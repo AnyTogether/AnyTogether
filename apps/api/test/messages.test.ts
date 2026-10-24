@@ -287,3 +287,67 @@ describe("groups", () => {
     expect((await h.call("POST", "/api/v1/conversations", { members: [a.id] }, a.token)).status).toBe(400);
   });
 });
+
+describe("moderation and accounts", () => {
+  it("lets a member report a message, keeping what it said even after it is deleted", async () => {
+    const a = await h.user("rep1@example.com");
+    const b = await h.user("rep2@example.com");
+    const outsider = await h.user("rep3@example.com");
+    await befriend(a, b);
+    const { body } = await h.call("POST", "/api/v1/conversations", { members: [b.id] }, a.token);
+    const sent = await send(b, body.id, "something nasty");
+    const report = (user: User, targetId: string) =>
+      h.call(
+        "POST",
+        "/api/v1/reports",
+        { targetKind: "message", targetId, reason: "harassment" },
+        user.token,
+      );
+    expect((await report(outsider, sent.body.id)).status).toBe(404);
+    expect((await report(b, sent.body.id)).status).toBe(400);
+    expect((await report(a, "not-a-message")).status).toBe(404);
+    expect((await report(a, sent.body.id)).status).toBe(201);
+    await h.call("DELETE", `/api/v1/conversations/${body.id}/messages/${sent.body.seq}`, undefined, b.token);
+    const { run } = await import("../src/admin.js");
+    const listed = await run(["reports"], h.deps);
+    expect(listed).toContain("message @rep2");
+    expect(listed).toContain("said: “something nasty”");
+  });
+
+  it("limits how many messages someone sends", async () => {
+    await h.close();
+    h = await harness({ limits: { message: { max: 2, seconds: 60 } } });
+    const a = await h.user("lim1@example.com");
+    const b = await h.user("lim2@example.com");
+    await befriend(a, b);
+    const { body } = await h.call("POST", "/api/v1/conversations", { members: [b.id] }, a.token);
+    expect((await send(a, body.id, "1")).status).toBe(201);
+    expect((await send(a, body.id, "2")).status).toBe(201);
+    const third = await send(a, body.id, "3");
+    expect(third.status).toBe(429);
+    expect(third.headers.get("retry-after")).toBeTruthy();
+  });
+
+  it("empties a deleted account's messages and puts them in its export", async () => {
+    const a = await h.user("gone1@example.com");
+    const b = await h.user("gone2@example.com");
+    await befriend(a, b);
+    const { body } = await h.call("POST", "/api/v1/conversations", { members: [b.id] }, a.token);
+    await send(a, body.id, "remember me");
+    await send(b, body.id, "I will");
+    const exported = await h.call("GET", "/api/v1/me/export", undefined, a.token);
+    expect(exported.body.messages).toMatchObject([{ conversationId: body.id, seq: 1, text: "remember me" }]);
+    expect((await h.call("POST", "/api/v1/me/deletion", {}, a.token)).status).toBe(202);
+    await h.call(
+      "DELETE",
+      "/api/v1/me",
+      { code: h.mailer.lastCode("gone1@example.com", "deletion") },
+      a.token,
+    );
+    const { purgeDeletedAccounts } = await import("../src/account.js");
+    expect(await purgeDeletedAccounts(h.deps, new Date(Date.now() + 15 * 86_400_000))).toBe(1);
+    const history = await h.call("GET", `/api/v1/conversations/${body.id}/messages`, undefined, b.token);
+    expect(history.body.messages.map((m: { text: string | null }) => m.text)).toEqual([null, "I will"]);
+    expect(history.body.messages[0].authorId).toBeNull();
+  });
+});

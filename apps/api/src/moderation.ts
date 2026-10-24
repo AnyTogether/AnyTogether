@@ -1,4 +1,13 @@
-import { type Database, accounts, auditLog, bans, profiles, reports } from "@anytogether/db";
+import {
+  type Database,
+  accounts,
+  auditLog,
+  bans,
+  conversationMembers,
+  messages,
+  profiles,
+  reports,
+} from "@anytogether/db";
 import { ErrorCode, ReportCreate, presenceKey } from "@anytogether/shared";
 import { and, count, desc, eq, gt, inArray, isNull, or } from "drizzle-orm";
 import { Hono } from "hono";
@@ -128,8 +137,10 @@ export async function listReports(db: Database, all = false, limit = 50) {
     .where(all ? undefined : eq(reports.status, "open"))
     .orderBy(desc(reports.createdAt))
     .limit(limit);
+  const authorOf = (r: (typeof rows)[number]) =>
+    r.targetKind === "message" ? ((r.snapshot as { authorId?: string } | null)?.authorId ?? null) : null;
   const people = [
-    ...new Set(rows.flatMap((r) => [r.reporterId, r.targetKind === "user" ? r.targetId : null])),
+    ...new Set(rows.flatMap((r) => [r.reporterId, r.targetKind === "user" ? r.targetId : authorOf(r)])),
   ].filter((id): id is string => Boolean(id && /^[0-9a-f-]{36}$/i.test(id)));
   const handles = new Map(
     people.length
@@ -160,7 +171,8 @@ export async function listReports(db: Database, all = false, limit = 50) {
   return rows.map((r) => ({
     ...r,
     reporter: r.reporterId ? (handles.get(r.reporterId) ?? null) : null,
-    target: r.targetKind === "user" ? (handles.get(r.targetId) ?? null) : null,
+    target:
+      r.targetKind === "user" ? (handles.get(r.targetId) ?? null) : (handles.get(authorOf(r) ?? "") ?? null),
     timesReported: totals.get(r.targetId) ?? 1,
   }));
 }
@@ -192,6 +204,33 @@ export function reportRoutes(deps: Deps) {
         : [];
       if (!target[0]) throw new HttpError(404, ErrorCode.notFound, "No such user");
     }
+    // A message: only someone in its conversation can report it, and not its author; what it
+    // said is kept with the report.
+    let snapshot: Record<string, unknown> | null = null;
+    if (input.targetKind === "message") {
+      const [found] = /^[0-9a-f-]{36}$/i.test(input.targetId)
+        ? await deps.db
+            .select({ message: messages })
+            .from(messages)
+            .innerJoin(
+              conversationMembers,
+              and(
+                eq(conversationMembers.conversationId, messages.conversationId),
+                eq(conversationMembers.accountId, me),
+              ),
+            )
+            .where(eq(messages.id, input.targetId))
+        : [];
+      if (!found || found.message.deletedAt) throw new HttpError(404, ErrorCode.notFound, "No such message");
+      if (found.message.authorId === me) throw new HttpError(400, ErrorCode.badRequest, "That is yours");
+      snapshot = {
+        authorId: found.message.authorId,
+        conversationId: found.message.conversationId,
+        seq: found.message.seq,
+        text: found.message.text,
+        createdAt: found.message.createdAt,
+      };
+    }
     // One open report per person and target: a second one adds nothing for the moderators.
     const [made] = await deps.db
       .insert(reports)
@@ -202,6 +241,7 @@ export function reportRoutes(deps: Deps) {
         targetId: input.targetId,
         reason: input.reason,
         note: input.note || null,
+        snapshot,
       })
       .onConflictDoNothing()
       .returning({ id: reports.id });

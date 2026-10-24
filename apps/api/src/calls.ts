@@ -22,6 +22,7 @@ import { publish } from "./events.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import type { PartyService } from "./parties.js";
 import { people } from "./people.js";
+import { rateLimiter } from "./ratelimit.js";
 
 type Call = typeof calls.$inferSelect;
 
@@ -53,6 +54,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
   const { db, valkey } = deps;
   const who = people(db);
   const keep = turnCredentialSeconds;
+  const limit = rateLimiter(valkey, deps.limits);
 
   const tell = async (userIds: string[], event: GatewayEvent) => {
     for (const userId of new Set(userIds)) await publish(valkey, userId, event);
@@ -157,6 +159,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     const parsed = CallCreate.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) throw new HttpError(400, ErrorCode.badRequest, "partyId or userId");
     const { partyId, userId } = parsed.data;
+    await limit("call", me);
 
     if (userId) {
       if (userId === me) throw new HttpError(400, ErrorCode.badRequest, "That is you");

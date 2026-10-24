@@ -297,6 +297,11 @@ describe("the gateway", () => {
     expect(await caller.waitFor((frame) => frame.code === "bad_signal")).toBeTruthy();
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(caller.frames.filter((frame) => frame.type === "signal")).toHaveLength(0);
+    // A call's setup sends many candidates at once: more than the socket's frame limit, still fine.
+    for (let i = 0; i < 60; i++)
+      caller.send({ op: "signal", to: "u2", device: "laptop", call: "c1", kind: "candidate", data: { i } });
+    await laptop.waitFor((frame) => (frame.data as { data?: { i?: number } })?.data?.i === 59);
+    expect(caller.socket.readyState).toBe(WebSocket.OPEN);
     // Signals are passed on, never kept for a replay.
     expect(await valkey.xlen("events:u2")).toBe(0);
     for (const c of [caller, phone, laptop, outsider]) c.socket.close();

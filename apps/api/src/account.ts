@@ -12,13 +12,14 @@ import {
   handleHistory,
   identities,
   library,
+  messages,
   playSessions,
   profiles,
   sessions,
   signInRequests,
 } from "@anytogether/db";
 import { ErrorCode, friendsKey, presenceHiddenKey, presenceKey, privacyOf } from "@anytogether/shared";
-import { and, eq, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
@@ -166,6 +167,19 @@ export async function exportAccount(db: Database, accountId: string) {
       handle: handles.get(b.blocked) ?? null,
       createdAt: b.createdAt,
     })),
+    messages: (
+      await db
+        .select()
+        .from(messages)
+        .where(and(eq(messages.authorId, accountId), isNull(messages.deletedAt)))
+        .orderBy(asc(messages.createdAt))
+    ).map((m) => ({
+      conversationId: m.conversationId,
+      seq: m.seq,
+      text: m.text,
+      createdAt: m.createdAt,
+      editedAt: m.editedAt,
+    })),
     auditLog: await db
       .select({ action: auditLog.action, target: auditLog.target, createdAt: auditLog.createdAt })
       .from(auditLog)
@@ -189,6 +203,11 @@ export async function purgeDeletedAccounts(ctx: { db: Database; valkey: Redis },
       await ctx.db.select({ titleId: library.titleId }).from(library).where(eq(library.accountId, id))
     ).map((l) => l.titleId);
     await ctx.db.transaction(async (tx) => {
+      // Their messages go too: emptied, so the others' threads keep their order.
+      await tx
+        .update(messages)
+        .set({ text: null, attachments: [], deletedAt: now })
+        .where(and(eq(messages.authorId, id), isNull(messages.deletedAt)));
       await tx.delete(accounts).where(and(eq(accounts.id, id), eq(accounts.status, "deleting")));
       await tx.insert(auditLog).values({ id: uuidv7(), action: "account.deleted", target: id });
     });

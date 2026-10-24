@@ -157,11 +157,14 @@ export const reports = pgTable(
   {
     id: uuid().primaryKey(),
     reporterId: uuid().references(() => accounts.id, { onDelete: "set null" }),
-    /** user (later message, activity, theme, game_name). */
+    /** user or message (later activity, theme, game_name). */
     targetKind: text().notNull(),
     targetId: text().notNull(),
     reason: text().notNull(),
     note: text(),
+    /** What a reported message said when it was reported, kept for the moderators even if its
+     *  author deletes it: {authorId, conversationId, seq, text, createdAt}. */
+    snapshot: jsonb(),
     /** open | actioned | dismissed */
     status: text().notNull().default("open"),
     handledBy: text(),

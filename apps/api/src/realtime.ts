@@ -2,6 +2,7 @@ import { realtimeTicketKey, realtimeTicketSeconds } from "@anytogether/shared";
 import { Hono } from "hono";
 import type { Deps } from "./app.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { rateLimiter } from "./ratelimit.js";
 import { hash, secret } from "./tokens.js";
 
 /** A one-time ticket for the gateway's hello, for the website: its browser never holds an access
@@ -10,8 +11,10 @@ import { hash, secret } from "./tokens.js";
 export function realtimeRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
+  const limit = rateLimiter(deps.valkey, deps.limits);
 
   app.post("/realtime/ticket", async (c) => {
+    await limit("realtimeTicket", c.get("userId"));
     const ticket = secret(24);
     await deps.valkey.set(
       realtimeTicketKey(hash(ticket).toString("hex")),

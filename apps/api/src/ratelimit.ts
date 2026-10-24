@@ -29,6 +29,15 @@ export const defaultLimits = {
   export: { max: 5, seconds: 3600 },
   /** Account-deletion codes mailed per account. */
   deletionCode: { max: 5, seconds: 3600 },
+  /** Messages sent by one account: a minute's burst, and a day's. */
+  message: { max: 30, seconds: 60 },
+  messageDay: { max: 1000, seconds: 86_400 },
+  /** Calls started (rung or joined) by one account. */
+  call: { max: 60, seconds: 3600 },
+  /** Game sessions opened by one account. */
+  gameSession: { max: 120, seconds: 3600 },
+  /** Gateway tickets for the website, per account (one per socket it opens). */
+  realtimeTicket: { max: 60, seconds: 60 },
 };
 export type Limits = { [name in keyof typeof defaultLimits]: { max: number; seconds: number } };
 

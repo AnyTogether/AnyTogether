@@ -23,6 +23,7 @@ import { publish } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { people } from "./people.js";
+import { rateLimiter } from "./ratelimit.js";
 
 type Conversation = typeof conversations.$inferSelect;
 type Message = typeof messages.$inferSelect;
@@ -49,6 +50,7 @@ export function messageRoutes(deps: Deps) {
   app.use("*", requireUser(deps));
   const { db } = deps;
   const who = people(db);
+  const limit = rateLimiter(deps.valkey, deps.limits);
 
   const memberIds = async (conversationId: string) =>
     (
@@ -324,6 +326,8 @@ export function messageRoutes(deps: Deps) {
     const me = c.get("userId");
     const { conversation } = await membership(c.req.param("id"), me);
     const input = await body(c, MessageSend);
+    await limit("message", me);
+    await limit("messageDay", me);
     const members = await memberIds(conversation.id);
     if (conversation.kind === "direct") {
       const other = members.find((id) => id !== me);

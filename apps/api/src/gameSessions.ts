@@ -20,6 +20,7 @@ import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { people } from "./people.js";
 import { setPresenceExtra } from "./presence.js";
+import { rateLimiter } from "./ratelimit.js";
 
 type Session = typeof gameSessions.$inferSelect;
 
@@ -31,6 +32,7 @@ export function gameSessionRoutes(deps: Deps) {
   app.use("*", requireUser(deps));
   const { db } = deps;
   const who = people(db);
+  const limit = rateLimiter(deps.valkey, deps.limits);
 
   const tell = async (userIds: string[], event: GatewayEvent) => {
     for (const userId of new Set(userIds)) await publish(deps.valkey, userId, event);
@@ -161,6 +163,7 @@ export function gameSessionRoutes(deps: Deps) {
   app.post("/game-sessions", async (c) => {
     const me = c.get("userId");
     const input = await body(c, GameSessionOpen);
+    await limit("gameSession", me);
     await leaveCurrent(me);
     await db.insert(games).values({ titleId: input.titleId }).onConflictDoNothing();
     const session = await db.transaction(async (tx) => {
