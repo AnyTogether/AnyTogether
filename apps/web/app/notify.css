@@ -572,3 +572,78 @@ span.toggle {
 .mono {
   font-family: var(--font-mono), monospace;
 }
+
+/* Admin: themes, in reports and in their own queue */
+.admin-still {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 128px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: radial-gradient(
+      120% 90% at 78% 12%,
+      color-mix(in srgb, var(--t-bright, #8fb0ff) 55%, transparent),
+      transparent 55%
+    ), linear-gradient(160deg, var(--t-middle, #1a1d29), var(--t-deep, #07080c) 70%);
+}
+.admin-still img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.reported-theme {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.reported-theme .lines {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.reported-theme .name,
+.admin-theme .name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.theme-now.is-review,
+.theme-now.is-hidden {
+  color: var(--danger);
+}
+.admin-themes {
+  list-style: none;
+  padding: 0;
+  margin-top: 10px;
+}
+.admin-theme {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 0;
+}
+.admin-theme + .admin-theme {
+  border-top: 1px solid var(--line);
+}
+.admin-theme .admin-still {
+  width: 168px;
+}
+.admin-theme-body {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+@media (max-width: 520px) {
+  .admin-theme {
+    flex-direction: column;
+  }
+  .admin-theme .admin-still {
+    width: 100%;
+  }
+}

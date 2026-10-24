@@ -1,10 +1,22 @@
 "use client";
 
 import { Avatar } from "@/components/Avatar";
-import type { AdminBanRow, AdminLookup, AdminPerson, AdminReport, AdminTab, AuditEntry } from "@/lib/admin";
+import {
+  type AdminBanRow,
+  type AdminLookup,
+  type AdminPerson,
+  type AdminReport,
+  type AdminTab,
+  type AdminTheme,
+  type AdminThemePage,
+  type AdminThemeStatus,
+  type AuditEntry,
+  adminThumb,
+} from "@/lib/admin";
 import { since } from "@/lib/feed";
 import type { UiStrings } from "@/lib/i18n";
 import { fill } from "@/lib/people";
+import { type ThemeColors, themeStyle } from "@/lib/themes";
 import Link from "next/link";
 import { type FormEvent, type ReactNode, useState } from "react";
 
@@ -57,7 +69,16 @@ function Who({ person, texts, size = 36 }: { person: AdminPerson; texts: Texts; 
   );
 }
 
-type Action = "dismiss" | "warn" | "ban" | "remove_message" | "reset_avatar" | "reset_bio";
+type Action =
+  | "dismiss"
+  | "warn"
+  | "ban"
+  | "remove_message"
+  | "reset_avatar"
+  | "reset_bio"
+  | "remove_post"
+  | "hide_theme"
+  | "publish_theme";
 const durations: { days: number | null; key: "days1" | "days7" | "days30" | "forGood" }[] = [
   { days: 1, key: "days1" },
   { days: 7, key: "days7" },
@@ -117,6 +138,61 @@ function ReasonField({
   );
 }
 
+/** A theme's card still over its own colors; the still comes through the admin API, so it shows
+ *  whatever the theme's state. */
+function ThemeStill({
+  id,
+  version,
+  colors,
+}: { id: string; version?: number | null; colors: ThemeColors | null }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className="admin-still" style={colors ? themeStyle(colors) : undefined}>
+      {!failed && (
+        <img
+          src={adminThumb(id, version)}
+          alt=""
+          width={640}
+          height={360}
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </span>
+  );
+}
+
+const statusWord = (status: AdminThemeStatus, texts: Texts) => texts[`themeStatus_${status}`];
+
+function ReportedTheme({ theme, texts }: { theme: NonNullable<AdminReport["theme"]>; texts: Texts }) {
+  return (
+    <figure className="said reported-theme">
+      {theme.status && <ThemeStill id={theme.id} colors={theme.colors} />}
+      <figcaption className="lines">
+        <span className="name">{theme.name ?? "?"}</span>
+        <span className="meta">
+          {theme.version ? fill(texts.themeVersion, { n: theme.version }) : null}
+          {theme.status ? (
+            <>
+              {theme.version ? " · " : ""}
+              <span className={`theme-now is-${theme.status}`}>
+                {fill(texts.themeNow, { status: statusWord(theme.status, texts) })}
+              </span>
+            </>
+          ) : null}
+        </span>
+        {!theme.status && <span className="meta">{texts.themeGone}</span>}
+        {theme.status === "published" && (
+          <Link href={`/themes/${theme.id}`} className="meta link">
+            {texts.themeOpen}
+          </Link>
+        )}
+      </figcaption>
+    </figure>
+  );
+}
+
 function ReportItem({
   report,
   texts,
@@ -159,9 +235,40 @@ function ReportItem({
       show: report.targetKind === "message" && !report.message?.removed,
       danger: true,
     },
+    {
+      key: "remove_post",
+      label: texts.acRemovePost,
+      show: report.targetKind === "lfg" && !report.post?.removed,
+      danger: true,
+    },
+    {
+      key: "hide_theme",
+      label: texts.acHideTheme,
+      show:
+        report.targetKind === "theme" && Boolean(report.theme?.status) && report.theme?.status !== "hidden",
+      danger: true,
+    },
+    {
+      key: "publish_theme",
+      label: texts.acPublishTheme,
+      show:
+        report.targetKind === "theme" &&
+        Boolean(report.theme?.status) &&
+        report.theme?.status !== "published",
+    },
     { key: "reset_avatar", label: texts.acResetAvatar, show: Boolean(report.target?.avatar) },
     { key: "reset_bio", label: texts.acResetBio, show: Boolean(report.target?.bio) },
   ];
+  const kindLabel =
+    report.targetKind === "message"
+      ? texts.kindMessage
+      : report.targetKind === "theme"
+        ? texts.kindTheme
+        : report.targetKind === "lfg"
+          ? texts.kindPost
+          : texts.kindUser;
+  // Putting a theme back is not a punishment: it is confirmed like a warning.
+  const gentle = action === "warn" || action === "publish_theme";
   const statusLabel =
     report.status === "open"
       ? texts.statusOpen
@@ -173,7 +280,7 @@ function ReportItem({
     <li className={`report-item is-${report.status}`}>
       <div className="report-top">
         <span className="flair reason-flag">{reasonText ?? report.reason}</span>
-        <span className="flair">{report.targetKind === "message" ? texts.kindMessage : texts.kindUser}</span>
+        <span className="flair">{kindLabel}</span>
         {report.timesReported > 1 && (
           <span className="meta">{fill(texts.reportedTimes, { n: report.timesReported })}</span>
         )}
@@ -195,6 +302,16 @@ function ReportItem({
           <blockquote>{report.message.text ?? "…"}</blockquote>
         </figure>
       )}
+      {report.post && (
+        <figure className="said">
+          <figcaption className="meta">
+            {texts.postText}
+            {report.post.removed && <span className="flair banned-flag">{texts.postRemoved}</span>}
+          </figcaption>
+          <blockquote>{report.post.note ?? "…"}</blockquote>
+        </figure>
+      )}
+      {report.theme && <ReportedTheme theme={report.theme} texts={texts} />}
       {report.target?.bio && report.targetKind === "user" && <p className="said-bio">{report.target.bio}</p>}
       {report.note && <p className="report-note">“{report.note}”</p>}
       <p className="meta">
@@ -253,11 +370,7 @@ function ReportItem({
                 <button type="button" className="pill" onClick={() => setAction(null)}>
                   {texts.cancel}
                 </button>
-                <button
-                  type="submit"
-                  className={action === "warn" ? "primary small" : "pill danger"}
-                  disabled={busy}
-                >
+                <button type="submit" className={gentle ? "primary small" : "pill danger"} disabled={busy}>
                   {texts.confirmAction}
                 </button>
               </div>
@@ -354,6 +467,163 @@ function ReportsPanel({
             className="pill"
             disabled={loading}
             onClick={() => load(status, page.reports.at(-1)?.id)}
+          >
+            {loading ? texts.loading : texts.loadMore}
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** One theme in the queue: its still, name, maker and reports, and what a moderator may do. */
+function ThemeItem({
+  theme,
+  texts,
+  onDone,
+}: {
+  theme: AdminTheme;
+  texts: Texts;
+  onDone: (theme: AdminTheme) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const choices: { status: AdminThemeStatus; label: string; danger?: boolean }[] = [
+    { status: "published", label: texts.themeShow },
+    { status: "review", label: texts.themeReview },
+    { status: "hidden", label: texts.themeHide, danger: true },
+  ];
+  async function set(status: AdminThemeStatus) {
+    setBusy(true);
+    setError(null);
+    const done = await admin<{ theme: AdminTheme }>(`admin/themes/${theme.id}`, { status });
+    setBusy(false);
+    if (!done.ok || !done.body?.theme) return setError(texts.failed);
+    onDone(done.body.theme);
+  }
+  return (
+    <li className="admin-theme">
+      <ThemeStill id={theme.id} version={theme.version} colors={theme.colors} />
+      <div className="admin-theme-body">
+        <span className="name">{theme.name}</span>
+        <span className="meta">
+          {theme.maker
+            ? fill(texts.themeBy, { name: `@${theme.maker.handle ?? "?"}` })
+            : texts.themeMakerGone}
+          {" · "}
+          {fill(texts.themeVersion, { n: theme.version })}
+        </span>
+        {theme.openReports > 0 && (
+          <span className="flair reason-flag">{fill(texts.themeReports, { n: theme.openReports })}</span>
+        )}
+        {theme.description && <p className="said-bio">{theme.description}</p>}
+        <div className="report-acts">
+          {choices
+            .filter((c) => c.status !== theme.status)
+            .map((c) => (
+              <button
+                key={c.status}
+                type="button"
+                className={`pill${c.danger ? " danger" : ""}`}
+                disabled={busy}
+                onClick={() => set(c.status)}
+              >
+                {c.label}
+              </button>
+            ))}
+          {theme.status === "published" && (
+            <Link href={`/themes/${theme.id}`} className="pill">
+              {texts.themeOpen}
+            </Link>
+          )}
+        </div>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    </li>
+  );
+}
+
+/** Themes held for review (people reported them), hidden ones, and published ones. */
+function ThemesPanel({ initial, texts }: { initial: AdminThemePage | null; texts: Texts }) {
+  const [status, setStatus] = useState<AdminThemeStatus>("review");
+  const [page, setPage] = useState<AdminThemePage>(initial ?? { themes: [], more: false, review: 0 });
+  const [notice, setNotice] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function load(next = status, before?: string) {
+    setLoading(true);
+    const got = await admin<AdminThemePage>(
+      `admin/themes?status=${next}${before ? `&before=${before}` : ""}`,
+    );
+    setLoading(false);
+    if (!got.body) return;
+    const body = got.body;
+    setPage((current) => (before ? { ...body, themes: [...current.themes, ...body.themes] } : body));
+  }
+
+  const filters: { value: AdminThemeStatus; label: string }[] = [
+    { value: "review", label: texts.themesReview },
+    { value: "hidden", label: texts.themesHidden },
+    { value: "published", label: texts.themesPublished },
+  ];
+  const empty =
+    status === "review"
+      ? texts.noThemesReview
+      : status === "hidden"
+        ? texts.noThemesHidden
+        : texts.noThemesPublished;
+  return (
+    <>
+      <div className="admin-bar">
+        <div className="seg-mini">
+          {filters.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              aria-pressed={status === f.value}
+              onClick={() => {
+                setStatus(f.value);
+                setNotice(null);
+                load(f.value);
+              }}
+            >
+              {f.label}
+              {f.value === "review" && page.review > 0 && <b className="n">{page.review}</b>}
+            </button>
+          ))}
+        </div>
+      </div>
+      {notice && <output className="notice success">{notice}</output>}
+      {page.themes.length ? (
+        <ul className="admin-themes">
+          {page.themes.map((theme) => (
+            <ThemeItem
+              key={theme.id}
+              theme={theme}
+              texts={texts}
+              onDone={(changed) => {
+                setNotice(
+                  fill(texts.themeDone, { name: changed.name, status: statusWord(changed.status, texts) }),
+                );
+                load();
+              }}
+            />
+          ))}
+        </ul>
+      ) : (
+        <p className="hint empty">{empty}</p>
+      )}
+      {page.more && (
+        <div className="more-row">
+          <button
+            type="button"
+            className="pill"
+            disabled={loading}
+            onClick={() => load(status, page.themes.at(-1)?.id)}
           >
             {loading ? texts.loading : texts.loadMore}
           </button>
@@ -672,11 +942,17 @@ function AuditPanel({
       : typeof data.by === "string"
         ? data.by
         : texts.auditSystem;
+    const name = typeof data.name === "string" ? data.name : null;
+    // A theme by its name, a removed post or message by its author, a person by their handle.
     const target = entry.targetUser
       ? `@${entry.targetUser.handle}`
-      : entry.action.startsWith("report.")
-        ? null
-        : entry.target;
+      : entry.action.startsWith("theme.") && name
+        ? `“${name}”`
+        : entry.author
+          ? `@${entry.author.handle}`
+          : entry.action.startsWith("report.")
+            ? null
+            : entry.target;
     return (
       <>
         <b>{by}</b> {verb} {target && <b>{target}</b>}
@@ -737,13 +1013,15 @@ function AuditPanel({
   );
 }
 
-/** The admin page: the reports queue, finding a person, bans, and the audit log, one tab each. */
+/** The admin page: the reports queue, the theme queue, finding a person, bans, and the audit log,
+ *  one tab each. */
 export function AdminBoard({
   texts,
   tab,
   initialReports,
   initialBans,
   initialAudit,
+  initialThemes,
   initialQuery,
   now,
 }: {
@@ -751,6 +1029,7 @@ export function AdminBoard({
   tab: AdminTab;
   me: string;
   initialReports: { reports: AdminReport[]; more: boolean; open: number };
+  initialThemes: AdminThemePage | null;
   initialBans: { bans: AdminBanRow[]; more: boolean } | null;
   initialAudit: { entries: AuditEntry[]; more: boolean } | null;
   initialQuery: string;
@@ -758,6 +1037,7 @@ export function AdminBoard({
 }) {
   const tabs: { key: AdminTab; label: string; n?: number }[] = [
     { key: "reports", label: texts.tabReports, n: initialReports.open },
+    { key: "themes", label: texts.tabThemes, n: initialThemes?.review },
     { key: "people", label: texts.tabPeople },
     { key: "bans", label: texts.tabBans },
     { key: "audit", label: texts.tabAudit },
@@ -778,6 +1058,7 @@ export function AdminBoard({
       </nav>
       <article className="card in d3 admin-card">
         {tab === "reports" && <ReportsPanel initial={initialReports} texts={texts} now={now} />}
+        {tab === "themes" && <ThemesPanel initial={initialThemes} texts={texts} />}
         {tab === "people" && <PeoplePanel initialQuery={initialQuery} texts={texts} now={now} />}
         {tab === "bans" && <BansPanel initial={initialBans} texts={texts} />}
         {tab === "audit" && <AuditPanel initial={initialAudit} texts={texts} now={now} />}

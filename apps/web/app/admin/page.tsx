@@ -1,5 +1,12 @@
 import { AdminBoard } from "@/components/AdminBoard";
-import { type AdminBanRow, type AdminReport, type AdminTab, type AuditEntry, adminTabs } from "@/lib/admin";
+import {
+  type AdminBanRow,
+  type AdminReport,
+  type AdminTab,
+  type AdminThemePage,
+  type AuditEntry,
+  adminTabs,
+} from "@/lib/admin";
 import { strings, ui } from "@/lib/i18n";
 import { apiJson, currentUser } from "@/lib/session";
 import type { Metadata } from "next";
@@ -16,8 +23,10 @@ export default async function Admin({
   if (!user) redirect("/login?next=/admin");
   if (user.account.role !== "admin") notFound();
   const tab: AdminTab = adminTabs.includes(query.tab as AdminTab) ? (query.tab as AdminTab) : "reports";
-  const [reports, bans, audit] = await Promise.all([
+  const [reports, themes, bans, audit] = await Promise.all([
     apiJson<{ reports: AdminReport[]; more: boolean; open: number }>("/admin/reports"),
+    // Always: the tab shows how many themes wait for review.
+    apiJson<AdminThemePage>("/admin/themes"),
     tab === "bans" ? apiJson<{ bans: AdminBanRow[]; more: boolean }>("/admin/bans") : null,
     tab === "audit" ? apiJson<{ entries: AuditEntry[]; more: boolean }>("/admin/audit") : null,
   ]);
@@ -34,6 +43,7 @@ export default async function Admin({
         initialReports={reports.body ?? { reports: [], more: false, open: 0 }}
         initialBans={bans?.body ?? null}
         initialAudit={audit?.body ?? null}
+        initialThemes={themes.body}
         initialQuery={tab === "people" ? (query.q ?? "") : ""}
         now={Date.now()}
       />

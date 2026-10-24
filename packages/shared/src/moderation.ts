@@ -33,6 +33,10 @@ export const reportActions = [
   "reset_bio",
   /** Takes a reported looking-for-group post off the board. */
   "remove_post",
+  /** Takes a reported theme off the Hub. */
+  "hide_theme",
+  /** Puts a reported theme (held for review) back on the Hub: its open reports are dismissed. */
+  "publish_theme",
 ] as const;
 export type ReportAction = (typeof reportActions)[number];
 

@@ -1,3 +1,5 @@
+import type { ThemeColors, ThemeStatus } from "./themes";
+
 /** The admin page's shapes, as the API's /admin routes give them. */
 export interface AdminPerson {
   userId: string;
@@ -14,9 +16,25 @@ export interface AdminReport {
   status: "open" | "actioned" | "dismissed";
   reason: string;
   note: string | null;
-  targetKind: "user" | "message";
+  targetKind: "user" | "message" | "theme" | "lfg";
   targetId: string;
   message: { text: string | null; sentAt: string | null; removed: boolean } | null;
+  /** A reported looking-for-group post, as it was when reported. */
+  post: {
+    note: string | null;
+    titleId: string | null;
+    purpose: string | null;
+    postedAt: string | null;
+    removed: boolean;
+  } | null;
+  /** A reported theme: its name and version when reported, and its state now (null once deleted). */
+  theme: {
+    id: string;
+    name: string | null;
+    version: number | null;
+    status: AdminThemeStatus | null;
+    colors: ThemeColors | null;
+  } | null;
   reporter: AdminPerson | null;
   target: AdminPerson | null;
   timesReported: number;
@@ -67,9 +85,43 @@ export interface AuditEntry {
   actor: { userId: string; handle: string; displayName: string; avatar: string | null } | null;
   target: string | null;
   targetUser: { userId: string; handle: string; displayName: string; avatar: string | null } | null;
+  /** Whose post, message or theme the entry is about, when its target is that thing. */
+  author?: { userId: string; handle: string; displayName: string; avatar: string | null } | null;
   data: Record<string, unknown> | null;
   createdAt: string;
 }
 
-export const adminTabs = ["reports", "people", "bans", "audit"] as const;
+export type AdminThemeStatus = ThemeStatus;
+
+/** A theme as the admin page's theme queue shows it. */
+export interface AdminTheme {
+  id: string;
+  name: string;
+  description: string | null;
+  status: AdminThemeStatus;
+  version: number;
+  style: number;
+  colors: ThemeColors;
+  background: "picture" | "video" | null;
+  music: boolean;
+  downloads: number;
+  likes: number;
+  maker: AdminPerson | null;
+  openReports: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminThemePage {
+  themes: AdminTheme[];
+  more: boolean;
+  /** How many themes wait for review. */
+  review: number;
+}
+
+/** Where the admin page reads a theme's card still, whatever its state. */
+export const adminThumb = (id: string, version?: number | null) =>
+  `/me/admin/admin/themes/${id}/thumb.webp${version ? `?v=${version}` : ""}`;
+
+export const adminTabs = ["reports", "themes", "people", "bans", "audit"] as const;
 export type AdminTab = (typeof adminTabs)[number];

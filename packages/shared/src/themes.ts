@@ -14,6 +14,8 @@ export const maxThemePage = 60;
  *  moderator took it down. Only its maker sees a theme that is not published. */
 export const themeStatuses = ["published", "review", "hidden"] as const;
 export type ThemeStatus = (typeof themeStatuses)[number];
+/** A moderator's verdict on a theme from the admin page. */
+export const ThemeModeration = z.object({ status: z.enum(themeStatuses) });
 /** Open reports from this many people put a theme back in review. */
 export const themeReportsToReview = 3;
 

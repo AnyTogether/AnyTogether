@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
+import sharp from "sharp";
 import { afterEach, describe, expect, it } from "vitest";
 import { run } from "../src/admin.js";
+import { writeZip } from "../src/zip.js";
 import { harness } from "./harness.js";
 
 let h: Awaited<ReturnType<typeof harness>>;
@@ -47,6 +49,24 @@ async function scene() {
   return { boss, utku, troll, conversation, message: sent.body };
 }
 
+/** A theme shared by `maker`, with a still. */
+async function shareTheme(token: string, name: string) {
+  const form = new FormData();
+  const json = { name, style: 0, deep: "#0A0014", middle: "#4A0E6B", bright: "#FF5EDB", accent: "#FF4FD8" };
+  const zip = writeZip([{ name: "theme.json", bytes: new TextEncoder().encode(JSON.stringify(json)) }]);
+  const still = await sharp({ create: { width: 640, height: 360, channels: 3, background: "#4A0E6B" } })
+    .png()
+    .toBuffer();
+  form.set("theme", new File([new Uint8Array(zip)], "t.anyps5theme"));
+  form.set("preview", new File([new Uint8Array(still)], "preview.png"));
+  const response = await h.app.request(`${v1}/themes`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+    body: form,
+  });
+  return (await response.json()) as { id: string; name: string };
+}
+
 const queue = (token: string, query = "") => h.call("GET", `${v1}/admin/reports${query}`, undefined, token);
 const act = (token: string, id: string, input: Record<string, unknown>) =>
   h.call("POST", `${v1}/admin/reports/${id}`, input, token);
@@ -63,6 +83,9 @@ describe("admin page", () => {
       ["GET", "/admin/bans"],
       ["POST", `/admin/bans/${crypto.randomUUID()}/lift`, {}],
       ["GET", "/admin/audit"],
+      ["GET", "/admin/themes"],
+      ["GET", `/admin/themes/${crypto.randomUUID()}/thumb.webp`],
+      ["POST", `/admin/themes/${crypto.randomUUID()}`, { status: "hidden" }],
     ];
     for (const [method, path, input] of routes) {
       expect((await h.call(method, `${v1}${path}`, input)).status).toBe(401);
@@ -218,5 +241,106 @@ describe("admin page", () => {
     expect(actions.filter((a: string) => a === "ban")).toHaveLength(3);
     expect(actions).toContain("unban");
     expect(actions).toContain("admin.lookup");
+  });
+
+  it("shows theme reports with the theme, hides it or puts it back, and keeps a theme queue", async () => {
+    h = await harness();
+    const { boss, utku } = await scene();
+    const maker = await h.user("maker@example.com");
+    const theme = await shareTheme(maker.token, "Loud Pink");
+    const other = await shareTheme(maker.token, "Quiet Blue");
+    const reporters = [utku, await h.user("r2@example.com"), await h.user("r3@example.com")];
+    for (const r of reporters)
+      expect(
+        (
+          await h.call(
+            "POST",
+            `${v1}/reports`,
+            { targetKind: "theme", targetId: theme.id, reason: "sexual" },
+            r.token,
+          )
+        ).status,
+      ).toBe(201);
+    // Three reports put it in review; the admin page lists it there.
+    const held = await h.call("GET", `${v1}/admin/themes`, undefined, boss.token);
+    expect(held.body).toMatchObject({ review: 1, more: false });
+    expect(held.body.themes).toMatchObject([
+      { id: theme.id, name: "Loud Pink", status: "review", openReports: 3, maker: { handle: "maker" } },
+    ]);
+    const thumb = await h.app.request(`${v1}/admin/themes/${theme.id}/thumb.webp`, {
+      headers: { authorization: `Bearer ${boss.token}` },
+    });
+    expect(thumb.headers.get("content-type")).toBe("image/webp");
+    expect((await sharp(Buffer.from(await thumb.arrayBuffer())).metadata()).width).toBe(640);
+    expect((await h.call("GET", `${v1}/admin/themes?status=nope`, undefined, boss.token)).status).toBe(400);
+
+    const onTheme = (await queue(boss.token)).body.reports.filter(
+      (r: { targetKind: string }) => r.targetKind === "theme",
+    );
+    expect(onTheme).toHaveLength(3);
+    expect(onTheme[0]).toMatchObject({
+      theme: { id: theme.id, name: "Loud Pink", version: 1, status: "review" },
+      target: { handle: "maker" },
+    });
+    // Theme verdicts are only for theme reports.
+    const [, onUser] = (await queue(boss.token)).body.reports.filter(
+      (r: { targetKind: string }) => r.targetKind !== "theme",
+    );
+    expect((await act(boss.token, onUser.id, { action: "hide_theme" })).status).toBe(400);
+
+    // Putting it back dismisses every report on it.
+    const back = await act(boss.token, onTheme[0].id, { action: "publish_theme" });
+    expect(back.body).toMatchObject({
+      closed: 3,
+      report: { status: "dismissed", theme: { status: "published" } },
+    });
+    expect((await h.call("GET", `${v1}/themes/${theme.id}`)).status).toBe(200);
+
+    // A new report, then hiding it acts on it; the Hub no longer shows it.
+    await h.call(
+      "POST",
+      `${v1}/reports`,
+      { targetKind: "theme", targetId: theme.id, reason: "spam" },
+      (await h.user("r4@example.com")).token,
+    );
+    const fresh = (await queue(boss.token)).body.reports.find(
+      (r: { targetKind: string }) => r.targetKind === "theme",
+    );
+    const hidden = await act(boss.token, fresh.id, { action: "hide_theme" });
+    expect(hidden.body).toMatchObject({
+      closed: 1,
+      report: { status: "actioned", theme: { status: "hidden" } },
+    });
+    expect((await h.call("GET", `${v1}/themes/${theme.id}`)).status).toBe(404);
+    expect(
+      (await h.call("GET", `${v1}/admin/themes?status=hidden`, undefined, boss.token)).body.themes,
+    ).toMatchObject([{ id: theme.id }]);
+
+    // Without a report: hold for review, put back, hide.
+    const verdict = (id: string, status: string) =>
+      h.call("POST", `${v1}/admin/themes/${id}`, { status }, boss.token);
+    expect((await verdict(other.id, "review")).body).toMatchObject({
+      closed: 0,
+      theme: { status: "review" },
+    });
+    expect((await h.call("GET", `${v1}/themes/${other.id}`)).status).toBe(404);
+    expect((await verdict(other.id, "published")).body.theme.status).toBe("published");
+    expect((await verdict(other.id, "gone")).status).toBe(400);
+    expect((await verdict(crypto.randomUUID(), "hidden")).status).toBe(404);
+
+    const log = (await h.call("GET", `${v1}/admin/audit`, undefined, boss.token)).body.entries;
+    const themeEntries = log.filter((e: { action: string }) => e.action.startsWith("theme."));
+    expect(themeEntries.map((e: { action: string }) => e.action)).toEqual([
+      "theme.published",
+      "theme.review",
+      "theme.hidden",
+      "theme.published",
+    ]);
+    expect(themeEntries[2]).toMatchObject({
+      actor: { handle: "boss" },
+      author: { handle: "maker" },
+      target: theme.id,
+      data: { by: "boss", name: "Loud Pink", report: fresh.id },
+    });
   });
 });

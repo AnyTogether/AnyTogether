@@ -32,7 +32,7 @@ type Maker = { userId: string; handle: string; displayName: string; avatar: stri
 
 const folderOf = (id: string, version: number) => `themes/${id}/v${version}/`;
 const fileKey = (id: string, version: number) => `${folderOf(id, version)}theme.${themeExtension}`;
-const stillKey = (id: string, version: number, kind: "preview" | "thumb") =>
+export const stillKey = (id: string, version: number, kind: "preview" | "thumb") =>
   `${folderOf(id, version)}${kind}.webp`;
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -102,14 +102,31 @@ export async function sweepThemeFiles(deps: Pick<Deps, "db" | "publicUrl" | "blo
 }
 
 /** A moderator's verdict on a theme: hide it, put it back, or hold it for review. */
-export async function setThemeStatus(db: Database, id: string, status: ThemeStatus, by?: string) {
+export async function setThemeStatus(
+  db: Database,
+  id: string,
+  status: ThemeStatus,
+  by?: string,
+  more: { actorId?: string; report?: string } = {},
+) {
   const [row] = await db
     .update(themes)
     .set({ status })
     .where(eq(themes.id, id))
-    .returning({ id: themes.id, name: themes.name });
+    .returning({ id: themes.id, name: themes.name, makerId: themes.makerId });
   if (!row) throw new Error(`No theme ${id}`);
-  await db.insert(auditLog).values({ id: uuidv7(), action: `theme.${status}`, target: id, data: { by } });
+  await db.insert(auditLog).values({
+    id: uuidv7(),
+    actorId: more.actorId ?? null,
+    action: `theme.${status}`,
+    target: id,
+    data: {
+      by,
+      name: row.name,
+      ...(row.makerId ? { maker: row.makerId } : {}),
+      ...(more.report ? { report: more.report } : {}),
+    },
+  });
   return row;
 }
 

@@ -1,28 +1,44 @@
 import { fromAnotherSite } from "@/lib/origin";
-import { relay } from "@/lib/session";
+import { accessToken, api, relay } from "@/lib/session";
 
 const id = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
 /** The admin API paths the admin page may reach through here; the API itself checks that the
  *  signed-in account is an admin on every one of them. */
 const allowed: Record<string, RegExp[]> = {
-  GET: [/^admin\/(reports|users|bans|audit)$/],
+  GET: [/^admin\/(reports|users|bans|audit|themes)$/],
   POST: [
     new RegExp(`^admin/reports/${id}$`),
+    new RegExp(`^admin/themes/${id}$`),
     new RegExp(`^admin/users/${id}/ban$`),
     new RegExp(`^admin/bans/${id}/lift$`),
   ],
 };
 const queries: Record<string, RegExp> = {
-  status: /^(open|actioned|dismissed|all)$/,
+  status: /^(open|actioned|dismissed|all|review|hidden|published)$/,
   before: new RegExp(`^${id}$`),
   limit: /^[0-9]{1,3}$/,
   all: /^1$/,
   q: /^[^\s]{2,254}$/,
 };
 
+/** A theme's card still for the admin page, whatever the theme's state. */
+const still = new RegExp(`^admin/themes/${id}/thumb\\.webp$`);
+
 async function pass(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const path = (await params).path.join("/");
+  if (request.method === "GET" && still.test(path)) {
+    const token = await accessToken();
+    const response = token ? await api(`/${path}`, { token }).catch(() => undefined) : undefined;
+    if (!response?.ok) return new Response(null, { status: response?.status ?? 401 });
+    return new Response(await response.arrayBuffer(), {
+      headers: {
+        "content-type": "image/webp",
+        "cache-control": "private, max-age=300",
+        "x-content-type-options": "nosniff",
+      },
+    });
+  }
   if (!allowed[request.method]?.some((pattern) => pattern.test(path)))
     return Response.json({ code: "not_found", title: "Not found" }, { status: 404 });
   // A changing call must come from this website's own pages.
