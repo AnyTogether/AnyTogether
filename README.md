@@ -6,6 +6,24 @@ share play, leaderboards, themes and downloads, at https://anytogether.kodla.age
 The plan lives on the `anytogether` branch of
 [AnyPS5-ARM](https://github.com/utkuhalis/AnyPS5-ARM/tree/anytogether) (English and Turkish).
 
+## Screenshots
+
+The website, with made-up demo people and data.
+
+| Home | Profile |
+|---|---|
+| ![Home feed](docs/screenshots/web-home.jpg) | ![Profile](docs/screenshots/web-profile.jpg) |
+| **Messages** | **Party** |
+| ![Messages](docs/screenshots/web-messages.jpg) | ![Party](docs/screenshots/web-party.jpg) |
+| **Leaderboards** | **Themes** |
+| ![Leaderboards](docs/screenshots/web-leaderboards.jpg) | ![Themes](docs/screenshots/web-themes.jpg) |
+| **Compatibility** | **Download** |
+| ![Compatibility](docs/screenshots/web-compat.jpg) | ![Download](docs/screenshots/web-download.jpg) |
+
+On a phone:
+
+<img src="docs/screenshots/web-phone.jpg" alt="Messages on a phone" width="300">
+
 ## Layout
 
 - `apps/api`: the REST API (`/api/v1`), TypeScript and Hono
