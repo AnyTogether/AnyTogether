@@ -31,5 +31,11 @@ export interface Problem {
 }
 
 export function problem(status: number, code: ErrorCode, title: string, detail?: string): Problem {
-  return { type: `https://anytogether.kodla.agency/errors/${code.replaceAll("_", "-")}`, title, status, code, ...(detail ? { detail } : {}) };
+  return {
+    type: `https://anytogether.kodla.agency/errors/${code.replaceAll("_", "-")}`,
+    title,
+    status,
+    code,
+    ...(detail ? { detail } : {}),
+  };
 }

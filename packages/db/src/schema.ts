@@ -1,5 +1,16 @@
 import { sql } from "drizzle-orm";
-import { check, customType, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  customType,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 const citext = customType<{ data: string }>({ dataType: () => "citext" });
 const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
@@ -19,7 +30,9 @@ export const accounts = pgTable("accounts", {
 export const identities = pgTable(
   "identities",
   {
-    accountId: uuid().notNull().references(() => accounts.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
     provider: text().notNull(),
     subject: text().notNull(),
     createdAt: now(),
@@ -32,7 +45,9 @@ export const sessions = pgTable(
   "sessions",
   {
     id: uuid().primaryKey(),
-    accountId: uuid().notNull().references(() => accounts.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
     client: text().notNull(),
     deviceName: text(),
     refreshHash: bytea().notNull(),
@@ -71,7 +86,9 @@ export const signInRequests = pgTable(
 export const profiles = pgTable(
   "profiles",
   {
-    accountId: uuid().primaryKey().references(() => accounts.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .primaryKey()
+      .references(() => accounts.id, { onDelete: "cascade" }),
     handle: citext().notNull().unique(),
     handleChangedAt: timestamp({ withTimezone: true }),
     displayName: text().notNull(),
@@ -89,7 +106,9 @@ export const devices = pgTable(
   "devices",
   {
     id: uuid().primaryKey(),
-    accountId: uuid().notNull().references(() => accounts.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
     platform: text().notNull(),
     name: text().notNull(),
     model: text(),
@@ -106,5 +125,3 @@ export const auditLog = pgTable("audit_log", {
   data: jsonb(),
   createdAt: now(),
 });
-
-

@@ -11,5 +11,7 @@ export async function runMigrations(url: string) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  await runMigrations(process.env.DATABASE_URL ?? "postgres://anytogether:anytogether@127.0.0.1:54329/anytogether");
+  await runMigrations(
+    process.env.DATABASE_URL ?? "postgres://anytogether:anytogether@127.0.0.1:54329/anytogether",
+  );
 }
