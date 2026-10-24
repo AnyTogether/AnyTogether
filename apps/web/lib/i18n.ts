@@ -17,12 +17,6 @@ const en = {
   language: "en" as Language,
   languageLabel: "Language",
   madeBy: "a {link} project",
-  inDevelopment: "in development",
-  eyebrow: "For AnyPS5 · Coming soon",
-  heroA: "Play",
-  heroB: "together.",
-  heroC: "Anywhere.",
-  lead: "is the online home of the AnyPS5 launchers on macOS, Windows and Linux. Your profile, your games, your trophies, your friends, parties and voice chat, plus every download you need. All in one place, in your own theme.",
   signIn: "Sign in",
   signOut: "Sign out",
   hello: "Signed in as",
@@ -224,32 +218,12 @@ const en = {
   moreActions: "More",
   done: "Done",
   home: "Home",
-  features: [
-    ["Profiles", "Your gamer card, avatar, bio and stats, styled your way."],
-    ["Trophies", "Every trophy you earn, with rarity, date and progress."],
-    ["Voice chat", "Party voice while you play, straight from player to player."],
-    ["Parties", "Start a party, invite friends and jump into the same game."],
-    ["Friends", "Add friends, see who is online and what they are playing."],
-    ["Messages", "Direct and group chats that follow you from launcher to web."],
-    ["Game library", "What you played, for how long and when, all synced."],
-    ["Activity feed", "Unlocks, sessions and highlights from your friends."],
-    ["Themes", "Make your profile and launcher look exactly how you want."],
-    ["Downloads", "Official links for the launchers, updates and tools."],
-    ["Share play", "Stream your session and let friends watch."],
-    ["Leaderboards", "Compare trophies and playtime with friends and the world."],
-  ],
 };
 
 const tr: typeof en = {
   language: "tr",
   languageLabel: "Dil",
   madeBy: "bir {link} projesi",
-  inDevelopment: "geliştiriliyor",
-  eyebrow: "AnyPS5 için · Yakında",
-  heroA: "Birlikte",
-  heroB: "oyna.",
-  heroC: "Her yerden.",
-  lead: "macOS, Windows ve Linux'taki AnyPS5 launcher'larının online evi. Profilin, oyunların, kupaların, arkadaşların, partiler ve sesli sohbet, ihtiyacın olan her indirme. Hepsi tek yerde, kendi temanla.",
   signIn: "Giriş yap",
   signOut: "Çıkış yap",
   hello: "Giriş yapan:",
@@ -451,20 +425,6 @@ const tr: typeof en = {
   moreActions: "Diğer",
   done: "Tamam",
   home: "Ana sayfa",
-  features: [
-    ["Profiller", "Oyuncu kartın, avatarın, bion ve istatistiklerin, kendi tarzınla."],
-    ["Kupalar", "Kazandığın her kupa; nadirliği, tarihi ve ilerlemesiyle."],
-    ["Sesli sohbet", "Oynarken parti sesi, doğrudan oyuncudan oyuncuya."],
-    ["Partiler", "Parti kur, arkadaşlarını çağır, aynı oyuna atlayın."],
-    ["Arkadaşlar", "Arkadaş ekle, kim çevrimiçi ve ne oynuyor gör."],
-    ["Mesajlar", "Launcher'dan web'e seni takip eden birebir ve grup sohbetleri."],
-    ["Oyun kütüphanesi", "Ne oynadın, ne kadar ve ne zaman; hepsi senkron."],
-    ["Aktivite akışı", "Arkadaşlarından kupalar, oturumlar ve öne çıkanlar."],
-    ["Temalar", "Profilin ve launcher'ın tam istediğin gibi görünsün."],
-    ["İndirmeler", "Launcher'lar, güncellemeler ve araçlar için resmi bağlantılar."],
-    ["Share play", "Oyununu yayınla, arkadaşların izlesin."],
-    ["Liderlik tabloları", "Kupaları ve oynama süresini arkadaşlarınla ve dünyayla karşılaştır."],
-  ],
 };
 
 export type Strings = typeof en &
@@ -476,9 +436,9 @@ export type Strings = typeof en &
   typeof downloadsEn &
   typeof compatEn &
   typeof discoverEn;
-/** What client components get: everything but the landing page's feature list. */
-export type UiStrings = Omit<Strings, "features">;
-export const ui = ({ features: _, ...rest }: Strings): UiStrings => rest;
+/** What client components get: the same texts (kept as its own name for them). */
+export type UiStrings = Strings;
+export const ui = (texts: Strings): UiStrings => texts;
 
 /** The language chosen with the switcher (the lang cookie); English until one is chosen. */
 export async function language(): Promise<Language> {

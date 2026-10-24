@@ -1,0 +1,463 @@
+import {
+  type Platform,
+  type PublicStats,
+  type Releases,
+  platformOrder,
+  statsWorthShowing,
+} from "@/lib/downloads";
+import type { SiteStrings } from "@/lib/i18n-site";
+import { fill } from "@/lib/people";
+import Link from "next/link";
+import type { CSSProperties } from "react";
+import { DownloadCta, PlatformCard, PlatformIcon } from "./Download";
+import { Reveal } from "./Reveal";
+import { BrowserFrame, MacFrame, PhoneFrame, Shot } from "./Shot";
+
+const productHref: Record<string, string> = {
+  mac: "/mac",
+  pc: "/pc",
+  phone: "/phone",
+  together: "/together",
+};
+
+const Arrow = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="ico arrow">
+    <path d="M5 12h14M13 6l6 6-6 6" />
+  </svg>
+);
+
+/** What signed-out visitors see at /: the AnyPS5 family, told section by section. */
+export function Landing({
+  s,
+  language,
+  platform,
+  releases,
+  stats,
+}: {
+  s: SiteStrings;
+  language: string;
+  platform: Platform | null;
+  releases: Releases | null;
+  stats: PublicStats | null;
+}) {
+  const l = s.landing;
+  const shownStats = statsWorthShowing(stats);
+  const number = new Intl.NumberFormat(language, { notation: "compact", maximumFractionDigits: 1 });
+  const others = platformOrder.filter((p) => p !== platform);
+  const version = releases?.macos?.version;
+  return (
+    <div className="site landing">
+      <Reveal />
+      <section className="l-hero">
+        {version && releases?.macos ? (
+          <a href={releases.macos.url} className="release in d1">
+            <i className="dot" />
+            {fill(l.released, { version })}
+            <span className="release-more">
+              {l.whatsNew}
+              <Arrow />
+            </span>
+          </a>
+        ) : (
+          <p className="kicker in d1">{l.eyebrow}</p>
+        )}
+        <h1 className="l-title in d2">
+          <span>{l.heroA}</span>
+          <span>{l.heroB}</span>
+          <span className="gradient">{l.heroC}</span>
+        </h1>
+        <p className="l-lead in d3">{l.lead}</p>
+        <div className="cta-row in d3">
+          <DownloadCta platform={platform} releases={releases} s={s} language={language} />
+          <Link href="/login" className="cta ghost">
+            {s.nav.createAccount}
+          </Link>
+        </div>
+        <p className="hero-note in d4">
+          <span>{l.heroNote[platform ?? "none"]}</span>
+          {platform && (
+            <span className="also">
+              {l.alsoOn}{" "}
+              {others.map((p, i) => (
+                <span key={p}>
+                  <a href="#platforms">{s.platform[p]}</a>
+                  {i < others.length - 1 ? ", " : ""}
+                </span>
+              ))}
+            </span>
+          )}
+        </p>
+      </section>
+
+      <div className="hero-stage in d4">
+        <MacFrame className="hero-stage-mac">
+          <Shot name="mac-home-trophies" alt={l.heroAlt} sizes="(max-width: 1180px) 92vw, 1080px" priority />
+        </MacFrame>
+        <PhoneFrame className="hero-stage-phone">
+          <Shot name="phone-launcher" alt={l.heroPhoneAlt} sizes="(max-width: 760px) 46vw, 360px" />
+        </PhoneFrame>
+      </div>
+
+      <nav className="family-strip" aria-label={l.family} data-reveal>
+        {l.products.map((product) => (
+          <Link key={product.key} href={productHref[product.key] ?? "/"} className="fam">
+            <span className="fam-where" lang="en">
+              {product.where}
+            </span>
+            <b>{product.name}</b>
+            <span className="fam-line">{product.line}</span>
+            <Arrow />
+          </Link>
+        ))}
+      </nav>
+
+      {shownStats.length > 0 && stats && (
+        <section className="live-stats" aria-label={l.statsLabel} data-reveal>
+          <p className="kicker">
+            <i className="dot" />
+            {l.statsLabel}
+          </p>
+          <dl>
+            {shownStats.map((key) => (
+              <div key={key}>
+                <dt>{number.format(stats[key])}</dt>
+                <dd>{l.stats[key]}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+
+      <section className="l-sec l-share" id="share-play">
+        <div className="sec-text" data-reveal>
+          <p className="kicker">{l.share.kicker}</p>
+          <h2 className="h-section">{l.share.title}</h2>
+          <p className="s-lead">{l.share.lead}</p>
+          <ol className="slots" aria-label={l.share.seats}>
+            <li className="slot p1">
+              <span className="led" aria-hidden="true" />
+              <b>P1</b>
+              <span>{l.share.host}</span>
+            </li>
+            <li className="slot p2">
+              <span className="led" aria-hidden="true" />
+              <b>P2</b>
+              <span>
+                Mira <em>{l.share.p2}</em>
+              </span>
+            </li>
+            <li className="slot p3">
+              <span className="led" aria-hidden="true" />
+              <b>P3</b>
+              <span>
+                Sol <em>{l.share.p3}</em>
+              </span>
+            </li>
+            <li className="slot p4 empty">
+              <span className="led" aria-hidden="true" />
+              <b>P4</b>
+              <span>{l.share.p4}</span>
+            </li>
+          </ol>
+          <ul className="points">
+            {l.share.points.map(([title, detail]) => (
+              <li key={title}>
+                <h3>{title}</h3>
+                <p>{detail}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="share-art" data-reveal>
+          <div className="share-frames">
+            <BrowserFrame className="share-viewer">
+              <Shot name="share-world" alt={l.share.worldAlt} sizes="(max-width: 760px) 92vw, 600px" />
+            </BrowserFrame>
+            <MacFrame className="share-host">
+              <Shot name="share-host" alt={l.share.hostAlt} sizes="(max-width: 760px) 70vw, 380px" />
+            </MacFrame>
+            <figure className="share-coop">
+              <Shot name="share-coop" alt={l.share.coopAlt} sizes="(max-width: 760px) 44vw, 240px" />
+            </figure>
+          </div>
+          <p className="proof">
+            {l.share.proof} <Link href="/together#share">{l.share.proofMore}</Link>
+          </p>
+        </div>
+      </section>
+
+      <section className="l-sec l-phone">
+        <div className="phone-art" data-reveal>
+          <PhoneFrame className="pad-phone">
+            <Shot name="phone-pad" alt={l.phone.padAlt} sizes="(max-width: 760px) 92vw, 560px" />
+          </PhoneFrame>
+          <figure className="device plain live-shot">
+            <div className="screen">
+              <Shot name="phone-live-silksong" alt={l.phone.liveAlt} sizes="(max-width: 760px) 60vw, 340px" />
+            </div>
+          </figure>
+        </div>
+        <div className="sec-text" data-reveal>
+          <p className="kicker">{l.phone.kicker}</p>
+          <h2 className="h-section">{l.phone.title}</h2>
+          <p className="s-lead">{l.phone.lead}</p>
+          <ul className="feature-chips">
+            {l.phone.chips.map((chip) => (
+              <li key={chip}>{chip}</li>
+            ))}
+          </ul>
+          <Link href="/phone" className="text-link">
+            {l.phone.more}
+            <Arrow />
+          </Link>
+        </div>
+      </section>
+
+      <section className="l-sec l-social">
+        <div className="sec-head" data-reveal>
+          <p className="kicker">{l.social.kicker}</p>
+          <h2 className="h-section">{l.social.title}</h2>
+          <p className="s-lead">{l.social.lead}</p>
+        </div>
+        <div className="bento" data-reveal>
+          <MacFrame className="b-main">
+            <Shot name="mac-party" alt={l.social.partyAlt} sizes="(max-width: 760px) 92vw, 680px" />
+          </MacFrame>
+          <PhoneFrame className="b-side">
+            <Shot name="phone-messages" alt={l.social.messagesAlt} sizes="(max-width: 760px) 92vw, 380px" />
+          </PhoneFrame>
+        </div>
+        <ul className="cards four" data-reveal>
+          {l.social.cards.map(([title, detail]) => (
+            <li key={title}>
+              <h3>{title}</h3>
+              <p>{detail}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="l-sec l-find">
+        <div className="sec-head row" data-reveal>
+          <div>
+            <p className="kicker">{l.find.kicker}</p>
+            <h2 className="h-section">{l.find.title}</h2>
+          </div>
+          <Link href="/find" className="text-link">
+            {l.find.cta}
+            <Arrow />
+          </Link>
+        </div>
+        <ul className="cards three numbered" data-reveal>
+          {l.find.cards.map(([title, detail], index) => (
+            <li key={title}>
+              <span className="num">{String(index + 1).padStart(2, "0")}</span>
+              <h3>{title}</h3>
+              <p>{detail}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="l-sec l-progress">
+        <div className="sec-head" data-reveal>
+          <p className="kicker">{l.progress.kicker}</p>
+          <h2 className="h-section">{l.progress.title}</h2>
+          <p className="s-lead">{l.progress.lead}</p>
+        </div>
+        <div className="progress-art" data-reveal>
+          <MacFrame className="pr-main">
+            <Shot name="mac-profile" alt={l.progress.profileAlt} sizes="(max-width: 760px) 92vw, 700px" />
+          </MacFrame>
+          <div className="pr-side">
+            <MacFrame>
+              <Shot name="mac-leaderboard" alt={l.progress.boardAlt} sizes="(max-width: 760px) 92vw, 360px" />
+            </MacFrame>
+            <PhoneFrame>
+              <Shot name="phone-feed" alt={l.progress.feedAlt} sizes="(max-width: 760px) 92vw, 360px" />
+            </PhoneFrame>
+          </div>
+        </div>
+        <ul className="cards four" data-reveal>
+          {l.progress.cards.map(([title, detail]) => (
+            <li key={title}>
+              <h3>{title}</h3>
+              <p>{detail}</p>
+            </li>
+          ))}
+        </ul>
+        <p className="fine-note">{s.demoPeople}</p>
+      </section>
+
+      <section className="l-sec l-duo">
+        <article className="duo-card themes" data-reveal>
+          <div className="duo-text">
+            <p className="kicker">{l.themes.kicker}</p>
+            <h2 className="h-card">{l.themes.title}</h2>
+            <p>{l.themes.lead}</p>
+            <Link href="/themes" className="text-link">
+              {l.themes.cta}
+              <Arrow />
+            </Link>
+          </div>
+          <div className="duo-shot">
+            <Shot name="mac-hub" alt={l.themes.alt} sizes="(max-width: 760px) 92vw, 520px" />
+          </div>
+        </article>
+        <article className="duo-card framegen" data-reveal>
+          <div className="duo-text">
+            <p className="kicker">
+              {l.framegen.kicker}
+              <span className="chip-tag experimental">{s.experimental}</span>
+            </p>
+            <h2 className="h-card">{l.framegen.title}</h2>
+            <p>{l.framegen.lead}</p>
+          </div>
+          <div className="frames" aria-hidden="true">
+            <div className="frame-row">
+              <span className="frame-label">60 · {l.framegen.from}</span>
+              <div className="ticks">
+                {Array.from({ length: 16 }, (_, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a fixed row of marks
+                  <i key={i} className={i % 2 ? "gap" : ""} style={{ "--i": i } as CSSProperties} />
+                ))}
+              </div>
+            </div>
+            <div className="frame-row">
+              <span className="frame-label">120 · {l.framegen.to}</span>
+              <div className="ticks">
+                {Array.from({ length: 16 }, (_, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a fixed row of marks
+                  <i key={i} className={i % 2 ? "made" : ""} style={{ "--i": i } as CSSProperties} />
+                ))}
+              </div>
+            </div>
+            <p className="frame-legend">
+              <span>
+                <i className="sw game" />
+                {l.framegen.legendGame}
+              </span>
+              <span>
+                <i className="sw made" />
+                {l.framegen.legendMade}
+              </span>
+            </p>
+          </div>
+        </article>
+      </section>
+
+      <section className="l-sec l-platforms" id="platforms">
+        <div className="sec-head" data-reveal>
+          <p className="kicker">{l.platforms.kicker}</p>
+          <h2 className="h-section">{l.platforms.title}</h2>
+          <p className="s-lead">{l.platforms.lead}</p>
+        </div>
+        <div className="plat-grid">
+          {platformOrder.map((p) => (
+            <PlatformCard
+              key={p}
+              platform={p}
+              releases={releases}
+              s={s}
+              language={language}
+              current={p === platform}
+            />
+          ))}
+          <article className="plat-card web" data-reveal>
+            <header>
+              <PlatformIcon platform="web" />
+              <div>
+                <h3>{l.platforms.web}</h3>
+                <Link href="/together" className="plat-product">
+                  {l.platforms.webProduct}
+                </Link>
+              </div>
+            </header>
+            <p className="plat-req">{l.platforms.webReq}</p>
+            <ul className="plat-files">
+              <li>
+                <Link href="/login" className="file-link">
+                  <span>{s.nav.createAccount}</span>
+                </Link>
+              </li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section className="l-sec l-open">
+        <div className="sec-text" data-reveal>
+          <p className="kicker">{l.open.kicker}</p>
+          <h2 className="h-section">{l.open.title}</h2>
+          <p className="s-lead">{l.open.lead}</p>
+          <ul className="repos">
+            {l.open.repos.map(([name, repo, license, what]) => (
+              <li key={repo}>
+                <a href={`https://github.com/${repo}`}>
+                  <b>{name}</b>
+                  <span className="lic">{license}</span>
+                  <span className="what">{what}</span>
+                  <Arrow />
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="fine-note">
+            {l.open.built.split("{link}")[0]}
+            <a href="https://github.com/boykopovar/AnyPS5">boykopovar/AnyPS5</a>
+            {l.open.built.split("{link}")[1]}
+          </p>
+        </div>
+        <div className="terminal" data-reveal>
+          <div className="chrome" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <span>deploy</span>
+          </div>
+          <pre>
+            <code>
+              <span className="c"># {l.open.guide}</span>
+              {"\n"}
+              <span className="p">$</span> git clone https://github.com/utkuhalis/AnyTogether.git{"\n"}
+              <span className="p">$</span> cd AnyTogether/deploy && cp .env.example .env{"\n"}
+              <span className="p">$</span> docker compose up -d --build{"\n"}
+              <span className="ok">✓</span> caddy · web · api · realtime · postgres · valkey
+            </code>
+          </pre>
+          <a
+            href="https://github.com/utkuhalis/AnyTogether/blob/main/docs/self-hosting.md"
+            className="text-link"
+          >
+            {l.open.guide}
+            <Arrow />
+          </a>
+        </div>
+      </section>
+
+      <section className="l-sec l-rules" data-reveal>
+        <p className="kicker">{l.rules.kicker}</p>
+        <h2 className="h-section">{l.rules.title}</h2>
+        <ol className="rules">
+          {l.rules.points.map(([title, detail]) => (
+            <li key={title}>
+              <h3>{title}</h3>
+              <p>{detail}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="l-final" data-reveal>
+        <h2>{l.final.title}</h2>
+        <p>{l.final.lead}</p>
+        <div className="cta-row center">
+          <DownloadCta platform={platform} releases={releases} s={s} language={language} />
+          <Link href="/login" className="cta ghost">
+            {s.nav.createAccount}
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}

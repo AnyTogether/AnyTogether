@@ -1,18 +1,20 @@
 import { Avatar } from "@/components/Avatar";
 import { CallProvider } from "@/components/Calls";
-import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { LiveProvider } from "@/components/Live";
 import { Mark } from "@/components/Mark";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ShareInvites } from "@/components/ShareInvites";
 import { UnreadBadge } from "@/components/UnreadBadge";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { strings } from "@/lib/i18n";
 import { shareInviteStrings } from "@/lib/i18n-share";
+import { siteStrings } from "@/lib/i18n-site";
 import { callStrings } from "@/lib/i18n-social";
 import { fill } from "@/lib/people";
 import { apiJson, currentUser, incomingRequests } from "@/lib/session";
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import "./globals.css";
@@ -22,6 +24,7 @@ import "./share.css";
 import "./notify.css";
 import "./hub.css";
 import "./discover.css";
+import "./site.css";
 
 const display = Space_Grotesk({
   subsets: ["latin", "latin-ext"],
@@ -34,10 +37,23 @@ const mono = JetBrains_Mono({
   variable: "--font-mono",
 });
 
-export const metadata: Metadata = {
-  title: "AnyTogether",
-  description: "Profiles, trophies, parties, voice chat and downloads for AnyPS5.",
-};
+const description =
+  "Play the PS5 games you own on your Mac, your PC and with friends: AnyPS5 for Mac, Windows and Linux, your phone as a DualSense, and AnyTogether online.";
+
+/** The site's address as the visitor reached it (any self-hosted AnyTogether too), so shared links
+ *  carry full URLs to their preview pictures. */
+export async function generateMetadata(): Promise<Metadata> {
+  const incoming = await headers();
+  const host = incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "localhost:3000";
+  const proto = incoming.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return {
+    metadataBase: new URL(`${proto}://${host}`),
+    title: "AnyTogether",
+    description,
+    openGraph: { siteName: "AnyTogether", type: "website", title: "AnyTogether", description },
+    twitter: { card: "summary_large_image", title: "AnyTogether", description },
+  };
+}
 
 export const viewport: Viewport = { themeColor: "#07080c" };
 
@@ -49,6 +65,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     apiJson<{ messages: number }>("/me/conversations/unread"),
     apiJson<{ unread: number }>("/me/notifications/unread"),
   ]);
+  const site = siteStrings(texts.language);
   const page = (
     <main>
       <header className="in">
@@ -132,37 +149,42 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               </form>
             </nav>
           ) : (
-            <>
-              <span className="tag status">
-                <i className="dot" />
-                {texts.inDevelopment}
-              </span>
-              <Link href="/login" className="pill">
-                {texts.signIn}
+            <nav className="side visitor" aria-label={site.nav.label}>
+              <ul className="site-nav">
+                <li>
+                  <Link href="/mac">{site.nav.mac}</Link>
+                </li>
+                <li>
+                  <Link href="/pc">{site.nav.pcShort}</Link>
+                </li>
+                <li>
+                  <Link href="/phone">{site.nav.phone}</Link>
+                </li>
+                <li>
+                  <Link href="/together">{site.nav.together}</Link>
+                </li>
+              </ul>
+              <Link href="/download" className="pill accent">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+                </svg>
+                {site.nav.download}
               </Link>
-            </>
+              <Link href="/login" className="pill">
+                {site.nav.signIn}
+              </Link>
+            </nav>
           )}
         </div>
       </header>
       {children}
-      <footer className="in d4">
-        <div className="foot-start">
-          <span>&copy; 2026 AnyTogether</span>
-          <nav className="foot-links" aria-label="AnyTogether">
-            <Link href="/themes">{texts.themes}</Link>
-            <Link href="/compatibility">{texts.compatibility}</Link>
-            <Link href="/download">{texts.downloads}</Link>
-          </nav>
-        </div>
-        <div className="foot-end">
-          <span>
-            {texts.madeBy.split("{link}")[0]}
-            <a href="https://kodla.agency">kodla.agency</a>
-            {texts.madeBy.split("{link}")[1]}
-          </span>
-          <LanguageSwitch current={texts.language} label={texts.languageLabel} />
-        </div>
-      </footer>
+      <SiteFooter
+        s={site}
+        signedIn={!!user}
+        language={texts.language}
+        languageLabel={texts.languageLabel}
+        madeBy={texts.madeBy}
+      />
     </main>
   );
   return (

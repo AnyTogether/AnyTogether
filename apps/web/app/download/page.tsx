@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Download · AnyTogether",
   description:
-    "AnyPS5 for Mac, Windows and Linux, and the phone controller, from each project's latest release.",
+    "AnyPS5 for Mac, Windows and Linux, and the phone controller for iPhone and Android, from each project's latest release.",
 };
 
 interface Asset {
@@ -164,7 +164,6 @@ export default async function Download() {
             <h3>{texts.desktopTitle}</h3>
             <span className="meta">{texts.desktopSub}</span>
           </div>
-          {!releases?.desktop && <span className="tag soon">{texts.comingSoon}</span>}
         </header>
         {releases?.desktop ? (
           <>
@@ -185,12 +184,7 @@ export default async function Download() {
             </ul>
           </>
         ) : (
-          <>
-            <p className="hint product-soon">{texts.desktopSoon}</p>
-            <a href="https://github.com/utkuhalis/AnyPS5-Desktop" className="pill">
-              {texts.watchRepo}
-            </a>
-          </>
+          <GitHubOnly repo="utkuhalis/AnyPS5-Desktop" texts={texts} />
         )}
       </article>
       <p className="hint-line fine in d4">{texts.onlyOurs}</p>
