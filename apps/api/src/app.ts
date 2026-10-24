@@ -30,6 +30,7 @@ import { type ClientIpHeader, type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
 import { releaseRoutes } from "./releases.js";
 import { sharePlayRoutes } from "./sharePlays.js";
+import { statsRoutes } from "./stats.js";
 import type { BlobStore } from "./storage.js";
 import { isThemeUpload, themeRoutes } from "./themes.js";
 import type { TokenSigner } from "./tokens.js";
@@ -104,10 +105,11 @@ export function createApp(deps: Deps) {
 
   // Before the signed-in routes: avatars are served to anyone.
   v1.route("/", avatarRoutes(deps));
-  // The Theme Hub, the compatibility list and downloads are open to anyone too.
+  // The Theme Hub, the compatibility list, downloads and the front page's totals are open to anyone too.
   v1.route("/", themeRoutes(deps));
   v1.route("/", compatRoutes(deps));
   v1.route("/", releaseRoutes(deps));
+  v1.route("/", statsRoutes(deps));
   v1.route("/", profileRoutes(deps));
   v1.route("/", accountRoutes(deps));
   const notes = notifier(deps);
