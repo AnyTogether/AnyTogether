@@ -40,6 +40,46 @@ describe("email codes", () => {
     expect(locked.body.code).toBe("code_locked");
   });
 
+  it("counts wrong codes sent at once: never more than ten tries for one code", async () => {
+    await h.close();
+    h = await harness({ limits: { signIn: { max: 1000, seconds: 900 } } });
+    await h.call("POST", "/api/v1/auth/email/start", { email: "race@example.com" });
+    const right = h.mailer.lastCode("race@example.com");
+    const wrongs = Array.from({ length: 40 }, (_, i) =>
+      String((Number(right) + 1 + i) % 1_000_000).padStart(6, "0"),
+    );
+    const answers = await Promise.all(
+      wrongs.map((code) => h.call("POST", "/api/v1/auth/email/verify", { email: "race@example.com", code })),
+    );
+    expect(answers.filter((a) => a.body.code === "code_invalid").length).toBeLessThanOrEqual(10);
+    const locked = await h.call("POST", "/api/v1/auth/email/verify", {
+      email: "race@example.com",
+      code: right,
+    });
+    expect(locked.body.code).toBe("code_locked");
+  });
+
+  it("stops trying codes for an address after thirty wrong ones in a day, whatever new codes come", async () => {
+    await h.close();
+    h = await harness({ limits: { signIn: { max: 1000, seconds: 900 } } });
+    const email = "target@example.com";
+    for (let round = 0; round < 3; round++) {
+      await h.call("POST", "/api/v1/auth/email/start", { email });
+      const right = h.mailer.lastCode(email);
+      const wrong = right === "000000" ? "111111" : "000000";
+      for (let i = 0; i < 10; i++) await h.call("POST", "/api/v1/auth/email/verify", { email, code: wrong });
+    }
+    await h.call("POST", "/api/v1/auth/email/start", { email });
+    const later = await h.call("POST", "/api/v1/auth/email/verify", {
+      email,
+      code: h.mailer.lastCode(email),
+    });
+    expect(later.status).toBe(400);
+    expect(later.body.code).toBe("code_locked");
+    // Another address is not held up.
+    expect((await emailSignIn("other@example.com")).status).toBe(200);
+  });
+
   it("signs in with the mail's link too", async () => {
     await h.call("POST", "/api/v1/auth/email/start", { email: "b@example.com" });
     const link = h.mailer.lastLink("b@example.com");

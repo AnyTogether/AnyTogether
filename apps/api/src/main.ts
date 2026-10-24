@@ -38,4 +38,7 @@ setTimeout(purge, 60_000);
 setInterval(purge, 3_600_000);
 
 // Devices whose realtime socket went away are taken out of their calls and share plays.
-setInterval(() => app.sweepDepartures().catch((error) => console.error("departure sweep failed", error)), 5_000);
+setInterval(
+  () => app.sweepDepartures().catch((error) => console.error("departure sweep failed", error)),
+  5_000,
+);

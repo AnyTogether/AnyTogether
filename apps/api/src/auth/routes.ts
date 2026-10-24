@@ -11,7 +11,7 @@ import {
   TokenRequest,
   providers,
 } from "@anytogether/shared";
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7";
 import { revokeAll } from "../account.js";
@@ -30,6 +30,10 @@ const minutes = (count: number) => new Date(Date.now() + count * 60_000);
 const same = (a: Buffer | null, b: Buffer) => a !== null && a.length === b.length && timingSafeEqual(a, b);
 /** No look-alikes (0/O, 1/I): read off a screen and typed on a phone. */
 const codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+/** Tries for one mailed code, and wrong codes for one address in a day over all its codes. */
+const maxCodeAttempts = 10;
+const maxDailyFailures = 30;
+const failuresKey = (address: string) => `signin-failures:${hash(address).toString("hex")}`;
 
 export function authRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
@@ -91,16 +95,23 @@ export function authRoutes(deps: Deps) {
     )[0];
     if (!request || request.expiresAt < new Date())
       throw new HttpError(400, ErrorCode.codeExpired, "This code has expired; ask for a new one");
-    if (request.attempts >= 10)
-      throw new HttpError(400, ErrorCode.codeLocked, "Too many wrong codes; ask for a new one");
+    const locked = () => new HttpError(400, ErrorCode.codeLocked, "Too many wrong codes; ask for a new one");
+    // Wrong codes for one address over a day, whichever code they were for: a new code does not
+    // bring new guesses.
+    const failures = failuresKey(address);
+    if (Number(await deps.valkey.get(failures)) >= maxDailyFailures) throw locked();
+    // Each try takes one of the code's ten before it is checked, so tries sent at once count too.
+    const counted = await deps.db
+      .update(signInRequests)
+      .set({ attempts: sql`${signInRequests.attempts} + 1` })
+      .where(and(eq(signInRequests.id, request.id), lt(signInRequests.attempts, maxCodeAttempts)))
+      .returning({ id: signInRequests.id });
+    if (!counted[0]) throw locked();
     const right = input.code
       ? same(request.codeHash, hash(input.code))
       : same(request.linkHash, hash(input.link ?? ""));
     if (!right) {
-      await deps.db
-        .update(signInRequests)
-        .set({ attempts: request.attempts + 1 })
-        .where(eq(signInRequests.id, request.id));
+      await deps.valkey.multi().incr(failures).expire(failures, 86_400, "NX").exec();
       throw new HttpError(400, ErrorCode.codeInvalid, "That code is not right");
     }
     const consumed = await deps.db
