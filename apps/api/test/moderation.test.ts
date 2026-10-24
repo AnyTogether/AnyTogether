@@ -28,7 +28,7 @@ describe("reports", () => {
     expect((await report({ targetKind: "user", targetId: utku.id, reason: "spam" })).status).toBe(400);
     expect((await report({ targetKind: "user", targetId: "nobody", reason: "spam" })).status).toBe(404);
     expect((await report({ targetKind: "user", targetId: troll.id, reason: "boring" })).status).toBe(400);
-    expect((await report({ targetKind: "theme", targetId: troll.id, reason: "spam" })).status).toBe(400);
+    expect((await report({ targetKind: "activity", targetId: troll.id, reason: "spam" })).status).toBe(400);
 
     const listed = await admin("reports");
     expect(listed).toContain("harassment");

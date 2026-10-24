@@ -33,6 +33,10 @@ export const ErrorCode = {
   payloadTooLarge: "payload_too_large",
   unsupportedMedia: "unsupported_media_type",
   badImage: "bad_image",
+  /** A theme file that is not a zip with a valid theme.json, or holds something it may not. */
+  badTheme: "bad_theme",
+  /** A theme needs a still: a preview file, one inside the theme, or a background picture. */
+  previewRequired: "preview_required",
   accountBanned: "account_banned",
   /** A passkey's challenge was used already or is too old: ask for a new one. */
   challengeExpired: "challenge_expired",

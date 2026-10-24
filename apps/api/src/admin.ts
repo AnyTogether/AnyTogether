@@ -8,6 +8,7 @@
  *   pnpm --filter @anytogether/api admin grant <@handle|email|id>    (the admin page at /admin)
  *   pnpm --filter @anytogether/api admin revoke <@handle|email|id>
  *   pnpm --filter @anytogether/api admin purge
+ *   pnpm --filter @anytogether/api admin theme <id> hide|show|review
  *
  * In the API's container: node dist/admin.js <the same>. */
 import { accounts, auditLog, connect } from "@anytogether/db";
@@ -17,6 +18,7 @@ import { uuidv7 } from "uuidv7";
 import { purgeDeletedAccounts } from "./account.js";
 import { config } from "./config.js";
 import { ban, findAccount, handleReport, isBanned, listReports, unban } from "./moderation.js";
+import { setThemeStatus } from "./themes.js";
 
 const usage = `usage: admin reports [--all]
        admin report <id> dismiss|action
@@ -25,7 +27,8 @@ const usage = `usage: admin reports [--all]
        admin user <@handle|email|id>
        admin grant <@handle|email|id>
        admin revoke <@handle|email|id>
-       admin purge`;
+       admin purge
+       admin theme <id> hide|show|review`;
 
 /** Runs one command and returns what to print; the tests call it directly. */
 export async function run(args: string[], ctx: Parameters<typeof ban>[0]): Promise<string> {
@@ -46,7 +49,8 @@ export async function run(args: string[], ctx: Parameters<typeof ban>[0]): Promi
             `${r.id}  ${r.createdAt.toISOString().slice(0, 16)}  ${r.status}  ${r.reason}\n` +
             `  ${r.targetKind} ${r.target ? `@${r.target}` : r.targetId} (reported ${r.timesReported}×)` +
             ` by ${r.reporter ? `@${r.reporter}` : "a deleted account"}${r.note ? `\n  “${r.note}”` : ""}` +
-            `${r.targetKind === "message" ? `\n  said: “${said ?? ""}”` : ""}`
+            `${r.targetKind === "message" ? `\n  said: “${said ?? ""}”` : ""}` +
+            `${r.targetKind === "theme" ? `\n  theme: “${(r.snapshot as { name?: string } | null)?.name ?? ""}”` : ""}`
           );
         })
         .join("\n");
@@ -102,6 +106,19 @@ export async function run(args: string[], ctx: Parameters<typeof ban>[0]): Promi
     }
     case "purge":
       return `deleted ${await purgeDeletedAccounts(ctx)} account(s)`;
+    case "theme": {
+      const status =
+        rest[0] === "hide"
+          ? "hidden"
+          : rest[0] === "show"
+            ? "published"
+            : rest[0] === "review"
+              ? "review"
+              : null;
+      if (!target || !status) return usage;
+      const theme = await setThemeStatus(ctx.db, target, status, by);
+      return `theme “${theme.name}” is ${status}`;
+    }
     default:
       return usage;
   }

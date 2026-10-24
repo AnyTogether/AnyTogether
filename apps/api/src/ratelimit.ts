@@ -45,6 +45,10 @@ export const defaultLimits = {
   sharePlay: { max: 60, seconds: 3600 },
   /** Reactions to feed items by one account. */
   reaction: { max: 300, seconds: 3600 },
+  /** Themes shared or updated by one account. */
+  themeUpload: { max: 20, seconds: 86_400 },
+  /** Likes and unlikes of themes by one account. */
+  themeLike: { max: 300, seconds: 3600 },
   /** Gateway tickets for the website, per account (one per socket it opens). */
   realtimeTicket: { max: 60, seconds: 60 },
 };

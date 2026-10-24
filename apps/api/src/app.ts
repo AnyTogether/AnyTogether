@@ -26,6 +26,8 @@ import type { ProviderConfig } from "./providers.js";
 import { type ClientIpHeader, type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
 import { sharePlayRoutes } from "./sharePlays.js";
+import type { BlobStore } from "./storage.js";
+import { isThemeUpload, themeRoutes } from "./themes.js";
 import type { TokenSigner } from "./tokens.js";
 
 export const maxBodyBytes = 8 * 1024 * 1024;
@@ -52,6 +54,8 @@ export interface Deps {
   blockedLinkDomains?: string[];
   /** Web Push with the server's VAPID keys; without it no push notifications are sent. */
   push?: PushSender;
+  /** Where theme files are kept: PostgreSQL when left out. */
+  blobs?: BlobStore;
 }
 
 export function createApp(deps: Deps) {
@@ -79,21 +83,22 @@ export function createApp(deps: Deps) {
   v1.get("/.well-known/jwks.json", async (c) => c.json({ keys: [await deps.tokens.publicJwk()] }));
   // Health checks and the gateway's key fetches above; everything else counts per address.
   v1.use("*", perIp(deps, "ip"));
-  // No request is read into memory past 8 MB (the biggest are trophy sets in many languages).
-  v1.use(
-    "*",
-    bodyLimit({
-      maxSize: maxBodyBytes,
-      onError: () => {
-        throw new HttpError(413, ErrorCode.payloadTooLarge, "The request is too large");
-      },
-    }),
-  );
+  // No request is read into memory past 8 MB (the biggest are trophy sets in many languages),
+  // but a theme file, which has its own limit where it is taken.
+  const capped = bodyLimit({
+    maxSize: maxBodyBytes,
+    onError: () => {
+      throw new HttpError(413, ErrorCode.payloadTooLarge, "The request is too large");
+    },
+  });
+  v1.use("*", (c, next) => (c.req.method === "POST" && isThemeUpload(c.req.path) ? next() : capped(c, next)));
   v1.route("/auth", authRoutes(deps));
   v1.route("/auth", passkeyRoutes(deps));
 
   // Before the signed-in routes: avatars are served to anyone.
   v1.route("/", avatarRoutes(deps));
+  // The Theme Hub is open to anyone too.
+  v1.route("/", themeRoutes(deps));
   v1.route("/", profileRoutes(deps));
   v1.route("/", accountRoutes(deps));
   const notes = notifier(deps);

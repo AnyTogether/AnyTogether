@@ -7,6 +7,7 @@ import {
   messages,
   profiles,
   reports,
+  themes,
 } from "@anytogether/db";
 import { ErrorCode, ReportCreate, presenceKey } from "@anytogether/shared";
 import { and, count, desc, eq, gt, inArray, isNull, or } from "drizzle-orm";
@@ -19,6 +20,7 @@ import { HttpError } from "./errors.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { rateLimiter } from "./ratelimit.js";
+import { reviewIfReported } from "./themes.js";
 import { hash } from "./tokens.js";
 
 type Ctx = { db: Database; valkey: Redis };
@@ -140,8 +142,9 @@ export async function listReports(db: Database, all = false, limit = 50) {
     .where(all ? undefined : eq(reports.status, "open"))
     .orderBy(desc(reports.createdAt))
     .limit(limit);
+  // A message's author, or a theme's maker, as the report's snapshot keeps them.
   const authorOf = (r: (typeof rows)[number]) =>
-    r.targetKind === "message" ? ((r.snapshot as { authorId?: string } | null)?.authorId ?? null) : null;
+    r.targetKind !== "user" ? ((r.snapshot as { authorId?: string } | null)?.authorId ?? null) : null;
   const people = [
     ...new Set(rows.flatMap((r) => [r.reporterId, r.targetKind === "user" ? r.targetId : authorOf(r)])),
   ].filter((id): id is string => Boolean(id && /^[0-9a-f-]{36}$/i.test(id)));
@@ -246,6 +249,15 @@ export function reportRoutes(deps: Deps) {
         createdAt: found.message.createdAt,
       };
     }
+    // A theme: anyone signed in but its maker; its name and version are kept with the report.
+    if (input.targetKind === "theme") {
+      const [found] = /^[0-9a-f-]{36}$/i.test(input.targetId)
+        ? await deps.db.select().from(themes).where(eq(themes.id, input.targetId))
+        : [];
+      if (!found || found.status === "hidden") throw new HttpError(404, ErrorCode.notFound, "No such theme");
+      if (found.makerId === me) throw new HttpError(400, ErrorCode.badRequest, "That is yours");
+      snapshot = { authorId: found.makerId, name: found.name, version: found.version };
+    }
     // One open report per person and target: a second one adds nothing for the moderators.
     const [made] = await deps.db
       .insert(reports)
@@ -260,6 +272,7 @@ export function reportRoutes(deps: Deps) {
       })
       .onConflictDoNothing()
       .returning({ id: reports.id });
+    if (made && input.targetKind === "theme") await reviewIfReported(deps.db, input.targetId);
     return c.json({ received: true }, made ? 201 : 200);
   });
 

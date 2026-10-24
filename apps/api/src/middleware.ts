@@ -32,3 +32,25 @@ export function requireUser(
     await next();
   };
 }
+
+/** For routes anyone may call: a valid access token tells who asks (for "liked", "mine"); a
+ *  missing or bad one is the same as none. */
+export function optionalUser(
+  deps: Pick<Deps, "tokens" | "valkey">,
+): MiddlewareHandler<{ Variables: Partial<AuthVariables> }> {
+  return async (c, next) => {
+    const header = c.req.header("authorization") ?? "";
+    if (header.startsWith("Bearer ") && !c.get("userId")) {
+      try {
+        const claims = await deps.tokens.verify(header.slice(7));
+        if (!(await deps.valkey.exists(revokedKey(claims.sessionId)))) {
+          c.set("userId", claims.userId);
+          c.set("sessionId", claims.sessionId);
+        }
+      } catch {
+        // Signed out, as far as this route cares.
+      }
+    }
+    await next();
+  };
+}

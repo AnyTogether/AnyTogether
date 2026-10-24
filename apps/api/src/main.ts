@@ -7,6 +7,7 @@ import { createApp } from "./app.js";
 import { config } from "./config.js";
 import { mailerFor } from "./mail.js";
 import { pruneNotifications, sendDigests, webPushSender } from "./notifications.js";
+import { sweepThemeFiles } from "./themes.js";
 import { createTokenSigner } from "./tokens.js";
 
 const settings = config();
@@ -37,10 +38,12 @@ const app = createApp({
 });
 serve({ fetch: app.fetch, port: settings.port }, (info) => console.log(`api listening on ${info.port}`));
 
-// Accounts whose 14 days to change their mind are over are deleted, checked every hour.
+// Accounts whose 14 days to change their mind are over are deleted, checked every hour, and the
+// files of their themes after them.
 const purge = () =>
   purgeDeletedAccounts({ db, valkey })
     .then((count) => count && console.log(`deleted ${count} account(s)`))
+    .then(() => sweepThemeFiles({ db, publicUrl: settings.publicUrl }))
     .catch((error) => console.error("purge failed", error));
 setTimeout(purge, 60_000);
 setInterval(purge, 3_600_000);

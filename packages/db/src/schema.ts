@@ -700,3 +700,72 @@ export const pushSubscriptions = pgTable(
   },
   (table) => [index().on(table.accountId), index().on(table.sessionId)],
 );
+
+/** Files kept in PostgreSQL by the default blob store (theme files and their stills), in pieces
+ *  of at most 1 MiB so none is read into memory whole. */
+export const blobs = pgTable(
+  "blobs",
+  {
+    key: text().notNull(),
+    part: integer().notNull(),
+    bytes: bytea().notNull(),
+    createdAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.key, table.part] })],
+);
+
+/** The Theme Hub: themes made in the launcher's Theme Studio and shared. The file, as the Hub
+ *  repacked it, and its stills live in the blob store under themes/<id>/v<version>/. */
+export const themes = pgTable(
+  "themes",
+  {
+    id: uuid().primaryKey(),
+    makerId: uuid().references(() => accounts.id, { onDelete: "cascade" }),
+    /** The id theme.json had when it was first shared, so the maker's next upload of the same
+     *  theme is known as a new version. */
+    sourceId: text(),
+    name: text().notNull(),
+    description: text(),
+    /** published | review | hidden */
+    status: text().notNull().default("published"),
+    version: integer().notNull().default(1),
+    style: integer().notNull().default(0),
+    colors: jsonb().$type<{ deep: string; middle: string; bright: string; accent: string }>().notNull(),
+    /** theme.json as it is in the file people download. */
+    design: jsonb().$type<Record<string, unknown>>().notNull(),
+    /** picture | video, or none. */
+    background: text(),
+    music: boolean().notNull().default(false),
+    size: integer().notNull(),
+    sha256: text().notNull(),
+    downloads: integer().notNull().default(0),
+    likes: integer().notNull().default(0),
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  (table) => [
+    index().on(table.makerId),
+    index("themes_new").on(table.status, table.createdAt.desc()),
+    index("themes_popular").on(table.status, table.downloads.desc()),
+    index("themes_liked").on(table.status, table.likes.desc()),
+    uniqueIndex("theme_source").on(table.makerId, table.sourceId),
+    check("theme_status", sql`${table.status} in ('published', 'review', 'hidden')`),
+    check("theme_background", sql`${table.background} in ('picture', 'video')`),
+    check("theme_name", sql`length(${table.name}) <= 60`),
+    check("theme_description", sql`length(${table.description}) <= 500`),
+  ],
+);
+
+export const themeLikes = pgTable(
+  "theme_likes",
+  {
+    themeId: uuid()
+      .notNull()
+      .references(() => themes.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    createdAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.themeId, table.accountId] }), index().on(table.accountId)],
+);

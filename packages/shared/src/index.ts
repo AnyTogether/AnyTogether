@@ -12,3 +12,4 @@ export * from "./gameSessions.js";
 export * from "./feed.js";
 export * from "./sharePlays.js";
 export * from "./notifications.js";
+export * from "./themes.js";
