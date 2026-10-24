@@ -75,11 +75,28 @@ export function rateLimiter(valkey: Redis, overrides: Partial<Limits> = {}) {
   };
 }
 
-/** The caller's address: Cloudflare's header, then the proxy's (the website passes both on when it
- *  calls the API for a browser), then the socket's. */
-export function clientIp(c: Context) {
-  const forwarded = c.req.header("cf-connecting-ip") ?? c.req.header("x-real-ip");
-  if (forwarded) return forwarded.trim().slice(0, 64);
+/** Which header holds the caller's address, as the proxy in front sets it:
+ *  - "cf-connecting-ip" (the default): Cloudflare's, then X-Real-IP, then the socket's. Only right
+ *    behind Cloudflare, or behind a proxy that drops a CF-Connecting-IP sent by the caller (the
+ *    Caddyfile in deploy/ does).
+ *  - "x-real-ip": the proxy's X-Real-IP, then the socket's; a CF-Connecting-IP is ignored.
+ *  - "socket": the connection's own address (nothing in front). */
+export const clientIpHeaders = ["cf-connecting-ip", "x-real-ip", "socket"] as const;
+export type ClientIpHeader = (typeof clientIpHeaders)[number];
+
+/** The caller's address, from the header `trusted` names (the website passes the browser's
+ *  headers on when it calls the API for it), else the socket's. */
+export function clientIp(c: Context, trusted: ClientIpHeader = "cf-connecting-ip") {
+  const names =
+    trusted === "cf-connecting-ip"
+      ? ["cf-connecting-ip", "x-real-ip"]
+      : trusted === "x-real-ip"
+        ? ["x-real-ip"]
+        : [];
+  for (const name of names) {
+    const value = c.req.header(name)?.trim();
+    if (value) return value.slice(0, 64);
+  }
   try {
     return getConnInfo(c).remote.address ?? "unknown";
   } catch {
@@ -88,10 +105,13 @@ export function clientIp(c: Context) {
 }
 
 /** Counts the request against a per-address limit. */
-export function perIp(valkey: Redis, name: keyof Limits, overrides?: Partial<Limits>): MiddlewareHandler {
-  const limit = rateLimiter(valkey, overrides);
+export function perIp(
+  deps: { valkey: Redis; limits?: Partial<Limits> | undefined; clientIpHeader?: ClientIpHeader | undefined },
+  name: keyof Limits,
+): MiddlewareHandler {
+  const limit = rateLimiter(deps.valkey, deps.limits);
   return async (c, next) => {
-    await limit(name, clientIp(c));
+    await limit(name, clientIp(c, deps.clientIpHeader));
     await next();
   };
 }

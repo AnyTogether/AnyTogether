@@ -21,7 +21,7 @@ import { reportRoutes } from "./moderation.js";
 import { partyRoutes, partyService } from "./parties.js";
 import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
-import { type Limits, perIp } from "./ratelimit.js";
+import { type ClientIpHeader, type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
 import { sharePlayRoutes } from "./sharePlays.js";
 import type { TokenSigner } from "./tokens.js";
@@ -42,6 +42,8 @@ export interface Deps {
   limits?: Partial<Limits>;
   /** STUN/TURN for calls; without it calls get no ICE servers beyond what the client has. */
   turn?: { secret: string; urls: string[] };
+  /** Which header carries the caller's address for per-address limits (see ratelimit.ts). */
+  clientIpHeader?: ClientIpHeader;
   /** Hosts a game's icon may come from (subdomains included); none when left out. */
   gameIconHosts?: string[];
   /** Domains messages may not link to (none when left out). */
@@ -72,7 +74,7 @@ export function createApp(deps: Deps) {
   v1.get("/health", (c) => c.json({ ok: true }));
   v1.get("/.well-known/jwks.json", async (c) => c.json({ keys: [await deps.tokens.publicJwk()] }));
   // Health checks and the gateway's key fetches above; everything else counts per address.
-  v1.use("*", perIp(deps.valkey, "ip", deps.limits));
+  v1.use("*", perIp(deps, "ip"));
   // No request is read into memory past 8 MB (the biggest are trophy sets in many languages).
   v1.use(
     "*",

@@ -1,6 +1,7 @@
 import { createRemoteJWKSet } from "jose";
 import { defaultBlockedLinkDomains } from "./links.js";
 import type { ProviderConfig } from "./providers.js";
+import { type ClientIpHeader, clientIpHeaders } from "./ratelimit.js";
 
 const list = (value: string | undefined) =>
   (value ?? "")
@@ -21,6 +22,9 @@ export function config(env = process.env) {
     },
     discord: { clientId: env.DISCORD_CLIENT_ID ?? "", clientSecret: env.DISCORD_CLIENT_SECRET ?? "", fetch },
   };
+  const ipHeader = (env.CLIENT_IP_HEADER ?? "cf-connecting-ip").toLowerCase();
+  if (!clientIpHeaders.includes(ipHeader as ClientIpHeader))
+    throw new Error(`CLIENT_IP_HEADER must be one of ${clientIpHeaders.join(", ")}`);
   return {
     port: Number(env.PORT ?? 8080),
     databaseUrl: env.DATABASE_URL ?? "postgres://anytogether:anytogether@127.0.0.1:54329/anytogether",
@@ -38,6 +42,8 @@ export function config(env = process.env) {
     providers,
     /** TURN REST: the secret shared with the relay, and the STUN/TURN URLs handed to clients. */
     turn: { secret: env.TURN_SECRET ?? "", urls: list(env.TURN_URLS) },
+    /** Where the caller's address is read from for per-address limits (CLIENT_IP_HEADER). */
+    clientIpHeader: ipHeader as ClientIpHeader,
     /** Hosts game icons may come from (GAME_ICON_HOSTS); launchers load them for everyone who
      *  sees the game, so none are kept unless set. */
     gameIconHosts: list(env.GAME_ICON_HOSTS).map((host) => host.toLowerCase()),

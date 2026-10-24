@@ -293,6 +293,21 @@ describe("the service", () => {
     expect((await h.call("GET", "/api/v1/health")).body).toEqual({ ok: true });
   });
 
+  it("counts sign-ins per X-Real-IP when told to, whatever CF-Connecting-IP the caller sends", async () => {
+    await h.close();
+    h = await harness({ clientIpHeader: "x-real-ip", limits: { signIn: { max: 3, seconds: 900 } } });
+    const start = (cf: string, real = "198.51.100.7") =>
+      h.app.request("/api/v1/auth/email/start", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": cf, "x-real-ip": real },
+        body: JSON.stringify({ email: "spoof@example.com" }),
+      });
+    for (let i = 0; i < 3; i++) expect((await start(`203.0.113.${i}`)).status).toBe(202);
+    expect((await start("203.0.113.99")).status).toBe(429);
+    // Another real address has its own count.
+    expect((await start("203.0.113.100", "198.51.100.8")).status).toBe(202);
+  });
+
   it("refuses a request body over 8 MB before reading it all", async () => {
     const huge = JSON.stringify({ email: "a@example.com", padding: "x".repeat(9 * 1024 * 1024) });
     const response = await h.app.request("/api/v1/auth/email/start", {

@@ -59,6 +59,7 @@ services:
       TURN_SECRET: ${TURN_SECRET:-}
       TURN_URLS: ${TURN_URLS:-}
       GAME_ICON_HOSTS: ${GAME_ICON_HOSTS:-}
+      CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-cf-connecting-ip}
     depends_on:
       postgres: { condition: service_healthy }
       valkey: { condition: service_healthy }

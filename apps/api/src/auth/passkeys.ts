@@ -56,8 +56,8 @@ export function passkeyRoutes(deps: Deps) {
   const limit = rateLimiter(deps.valkey, deps.limits);
   // Asking for a challenge is cheap and the sign-in page does it on every visit; trying one counts
   // as a sign-in attempt.
-  app.post("/passkey/start", perIp(deps.valkey, "passkeyChallenge", deps.limits));
-  app.post("/passkey/finish", perIp(deps.valkey, "signIn", deps.limits));
+  app.post("/passkey/start", perIp(deps, "passkeyChallenge"));
+  app.post("/passkey/finish", perIp(deps, "signIn"));
 
   app.post("/passkey/start", async (c) => {
     const options = await generateAuthenticationOptions({

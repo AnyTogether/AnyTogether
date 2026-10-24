@@ -38,10 +38,10 @@ const failuresKey = (address: string) => `signin-failures:${hash(address).toStri
 export function authRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   const ctx = { db: deps.db, valkey: deps.valkey, tokens: deps.tokens };
-  const signIn = perIp(deps.valkey, "signIn", deps.limits);
+  const signIn = perIp(deps, "signIn");
   for (const path of ["/email/start", "/email/verify", "/oidc/*", "/handoff/start", "/device"])
     app.post(path, signIn);
-  app.post("/token", perIp(deps.valkey, "token", deps.limits));
+  app.post("/token", perIp(deps, "token"));
 
   app.post("/email/start", async (c) => {
     const { email } = await body(c, EmailStart);
