@@ -3,9 +3,11 @@ import { Hono } from "hono";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 
-/** AnyPS5's downloads, from each project's latest GitHub release (the release stays the source).
- *  Answers are kept in Valkey for ten minutes, and the last good one for a week in case GitHub
- *  is down or the address runs out of its 60 calls an hour. */
+/** AnyPS5's downloads, from each project's latest GitHub release (the release stays the source),
+ *  the release history for the changelog, and the repositories' numbers for the projects page.
+ *  Answers are kept in Valkey (ten minutes for the latest release, a quarter of an hour for the
+ *  history, an hour for the numbers), and the last good one for a week in case GitHub is down or
+ *  the address runs out of its 60 calls an hour: together they take about 24 calls an hour. */
 
 export const releaseRepos = {
   /** The macOS launcher, with the phone app's APK and IPA beside it. */
@@ -15,11 +17,21 @@ export const releaseRepos = {
 } as const;
 type Product = keyof typeof releaseRepos;
 
+/** The repositories the projects page lists, the upstream engine last. */
+export const projectRepos = [
+  "utkuhalis/AnyPS5-ARM",
+  "utkuhalis/AnyPS5-Desktop",
+  "utkuhalis/AnyTogether",
+  "boykopovar/AnyPS5",
+] as const;
+
 export interface ReleaseAsset {
   name: string;
   size: number;
   url: string;
   sha256: string | null;
+  /** When the file was last uploaded, as GitHub says. */
+  updatedAt: string;
 }
 
 export interface Release {
@@ -30,10 +42,24 @@ export interface Release {
   publishedAt: string;
   url: string;
   notes: string;
+  prerelease: boolean;
   assets: ReleaseAsset[];
 }
 
+export interface RepoStats {
+  repo: string;
+  description: string;
+  stars: number;
+  forks: number;
+  openIssues: number;
+  license: string | null;
+  pushedAt: string;
+  url: string;
+}
+
 const fresh = 600;
+const freshHistory = 900;
+const freshRepo = 3600;
 const stale = 7 * 86_400;
 /** The main file of each product, by name. */
 const mainAsset: Record<string, (name: string) => boolean> = {
@@ -44,7 +70,7 @@ const mainAsset: Record<string, (name: string) => boolean> = {
   desktop: (name) => /\.(zip|exe|msi|AppImage|tar\.gz)$/i.test(name),
 };
 
-function parse(repo: string, raw: unknown): Release | null {
+function parse(repo: string, raw: unknown, notesUpTo = 8000): Release | null {
   const r = raw as {
     tag_name?: string;
     name?: string;
@@ -52,7 +78,14 @@ function parse(repo: string, raw: unknown): Release | null {
     html_url?: string;
     body?: string;
     draft?: boolean;
-    assets?: { name?: string; size?: number; browser_download_url?: string; digest?: string | null }[];
+    prerelease?: boolean;
+    assets?: {
+      name?: string;
+      size?: number;
+      browser_download_url?: string;
+      digest?: string | null;
+      updated_at?: string;
+    }[];
   };
   if (!r?.tag_name || r.draft) return null;
   return {
@@ -63,7 +96,8 @@ function parse(repo: string, raw: unknown): Release | null {
     name: r.name || r.tag_name,
     publishedAt: r.published_at ?? "",
     url: r.html_url ?? `https://github.com/${repo}/releases`,
-    notes: (r.body ?? "").slice(0, 8000),
+    notes: (r.body ?? "").slice(0, notesUpTo),
+    prerelease: !!r.prerelease,
     assets: (r.assets ?? [])
       .filter((a) => a.name && a.browser_download_url?.startsWith("https://github.com/"))
       .map((a) => ({
@@ -71,7 +105,33 @@ function parse(repo: string, raw: unknown): Release | null {
         size: a.size ?? 0,
         url: a.browser_download_url as string,
         sha256: a.digest?.startsWith("sha256:") ? a.digest.slice(7) : null,
+        updatedAt: a.updated_at ?? "",
       })),
+  };
+}
+
+function parseRepo(repo: string, raw: unknown): RepoStats | null {
+  const r = raw as {
+    full_name?: string;
+    description?: string | null;
+    stargazers_count?: number;
+    forks_count?: number;
+    open_issues_count?: number;
+    license?: { spdx_id?: string | null } | null;
+    pushed_at?: string;
+    html_url?: string;
+  };
+  if (!r?.full_name) return null;
+  const license = r.license?.spdx_id;
+  return {
+    repo,
+    description: (r.description ?? "").slice(0, 300),
+    stars: r.stargazers_count ?? 0,
+    forks: r.forks_count ?? 0,
+    openIssues: r.open_issues_count ?? 0,
+    license: license && license !== "NOASSERTION" ? license : null,
+    pushedAt: r.pushed_at ?? "",
+    url: `https://github.com/${repo}`,
   };
 }
 
@@ -79,13 +139,18 @@ export function releaseRoutes(deps: Deps) {
   const app = new Hono();
   const fetcher = deps.githubFetch ?? fetch;
 
-  /** The latest release of a repository, or null when it has none yet. */
-  const latest = async (repo: string): Promise<Release | null> => {
-    const key = `releases:${repo}`;
-    const cached = await deps.valkey.get(key);
-    if (cached) return JSON.parse(cached);
+  /** A GitHub answer, parsed and kept: null when GitHub has no such thing (404). Fails only when
+   *  GitHub fails and no earlier answer is kept. */
+  const cached = async <T>(
+    key: string,
+    path: string,
+    read: (raw: unknown) => T | null,
+    keepFor: number,
+  ): Promise<T | null> => {
+    const kept = await deps.valkey.get(key);
+    if (kept) return JSON.parse(kept);
     try {
-      const response = await fetcher(`https://api.github.com/repos/${repo}/releases/latest`, {
+      const response = await fetcher(`https://api.github.com/${path}`, {
         headers: {
           accept: "application/vnd.github+json",
           "user-agent": "AnyTogether",
@@ -94,14 +159,13 @@ export function releaseRoutes(deps: Deps) {
         signal: AbortSignal.timeout(8000),
       });
       if (response.status === 404) {
-        await deps.valkey.set(key, "null", "EX", fresh);
+        await deps.valkey.set(key, "null", "EX", keepFor);
         return null;
       }
       if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
-      const release = parse(repo, await response.json());
-      const text = JSON.stringify(release);
-      await deps.valkey.multi().set(key, text, "EX", fresh).set(`${key}:stale`, text, "EX", stale).exec();
-      return release;
+      const text = JSON.stringify(read(await response.json()));
+      await deps.valkey.multi().set(key, text, "EX", keepFor).set(`${key}:stale`, text, "EX", stale).exec();
+      return JSON.parse(text);
     } catch (error) {
       const old = await deps.valkey.get(`${key}:stale`);
       if (old) {
@@ -109,10 +173,26 @@ export function releaseRoutes(deps: Deps) {
         await deps.valkey.set(key, old, "EX", 60);
         return JSON.parse(old);
       }
-      console.error(`release check for ${repo} failed`, error);
-      throw new HttpError(503, ErrorCode.internal, "Releases are not available right now");
+      console.error(`GitHub ${path} failed`, error);
+      throw new HttpError(503, ErrorCode.internal, "GitHub is not available right now");
     }
   };
+
+  /** The latest release of a repository, or null when it has none yet. */
+  const latest = (repo: string) =>
+    cached(`releases:${repo}`, `repos/${repo}/releases/latest`, (raw) => parse(repo, raw), fresh);
+
+  /** A repository's releases, newest first, drafts left out; null when GitHub cannot say. */
+  const history = (repo: string) =>
+    cached(
+      `releases:history:${repo}`,
+      `repos/${repo}/releases?per_page=50`,
+      (raw) =>
+        (Array.isArray(raw) ? raw : [])
+          .map((r) => parse(repo, r, 20_000))
+          .filter((r): r is Release => r !== null),
+      freshHistory,
+    ).catch(() => null);
 
   app.get("/releases", async (c) => {
     const [macos, desktop] = await Promise.all([
@@ -145,6 +225,26 @@ export function releaseRoutes(deps: Deps) {
       size: asset.size,
       sha256: asset.sha256,
     });
+  });
+
+  /** Every release of both projects, newest first, for the changelog. A project GitHub cannot
+   *  tell about right now is null. */
+  app.get("/releases/history", async (c) => {
+    const [macos, desktop] = await Promise.all([history(releaseRepos.macos), history(releaseRepos.desktop)]);
+    c.header("cache-control", "public, max-age=300");
+    return c.json({ macos, desktop });
+  });
+
+  /** The project's repositories by name, with their stars, forks and last push; null for one
+   *  GitHub cannot tell about right now. */
+  app.get("/projects", async (c) => {
+    const repos = await Promise.all(
+      projectRepos.map((repo) =>
+        cached(`repo:${repo}`, `repos/${repo}`, (raw) => parseRepo(repo, raw), freshRepo).catch(() => null),
+      ),
+    );
+    c.header("cache-control", "public, max-age=600");
+    return c.json({ repos: Object.fromEntries(projectRepos.map((repo, i) => [repo, repos[i] ?? null])) });
   });
 
   return app;
