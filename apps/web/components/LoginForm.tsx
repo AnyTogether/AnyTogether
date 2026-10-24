@@ -43,7 +43,8 @@ export function LoginForm({ texts, next }: { texts: Texts; next: string }) {
         <input
           id="email"
           type="email"
-          autoComplete="email"
+          // "webauthn" lets the browser offer passkeys in this field's autofill.
+          autoComplete="email webauthn"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}

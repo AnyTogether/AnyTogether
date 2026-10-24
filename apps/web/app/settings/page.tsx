@@ -1,4 +1,5 @@
 import { AvatarEditor } from "@/components/AvatarEditor";
+import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
 import { DeleteAccount, HandleForm, PrivacyForm, ProfileForm, SessionList } from "@/components/Settings";
 import { countryOptions } from "@/lib/countries";
 import { strings, ui } from "@/lib/i18n";
@@ -9,13 +10,15 @@ import { redirect } from "next/navigation";
 
 export const metadata: Metadata = { title: "Settings · AnyTogether" };
 
-/** The signed-in user's settings: profile, privacy, signed-in devices, their data, deletion. */
+/** The signed-in user's settings: profile, privacy, passkeys, signed-in devices, their data,
+ *  deletion. */
 export default async function Settings() {
   const [texts, user] = await Promise.all([strings(), currentUser()]);
   if (!user) redirect("/login?next=/settings");
-  const [own, signedIn] = await Promise.all([
+  const [own, signedIn, keys] = await Promise.all([
     apiJson<Own>("/me"),
     apiJson<{ sessions: SignedIn[] }>("/auth/sessions"),
+    apiJson<{ passkeys: PasskeyRow[]; max: number }>("/auth/passkeys"),
   ]);
   if (!own.body) redirect("/login?next=/settings");
   const me = own.body;
@@ -23,6 +26,7 @@ export default async function Settings() {
   const sections = [
     ["profile", texts.sectionProfile],
     ["privacy", texts.sectionPrivacy],
+    ["passkeys", texts.sectionPasskeys],
     ["devices", texts.sectionDevices],
     ["data", texts.sectionData],
   ] as const;
@@ -53,6 +57,14 @@ export default async function Settings() {
           <h3 className="sub">{texts.sectionPrivacy}</h3>
           <p className="hint section-lead">{texts.privacyLead}</p>
           <PrivacyForm privacy={me.profile.privacy} texts={t} />
+        </article>
+
+        <article className="card" id="passkeys">
+          <h3 className="sub">
+            {texts.sectionPasskeys} <span className="n">{keys.body?.passkeys.length ?? 0}</span>
+          </h3>
+          <p className="hint section-lead">{texts.passkeysLead}</p>
+          <PasskeyList passkeys={keys.body?.passkeys ?? []} max={keys.body?.max ?? 10} texts={t} />
         </article>
 
         <article className="card" id="devices">

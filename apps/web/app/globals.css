@@ -1558,3 +1558,110 @@ dialog.sheet::backdrop {
 .danger-zone .quiet {
   font-size: 14px;
 }
+
+/* Passkeys */
+.or {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 22px 0 18px;
+  font: 500 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.or::before,
+.or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.passkey-sign-in {
+  display: grid;
+  gap: 10px;
+}
+.passkey-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  transition: transform 0.12s ease, border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+}
+.passkey-button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+}
+.passkey-button:focus-visible {
+  outline: 2px solid rgba(79, 124, 255, 0.7);
+  outline-offset: 2px;
+}
+.key-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.passkey-button .key-icon {
+  color: #a9c0ff;
+}
+.passkey-hint {
+  text-align: center;
+}
+.link-sign-in {
+  margin-top: 24px;
+  display: grid;
+  gap: 16px;
+}
+.link-sign-in > .pill {
+  justify-self: center;
+}
+.passkeys .name .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tag.synced {
+  flex: none;
+  padding: 4px 8px;
+  font-size: 10.5px;
+  color: #a9c0ff;
+  border-color: rgba(79, 124, 255, 0.3);
+}
+.passkey-warning {
+  margin-top: 10px;
+}
+.passkey-add {
+  margin-top: 18px;
+}
+form.passkey-add {
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.add-row {
+  display: flex;
+  gap: 10px;
+}
+.add-row input {
+  flex: 1;
+  min-width: 0;
+}
+.add-row .primary {
+  flex: none;
+}
+@media (max-width: 520px) {
+  .add-row {
+    flex-direction: column;
+  }
+  .passkeys .acts .quiet {
+    padding: 8px 4px;
+  }
+}
