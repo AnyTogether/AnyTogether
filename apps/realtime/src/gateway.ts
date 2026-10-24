@@ -18,6 +18,7 @@ import {
   presenceHiddenKey,
   realtimeTicketKey,
   shareDeparturesKey,
+  sharePlayKey,
   sharePlayMembersKey,
   shareSignalKinds,
   signalKinds,
@@ -218,12 +219,17 @@ export async function createGateway(options: GatewayOptions) {
       : share
         ? sharePlayMembersKey(share)
         : gameSessionMembersKey(session as string);
-    const [[, from], [, peer]] = (await store
-      .multi()
-      .sismember(members, connection.userId)
-      .sismember(members, to)
-      .exec()) as [[null, number], [null, number]];
-    if (!from || !peer || to === connection.userId)
+    const asked = store.multi().sismember(members, connection.userId).sismember(members, to);
+    if (share) asked.get(sharePlayKey(share));
+    const [[, from], [, peer], [, shared] = [null, null]] = (await asked.exec()) as [
+      [null, number],
+      [null, number],
+      [null, string | null]?,
+    ];
+    // In a share play one end is always the host: viewers never reach each other.
+    const host = share ? hostOf(shared) : undefined;
+    const viaHost = !share || (host !== undefined && (host === connection.userId || host === to));
+    if (!from || !peer || to === connection.userId || !viaHost)
       return send(
         connection.socket,
         call
@@ -390,6 +396,16 @@ function devicePresence(presence: unknown): Presence {
     ...(typeof titleId === "string" ? { titleId: titleId.slice(0, 32) } : {}),
     ...(typeof since === "string" ? { since: since.slice(0, 40) } : {}),
   };
+}
+
+/** The host of a share play from what the API keeps of it. */
+function hostOf(stored: string | null) {
+  try {
+    const { hostId } = JSON.parse(stored ?? "null") as { hostId?: unknown };
+    return typeof hostId === "string" ? hostId : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 const presenceKey = (connection: Connection) => devicePresenceKey(connection.userId, connection.sessionId);

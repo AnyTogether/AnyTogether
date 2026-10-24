@@ -384,6 +384,7 @@ describe("the gateway", () => {
   });
 
   it("relays signals between a share play's host and viewers only, and notes a departing device", async () => {
+    await valkey.set("share-play:sp1", JSON.stringify({ id: "sp1", hostId: "u1", hostDevice: "mac" }));
     await valkey.sadd("share-play:sp1:members", "u1", "u2");
     await valkey.sadd("game-session:g1:members", "u1", "u3");
     const host = await signedIn("u1", "mac");
@@ -422,6 +423,20 @@ describe("the gateway", () => {
     expect(Number(score)).toBeGreaterThan(Date.now());
     expect(await valkey.zcard("call-departures")).toBe(0);
     for (const c of [host, player]) c.socket.close();
+  });
+
+  it("passes no signals from one share play viewer to another, only to and from the host", async () => {
+    await valkey.set("share-play:sp2", JSON.stringify({ id: "sp2", hostId: "u1", hostDevice: "mac" }));
+    await valkey.sadd("share-play:sp2:members", "u1", "u2", "u4");
+    const viewer = await signedIn("u2", "web");
+    const other = await signedIn("u4", "phone");
+    viewer.send({ op: "signal", to: "u4", share: "sp2", kind: "offer", data: { sdp: "v=0" } });
+    expect(await viewer.waitFor((frame) => frame.op === "error")).toMatchObject({
+      code: "not_in_share_play",
+    });
+    expect(other.frames.some((frame) => frame.type === "share_play.signal")).toBe(false);
+    expect(await valkey.xlen("events:u4")).toBe(0);
+    for (const c of [viewer, other]) c.socket.close();
   });
 
   it("keeps presence from heartbeats", async () => {
