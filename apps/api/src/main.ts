@@ -26,6 +26,7 @@ const app = createApp({
   rpName: settings.rpName,
   turn: settings.turn,
   blockedLinkDomains: settings.blockedLinkDomains,
+  gameIconHosts: settings.gameIconHosts,
 });
 serve({ fetch: app.fetch, port: settings.port }, (info) => console.log(`api listening on ${info.port}`));
 

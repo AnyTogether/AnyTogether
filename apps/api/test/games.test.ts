@@ -74,6 +74,8 @@ async function listen(userId: string) {
 
 describe("catalogue", () => {
   it("is taught a game once; later launchers only add languages it lacks", async () => {
+    await h.close();
+    h = await harness({ gameIconHosts: ["cdn.example.com"] });
     const a = await h.user("teach1@example.com");
     const b = await h.user("teach2@example.com");
     const taught = await h.call(
@@ -101,6 +103,35 @@ describe("catalogue", () => {
       locked: false,
       players: 0,
     });
+  });
+
+  it("keeps no icon from a host that is not on the list: every viewer would load it", async () => {
+    await h.close();
+    h = await harness({ gameIconHosts: ["cdn.example.com"] });
+    const a = await h.user("icon@example.com");
+    for (const iconUrl of [
+      "https://tracker.example.net/pixel.png",
+      "https://cdn.example.com.evil.net/i.png",
+    ]) {
+      const taught = await h.call("PUT", `${v1}/games/${game}`, { names: { en: "Stray" }, iconUrl }, a.token);
+      expect(taught.status).toBeLessThan(300);
+      expect(taught.body.iconUrl).toBeNull();
+    }
+    expect((await h.call("GET", `${v1}/games/${game}`, undefined, a.token)).body).toMatchObject({
+      names: { en: "Stray" },
+      iconUrl: null,
+    });
+    // Without a list nobody's icon is kept.
+    await h.close();
+    h = await harness();
+    const b = await h.user("icon2@example.com");
+    const taught = await h.call(
+      "PUT",
+      `${v1}/games/PPSA05678`,
+      { names: { en: "Other" }, iconUrl: "https://cdn.example.com/icon.webp" },
+      b.token,
+    );
+    expect(taught.body.iconUrl).toBeNull();
   });
 
   it("leaves a locked game alone", async () => {

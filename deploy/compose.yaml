@@ -58,6 +58,7 @@ services:
       WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-}
       TURN_SECRET: ${TURN_SECRET:-}
       TURN_URLS: ${TURN_URLS:-}
+      GAME_ICON_HOSTS: ${GAME_ICON_HOSTS:-}
     depends_on:
       postgres: { condition: service_healthy }
       valkey: { condition: service_healthy }

@@ -134,6 +134,7 @@ rest.
 | `WEBAUTHN_RP_NAME` | api | `.env`, `AnyTogether` | the site's name in passkey prompts |
 | `TURN_SECRET` | api (and coturn) | `.env` | the TURN REST secret; empty: no relay credentials |
 | `TURN_URLS` | api | `.env` | STUN/TURN URLs handed to callers, comma separated |
+| `GAME_ICON_HOSTS` | api | `.env` | hosts (and their subdomains) a game's icon URL may point at, comma separated; launchers load icons for everyone who sees the game, so empty keeps none |
 | `GATEWAY_PUBLIC_URL` | web | not set | where browsers open the gateway socket, when it is not `wss://<site>/rt` |
 | `HOSTNAME`, `NODE_ENV` | web | set by the image | the website listens on all addresses, in production mode (HTTPS-only cookies) |
 | `USER` | api's admin tool | your shell's | the name recorded with a ban or a handled report; `admin` when unset |

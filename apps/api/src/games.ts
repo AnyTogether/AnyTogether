@@ -161,10 +161,20 @@ export function gameRoutes(deps: Deps) {
     locked: row.locked,
   });
 
+  /** An icon only from a host the operator trusts: every launcher showing the game loads it, so
+   *  any other address would see who looks at the game. Others are dropped, not refused. */
+  const iconHosts = (deps.gameIconHosts ?? []).map((host) => host.toLowerCase());
+  const trustedIcon = (url: string | undefined) => {
+    if (!url) return null;
+    const host = URL.canParse(url) ? new URL(url).hostname.toLowerCase() : "";
+    return iconHosts.some((allowed) => host === allowed || host.endsWith(`.${allowed}`)) ? url : null;
+  };
+
   app.put("/games/:titleId", async (c) => {
     const me = c.get("userId");
     const titleId = param(TitleId, c.req.param("titleId"), "titleId");
-    const input = await body(c, GameTeach);
+    const raw = await body(c, GameTeach);
+    const input = { ...raw, iconUrl: trustedIcon(raw.iconUrl) };
     const created = await db
       .insert(games)
       .values({ titleId, names: input.names, iconUrl: input.iconUrl ?? null, taughtBy: me })

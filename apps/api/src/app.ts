@@ -39,6 +39,8 @@ export interface Deps {
   limits?: Partial<Limits>;
   /** STUN/TURN for calls; without it calls get no ICE servers beyond what the client has. */
   turn?: { secret: string; urls: string[] };
+  /** Hosts a game's icon may come from (subdomains included); none when left out. */
+  gameIconHosts?: string[];
   /** Domains messages may not link to (none when left out). */
   blockedLinkDomains?: string[];
 }
