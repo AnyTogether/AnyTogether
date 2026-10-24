@@ -214,6 +214,18 @@ A ban signs the account out everywhere at once and refuses every way back in (em
 providers, passkeys); a ban on an email also stops new accounts with it. Accounts whose owners
 asked for deletion are purged every hour by the API itself; `purge` only does it sooner.
 
+### Starting the Theme Hub
+
+A folder like the old GitHub hub (`themes.json` and the `.anyps5theme` files it names, or just
+theme files) can be put on the Hub at once. The themes are shared by `@anyps5`, a reserved
+account with no way to sign in that is made the first time; who made each theme is kept in its
+file and named in its description. Running it again skips the themes already there.
+
+```sh
+docker compose cp ./hub api:/tmp/hub
+docker compose exec -e USER=yourname api node dist/admin.js hub import /tmp/hub
+```
+
 ## Troubleshooting
 
 - `docker compose ps` shows what is unhealthy; `docker compose logs <service>` says why.

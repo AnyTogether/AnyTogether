@@ -9,6 +9,7 @@
  *   pnpm --filter @anytogether/api admin revoke <@handle|email|id>
  *   pnpm --filter @anytogether/api admin purge
  *   pnpm --filter @anytogether/api admin theme <id> hide|show|review
+ *   pnpm --filter @anytogether/api admin hub import <folder>   (themes.json + .anyps5theme files)
  *
  * In the API's container: node dist/admin.js <the same>. */
 import { accounts, auditLog, connect } from "@anytogether/db";
@@ -17,6 +18,7 @@ import { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
 import { purgeDeletedAccounts } from "./account.js";
 import { config } from "./config.js";
+import { importHub } from "./hubImport.js";
 import { ban, findAccount, handleReport, isBanned, listReports, unban } from "./moderation.js";
 import { setThemeStatus } from "./themes.js";
 
@@ -28,10 +30,14 @@ const usage = `usage: admin reports [--all]
        admin grant <@handle|email|id>
        admin revoke <@handle|email|id>
        admin purge
-       admin theme <id> hide|show|review`;
+       admin theme <id> hide|show|review
+       admin hub import <folder>`;
 
 /** Runs one command and returns what to print; the tests call it directly. */
-export async function run(args: string[], ctx: Parameters<typeof ban>[0]): Promise<string> {
+export async function run(
+  args: string[],
+  ctx: Parameters<typeof ban>[0] & Parameters<typeof importHub>[0],
+): Promise<string> {
   const [command, target, ...rest] = args;
   const option = (name: string) => {
     const index = rest.indexOf(`--${name}`);
@@ -118,6 +124,11 @@ export async function run(args: string[], ctx: Parameters<typeof ban>[0]): Promi
       if (!target || !status) return usage;
       const theme = await setThemeStatus(ctx.db, target, status, by);
       return `theme “${theme.name}” is ${status}`;
+    }
+    case "hub": {
+      // The themes of the old GitHub hub (or any folder like it), shared by @anyps5.
+      if (target !== "import" || !rest[0]) return usage;
+      return (await importHub(ctx, rest[0], by)).text;
     }
     default:
       return usage;
