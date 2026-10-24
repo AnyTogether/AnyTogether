@@ -1,0 +1,26 @@
+{
+  "name": "@anytogether/realtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/main.js --packages=external",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anytogether/shared": "workspace:*",
+    "ioredis": "^5.4.2",
+    "jose": "^5.9.6",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.13",
+    "esbuild": "^0.24.2",
+    "tsx": "^4.19.2",
+    "vitest": "^2.1.8"
+  }
+}
