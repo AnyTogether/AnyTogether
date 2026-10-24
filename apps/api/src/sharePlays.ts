@@ -1,7 +1,11 @@
+import { games } from "@anytogether/db";
 import {
   ErrorCode,
   type GatewayEvent,
+  LanguageCode,
   type MemberView,
+  type PublicJoin,
+  type PublicShareView,
   type SharePadSlot,
   SharePlayInvite,
   type SharePlayInviteView,
@@ -11,31 +15,35 @@ import {
   SharePlayUpdate,
   type SharePlayView,
   type SharePresence,
+  TitleId,
   devicePresenceKey,
   deviceSharePlaysKey,
   hostSharePlayKey,
+  publicSharePlaysKey,
   shareDeparturesKey,
   sharePlayInvitesKey,
   sharePlayKeepSeconds,
   sharePlayKey,
   sharePlayMembersKey,
   sharePlayRemovedKey,
+  sharePlayRequestsKey,
   sharePlayViewersKey,
   userShareInvitesKey,
   watchSharePlayKey,
 } from "@anytogether/shared";
+import { inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
 import type { Deps } from "./app.js";
 import { iceServers } from "./calls.js";
 import { HttpError } from "./errors.js";
-import { publish } from "./events.js";
+import { broadcast, publish, topicsFor } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { people } from "./people.js";
 import { setPresenceExtra } from "./presence.js";
-import { rateLimiter } from "./ratelimit.js";
+import { rateLimiter, strangerLimiter } from "./ratelimit.js";
 
 /** What Valkey keeps of a share play. */
 interface Share {
@@ -47,6 +55,8 @@ interface Share {
   open: boolean;
   maxViewers: number;
   startedAt: string;
+  /** Listed in public (older ones kept before listing existed have none). */
+  public?: { join: PublicJoin; language: string | null; live: boolean } | null;
 }
 
 interface Seat {
@@ -72,8 +82,38 @@ export function sharePlayRoutes(deps: Deps) {
   const { valkey } = deps;
   const who = people(deps.db);
   const limit = rateLimiter(valkey, deps.limits);
+  const strangerLimit = strangerLimiter(deps);
   const keep = sharePlayKeepSeconds;
 
+  /** The public lists hear that a listed share play came, changed or went. */
+  const relist = (share: Share, change: "listed" | "updated" | "unlisted") =>
+    broadcast(valkey, topicsFor("discover", share.titleId), {
+      type: "discover.changed",
+      data: { kind: "share_play", id: share.id, titleId: share.titleId, change },
+    });
+
+  /** Keeps the public index in step with the share play's listing. */
+  const index = async (share: Share) => {
+    if (share.public) await valkey.zadd(publicSharePlaysKey, Date.parse(share.startedAt), share.id);
+    else await valkey.zrem(publicSharePlaysKey, share.id);
+  };
+
+  /** Drops every request to join (the share play left the list or ended); the askers hear no. */
+  const dropRequests = async (share: Share) => {
+    const asked = Object.keys(await valkey.hgetall(sharePlayRequestsKey(share.id)));
+    await valkey.del(sharePlayRequestsKey(share.id));
+    for (const userId of asked)
+      await publish(valkey, userId, {
+        type: "share_play.request_answered",
+        data: { sharePlayId: share.id, answer: "declined" },
+      });
+  };
+
+  const listingOf = (input: { join: PublicJoin; language?: string | null | undefined; live: boolean }) => ({
+    join: input.join,
+    language: input.language ?? null,
+    live: input.live,
+  });
   const tell = async (userIds: string[], event: GatewayEvent) => {
     for (const userId of new Set(userIds)) await publish(valkey, userId, event);
   };
@@ -98,6 +138,7 @@ export function sharePlayRoutes(deps: Deps) {
       sharePlayMembersKey(share.id),
       sharePlayInvitesKey(share.id),
       sharePlayRemovedKey(share.id),
+      sharePlayRequestsKey(share.id),
       hostSharePlayKey(share.hostId),
     ])
       write.expire(key, keep);
@@ -109,7 +150,9 @@ export function sharePlayRoutes(deps: Deps) {
   async function view(share: Share, forHost = false): Promise<SharePlayView> {
     const sat = [...(await seats(share.id))].sort((a, b) => a[1].joinedAt.localeCompare(b[1].joinedAt));
     const invited = forHost ? Object.keys(await valkey.hgetall(sharePlayInvitesKey(share.id))) : [];
-    const cards = await who.cards([share.hostId, ...sat.map(([id]) => id), ...invited]);
+    const asked =
+      forHost && share.public ? Object.keys(await valkey.hgetall(sharePlayRequestsKey(share.id))) : [];
+    const cards = await who.cards([share.hostId, ...sat.map(([id]) => id), ...invited, ...asked]);
     return {
       id: share.id,
       host: cards.get(share.hostId) ?? null,
@@ -122,7 +165,13 @@ export function sharePlayRoutes(deps: Deps) {
         const user = cards.get(id);
         return user ? [{ user, device: seat.device, slot: seat.slot, joinedAt: seat.joinedAt }] : [];
       }),
-      ...(forHost ? { invited: invited.flatMap((id) => cards.get(id) ?? []) } : {}),
+      public: share.public ?? null,
+      ...(forHost
+        ? {
+            invited: invited.flatMap((id) => cards.get(id) ?? []),
+            requests: asked.flatMap((id) => cards.get(id) ?? []),
+          }
+        : {}),
       startedAt: share.startedAt,
     };
   }
@@ -150,6 +199,7 @@ export function sharePlayRoutes(deps: Deps) {
     await tell([share.hostId], { type: "share_play.updated", data: await view(share, true) });
     if (now.size) await tell([...now.keys()], { type: "share_play.updated", data: await view(share) });
     await showInPresence(share, now.size);
+    if (share.public) await relist(share, "updated");
   }
 
   async function end(share: Share) {
@@ -168,6 +218,11 @@ export function sharePlayRoutes(deps: Deps) {
     for (const seat of now.values()) cleanup.srem(deviceSharePlaysKey(seat.device), share.id);
     for (const userId of invited) cleanup.hdel(userShareInvitesKey(userId), share.id);
     await cleanup.exec();
+    if (share.public) {
+      await dropRequests(share);
+      await valkey.zrem(publicSharePlaysKey, share.id);
+      await relist(share, "unlisted");
+    }
     if ((await valkey.get(hostSharePlayKey(share.hostId))) === share.id)
       await valkey.del(hostSharePlayKey(share.hostId));
     for (const userId of now.keys())
@@ -206,19 +261,39 @@ export function sharePlayRoutes(deps: Deps) {
     if (watched) await unseat(watched, userId);
   }
 
-  /** The host, its viewers, the invited and (while open) the host's friends see it; nobody the
-   *  host was taken out by or blocked. */
+  /** How `me` stands with a share play: seated, invited, taken out by the host. */
+  const standing = async (share: Share, me: string) => {
+    const [[, seated], [, invited], [, removed]] = (await valkey
+      .multi()
+      .hexists(sharePlayViewersKey(share.id), me)
+      .hexists(sharePlayInvitesKey(share.id), me)
+      .sismember(sharePlayRemovedKey(share.id), me)
+      .exec()) as [[null, number], [null, number], [null, number]];
+    return { seated: Boolean(seated), invited: Boolean(invited), removed: Boolean(removed) };
+  };
+
+  /** May `me` take a seat without asking: seated or invited already, a friend of the host while it
+   *  is open to friends, or anyone while it is listed in public as open. */
+  const mayWalkIn = async (share: Share, me: string) => {
+    const { seated, invited, removed } = await standing(share, me);
+    if (seated || invited) return true;
+    if (removed) return false;
+    return share.public?.join === "open" || (share.open && (await who.friends(me, share.hostId)));
+  };
+
+  /** The host, its viewers, the invited and (while open) the host's friends see it, and anyone
+   *  while it is listed in public; nobody the host took out (unless invited again) or who has a
+   *  block with the host. */
   const visible = async (id: string, me: string) => {
     const share = await load(id);
     if (share) {
       if (share.hostId === me) return share;
-      const [[, seated], [, invited], [, removed]] = (await valkey
-        .multi()
-        .hexists(sharePlayViewersKey(share.id), me)
-        .hexists(sharePlayInvitesKey(share.id), me)
-        .sismember(sharePlayRemovedKey(share.id), me)
-        .exec()) as [[null, number], [null, number], [null, number]];
-      if (seated || invited || (!removed && share.open && (await who.friends(me, share.hostId))))
+      const { seated, invited, removed } = await standing(share, me);
+      if (
+        seated ||
+        invited ||
+        (!removed && (share.public || (share.open && (await who.friends(me, share.hostId)))))
+      )
         if (!(await who.blocked(me, share.hostId))) return share;
     }
     throw new HttpError(404, ErrorCode.notFound, "No such share play");
@@ -237,6 +312,118 @@ export function sharePlayRoutes(deps: Deps) {
     return share;
   };
 
+  /** The host invites people (who may be invited is the caller's to check); they hear it on every
+   *  device. Returns who was invited now. */
+  async function inviteTo(share: Share, userIds: string[]) {
+    const at = new Date().toISOString();
+    const fresh: string[] = [];
+    for (const id of userIds) {
+      const added = await valkey.hsetnx(sharePlayInvitesKey(share.id), id, at);
+      await valkey
+        .multi()
+        .srem(sharePlayRemovedKey(share.id), id)
+        .hdel(sharePlayRequestsKey(share.id), id)
+        .hset(userShareInvitesKey(id), share.id, JSON.stringify({ from: share.hostId, at }))
+        .expire(userShareInvitesKey(id), keep)
+        .exec();
+      if (added) fresh.push(id);
+    }
+    await touch(share);
+    const from = await who.card(share.hostId);
+    if (from)
+      await tell(fresh, {
+        type: "share_play.invite",
+        data: { sharePlayId: share.id, from, titleId: share.titleId, title: share.title },
+      });
+    if (fresh.length)
+      await tell([share.hostId], { type: "share_play.updated", data: await view(share, true) });
+    return fresh;
+  }
+
+  /** The share play `userId` hosts now, if any. */
+  const hostedBy = async (userId: string) => load((await valkey.get(hostSharePlayKey(userId))) ?? "");
+
+  /** Share plays listed in public that `me` may see (no block with the host, not taken out by
+   *  them), newest first; `live` keeps the ones under Live now. Ones that ended are dropped from
+   *  the index as they are found. */
+  async function publicShares(
+    me: string,
+    filter: { titleId?: string; language?: string; live?: boolean; limit?: number },
+  ) {
+    const ids = await valkey.zrevrange(publicSharePlaysKey, 0, 499);
+    const found: Share[] = [];
+    for (const id of ids) {
+      const share = await load(id);
+      if (!share?.public) {
+        await valkey.zrem(publicSharePlaysKey, id);
+        continue;
+      }
+      if (filter.titleId && share.titleId !== filter.titleId) continue;
+      if (filter.language && share.public.language !== filter.language) continue;
+      if (filter.live && !share.public.live) continue;
+      found.push(share);
+    }
+    const blocked = await who.blockedAmong(
+      me,
+      found.map((s) => s.hostId),
+    );
+    const shown: Share[] = [];
+    for (const share of found) {
+      if (blocked.has(share.hostId)) continue;
+      if (share.hostId !== me && (await valkey.sismember(sharePlayRemovedKey(share.id), me))) continue;
+      shown.push(share);
+      if (shown.length >= (filter.limit ?? 50)) break;
+    }
+    const cards = await who.cards(shown.map((s) => s.hostId));
+    const titles = [...new Set(shown.map((s) => s.titleId))];
+    const names = new Map(
+      titles.length
+        ? (await deps.db.select().from(games).where(inArray(games.titleId, titles))).map((g) => [
+            g.titleId,
+            g,
+          ])
+        : [],
+    );
+    const views: PublicShareView[] = [];
+    for (const share of shown) {
+      const listing = share.public as NonNullable<Share["public"]>;
+      const game = names.get(share.titleId);
+      views.push({
+        id: share.id,
+        host: cards.get(share.hostId) ?? null,
+        titleId: share.titleId,
+        title: share.title,
+        game: game ? { names: game.names, iconUrl: game.iconUrl } : null,
+        language: listing.language,
+        join: listing.join,
+        live: listing.live,
+        viewers: await valkey.hlen(sharePlayViewersKey(share.id)),
+        maxViewers: share.maxViewers,
+        requested: Boolean(await valkey.hexists(sharePlayRequestsKey(share.id), me)),
+        startedAt: share.startedAt,
+      });
+    }
+    return views;
+  }
+
+  /** Share plays listed in public, newest first; by game and language, and live=1 for the ones
+   *  under Live now. */
+  app.get("/share-plays/public", async (c) => {
+    const titleId = c.req.query("titleId");
+    const language = c.req.query("language");
+    if (titleId !== undefined && !TitleId.safeParse(titleId).success)
+      throw new HttpError(400, ErrorCode.badRequest, "titleId: a title ID like PPSA01234");
+    if (language !== undefined && !LanguageCode.safeParse(language).success)
+      throw new HttpError(400, ErrorCode.badRequest, "language: a language like en or tr");
+    return c.json({
+      sharePlays: await publicShares(c.get("userId"), {
+        titleId,
+        language,
+        live: c.req.query("live") === "1",
+      }),
+    });
+  });
+
   /** Start sharing the game this device runs; one at a time, so an earlier one ends. */
   app.post("/share-plays", async (c) => {
     const me = c.get("userId");
@@ -253,6 +440,7 @@ export function sharePlayRoutes(deps: Deps) {
       open: input.open,
       maxViewers: input.maxViewers,
       startedAt: new Date().toISOString(),
+      public: input.public ? listingOf(input.public) : null,
     };
     await valkey
       .multi()
@@ -262,6 +450,10 @@ export function sharePlayRoutes(deps: Deps) {
       .exec();
     await touch(share, [device]);
     await showInPresence(share, 0);
+    if (share.public) {
+      await index(share);
+      await relist(share, "listed");
+    }
     return c.json(await joined(share, me, true), 201);
   });
 
@@ -321,9 +513,19 @@ export function sharePlayRoutes(deps: Deps) {
       ...(input.title !== undefined ? { title: input.title } : {}),
       ...(input.open !== undefined ? { open: input.open } : {}),
       ...(input.maxViewers !== undefined ? { maxViewers: input.maxViewers } : {}),
+      ...(input.public !== undefined ? { public: input.public ? listingOf(input.public) : null } : {}),
     };
     await valkey.set(sharePlayKey(share.id), JSON.stringify(updated), "EX", keep);
     await touch(updated);
+    await index(updated);
+    if (share.public && !updated.public) {
+      await dropRequests(updated);
+      await relist(share, "unlisted");
+    } else if (!share.public && updated.public) await relist(updated, "listed");
+    else if (share.public && share.titleId !== updated.titleId) {
+      await relist(share, "unlisted");
+      await relist(updated, "listed");
+    }
     await changed(updated);
     return c.json(await view(updated, true));
   });
@@ -343,27 +545,7 @@ export function sharePlayRoutes(deps: Deps) {
     const friends = await who.friendsAmong(me, asked);
     if (asked.some((id) => !friends.has(id)))
       throw new HttpError(403, ErrorCode.forbidden, "You can only invite your friends");
-    const at = new Date().toISOString();
-    const fresh: string[] = [];
-    for (const id of asked) {
-      const added = await valkey.hsetnx(sharePlayInvitesKey(share.id), id, at);
-      await valkey
-        .multi()
-        .srem(sharePlayRemovedKey(share.id), id)
-        .hset(userShareInvitesKey(id), share.id, JSON.stringify({ from: me, at }))
-        .expire(userShareInvitesKey(id), keep)
-        .exec();
-      if (added) fresh.push(id);
-    }
-    await touch(share);
-    const from = await who.card(me);
-    if (from)
-      await tell(fresh, {
-        type: "share_play.invite",
-        data: { sharePlayId: share.id, from, titleId: share.titleId, title: share.title },
-      });
-    if (fresh.length) await tell([me], { type: "share_play.updated", data: await view(share, true) });
-    return c.json({ invited: fresh });
+    return c.json({ invited: await inviteTo(share, asked) });
   });
 
   app.post("/share-plays/:id/decline", async (c) => {
@@ -383,7 +565,14 @@ export function sharePlayRoutes(deps: Deps) {
     const device = c.get("sessionId");
     const share = await visible(c.req.param("id"), me);
     if (share.hostId === me) throw new HttpError(400, ErrorCode.badRequest, "That is your own share play");
+    if (!(await mayWalkIn(share, me)))
+      throw new HttpError(403, ErrorCode.forbidden, "Ask the host to let you in", {
+        join: share.public?.join ?? null,
+      });
     const before = (await seats(share.id)).get(me);
+    // Walking into a stranger's share play counts like asking to.
+    if (!before && share.public?.join === "open" && !(await standing(share, me)).invited)
+      if (!(await who.friends(me, share.hostId))) await strangerLimit("joinRequest", me);
     const seat: Seat = {
       device,
       slot: before?.slot ?? null,
@@ -406,6 +595,7 @@ export function sharePlayRoutes(deps: Deps) {
       .multi()
       .sadd(sharePlayMembersKey(share.id), me)
       .hdel(sharePlayInvitesKey(share.id), me)
+      .hdel(sharePlayRequestsKey(share.id), me)
       .hdel(userShareInvitesKey(me), share.id)
       .set(watchSharePlayKey(me), share.id, "EX", keep);
     if (before && before.device !== device) write.srem(deviceSharePlaysKey(before.device), share.id);
@@ -413,6 +603,56 @@ export function sharePlayRoutes(deps: Deps) {
     await touch(share, [device]);
     await changed(share);
     return c.json(await joined(share, me, false), before ? 200 : 201);
+  });
+
+  /** Asks to join a share play listed in public; the host hears it and lets them in with an
+   *  invite. */
+  app.post("/share-plays/:id/requests", async (c) => {
+    const me = c.get("userId");
+    const share = await visible(c.req.param("id"), me);
+    if (share.hostId === me) throw new HttpError(400, ErrorCode.badRequest, "That is your own share play");
+    if (!share.public) throw new HttpError(403, ErrorCode.forbidden, "This share play takes no requests");
+    if ((await standing(share, me)).seated) throw new HttpError(409, ErrorCode.conflict, "You are watching");
+    await strangerLimit("joinRequest", me);
+    const made = await valkey.hsetnx(sharePlayRequestsKey(share.id), me, new Date().toISOString());
+    await touch(share);
+    if (made) {
+      const from = await who.card(me);
+      if (from)
+        await tell([share.hostId], { type: "share_play.request", data: { sharePlayId: share.id, from } });
+      await tell([share.hostId], { type: "share_play.updated", data: await view(share, true) });
+    }
+    return c.json({ requested: true }, made ? 201 : 200);
+  });
+
+  app.delete("/share-plays/:id/requests/me", async (c) => {
+    const me = c.get("userId");
+    const share = await load(c.req.param("id"));
+    const removed = share ? await valkey.hdel(sharePlayRequestsKey(share.id), me) : 0;
+    if (!share || !removed) throw new HttpError(404, ErrorCode.notFound, "No such request");
+    await tell([share.hostId], {
+      type: "share_play.request_cancelled",
+      data: { sharePlayId: share.id, userId: me },
+    });
+    await tell([share.hostId], { type: "share_play.updated", data: await view(share, true) });
+    return c.body(null, 204);
+  });
+
+  /** The host answers a request: yes is an invite, which the asker hears and joins with. */
+  app.post("/share-plays/:id/requests/:userId/:answer{accept|decline}", async (c) => {
+    const me = c.get("userId");
+    const share = await asHost(c.req.param("id"), me);
+    const userId = c.req.param("userId");
+    const removed = await valkey.hdel(sharePlayRequestsKey(share.id), userId);
+    if (!removed) throw new HttpError(404, ErrorCode.notFound, "No such request");
+    const accept = c.req.param("answer") === "accept";
+    if (accept && !(await who.blocked(me, userId))) await inviteTo(share, [userId]);
+    else await tell([me], { type: "share_play.updated", data: await view(share, true) });
+    await tell([userId], {
+      type: "share_play.request_answered",
+      data: { sharePlayId: share.id, answer: accept ? "accepted" : "declined" },
+    });
+    return c.json(await view(share, true));
   });
 
   app.post("/share-plays/:id/leave", async (c) => {
@@ -478,5 +718,7 @@ export function sharePlayRoutes(deps: Deps) {
     return gone;
   }
 
-  return Object.assign(app, { sweepDepartures });
+  return Object.assign(app, { sweepDepartures, hostedBy, inviteTo, publicShares });
 }
+
+export type SharePlayService = ReturnType<typeof sharePlayRoutes>;

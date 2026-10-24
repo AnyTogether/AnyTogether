@@ -14,3 +14,4 @@ export * from "./sharePlays.js";
 export * from "./notifications.js";
 export * from "./themes.js";
 export * from "./compat.js";
+export * from "./discover.js";

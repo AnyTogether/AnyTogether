@@ -71,3 +71,13 @@ setInterval(
   () => app.sweepDepartures().catch((error) => console.error("departure sweep failed", error)),
   5_000,
 );
+
+// Looking-for-group posts whose time ran out leave the board, looked at every minute.
+setInterval(
+  () =>
+    app
+      .sweepLfg()
+      .then((count) => count && console.log(`closed ${count} expired looking-for-group post(s)`))
+      .catch((error) => console.error("looking-for-group sweep failed", error)),
+  60_000,
+);

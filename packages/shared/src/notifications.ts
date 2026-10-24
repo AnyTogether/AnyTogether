@@ -10,6 +10,8 @@ export const notificationKinds = [
   "party_invite",
   "game_invite",
   "missed_call",
+  "lfg_request",
+  "lfg_accepted",
   "warning",
 ] as const;
 export type NotificationKind = (typeof notificationKinds)[number];
@@ -29,7 +31,9 @@ export interface NotificationView {
   /** What it is about: a conversation, party, game session or call ID; null for friends. */
   subjectId: string | null;
   /** message: {conversationId, title, group, count, text}; party_invite: {partyId, size};
-   *  game_invite: {sessionId, titleId}; missed_call: {callId}; warning: {reason}. */
+   *  game_invite: {sessionId, titleId}; missed_call: {callId}; warning: {reason};
+   *  lfg_request: {postId, titleId, gameNames, purpose, count}; lfg_accepted: {postId, titleId,
+   *  gameNames, purpose, invite: {kind, id} | null}. */
   data: Record<string, unknown>;
   read: boolean;
   createdAt: string;
@@ -52,6 +56,8 @@ export const defaultNotificationSettings: NotificationSettings = {
   party_invite: true,
   game_invite: true,
   missed_call: true,
+  lfg_request: true,
+  lfg_accepted: true,
   digest: false,
 };
 

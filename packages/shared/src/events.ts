@@ -1,4 +1,5 @@
 import type { CallEvent, SignalKind } from "./calls.js";
+import type { DiscoverEvent } from "./discover.js";
 import type { FeedEvent } from "./feed.js";
 import type { GamePresence, GameSessionEvent, GameSignalKind } from "./gameSessions.js";
 import type { MessageEvent } from "./messages.js";
@@ -44,7 +45,8 @@ export type GatewayEvent =
   | GameSessionEvent
   | SharePlayEvent
   | FeedEvent
-  | NotificationEvent;
+  | NotificationEvent
+  | DiscoverEvent;
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 
@@ -58,6 +60,9 @@ export type ClientFrame =
     }
   /** Typing in a conversation: the other members hear it (at most every 2 s). */
   | { op: "typing"; conversation: string }
+  /** The public topics this socket hears (see topicPattern), replacing the ones before; [] for
+   *  none. */
+  | { op: "watch"; topics: string[] }
   /** WebRTC signalling to a peer in the same call: `device` is their session, or "*" for all. */
   | { op: "signal"; to: string; device?: string; call: string; kind: SignalKind; data: unknown }
   /** The same between two players of a game session (`session` is its ID, not a device). */

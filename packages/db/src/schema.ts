@@ -128,6 +128,11 @@ export const profiles = pgTable(
      *  notificationSettingsOf); only what was changed is stored. */
     notificationSettings: jsonb().notNull().default({}),
     stats: jsonb().notNull().default({}),
+    /** Shown in discovery (players of a game, suggestions, game hubs); null follows the library
+     *  setting: on while the library is public. */
+    discoverable: boolean(),
+    /** Languages the person plays in (ISO 639-1), at most five. */
+    languages: jsonb().$type<string[]>().notNull().default([]),
   },
   (table) => [check("bio_length", sql`length(${table.bio}) <= 160`)],
 );
@@ -529,10 +534,23 @@ export const parties = pgTable(
     id: uuid().primaryKey(),
     leaderId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     privacy: text().notNull().default("invite"),
+    /** Listed in public: request (others ask the leader) or open (anyone walks in); null when not
+     *  listed. */
+    publicJoin: text(),
+    /** The game and language it is listed with. */
+    titleId: text().references(() => games.titleId),
+    language: text(),
+    listedAt: timestamp({ withTimezone: true }),
     createdAt: now(),
     endedAt: timestamp({ withTimezone: true }),
   },
-  (table) => [check("privacy", sql`${table.privacy} in ('invite', 'friends')`)],
+  (table) => [
+    check("privacy", sql`${table.privacy} in ('invite', 'friends')`),
+    check("party_public_join", sql`${table.publicJoin} in ('request', 'open')`),
+    index("parties_listed")
+      .on(table.listedAt.desc())
+      .where(sql`${table.publicJoin} is not null and ${table.endedAt} is null`),
+  ],
 );
 
 /** Someone is in at most one party at a time. */
@@ -561,6 +579,21 @@ export const partyInvites = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     invitedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    createdAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.partyId, table.accountId] }), index().on(table.accountId)],
+);
+
+/** People asking to join a party listed in public; the leader lets them in with an invite. */
+export const partyRequests = pgTable(
+  "party_requests",
+  {
+    partyId: uuid()
+      .notNull()
+      .references(() => parties.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
     createdAt: now(),
   },
   (table) => [primaryKey({ columns: [table.partyId, table.accountId] }), index().on(table.accountId)],
@@ -653,7 +686,8 @@ export const notifications = pgTable(
     accountId: uuid()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    /** friend_request | friend_accepted | message | party_invite | game_invite | missed_call | warning */
+    /** friend_request | friend_accepted | message | party_invite | game_invite | missed_call |
+     *  lfg_request | lfg_accepted | warning */
     kind: text().notNull(),
     actorId: uuid().references(() => accounts.id, { onDelete: "cascade" }),
     /** What it is about: the conversation, party, game session or call; for a friend request or
@@ -675,7 +709,7 @@ export const notifications = pgTable(
       .where(sql`${table.readAt} is null`),
     check(
       "notification_kind",
-      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'warning')`,
+      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning')`,
     ),
   ],
 );
@@ -820,5 +854,69 @@ export const compatSummaries = pgTable(
     primaryKey({ columns: [table.titleId, table.platform] }),
     index().on(table.testedAt.desc()),
     index().on(table.platform, table.status),
+  ],
+);
+
+/** The looking-for-group board: someone wants players for a game, now or later today. A post goes
+ *  by itself at expires_at (at most a day after it was made), when full, or when its poster or a
+ *  moderator closes it. */
+export const lfgPosts = pgTable(
+  "lfg_posts",
+  {
+    /** UUIDv7, so the newest has the largest ID; the board pages by it. */
+    id: uuid().primaryKey(),
+    authorId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    titleId: text()
+      .notNull()
+      .references(() => games.titleId),
+    /** coop | online | party | trophies */
+    purpose: text().notNull(),
+    /** Null: now. */
+    startsAt: timestamp({ withTimezone: true }),
+    languages: jsonb().$type<string[]>().notNull(),
+    region: text(),
+    slots: integer().notNull(),
+    filled: integer().notNull().default(0),
+    note: text(),
+    /** open | full | closed | expired | removed */
+    status: text().notNull().default("open"),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  (table) => [
+    index("lfg_open").on(table.status, table.expiresAt),
+    index("lfg_by_game").on(table.titleId, table.status),
+    index().on(table.authorId, table.status),
+    check("lfg_purpose", sql`${table.purpose} in ('coop', 'online', 'party', 'trophies')`),
+    check("lfg_status", sql`${table.status} in ('open', 'full', 'closed', 'expired', 'removed')`),
+    check("lfg_slots", sql`${table.slots} between 1 and 7 and ${table.filled} between 0 and ${table.slots}`),
+    check("lfg_note", sql`length(${table.note}) <= 140`),
+  ],
+);
+
+/** "I'm in" on a post: pending until the poster answers; on yes, where they were invited. */
+export const lfgRequests = pgTable(
+  "lfg_requests",
+  {
+    postId: uuid()
+      .notNull()
+      .references(() => lfgPosts.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** pending | accepted | declined */
+    status: text().notNull().default("pending"),
+    /** {kind: party | share_play, id} once accepted. */
+    invite: jsonb().$type<{ kind: "party" | "share_play"; id: string }>(),
+    createdAt: now(),
+    answeredAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.postId, table.accountId] }),
+    index().on(table.accountId, table.createdAt.desc()),
+    check("lfg_request_status", sql`${table.status} in ('pending', 'accepted', 'declined')`),
   ],
 );

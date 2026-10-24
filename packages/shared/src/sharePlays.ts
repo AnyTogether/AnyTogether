@@ -1,8 +1,9 @@
 import { z } from "zod";
 import type { IceServer } from "./calls.js";
 import { type GameSignalKind, gameSignalKinds } from "./gameSessions.js";
-import { TitleId } from "./games.js";
+import { LanguageCode, TitleId } from "./games.js";
 import type { MemberView } from "./messages.js";
+import { type PublicJoin, publicJoins } from "./parties.js";
 
 /** Share play: a host streams the game they run to friends (WebRTC, host → each viewer), and lets
  *  a viewer play along as player 2, 3 or 4 with their own pad. The server introduces them, relays
@@ -17,6 +18,19 @@ export type SharePadSlot = (typeof sharePadSlots)[number];
 
 const GameName = z.string().trim().min(1).max(80);
 
+/** A share play in public; `live` also lists it under "Live now" for anyone to watch, which needs
+ *  an open one. Never on unless the host turns it on. */
+export const ShareListing = z
+  .object({
+    join: z.enum(publicJoins),
+    language: LanguageCode.nullable().optional(),
+    live: z.boolean().default(false),
+  })
+  .refine((listing) => !listing.live || listing.join === "open", {
+    message: "only an open share play can be listed under Live now",
+    path: ["live"],
+  });
+
 export const SharePlayStart = z.object({
   titleId: TitleId,
   /** The game's name as the launcher shows it, for viewers who do not know the title ID. */
@@ -24,6 +38,8 @@ export const SharePlayStart = z.object({
   /** Friends may walk in without an invite. */
   open: z.boolean().default(true),
   maxViewers: z.number().int().min(1).max(maxShareViewers).default(2),
+  /** In the public list; null or left out keeps it to friends and invites. */
+  public: ShareListing.nullable().optional(),
 });
 
 export const SharePlayUpdate = z
@@ -32,6 +48,7 @@ export const SharePlayUpdate = z
     title: GameName.nullable().optional(),
     open: z.boolean().optional(),
     maxViewers: z.number().int().min(1).max(maxShareViewers).optional(),
+    public: ShareListing.nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, "nothing to change");
 
@@ -61,8 +78,12 @@ export interface SharePlayView {
   open: boolean;
   maxViewers: number;
   viewers: SharePlayViewer[];
+  /** In the public list, and how; null when it is not listed. */
+  public: { join: PublicJoin; language: string | null; live: boolean } | null;
   /** People invited who have not come yet; only the host sees them. */
   invited?: MemberView[];
+  /** People who asked to join; only the host sees them. */
+  requests?: MemberView[];
   startedAt: string;
 }
 

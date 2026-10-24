@@ -3,6 +3,7 @@ import { getConnInfo } from "@hono/node-server/conninfo";
 import type { Context, MiddlewareHandler } from "hono";
 import type { Redis } from "ioredis";
 import { HttpError } from "./errors.js";
+import { isNewcomer } from "./people.js";
 
 /** How many of something per window (seconds); counters live in Valkey as rl:<name>:<who>:<window>.
  *  Over a limit the answer is 429 with Retry-After. */
@@ -53,6 +54,16 @@ export const defaultLimits = {
   compatReport: { max: 60, seconds: 86_400 },
   /** Gateway tickets for the website, per account (one per socket it opens). */
   realtimeTicket: { max: 60, seconds: 60 },
+  /** Looking-for-group posts by one account, and by a new one (under a day old or with few
+   *  trophies). */
+  lfgPost: { max: 10, seconds: 86_400 },
+  lfgPostNew: { max: 2, seconds: 86_400 },
+  /** Asking strangers to play (an "I'm in", a request to join a public party or share play) and
+   *  walking into open ones, by one account and by a new one. */
+  joinRequest: { max: 60, seconds: 3600 },
+  joinRequestNew: { max: 10, seconds: 3600 },
+  /** Discovery lists (players of a game, suggestions, game hubs) per account. */
+  discover: { max: 60, seconds: 60 },
 };
 export type Limits = { [name in keyof typeof defaultLimits]: { max: number; seconds: number } };
 
@@ -79,6 +90,18 @@ export function rateLimiter(valkey: Redis, overrides: Partial<Limits> = {}) {
       { "retry-after": String(Math.max(1, retry)) },
     );
   };
+}
+
+/** Counts one more of something done towards strangers, against the tighter limit when the account
+ *  is new (see isNewcomer). */
+export function strangerLimiter(deps: {
+  db: Parameters<typeof isNewcomer>[0];
+  valkey: Redis;
+  limits?: Partial<Limits> | undefined;
+}) {
+  const limit = rateLimiter(deps.valkey, deps.limits);
+  return async (name: "lfgPost" | "joinRequest", who: string) =>
+    limit((await isNewcomer(deps.db, who)) ? `${name}New` : name, who);
 }
 
 /** Which header holds the caller's address, as the proxy in front sets it:

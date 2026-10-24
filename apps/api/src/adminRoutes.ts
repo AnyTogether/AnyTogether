@@ -4,6 +4,7 @@ import {
   avatars,
   bans,
   conversationMembers,
+  lfgPosts,
   messages,
   profiles,
   reports,
@@ -18,6 +19,7 @@ import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
+import { lfgService } from "./lfg.js";
 import { messageView } from "./messages.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { ban, emailHash, handleReport, liveBan } from "./moderation.js";
@@ -59,6 +61,7 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
   app.use("/admin/*", requireAdmin(deps));
   const { db, valkey } = deps;
   const who = people(db);
+  const board = lfgService(deps, notes);
 
   const audit = (
     c: { get: (key: "userId" | "adminHandle") => string },
@@ -120,6 +123,17 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
     const messageIds = rows
       .filter((r) => r.targetKind === "message" && isId(r.targetId))
       .map((r) => r.targetId);
+    const postIds = rows.filter((r) => r.targetKind === "lfg" && isId(r.targetId)).map((r) => r.targetId);
+    const removedPosts = new Set(
+      postIds.length
+        ? (
+            await db
+              .select({ id: lfgPosts.id })
+              .from(lfgPosts)
+              .where(and(inArray(lfgPosts.id, postIds), eq(lfgPosts.status, "removed")))
+          ).map((p) => p.id)
+        : [],
+    );
     const removed = new Set(
       messageIds.length
         ? (
@@ -135,7 +149,13 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
     return rows.map((r) => {
       const reporter = r.reporterId ? people.get(r.reporterId) : undefined;
       const subject = people.get(subjectOf(r) ?? "");
-      const snapshot = (r.snapshot ?? null) as { text?: string; createdAt?: string } | null;
+      const snapshot = (r.snapshot ?? null) as {
+        text?: string;
+        createdAt?: string;
+        note?: string | null;
+        titleId?: string;
+        purpose?: string;
+      } | null;
       return {
         id: r.id,
         status: r.status,
@@ -149,6 +169,16 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
                 text: snapshot?.text ?? null,
                 sentAt: snapshot?.createdAt ?? null,
                 removed: removed.has(r.targetId),
+              }
+            : null,
+        post:
+          r.targetKind === "lfg"
+            ? {
+                note: snapshot?.note ?? null,
+                titleId: snapshot?.titleId ?? null,
+                purpose: snapshot?.purpose ?? null,
+                postedAt: snapshot?.createdAt ?? null,
+                removed: removedPosts.has(r.targetId),
               }
             : null,
         reporter: reporter ? personView(reporter) : null,
@@ -252,6 +282,14 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
         await audit(c, "profile.avatar_reset", subject, { report: report.id });
         break;
       }
+      case "remove_post": {
+        if (report.targetKind !== "lfg")
+          throw new HttpError(400, ErrorCode.badRequest, "Only a reported post can be removed");
+        const [post] = await db.select().from(lfgPosts).where(eq(lfgPosts.id, report.targetId));
+        if (post) await board.close(post, "removed");
+        await audit(c, "lfg.removed", report.targetId, { author: subject, report: report.id });
+        break;
+      }
       case "reset_bio": {
         await db.update(profiles).set({ bio: null }).where(eq(profiles.accountId, subject));
         await audit(c, "profile.bio_reset", subject, { report: report.id });
@@ -276,6 +314,16 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
     const [fresh] = await db.select().from(reports).where(eq(reports.id, report.id));
     const [view] = await reportViews([fresh as Report]);
     return c.json({ report: view, closed: others.length });
+  });
+
+  /** Takes a looking-for-group post off the board without a report. */
+  app.post("/admin/lfg/:id/remove", async (c) => {
+    const id = c.req.param("id");
+    const [post] = isId(id) ? await db.select().from(lfgPosts).where(eq(lfgPosts.id, id)) : [];
+    if (!post) throw new HttpError(404, ErrorCode.notFound, "No such post");
+    await board.close(post, "removed");
+    await audit(c, "lfg.removed", post.id, { author: post.authorId });
+    return c.body(null, 204);
   });
 
   const banViews = async (rows: Ban[]) => {

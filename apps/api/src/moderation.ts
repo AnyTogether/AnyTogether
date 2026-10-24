@@ -4,6 +4,7 @@ import {
   auditLog,
   bans,
   conversationMembers,
+  lfgPosts,
   messages,
   profiles,
   reports,
@@ -257,6 +258,22 @@ export function reportRoutes(deps: Deps) {
       if (!found || found.status === "hidden") throw new HttpError(404, ErrorCode.notFound, "No such theme");
       if (found.makerId === me) throw new HttpError(400, ErrorCode.badRequest, "That is yours");
       snapshot = { authorId: found.makerId, name: found.name, version: found.version };
+    }
+    // A looking-for-group post: anyone who can see it but its poster; what it said is kept.
+    if (input.targetKind === "lfg") {
+      const [found] = /^[0-9a-f-]{36}$/i.test(input.targetId)
+        ? await deps.db.select().from(lfgPosts).where(eq(lfgPosts.id, input.targetId))
+        : [];
+      if (!found || found.status === "removed") throw new HttpError(404, ErrorCode.notFound, "No such post");
+      if (found.authorId === me) throw new HttpError(400, ErrorCode.badRequest, "That is yours");
+      snapshot = {
+        authorId: found.authorId,
+        titleId: found.titleId,
+        purpose: found.purpose,
+        languages: found.languages,
+        note: found.note,
+        createdAt: found.createdAt,
+      };
     }
     // One open report per person and target: a second one adds nothing for the moderators.
     const [made] = await deps.db

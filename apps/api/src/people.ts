@@ -1,6 +1,6 @@
 import { type Database, accounts, blocks, friendships, handleHistory, profiles } from "@anytogether/db";
 import { type MemberView, type Visibility, handleHoldDays, isReservedHandle } from "@anytogether/shared";
-import { and, eq, gt, inArray, ne, or } from "drizzle-orm";
+import { and, eq, gt, inArray, ne, or, sql } from "drizzle-orm";
 
 type Querier = Pick<Database, "select">;
 export type ProfileRow = typeof profiles.$inferSelect;
@@ -70,6 +70,24 @@ export async function areFriends(db: Querier, a: string, b: string) {
     );
   return rows.length > 0;
 }
+
+/** An account under a day old, or with fewer trophies than this, is new: it may post and ask to
+ *  join strangers less often. */
+export const newcomerHours = 24;
+export const newcomerTrophies = 5;
+
+export async function isNewcomer(db: Pick<Database, "execute">, userId: string) {
+  const [row] = await db.execute<{ fresh: boolean; trophies: number }>(sql`
+    select a.created_at > now() - make_interval(hours => ${newcomerHours}) fresh,
+      coalesce((select sum(l.trophies_earned) from library l where l.account_id = a.id), 0)::int trophies
+    from accounts a where a.id = ${userId}`);
+  return !row || row.fresh || Number(row.trophies) < newcomerTrophies;
+}
+
+/** SQL: neither of the two blocked the other (`other` is a column or a value). */
+export const noBlockBetween = (me: string, other: unknown) =>
+  sql`not exists (select 1 from blocks b where (b.blocker = ${me}::uuid and b.blocked = ${other})
+    or (b.blocker = ${other} and b.blocked = ${me}::uuid))`;
 
 /** Who is looking, as privacy settings see it. */
 export type Relation = "me" | "friend" | "other";

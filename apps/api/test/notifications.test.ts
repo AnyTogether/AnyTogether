@@ -183,6 +183,8 @@ describe("notifications", () => {
         party_invite: true,
         game_invite: true,
         missed_call: true,
+        lfg_request: true,
+        lfg_accepted: true,
         digest: false,
       },
       push: null,

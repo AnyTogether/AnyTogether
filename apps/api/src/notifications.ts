@@ -76,6 +76,9 @@ const pushTexts = {
     party_invite: ["{name}", "invited you to their party."],
     game_invite: ["{name}", "invited you to play {game}."],
     missed_call: ["{name}", "Missed call."],
+    lfg_request: ["{name}", "wants in on your {game} post."],
+    lfg_requests: ["{name}", "and {others} more want in on your {game} post."],
+    lfg_accepted: ["{name}", "let you in for {game}. Your invite is waiting."],
     warning: ["AnyTogether", "A moderator warned you: {reason}"],
   },
   tr: {
@@ -86,6 +89,9 @@ const pushTexts = {
     party_invite: ["{name}", "seni partisine çağırdı."],
     game_invite: ["{name}", "seni {game} oynamaya çağırdı."],
     missed_call: ["{name}", "Cevapsız arama."],
+    lfg_request: ["{name}", "{game} ilanına katılmak istiyor."],
+    lfg_requests: ["{name}", "ve {others} kişi daha {game} ilanına katılmak istiyor."],
+    lfg_accepted: ["{name}", "seni {game} için kabul etti. Davetin seni bekliyor."],
     warning: ["AnyTogether", "Bir moderatör seni uyardı: {reason}"],
   },
 } as const;
@@ -94,7 +100,7 @@ const fillIn = (text: string, values: Record<string, string | number>) =>
   text.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
 
 /** Where a notification leads on the website. */
-export function notificationPath(n: Pick<NotificationView, "kind" | "subjectId" | "actor">) {
+export function notificationPath(n: Pick<NotificationView, "kind" | "subjectId" | "actor" | "data">) {
   switch (n.kind) {
     case "message":
       return `/messages?c=${n.subjectId}`;
@@ -105,6 +111,12 @@ export function notificationPath(n: Pick<NotificationView, "kind" | "subjectId" 
       return "/party";
     case "missed_call":
       return n.actor ? `/u/${n.actor.handle}` : "/notifications";
+    case "lfg_request":
+      return "/find#mine";
+    case "lfg_accepted": {
+      const invite = (n.data as { invite?: { kind?: string; id?: string } | null }).invite;
+      return invite?.kind === "share_play" && invite.id ? `/watch/${invite.id}` : "/party";
+    }
     default:
       return "/notifications";
   }
@@ -115,7 +127,12 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
   const texts = lang === "tr" ? pushTexts.tr : pushTexts.en;
   const data = n.data as Record<string, unknown>;
   const count = Number(data.count ?? 1);
-  const key = n.kind === "message" && count > 1 ? "messages" : n.kind;
+  const key =
+    n.kind === "message" && count > 1
+      ? "messages"
+      : n.kind === "lfg_request" && count > 1
+        ? "lfg_requests"
+        : n.kind;
   const name =
     n.kind === "message" && data.group
       ? `${String(data.title ?? "")}${data.title ? " · " : ""}${n.actor?.displayName ?? ""}`
@@ -124,6 +141,7 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
   const values = {
     name,
     n: count,
+    others: count - 1,
     text: String(data.text ?? ""),
     game: games[lang] ?? games.en ?? String(data.titleId ?? ""),
     reason: String(data.reason ?? ""),
@@ -200,7 +218,9 @@ export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
   }
 
   /** A notification for `accountId`, unless they turned its kind off; a message only while none of
-   *  their devices is connected. Returns it, or null when nothing was stored. */
+   *  their devices is connected. Messages, and people asking in on a post, gather in the one unread
+   *  notification of their conversation or post, counting how many came. Returns it, or null when
+   *  nothing was stored. */
   async function notify(accountId: string, input: NotifyInput) {
     const [profile] = await db
       .select({ settings: profiles.notificationSettings })
@@ -211,6 +231,7 @@ export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
     const online = await hasLiveSocket(valkey, accountId);
     if (input.kind === "message" && online) return null;
     const data = input.data ?? {};
+    const gathers = input.kind === "message" || input.kind === "lfg_request";
     const [row] = await db
       .insert(notifications)
       .values({
@@ -219,7 +240,7 @@ export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
         kind: input.kind,
         actorId: input.actorId ?? null,
         subjectId: input.subjectId,
-        data: input.kind === "message" ? { ...data, count: 1 } : data,
+        data: gathers ? { ...data, count: 1 } : data,
       })
       .onConflictDoUpdate({
         target: [notifications.accountId, notifications.kind, notifications.subjectId],
@@ -227,10 +248,9 @@ export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
         set: {
           actorId: sql`excluded.actor_id`,
           // More messages gather into the one unread notification of the conversation.
-          data:
-            input.kind === "message"
-              ? sql`jsonb_set(excluded.data, '{count}', to_jsonb(coalesce((${notifications.data}->>'count')::int, 1) + 1))`
-              : sql`excluded.data`,
+          data: gathers
+            ? sql`jsonb_set(excluded.data, '{count}', to_jsonb(coalesce((${notifications.data}->>'count')::int, 1) + 1))`
+            : sql`excluded.data`,
           updatedAt: new Date(),
         },
       })

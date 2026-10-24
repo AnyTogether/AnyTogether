@@ -1,4 +1,4 @@
-import { type GatewayEvent, userChannel, userEvents } from "@anytogether/shared";
+import { type GatewayEvent, topicChannel, userChannel, userEvents } from "@anytogether/shared";
 import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
 
@@ -14,6 +14,19 @@ export async function publish(valkey: Redis, userId: string, event: GatewayEvent
     .exec();
   return id;
 }
+
+/** Tells every socket watching a public topic (the board, the public lists); nothing is kept for
+ *  a socket that reconnects, which reads the list again anyway. */
+export async function broadcast(valkey: Redis, topics: string[], event: GatewayEvent) {
+  const message = JSON.stringify({ id: uuidv7(), ...event });
+  const write = valkey.multi();
+  for (const topic of new Set(topics)) write.publish(topicChannel(topic), message);
+  await write.exec();
+}
+
+/** A board or list topic, and the same for one game. */
+export const topicsFor = (topic: "lfg" | "discover", titleId: string | null | undefined) =>
+  titleId ? [topic, `${topic}:${titleId}`] : [topic];
 
 /** Revoked sessions, kept as long as an access token of theirs could still be valid. */
 export const revokedKey = (sessionId: string) => `revoked:${sessionId}`;

@@ -7,6 +7,13 @@ export const SetHash = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/, "a trophy set
 /** A language tag: "en", "tr", "pt-BR". */
 const Language = z.string().regex(/^[a-z]{2,3}(-[A-Z]{2})?$/, "a language like en or pt-BR");
 
+/** A language people play in: an ISO 639-1 code ("en", "tr", "pt"). */
+export const LanguageCode = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^[a-z]{2}$/, "a language like en or tr");
+
 export const platforms = ["macos", "windows", "linux"] as const;
 export const grades = ["bronze", "silver", "gold", "platinum"] as const;
 export type Grade = (typeof grades)[number];

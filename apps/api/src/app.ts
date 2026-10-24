@@ -10,12 +10,14 @@ import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
 import { callRoutes } from "./calls.js";
 import { compatRoutes } from "./compat.js";
+import { discoverRoutes } from "./discover.js";
 import { HttpError } from "./errors.js";
 import { feedRoutes } from "./feed.js";
 import { friendRoutes } from "./friends.js";
 import { gameSessionRoutes } from "./gameSessions.js";
 import { gameRoutes } from "./games.js";
 import { leaderboardRoutes } from "./leaderboards.js";
+import { lfgRoutes } from "./lfg.js";
 import type { Mailer } from "./mail.js";
 import { messageRoutes } from "./messages.js";
 import type { AuthVariables } from "./middleware.js";
@@ -123,6 +125,9 @@ export function createApp(deps: Deps) {
   v1.route("/", gameSessionRoutes(deps, notes));
   const shares = sharePlayRoutes(deps);
   v1.route("/", shares);
+  const lfg = lfgRoutes(deps, notes, partyPieces, shares);
+  v1.route("/", lfg);
+  v1.route("/", discoverRoutes(deps, { lfg, parties: partyPieces, shares }));
   v1.route("/", realtimeRoutes(deps));
   v1.route("/", adminRoutes(deps, notes));
   app.route("/api/v1", v1);
@@ -134,5 +139,7 @@ export function createApp(deps: Deps) {
     sweepDepartures,
     sweepCalls: calls.sweepDepartures,
     sweepShares: shares.sweepDepartures,
+    /** Looking-for-group posts whose time ran out leave the board. */
+    sweepLfg: lfg.sweep,
   });
 }

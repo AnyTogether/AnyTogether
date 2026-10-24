@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** What can be reported; activities join this list when they exist. */
-export const reportTargets = ["user", "message", "theme"] as const;
+export const reportTargets = ["user", "message", "theme", "lfg"] as const;
 export const reportReasons = [
   "spam",
   "harassment",
@@ -16,7 +16,7 @@ export type ReportReason = (typeof reportReasons)[number];
 
 export const ReportCreate = z.object({
   targetKind: z.enum(reportTargets),
-  /** For a user, their user ID; for a message or a theme, its ID. */
+  /** For a user, their user ID; for a message, a theme or a looking-for-group post, its ID. */
   targetId: z.string().min(1).max(100),
   reason: z.enum(reportReasons),
   note: z.string().trim().max(500).optional(),
@@ -31,6 +31,8 @@ export const reportActions = [
   "remove_message",
   "reset_avatar",
   "reset_bio",
+  /** Takes a reported looking-for-group post off the board. */
+  "remove_post",
 ] as const;
 export type ReportAction = (typeof reportActions)[number];
 
