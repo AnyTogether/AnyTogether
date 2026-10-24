@@ -10,6 +10,8 @@ import {
   deviceCallsKey,
   devicePresenceKey,
   friendsKey,
+  gameSessionMembersKey,
+  gameSignalKinds,
   presenceKey as mergedPresenceKey,
   presenceExtraKey,
   presenceHiddenKey,
@@ -175,33 +177,47 @@ export async function createGateway(options: GatewayOptions) {
     return { userId: payload.sub, sessionId: payload.sid };
   }
 
-  /** WebRTC signalling between two members of the same call, as the API set it up; passed on
-   *  through the peer's channel and never stored. */
+  /** WebRTC signalling between two members of the same call, or two players of the same game
+   *  session, as the API set them up; passed on through the peer's channel and never stored. */
   async function relaySignal(connection: Connection, frame: Extract<ClientFrame, { op: "signal" }>) {
-    const { to, call, kind, device } = frame;
+    const { to, kind, device } = frame;
+    const call = typeof frame.call === "string" ? frame.call : undefined;
+    const raw = frame as { session?: unknown };
+    const session = !call && typeof raw.session === "string" ? raw.session : undefined;
     if (
       typeof to !== "string" ||
-      typeof call !== "string" ||
-      !signalKinds.includes(kind) ||
+      !(call ?? session) ||
+      !(call ? signalKinds : gameSignalKinds).includes(kind as never) ||
       (device !== undefined && typeof device !== "string")
     )
-      return send(connection.socket, { op: "error", code: "bad_signal", message: "to, call and kind" });
+      return send(connection.socket, {
+        op: "error",
+        code: "bad_signal",
+        message: "to, call or session, and kind",
+      });
     const now = Date.now();
     if (now - connection.signals.since > signalLimit.windowMs) connection.signals = { count: 0, since: now };
     if (++connection.signals.count > signalLimit.count)
       return connection.socket.close(CloseCode.tooMany, "too many signals");
-    const members = callMembersKey(call);
+    const members = call ? callMembersKey(call) : gameSessionMembersKey(session as string);
     const [[, from], [, peer]] = (await store
       .multi()
       .sismember(members, connection.userId)
       .sismember(members, to)
       .exec()) as [[null, number], [null, number]];
     if (!from || !peer || to === connection.userId)
-      return send(connection.socket, { op: "error", code: "not_in_call", message: "not in that call" });
+      return send(
+        connection.socket,
+        call
+          ? { op: "error", code: "not_in_call", message: "not in that call" }
+          : { op: "error", code: "not_in_session", message: "not in that game session" },
+      );
+    const signal = { from: connection.userId, device: connection.sessionId, kind, data: frame.data ?? null };
     const message = JSON.stringify({
       id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
-      type: "signal",
-      data: { call, from: connection.userId, device: connection.sessionId, kind, data: frame.data ?? null },
+      ...(call
+        ? { type: "signal", data: { call, ...signal } }
+        : { type: "game_session.signal", data: { sessionId: session, ...signal } }),
       ...(device && device !== "*" ? { device } : {}),
     });
     await store.publish(userChannel(to), message);

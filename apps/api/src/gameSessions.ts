@@ -4,16 +4,22 @@ import {
   type GamePresence,
   GameSessionInvite,
   GameSessionJoin,
+  type GameSessionMember,
+  GameSessionMemberUpdate,
   GameSessionOpen,
   GameSessionUpdate,
   type GameSessionView,
   type GatewayEvent,
+  gameSessionKeepSeconds,
+  gameSessionMembersKey,
+  gameSessionPropertiesKey,
 } from "@anytogether/shared";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
 import type { Deps } from "./app.js";
+import { iceServers } from "./calls.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
@@ -65,7 +71,41 @@ export function gameSessionRoutes(deps: Deps) {
         .where(and(eq(gameSessionInvites.sessionId, sessionId), eq(gameSessionInvites.accountId, userId)))
     ).length > 0;
 
-  async function view(session: Session, players?: string[]): Promise<GameSessionView> {
+  /** The players the gateway lets signal each other, kept a day past the last change or look. */
+  const keepMembers = async (sessionId: string, players: string[]) => {
+    const write = deps.valkey.multi().del(gameSessionMembersKey(sessionId));
+    if (players.length) write.sadd(gameSessionMembersKey(sessionId), ...players);
+    await write
+      .expire(gameSessionMembersKey(sessionId), gameSessionKeepSeconds)
+      .expire(gameSessionPropertiesKey(sessionId), gameSessionKeepSeconds)
+      .exec();
+  };
+
+  /** Each player in join order with what they published. */
+  const members = async (sessionId: string): Promise<GameSessionMember[]> => {
+    const rows = await db
+      .select({ id: gameSessionPlayers.accountId, joinedAt: gameSessionPlayers.joinedAt })
+      .from(gameSessionPlayers)
+      .where(eq(gameSessionPlayers.sessionId, sessionId))
+      .orderBy(asc(gameSessionPlayers.joinedAt));
+    const published = await deps.valkey.hgetall(gameSessionPropertiesKey(sessionId));
+    return rows.map((row) => {
+      let own: { device?: string; properties?: Record<string, unknown>; updatedAt?: string } = {};
+      try {
+        own = JSON.parse(published[row.id] ?? "{}");
+      } catch {}
+      return {
+        userId: row.id,
+        device: own.device ?? null,
+        properties: own.properties ?? {},
+        joinedAt: row.joinedAt.toISOString(),
+        updatedAt: own.updatedAt ?? null,
+      };
+    });
+  };
+
+  /** The session; with every player's own properties when the one asking plays in it. */
+  async function view(session: Session, players?: string[], forPlayers = false): Promise<GameSessionView> {
     const ids = players ?? (await playerIds(session.id));
     const cards = await who.cards([session.hostId, ...ids]);
     return {
@@ -77,6 +117,7 @@ export function gameSessionRoutes(deps: Deps) {
       capacity: session.capacity,
       joinable: session.joinable,
       players: ids.flatMap((id) => cards.get(id) ?? []),
+      ...(forPlayers ? { members: await members(session.id) } : {}),
       properties: session.properties,
       createdAt: session.createdAt.toISOString(),
       endedAt: session.endedAt?.toISOString() ?? null,
@@ -98,7 +139,8 @@ export function gameSessionRoutes(deps: Deps) {
   /** Players hear the session as it is now; the host's presence follows. */
   const changed = async (session: Session) => {
     const players = await playerIds(session.id);
-    await tell(players, { type: "game_session.updated", data: await view(session, players) });
+    await keepMembers(session.id, players);
+    await tell(players, { type: "game_session.updated", data: await view(session, players, true) });
     await showInPresence(session, players.length);
   };
 
@@ -110,6 +152,7 @@ export function gameSessionRoutes(deps: Deps) {
       .returning();
     await db.delete(gameSessionPlayers).where(eq(gameSessionPlayers.sessionId, session.id));
     await db.update(gameSessions).set({ endedAt: new Date() }).where(eq(gameSessions.id, session.id));
+    await deps.valkey.del(gameSessionMembersKey(session.id), gameSessionPropertiesKey(session.id));
     await setPresenceExtra(deps.valkey, session.hostId, "game", null);
     await tell([...players, ...invites.map((i) => i.accountId)], {
       type: "game_session.ended",
@@ -135,6 +178,7 @@ export function gameSessionRoutes(deps: Deps) {
     await db
       .delete(gameSessionPlayers)
       .where(and(eq(gameSessionPlayers.sessionId, row.session.id), eq(gameSessionPlayers.accountId, userId)));
+    await deps.valkey.hdel(gameSessionPropertiesKey(row.session.id), userId);
     await changed(row.session);
   }
 
@@ -174,8 +218,9 @@ export function gameSessionRoutes(deps: Deps) {
       await tx.insert(gameSessionPlayers).values({ sessionId: (made as Session).id, accountId: me });
       return made as Session;
     });
+    await keepMembers(session.id, [me]);
     await showInPresence(session, 1);
-    return c.json(await view(session, [me]), 201);
+    return c.json(await view(session, [me], true), 201);
   });
 
   /** The session I play in, and invites waiting for me. */
@@ -194,7 +239,7 @@ export function gameSessionRoutes(deps: Deps) {
       .orderBy(asc(gameSessionInvites.createdAt));
     const cards = await who.cards(invites.flatMap((i) => (i.invite.invitedBy ? [i.invite.invitedBy] : [])));
     return c.json({
-      session: row ? await view(row.session) : null,
+      session: row ? await view(row.session, undefined, true) : null,
       invites: invites.map(({ invite, session }) => ({
         sessionId: session.id,
         from: invite.invitedBy ? (cards.get(invite.invitedBy) ?? null) : null,
@@ -207,8 +252,41 @@ export function gameSessionRoutes(deps: Deps) {
   });
 
   app.get("/game-sessions/:id", async (c) => {
-    const { session, players } = await visible(c.req.param("id"), c.get("userId"));
-    return c.json(await view(session, players));
+    const me = c.get("userId");
+    const { session, players } = await visible(c.req.param("id"), me);
+    const playing = players.includes(me);
+    if (playing) await keepMembers(session.id, players);
+    return c.json(await view(session, players, playing));
+  });
+
+  /** A player in it, or 403 for someone who may only look. */
+  const asPlayer = async (sessionId: string, me: string) => {
+    const found = await visible(sessionId, me);
+    if (!found.players.includes(me)) throw new HttpError(403, ErrorCode.forbidden, "Join the game first");
+    return found;
+  };
+
+  /** A player publishes their own properties (where their launcher takes packets, a public key),
+   *  replacing what they had; the other players get the session as it is now. */
+  app.put("/game-sessions/:id/members/me", async (c) => {
+    const me = c.get("userId");
+    const { session } = await asPlayer(c.req.param("id"), me);
+    const { properties } = await body(c, GameSessionMemberUpdate);
+    await deps.valkey.hset(
+      gameSessionPropertiesKey(session.id),
+      me,
+      JSON.stringify({ device: c.get("sessionId"), properties, updatedAt: new Date().toISOString() }),
+    );
+    await changed(session);
+    return c.json(await view(session, undefined, true));
+  });
+
+  /** STUN and TURN for the players' own connections, as calls get them; asking again renews them. */
+  app.get("/game-sessions/:id/ice-servers", async (c) => {
+    const me = c.get("userId");
+    const { session, players } = await asPlayer(c.req.param("id"), me);
+    await keepMembers(session.id, players);
+    return c.json(iceServers(deps.turn, me));
   });
 
   app.patch("/game-sessions/:id", async (c) => {
@@ -223,7 +301,7 @@ export function gameSessionRoutes(deps: Deps) {
       .where(eq(gameSessions.id, session.id))
       .returning();
     await changed(updated as Session);
-    return c.json(await view(updated as Session));
+    return c.json(await view(updated as Session, undefined, true));
   });
 
   app.delete("/game-sessions/:id", async (c) => {
@@ -270,7 +348,7 @@ export function gameSessionRoutes(deps: Deps) {
   app.post("/game-sessions/:id/join", async (c) => {
     const me = c.get("userId");
     const { session, players } = await visible(c.req.param("id"), me);
-    if (players.includes(me)) return c.json(await view(session, players));
+    if (players.includes(me)) return c.json(await view(session, players, true));
     const input = await body(c, GameSessionJoin);
     if (input.gameVersion !== session.gameVersion || input.engineBuild !== session.engineBuild)
       throw new HttpError(
@@ -302,7 +380,7 @@ export function gameSessionRoutes(deps: Deps) {
     if (joined === "ended") throw new HttpError(404, ErrorCode.notFound, "No such game session");
     if (joined === "full") throw new HttpError(409, ErrorCode.full, "This game is full");
     await changed(session);
-    return c.json(await view(session));
+    return c.json(await view(session, undefined, true));
   });
 
   app.post("/game-sessions/:id/decline", async (c) => {

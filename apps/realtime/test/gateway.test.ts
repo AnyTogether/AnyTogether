@@ -352,6 +352,37 @@ describe("the gateway", () => {
     for (const c of [me, myPhone, friend, other, outsider]) c.socket.close();
   });
 
+  it("relays signals between players of a game session only", async () => {
+    await valkey.sadd("game-session:g1:members", "u1", "u2");
+    await valkey.sadd("call:c9:members", "u1", "u3");
+    const host = await signedIn("u1", "mac");
+    const guest = await signedIn("u2", "mac2");
+    const caller = await signedIn("u3", "s3");
+    host.send({ op: "signal", to: "u2", session: "g1", kind: "candidate", data: "192.0.2.10:49152" });
+    const got = await guest.waitFor((frame) => frame.type === "game_session.signal");
+    expect(got.data).toEqual({
+      sessionId: "g1",
+      from: "u1",
+      device: "mac",
+      kind: "candidate",
+      data: "192.0.2.10:49152",
+    });
+    guest.send({ op: "signal", to: "u1", device: "mac", session: "g1", kind: "message", data: { hi: 1 } });
+    expect((await host.waitFor((frame) => frame.type === "game_session.signal")).data).toMatchObject({
+      kind: "message",
+      data: { hi: 1 },
+    });
+    // A call member is not a player, and "message" is for game sessions only.
+    caller.send({ op: "signal", to: "u1", session: "g1", kind: "offer", data: {} });
+    expect(await caller.waitFor((frame) => frame.op === "error")).toMatchObject({ code: "not_in_session" });
+    caller.send({ op: "signal", to: "u1", call: "c9", kind: "message", data: {} });
+    expect(await caller.waitFor((frame) => frame.code === "bad_signal")).toBeTruthy();
+    host.send({ op: "signal", to: "u2", kind: "offer", data: {} });
+    expect(await host.waitFor((frame) => frame.code === "bad_signal")).toBeTruthy();
+    expect(await valkey.xlen("events:u2")).toBe(0);
+    for (const c of [host, guest, caller]) c.socket.close();
+  });
+
   it("keeps presence from heartbeats", async () => {
     const c = await signedIn("u1", "s1");
     c.send({

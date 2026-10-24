@@ -235,3 +235,89 @@ describe("game sessions", () => {
     ).toBe(400);
   });
 });
+
+describe("online play between players", () => {
+  /** The session ID inside an access token, which the gateway calls the device. */
+  const deviceOf = (token: string) =>
+    JSON.parse(Buffer.from(token.split(".")[1] as string, "base64url").toString()).sid as string;
+
+  it("lets each player publish their own properties, seen only by the players, and signal", async () => {
+    await h.close();
+    h = await harness({ turn: { secret: "s", urls: ["stun:relay.test:3478", "turn:relay.test:3478"] } });
+    const host = await h.user("oh@example.com");
+    const guest = await h.user("og@example.com");
+    const onlooker = await h.user("oo@example.com");
+    await befriend(host, guest);
+    await befriend(host, onlooker);
+    const { body: opened } = await h.call("POST", "/api/v1/game-sessions", game, host.token);
+    const id = opened.id as string;
+    expect(opened.members).toEqual([
+      { userId: host.id, device: null, properties: {}, joinedAt: expect.any(String), updatedAt: null },
+    ]);
+    expect(await h.valkey.smembers(`game-session:${id}:members`)).toEqual([host.id]);
+    await h.call("POST", `/api/v1/game-sessions/${id}/join`, same, guest.token);
+    expect((await h.valkey.smembers(`game-session:${id}:members`)).sort()).toEqual(
+      [host.id, guest.id].sort(),
+    );
+
+    const guestHears = await listen(guest.id);
+    const endpoint = { endpoints: ["192.0.2.10:49152"], key: "bm90LWEtcmVhbC1rZXk", v: 1 };
+    const put = await h.call(
+      "PUT",
+      `/api/v1/game-sessions/${id}/members/me`,
+      { properties: endpoint },
+      host.token,
+    );
+    expect(put.status).toBe(200);
+    expect(put.body.members[0]).toMatchObject({
+      userId: host.id,
+      device: deviceOf(host.token),
+      properties: endpoint,
+      updatedAt: expect.any(String),
+    });
+    await settle();
+    const told = guestHears.heard.filter((e) => e.type === "game_session.updated").at(-1);
+    expect((told?.data as { members: unknown[] }).members).toEqual([
+      expect.objectContaining({ userId: host.id, properties: endpoint }),
+      expect.objectContaining({ userId: guest.id, properties: {}, device: null }),
+    ]);
+    guestHears.stop();
+
+    // The players see who published what; a friend who may only look does not.
+    const seen = await h.call("GET", `/api/v1/game-sessions/${id}`, undefined, guest.token);
+    expect(seen.body.members.map((m: { userId: string }) => m.userId)).toEqual([host.id, guest.id]);
+    const looked = await h.call("GET", `/api/v1/game-sessions/${id}`, undefined, onlooker.token);
+    expect(looked.status).toBe(200);
+    expect(looked.body.members).toBeUndefined();
+    expect(JSON.stringify(looked.body)).not.toContain("192.0.2.10");
+    expect(
+      (await h.call("PUT", `/api/v1/game-sessions/${id}/members/me`, { properties: {} }, onlooker.token))
+        .status,
+    ).toBe(403);
+    const big = await h.call(
+      "PUT",
+      `/api/v1/game-sessions/${id}/members/me`,
+      { properties: { blob: "x".repeat(2100) } },
+      guest.token,
+    );
+    expect(big.status).toBe(400);
+    expect((await h.call("PUT", `/api/v1/game-sessions/${id}/members/me`, {}, guest.token)).status).toBe(400);
+
+    // Relay credentials for the players, as calls get them.
+    const ice = await h.call("GET", `/api/v1/game-sessions/${id}/ice-servers`, undefined, guest.token);
+    expect(ice.status).toBe(200);
+    expect(ice.body.iceServers[1]).toMatchObject({ urls: ["turn:relay.test:3478"] });
+    expect(ice.body.iceServers[1].username).toMatch(new RegExp(`:${guest.id}$`));
+    expect(
+      (await h.call("GET", `/api/v1/game-sessions/${id}/ice-servers`, undefined, onlooker.token)).status,
+    ).toBe(403);
+
+    // A player who leaves takes their properties along and can no longer signal.
+    await h.call("PUT", `/api/v1/game-sessions/${id}/members/me`, { properties: { a: 1 } }, guest.token);
+    await h.call("POST", `/api/v1/game-sessions/${id}/leave`, {}, guest.token);
+    expect(await h.valkey.hexists(`game-session:${id}:properties`, guest.id)).toBe(0);
+    expect(await h.valkey.smembers(`game-session:${id}:members`)).toEqual([host.id]);
+    await h.call("DELETE", `/api/v1/game-sessions/${id}`, undefined, host.token);
+    expect(await h.valkey.exists(`game-session:${id}:members`, `game-session:${id}:properties`)).toBe(0);
+  });
+});
