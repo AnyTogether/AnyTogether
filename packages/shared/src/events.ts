@@ -5,7 +5,10 @@ export type GatewayEvent =
       type: "presence.updated";
       data: { userId: string; state: PresenceState; titleId?: string; since?: string };
     }
-  | { type: "auth.handoff"; data: { handoffId: string; deviceName: string; client: string } };
+  | { type: "auth.handoff"; data: { handoffId: string; deviceName: string; client: string } }
+  | { type: "friend.request"; data: { userId: string; handle: string; displayName: string } }
+  | { type: "friend.accepted"; data: { userId: string; handle: string; displayName: string } }
+  | { type: "friend.removed"; data: { userId: string } };
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 
@@ -24,3 +27,8 @@ export type ServerFrame =
 
 export const userChannel = (userId: string) => `user:${userId}`;
 export const userEvents = (userId: string) => `events:${userId}`;
+
+/** Each user's friends, kept by the API for the gateway's presence fan-out. */
+export const friendsKey = (userId: string) => `friends:${userId}`;
+/** A user's presence merged over their devices, kept by the gateway. */
+export const presenceKey = (userId: string) => `presence:${userId}`;

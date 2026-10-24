@@ -25,7 +25,7 @@ export async function fakeProvider(issuer: string) {
 
 export async function harness(overrides: Partial<Deps> = {}) {
   const { db, client } = connect(testDatabaseUrl, 4);
-  await client`truncate accounts, sign_in_requests, audit_log cascade`;
+  await client`truncate accounts, sign_in_requests, audit_log, friendships, blocks cascade`;
   const valkey = new Redis(process.env.TEST_VALKEY_URL ?? "redis://127.0.0.1:63799/1");
   await valkey.flushdb();
   const mailer = memoryMailer();
@@ -68,6 +68,16 @@ export async function harness(overrides: Partial<Deps> = {}) {
     const text = await response.text();
     return { status: response.status, body: text ? JSON.parse(text) : null, headers: response.headers };
   };
+  /** A signed-in user: their access token, id and handle. */
+  const user = async (email: string) => {
+    await call("POST", "/api/v1/auth/email/start", { email });
+    const signedIn = await call("POST", "/api/v1/auth/email/verify", { email, code: mailer.lastCode(email) });
+    return {
+      token: signedIn.body.accessToken as string,
+      id: signedIn.body.user.id as string,
+      handle: signedIn.body.user.handle as string,
+    };
+  };
   return {
     app,
     call,
@@ -76,6 +86,7 @@ export async function harness(overrides: Partial<Deps> = {}) {
     google,
     apple,
     valkey,
+    user,
     close: async () => {
       await client.end();
       valkey.disconnect();

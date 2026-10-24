@@ -158,6 +158,50 @@ describe("the gateway", () => {
     again.socket.close();
   });
 
+  it("tells friends when a friend comes online, plays and leaves", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    await valkey.sadd("friends:u2", "u1");
+    const friend = await signedIn("u2", "s2");
+    const me = await signedIn("u1", "s1");
+    await friend.waitFor(
+      (frame) => frame.type === "presence.updated" && (frame.data as { state: string }).state === "online",
+    );
+    me.send({
+      op: "heartbeat",
+      presence: { state: "in_game", titleId: "PPSA01234", since: "2026-10-24T10:00:00Z" },
+    });
+    await friend.waitFor(
+      (frame) => frame.type === "presence.updated" && (frame.data as { state: string }).state === "in_game",
+    );
+    expect(JSON.parse((await valkey.get("presence:u1")) ?? "{}")).toMatchObject({
+      state: "in_game",
+      titleId: "PPSA01234",
+    });
+    me.socket.close();
+    await friend.waitFor(
+      (frame) => frame.type === "presence.updated" && (frame.data as { state: string }).state === "offline",
+    );
+    expect(await valkey.get("presence:u1")).toBeNull();
+    friend.socket.close();
+  });
+
+  it("merges a user's devices: playing on one wins over online on another", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    const friend = await signedIn("u2", "s2");
+    const mac = await signedIn("u1", "mac");
+    const phone = await signedIn("u1", "phone");
+    mac.send({
+      op: "heartbeat",
+      presence: { state: "in_game", titleId: "PPSA09999", since: "2026-10-24T10:00:00Z" },
+    });
+    await friend.waitFor((frame) => (frame.data as { state?: string })?.state === "in_game");
+    phone.socket.close();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(JSON.parse((await valkey.get("presence:u1")) ?? "{}").state).toBe("in_game");
+    mac.socket.close();
+    friend.socket.close();
+  });
+
   it("keeps presence from heartbeats", async () => {
     const c = await signedIn("u1", "s1");
     c.send({

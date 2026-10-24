@@ -1,5 +1,12 @@
 import { createServer } from "node:http";
-import { type ClientFrame, type ServerFrame, userChannel, userEvents } from "@anytogether/shared";
+import {
+  type ClientFrame,
+  type ServerFrame,
+  friendsKey,
+  presenceKey as mergedPresenceKey,
+  userChannel,
+  userEvents,
+} from "@anytogether/shared";
 import { Redis } from "ioredis";
 import { type JWTVerifyGetKey, type KeyLike, jwtVerify } from "jose";
 import { WebSocket, WebSocketServer } from "ws";
@@ -21,6 +28,12 @@ interface Connection {
   userId: string;
   sessionId: string;
   lastHeard: number;
+}
+
+interface Presence {
+  state: "online" | "away" | "in_game" | "offline";
+  titleId?: string;
+  since?: string;
 }
 
 /** One WebSocket per signed-in client: events the API publishes for its user reach it, a socket
@@ -74,6 +87,30 @@ export async function createGateway(options: GatewayOptions) {
       await subscriber.unsubscribe(userChannel(connection.userId));
     }
     await store.del(presenceKey(connection));
+    await announce(connection.userId);
+  }
+
+  /** The user's presence over all their devices (in a game > online > away), kept and, when it
+   *  changed, sent to every friend. */
+  async function announce(userId: string) {
+    const keys = await store.keys(`presence:${userId}:*`);
+    const devices = (keys.length ? await store.mget(...keys) : [])
+      .filter(Boolean)
+      .map((value) => JSON.parse(value as string) as Presence);
+    const rank = { in_game: 0, online: 1, away: 2, offline: 3 };
+    const merged: Presence = devices.sort((a, b) => rank[a.state] - rank[b.state])[0] ?? { state: "offline" };
+    const before = await store.get(mergedPresenceKey(userId));
+    const now = JSON.stringify(merged);
+    if (merged.state === "offline") await store.del(mergedPresenceKey(userId));
+    else await store.set(mergedPresenceKey(userId), now, "EX", 70);
+    if (before === now || (before === null && merged.state === "offline")) return;
+    const friends = await store.smembers(friendsKey(userId));
+    const message = (id: string) =>
+      JSON.stringify({ id, type: "presence.updated", data: { userId, ...merged } });
+    for (const friend of friends) {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      await store.publish(userChannel(friend), message(id));
+    }
   }
 
   /** The events after `resume` still kept for the user (the API keeps five minutes of them). */
@@ -120,6 +157,8 @@ export async function createGateway(options: GatewayOptions) {
           connection = { socket, userId: payload.sub, sessionId: payload.sid, lastHeard: Date.now() };
           await join(connection);
           send(socket, { op: "ready", session: payload.sid, heartbeat });
+          await store.set(presenceKey(connection), JSON.stringify({ state: "online" }), "EX", 60);
+          await announce(connection.userId);
           if (frame.resume) await replay(connection, frame.resume);
         } catch {
           socket.close(CloseCode.unauthorized, "bad token");
@@ -129,9 +168,13 @@ export async function createGateway(options: GatewayOptions) {
       if (!connection) return socket.close(CloseCode.unauthorized, "say hello first");
       if (frame.op === "heartbeat") {
         connection.lastHeard = Date.now();
-        if (frame.presence) {
-          await store.set(presenceKey(connection), JSON.stringify(frame.presence), "EX", 60);
-        }
+        await store.set(
+          presenceKey(connection),
+          JSON.stringify(frame.presence ?? { state: "online" }),
+          "EX",
+          60,
+        );
+        await announce(connection.userId);
       }
     });
 

@@ -125,3 +125,40 @@ export const auditLog = pgTable("audit_log", {
   data: jsonb(),
   createdAt: now(),
 });
+
+/** One row per pair (userA < userB): pending until the other accepts. */
+export const friendships = pgTable(
+  "friendships",
+  {
+    userA: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    userB: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    state: text().notNull(),
+    askedBy: uuid().notNull(),
+    createdAt: now(),
+    acceptedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userA, table.userB] }),
+    index().on(table.userB),
+    check("ordered", sql`${table.userA} < ${table.userB}`),
+    check("state", sql`${table.state} in ('pending', 'accepted')`),
+  ],
+);
+
+export const blocks = pgTable(
+  "blocks",
+  {
+    blocker: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    blocked: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    createdAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.blocker, table.blocked] })],
+);
