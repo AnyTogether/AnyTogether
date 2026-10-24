@@ -1,0 +1,21 @@
+# Local development and tests only: PostgreSQL and Valkey on the loopback.
+name: anytogether-dev
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: anytogether
+      POSTGRES_PASSWORD: anytogether
+      POSTGRES_DB: anytogether
+    ports: ["127.0.0.1:54329:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anytogether"]
+      interval: 2s
+      retries: 30
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    ports: ["127.0.0.1:63799:6379"]
+volumes:
+  pgdata:
