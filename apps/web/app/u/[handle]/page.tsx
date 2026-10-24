@@ -50,7 +50,7 @@ export default async function UserProfile({ params }: Params) {
   const loaded = await load(handle);
   if (!loaded) notFound();
   const { profile, games, trophies } = loaded;
-  const language = texts.signIn === "Giriş yap" ? "tr" : "en";
+  const { language } = texts;
   const seconds = games.reduce((sum, game) => sum + game.secondsPlayed, 0);
   const earned = games.reduce((sum, game) => sum + game.trophiesEarned, 0);
   const points = games.reduce((sum, game) => sum + game.points, 0);

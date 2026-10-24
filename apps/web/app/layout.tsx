@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/Avatar";
+import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { Mark } from "@/components/Mark";
 import { strings } from "@/lib/i18n";
 import { fill } from "@/lib/people";
@@ -30,10 +31,7 @@ export const viewport: Viewport = { themeColor: "#07080c" };
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const [texts, user, waiting] = await Promise.all([strings(), currentUser(), incomingRequests()]);
   return (
-    <html
-      lang={texts.signIn === "Giriş yap" ? "tr" : "en"}
-      className={`${display.variable} ${mono.variable}`}
-    >
+    <html lang={texts.language} className={`${display.variable} ${mono.variable}`}>
       <body>
         <div className="glow" />
         <div className="grid" />
@@ -96,9 +94,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {children}
           <footer className="in d4">
             <span>&copy; 2026 AnyTogether</span>
-            <span>
-              a <a href="https://kodla.agency">kodla.agency</a> project
-            </span>
+            <div className="foot-end">
+              <span>
+                {texts.madeBy.split("{link}")[0]}
+                <a href="https://kodla.agency">kodla.agency</a>
+                {texts.madeBy.split("{link}")[1]}
+              </span>
+              <LanguageSwitch current={texts.language} label={texts.languageLabel} />
+            </div>
           </footer>
         </main>
       </body>

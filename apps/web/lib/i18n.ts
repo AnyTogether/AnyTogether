@@ -1,6 +1,14 @@
-import { headers } from "next/headers";
+import { cookies } from "next/headers";
+
+export const languages = ["en", "tr"] as const;
+export type Language = (typeof languages)[number];
+/** The cookie that keeps the chosen language; without it the site is in English. */
+export const languageCookie = "lang";
 
 const en = {
+  language: "en" as Language,
+  languageLabel: "Language",
+  madeBy: "a {link} project",
   inDevelopment: "in development",
   eyebrow: "For AnyPS5 · Coming soon",
   heroA: "Play",
@@ -103,6 +111,9 @@ const en = {
 };
 
 const tr: typeof en = {
+  language: "tr",
+  languageLabel: "Dil",
+  madeBy: "bir {link} projesi",
   inDevelopment: "geliştiriliyor",
   eyebrow: "AnyPS5 için · Yakında",
   heroA: "Birlikte",
@@ -209,8 +220,12 @@ export type Strings = typeof en;
 export type UiStrings = Omit<Strings, "features">;
 export const ui = ({ features: _, ...rest }: Strings): UiStrings => rest;
 
-/** English, or Turkish when the browser asks for it first. */
+/** The language chosen with the switcher (the lang cookie); English until one is chosen. */
+export async function language(): Promise<Language> {
+  return (await cookies()).get(languageCookie)?.value === "tr" ? "tr" : "en";
+}
+
+/** The texts in the chosen language. */
 export async function strings(): Promise<Strings> {
-  const accept = (await headers()).get("accept-language") ?? "";
-  return accept.toLowerCase().startsWith("tr") ? tr : en;
+  return (await language()) === "tr" ? tr : en;
 }

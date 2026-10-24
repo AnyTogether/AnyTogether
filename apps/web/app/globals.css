@@ -205,6 +205,29 @@ footer a {
 footer a:hover {
   color: var(--ink);
 }
+.foot-end {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.langs {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+footer .langs a {
+  border: 0;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font: 500 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.06em;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+footer .langs a[aria-current] {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+}
 
 /* Forms */
 .narrow {
