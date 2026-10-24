@@ -23,3 +23,8 @@ pnpm dev:db                       # PostgreSQL and Valkey on the loopback (Docke
 pnpm --filter @anytogether/db migrate
 pnpm test
 ```
+
+## License
+
+AGPL-3.0 (see `LICENSE`). If you run a modified AnyTogether for other people, you must publish
+your changes.
