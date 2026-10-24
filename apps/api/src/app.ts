@@ -36,6 +36,8 @@ export interface Deps {
   limits?: Partial<Limits>;
   /** STUN/TURN for calls; without it calls get no ICE servers beyond what the client has. */
   turn?: { secret: string; urls: string[] };
+  /** Domains messages may not link to (none when left out). */
+  blockedLinkDomains?: string[];
 }
 
 export function createApp(deps: Deps) {

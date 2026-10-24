@@ -49,6 +49,8 @@ export type ClientFrame =
       op: "heartbeat";
       presence?: { state: Exclude<PresenceState, "offline">; titleId?: string; since?: string };
     }
+  /** Typing in a conversation: the other members hear it (at most every 2 s). */
+  | { op: "typing"; conversation: string }
   /** WebRTC signalling to a peer in the same call: `device` is their session, or "*" for all. */
   | { op: "signal"; to: string; device?: string; call: string; kind: SignalKind; data: unknown };
 

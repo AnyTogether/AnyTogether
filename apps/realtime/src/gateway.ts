@@ -6,6 +6,7 @@ import {
   callDepartureGraceMs,
   callDeparturesKey,
   callMembersKey,
+  conversationMembersKey,
   deviceCallsKey,
   devicePresenceKey,
   friendsKey,
@@ -14,6 +15,7 @@ import {
   presenceHiddenKey,
   realtimeTicketKey,
   signalKinds,
+  typingEveryMs,
   userChannel,
   userEvents,
   withExtras,
@@ -44,6 +46,8 @@ interface Connection {
   lastHeard: number;
   /** Signals sent in the current window, and when it started. */
   signals: { count: number; since: number };
+  /** When it last said it is typing, by conversation. */
+  typing: Map<string, number>;
 }
 
 /** Enough for a full party's offers and ICE candidates at once, not for flooding a peer. */
@@ -203,6 +207,33 @@ export async function createGateway(options: GatewayOptions) {
     await store.publish(userChannel(to), message);
   }
 
+  /** "I am typing" to the conversation's other members: only from a member, at most every two
+   *  seconds per conversation (more is dropped quietly), passed on and never kept. */
+  async function relayTyping(connection: Connection, frame: Extract<ClientFrame, { op: "typing" }>) {
+    const { conversation } = frame;
+    if (typeof conversation !== "string" || conversation.length > 64)
+      return send(connection.socket, { op: "error", code: "bad_typing", message: "conversation" });
+    const now = Date.now();
+    if (now - (connection.typing.get(conversation) ?? 0) < typingEveryMs) return;
+    if (connection.typing.size > 50)
+      for (const [id, at] of connection.typing) if (now - at >= typingEveryMs) connection.typing.delete(id);
+    connection.typing.set(conversation, now);
+    const members = await store.smembers(conversationMembersKey(conversation));
+    if (!members.includes(connection.userId))
+      return send(connection.socket, {
+        op: "error",
+        code: "not_in_conversation",
+        message: "open the conversation first",
+      });
+    const message = JSON.stringify({
+      id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
+      type: "typing",
+      data: { conversationId: conversation, userId: connection.userId },
+    });
+    for (const member of members)
+      if (member !== connection.userId) await store.publish(userChannel(member), message);
+  }
+
   /** The events after `resume` still kept for the user (the API keeps five minutes of them). */
   async function replay(connection: Connection, resume: string) {
     const entries = await store.xrange(userEvents(connection.userId), "-", "+");
@@ -261,6 +292,7 @@ export async function createGateway(options: GatewayOptions) {
             sessionId,
             lastHeard: Date.now(),
             signals: { count: 0, since: Date.now() },
+            typing: new Map(),
           };
           await join(connection);
           send(socket, { op: "ready", session: sessionId, heartbeat });
@@ -280,6 +312,7 @@ export async function createGateway(options: GatewayOptions) {
         return;
       }
       if (frame.op === "signal") await relaySignal(connection, frame);
+      else if (frame.op === "typing") await relayTyping(connection, frame);
     }
 
     socket.on("close", () => {

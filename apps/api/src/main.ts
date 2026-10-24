@@ -25,6 +25,7 @@ const app = createApp({
   publicUrl: settings.publicUrl,
   rpName: settings.rpName,
   turn: settings.turn,
+  blockedLinkDomains: settings.blockedLinkDomains,
 });
 serve({ fetch: app.fetch, port: settings.port }, (info) => console.log(`api listening on ${info.port}`));
 

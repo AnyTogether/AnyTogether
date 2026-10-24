@@ -11,8 +11,11 @@ import {
   conversationName,
   editWindowMs,
   json,
+  maxGroupMembers,
   shortTime,
   social,
+  typingEveryMs,
+  typingShownMs,
 } from "@/lib/social";
 import {
   type KeyboardEvent,
@@ -35,6 +38,20 @@ interface Pending {
 }
 
 const byUpdated = (a: Conversation, b: Conversation) => b.updatedAt.localeCompare(a.updatedAt);
+const firstName = (person: Person) => person.displayName.split(" ")[0] || person.handle;
+
+/** "Ayşe is typing…", "Ayşe and Mert are typing…", "Several people are typing…". */
+function typingLine(texts: UiStrings, people: Person[]) {
+  const [a, b] = people;
+  if (!a) return "";
+  if (!b) return fill(texts.typingOne, { name: firstName(a) });
+  if (people.length === 2) return fill(texts.typingTwo, { a: firstName(a), b: firstName(b) });
+  return texts.typingMany;
+}
+
+/** Why a message was refused, in the reader's words. */
+const refusal = (texts: UiStrings, status: number, code: string | undefined) =>
+  code === "link_blocked" ? texts.linkBlocked : status === 403 ? texts.cannotMessage : texts.failed;
 /** A run: messages by the same person within five minutes stay together. */
 const sameRun = (a: Message | undefined, b: Message) =>
   !!a &&
@@ -57,8 +74,11 @@ export function MessagesBoard({
   initialSelected: string | null;
   friends: Person[];
 }) {
-  const { me, status } = useLive();
+  const { me, status, send: sendFrame } = useLive();
   const [conversations, setConversations] = useState(initialConversations);
+  /** Who is typing where, and until when it shows. */
+  const [typing, setTyping] = useState<Record<string, Record<string, number>>>({});
+  const lastTyped = useRef<Record<string, number>>({});
   const [selected, setSelected] = useState<string | null>(initialSelected);
   const [composing, setComposing] = useState(false);
   const [threads, setThreads] = useState<Record<string, Thread>>({});
@@ -74,6 +94,49 @@ export function MessagesBoard({
     const timer = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(timer);
   }, []);
+
+  // Typing fades out a few seconds after the last word of it.
+  const someoneTyping = Object.keys(typing).length > 0;
+  useEffect(() => {
+    if (!someoneTyping) return;
+    const timer = setInterval(() => {
+      const at = Date.now();
+      setTyping((all) => {
+        const next: typeof all = {};
+        for (const [id, who] of Object.entries(all)) {
+          const left = Object.fromEntries(Object.entries(who).filter(([, until]) => until > at));
+          if (Object.keys(left).length) next[id] = left;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [someoneTyping]);
+
+  const stopTyping = useCallback((conversationId: string, userId: string) => {
+    setTyping((all) => {
+      if (!all[conversationId]?.[userId]) return all;
+      const { [userId]: _, ...rest } = all[conversationId];
+      const next = { ...all, [conversationId]: rest };
+      if (!Object.keys(rest).length) delete next[conversationId];
+      return next;
+    });
+  }, []);
+
+  /** Tells the others we are typing, at most every few seconds. */
+  const typed = useCallback(
+    (conversationId: string) => {
+      const at = Date.now();
+      if (at - (lastTyped.current[conversationId] ?? 0) < typingEveryMs) return;
+      if (sendFrame({ op: "typing", conversation: conversationId })) lastTyped.current[conversationId] = at;
+    },
+    [sendFrame],
+  );
+
+  const typistsOf = (conversation: Conversation) => {
+    const who = typing[conversation.id] ?? {};
+    return conversation.members.filter((m) => m.userId !== me && who[m.userId]);
+  };
 
   // The address follows the open conversation, so a reload or a shared link opens it again.
   useEffect(() => {
@@ -191,7 +254,18 @@ export function MessagesBoard({
   useLiveEvents((event) => {
     switch (event.type) {
       case "message.created":
+        if (event.data.authorId) stopTyping(event.data.conversationId, event.data.authorId);
         return take(event.data as Message, true);
+      case "typing":
+        if (event.data.userId === me) return;
+        setTyping((all) => ({
+          ...all,
+          [event.data.conversationId]: {
+            ...all[event.data.conversationId],
+            [event.data.userId]: Date.now() + typingShownMs,
+          },
+        }));
+        return;
       case "message.updated":
       case "message.deleted":
         return take(event.data as Message, false);
@@ -228,7 +302,8 @@ export function MessagesBoard({
         { clientId, text, failed: false },
       ],
     }));
-    const result = await social<Message & { title?: string }>(`conversations/${conversationId}/messages`, {
+    lastTyped.current[conversationId] = 0;
+    const result = await social<Message & { code?: string }>(`conversations/${conversationId}/messages`, {
       method: "POST",
       ...json({ clientId, text }),
     });
@@ -239,16 +314,17 @@ export function MessagesBoard({
         p.clientId === clientId ? { ...p, failed: true } : p,
       ),
     }));
-    if (result.status === 403) setNotice(texts.cannotMessage);
+    if (result.status === 403 || result.body?.code === "link_blocked")
+      setNotice(refusal(texts, result.status, result.body?.code));
   }
 
   async function edit(message: Message, text: string) {
-    const result = await social<Message>(`conversations/${message.conversationId}/messages/${message.seq}`, {
-      method: "PATCH",
-      ...json({ text }),
-    });
-    if (result.body) take(result.body, false);
-    else setNotice(texts.failed);
+    const result = await social<Message & { code?: string }>(
+      `conversations/${message.conversationId}/messages/${message.seq}`,
+      { method: "PATCH", ...json({ text }) },
+    );
+    if (result.ok && result.body) take(result.body, false);
+    else setNotice(refusal(texts, result.status, result.body?.code));
   }
 
   async function remove(message: Message) {
@@ -267,7 +343,7 @@ export function MessagesBoard({
   }
 
   async function start(members: string[], title: string) {
-    const result = await social<Conversation>("conversations", {
+    const result = await social<Conversation & { code?: string }>("conversations", {
       method: "POST",
       ...json({
         members,
@@ -276,7 +352,11 @@ export function MessagesBoard({
       }),
     });
     if (!result.body || !result.ok)
-      return setNotice(result.status === 403 ? texts.cannotMessage : texts.failed);
+      return setNotice(
+        result.body?.code === "full"
+          ? fill(texts.groupFull, { max: maxGroupMembers })
+          : refusal(texts, result.status, result.body?.code),
+      );
     const made = result.body;
     setConversations((all) => [made, ...all.filter((c) => c.id !== made.id)].sort(byUpdated));
     setComposing(false);
@@ -304,6 +384,7 @@ export function MessagesBoard({
               title={texts.newMessage}
               onClick={() => {
                 setComposing(true);
+                setNotice(null);
                 setSelected(null);
               }}
             >
@@ -327,12 +408,14 @@ export function MessagesBoard({
                     <Faces conversation={c} me={me} />
                     <span className="lines">
                       <span className="name">{conversationName(c, me)}</span>
-                      <span className="meta preview">
-                        {c.lastMessage
-                          ? `${c.lastMessage.authorId === me ? `${texts.you}: ` : ""}${
-                              c.lastMessage.deletedAt ? texts.deletedMessage : c.lastMessage.text
-                            }`
-                          : fill(texts.membersCount, { n: c.members.length })}
+                      <span className={`meta preview${typistsOf(c).length ? " is-typing" : ""}`}>
+                        {typistsOf(c).length
+                          ? typingLine(texts, typistsOf(c))
+                          : c.lastMessage
+                            ? `${c.lastMessage.authorId === me ? `${texts.you}: ` : ""}${
+                                c.lastMessage.deletedAt ? texts.deletedMessage : c.lastMessage.text
+                              }`
+                            : fill(texts.membersCount, { n: c.members.length })}
                       </span>
                     </span>
                     <span className="when">
@@ -350,6 +433,7 @@ export function MessagesBoard({
           {composing ? (
             <NewConversation
               texts={texts}
+              notice={notice}
               friends={friends}
               onBack={() => setComposing(false)}
               onStart={start}
@@ -364,7 +448,9 @@ export function MessagesBoard({
               conversation={current}
               thread={threads[current.id]}
               pending={pending[current.id] ?? []}
+              typists={typistsOf(current)}
               notice={notice}
+              onTyping={() => typed(current.id)}
               onBack={() => setSelected(null)}
               onOlder={(before) => loadThread(current.id, before)}
               onSend={(text, clientId) => send(current.id, text, clientId)}
@@ -415,7 +501,9 @@ function ThreadView({
   conversation,
   thread,
   pending,
+  typists,
   notice,
+  onTyping,
   onBack,
   onOlder,
   onSend,
@@ -430,7 +518,9 @@ function ThreadView({
   conversation: Conversation;
   thread: Thread | undefined;
   pending: Pending[];
+  typists: Person[];
   notice: string | null;
+  onTyping: () => void;
   onBack: () => void;
   onOlder: (before: number) => Promise<void>;
   onSend: (text: string, clientId?: string) => void;
@@ -461,7 +551,7 @@ function ThreadView({
       box.scrollTop = box.scrollHeight - olderFrom.current;
       olderFrom.current = null;
     } else if (stick.current) box.scrollTop = box.scrollHeight;
-  }, [messages.length, pending.length, thread]);
+  }, [messages.length, pending.length, thread, typists.length]);
 
   return (
     <>
@@ -598,6 +688,16 @@ function ThreadView({
             </div>
           </div>
         ))}
+        {typists.length > 0 && (
+          <p className="typing" aria-live="polite">
+            <span className="typing-dots" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+            {typingLine(texts, typists)}
+          </p>
+        )}
       </div>
 
       {notice && (
@@ -610,6 +710,7 @@ function ThreadView({
         texts={texts}
         placeholder={fill(texts.composerPlaceholder, { name })}
         editing={editing}
+        onTyping={onTyping}
         onCancel={() => setEditing(null)}
         onSubmit={async (text) => {
           stick.current = true;
@@ -627,12 +728,14 @@ function Composer({
   texts,
   placeholder,
   editing,
+  onTyping,
   onCancel,
   onSubmit,
 }: {
   texts: UiStrings;
   placeholder: string;
   editing: Message | null;
+  onTyping: () => void;
   onCancel: () => void;
   onSubmit: (text: string) => Promise<void> | void;
 }) {
@@ -690,7 +793,10 @@ function Composer({
           value={text}
           placeholder={placeholder}
           aria-label={placeholder}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            setText(event.target.value);
+            if (!editing && event.target.value.trim()) onTyping();
+          }}
           onKeyDown={onKey}
         />
         <button
@@ -821,11 +927,13 @@ export function Menu({
 
 function NewConversation({
   texts,
+  notice,
   friends,
   onBack,
   onStart,
 }: {
   texts: UiStrings;
+  notice: string | null;
   friends: Person[];
   onBack: () => void;
   onStart: (members: string[], title: string) => Promise<void>;
@@ -838,8 +946,12 @@ function NewConversation({
   const shown = friends.filter(
     (f) => !term || f.handle.toLowerCase().includes(term) || f.displayName.toLowerCase().includes(term),
   );
+  // Everyone picked and you: a group holds at most 32.
+  const full = picked.length >= maxGroupMembers - 1;
   const toggle = (id: string) =>
-    setPicked((all) => (all.includes(id) ? all.filter((x) => x !== id) : [...all, id]));
+    setPicked((all) =>
+      all.includes(id) ? all.filter((x) => x !== id) : all.length >= maxGroupMembers - 1 ? all : [...all, id],
+    );
 
   return (
     <div className="new-chat">
@@ -850,8 +962,12 @@ function NewConversation({
           </svg>
         </button>
         <span className="lines">
-          <span className="name">{texts.newMessage}</span>
-          <span className="meta">{texts.pickFriends}</span>
+          <span className="name">{picked.length > 1 ? texts.newGroup : texts.newMessage}</span>
+          <span className="meta">
+            {picked.length > 1
+              ? fill(texts.groupPicked, { n: picked.length + 1, max: maxGroupMembers })
+              : texts.pickFriends}
+          </span>
         </span>
       </div>
       {friends.length === 0 ? (
@@ -892,6 +1008,7 @@ function NewConversation({
                     type="button"
                     className={`pick-item${on ? " on" : ""}`}
                     aria-pressed={on}
+                    disabled={!on && full}
                     onClick={() => toggle(friend.userId)}
                   >
                     <Avatar person={friend} size={36} />
@@ -909,6 +1026,12 @@ function NewConversation({
               );
             })}
           </ul>
+          {full && <p className="hint pad group-full">{fill(texts.groupFull, { max: maxGroupMembers })}</p>}
+          {notice && (
+            <p className="notice error thread-notice" role="alert">
+              {notice}
+            </p>
+          )}
           <div className="new-foot">
             {picked.length > 1 && (
               <input

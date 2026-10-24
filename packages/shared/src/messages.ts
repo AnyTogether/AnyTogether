@@ -79,4 +79,12 @@ export type MessageEvent =
   | { type: "message.deleted"; data: MessageView }
   | { type: "conversation.read"; data: { conversationId: string; userId: string; upToSeq: number } }
   /** Made, renamed, or its members changed; `removed` is set for whoever is no longer in it. */
-  | { type: "conversation.updated"; data: { conversationId: string; removed?: boolean } };
+  | { type: "conversation.updated"; data: { conversationId: string; removed?: boolean } }
+  /** Someone is typing in it: passed on by the gateway, never kept; show it for a few seconds. */
+  | { type: "typing"; data: { conversationId: string; userId: string } };
+
+/** Who is in a conversation (user IDs), kept by the API for the gateway's typing indicators. */
+export const conversationMembersKey = (conversationId: string) => `conversation:${conversationId}:members`;
+export const conversationMembersSeconds = 86_400;
+/** A client says it is typing at most this often per conversation; more is dropped. */
+export const typingEveryMs = 2000;

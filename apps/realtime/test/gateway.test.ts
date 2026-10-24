@@ -326,6 +326,32 @@ describe("the gateway", () => {
     expect(await valkey.exists("presence:u1:web1")).toBe(0);
   });
 
+  it("passes typing on to the conversation's other members, at most every two seconds", async () => {
+    await valkey.sadd("conversation:k1:members", "u1", "u2", "u3");
+    const me = await signedIn("u1", "s1");
+    const myPhone = await signedIn("u1", "s1b");
+    const friend = await signedIn("u2", "s2");
+    const other = await signedIn("u3", "s3");
+    const outsider = await signedIn("u4", "s4");
+    me.send({ op: "typing", conversation: "k1" });
+    expect((await friend.waitFor((frame) => frame.type === "typing")).data).toEqual({
+      conversationId: "k1",
+      userId: "u1",
+    });
+    await other.waitFor((frame) => frame.type === "typing");
+    // Again at once: dropped.
+    me.send({ op: "typing", conversation: "k1" });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(friend.frames.filter((frame) => frame.type === "typing")).toHaveLength(1);
+    expect(myPhone.frames.filter((frame) => frame.type === "typing")).toHaveLength(0);
+    outsider.send({ op: "typing", conversation: "k1" });
+    expect(await outsider.waitFor((frame) => frame.op === "error")).toMatchObject({
+      code: "not_in_conversation",
+    });
+    expect(await valkey.xlen("events:u2")).toBe(0);
+    for (const c of [me, myPhone, friend, other, outsider]) c.socket.close();
+  });
+
   it("keeps presence from heartbeats", async () => {
     const c = await signedIn("u1", "s1");
     c.send({

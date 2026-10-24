@@ -351,3 +351,68 @@ describe("moderation and accounts", () => {
     expect(history.body.messages[0].authorId).toBeNull();
   });
 });
+
+describe("links", () => {
+  it("to a blocked domain are refused, in any spelling, and allowed ones pass", async () => {
+    await h.close();
+    h = await harness({ blockedLinkDomains: ["grabify.link", "iplogger.org"] });
+    const a = await h.user("la@example.com");
+    const b = await h.user("lb@example.com");
+    await befriend(a, b);
+    const { body: chat } = await h.call("POST", "/api/v1/conversations", { members: [b.id] }, a.token);
+    for (const text of [
+      "look https://grabify.link/AB12CD",
+      "grabify.link/x",
+      "www.IPLOGGER.org/abc",
+      "a.b.iplogger.org",
+      "grabify[.]link/x",
+      "grabify (dot) link",
+      "ｇｒａｂｉｆｙ．ｌｉｎｋ",
+      // Inside another link too: a redirect could take the reader there.
+      "https://example.com/out?to=grabify.link/x",
+    ]) {
+      const refused = await send(a, chat.id, text);
+      expect(refused.status, text).toBe(400);
+      expect(refused.body.code).toBe("link_blocked");
+    }
+    for (const text of ["notgrabify.link", "grabify.linked.example", "grabify link"]) {
+      const sent = await send(a, chat.id, text);
+      expect(sent.status, text).toBe(201);
+    }
+    const ok = await send(a, chat.id, "fine");
+    const edited = await h.call(
+      "PATCH",
+      `/api/v1/conversations/${chat.id}/messages/${ok.body.seq}`,
+      { text: "now https://grabify.link/x" },
+      a.token,
+    );
+    expect(edited.body.code).toBe("link_blocked");
+  });
+});
+
+describe("typing", () => {
+  it("is checked against the members the API keeps for the gateway", async () => {
+    const a = await h.user("ta@example.com");
+    const b = await h.user("tb@example.com");
+    const c = await h.user("tc@example.com");
+    await befriend(a, b);
+    await befriend(a, c);
+    const { body: group } = await h.call(
+      "POST",
+      "/api/v1/conversations",
+      { members: [b.id], title: "Two of us" },
+      a.token,
+    );
+    const key = `conversation:${group.id}:members`;
+    await h.call("GET", `/api/v1/conversations/${group.id}/messages`, undefined, b.token);
+    expect((await h.valkey.smembers(key)).sort()).toEqual([a.id, b.id].sort());
+    expect(await h.valkey.ttl(key)).toBeGreaterThan(80_000);
+    await h.call("POST", `/api/v1/conversations/${group.id}/members`, { userIds: [c.id] }, a.token);
+    expect(await h.valkey.exists(key)).toBe(0);
+    await send(c, group.id, "hi");
+    expect((await h.valkey.smembers(key)).sort()).toEqual([a.id, b.id, c.id].sort());
+    await h.call("DELETE", `/api/v1/conversations/${group.id}/members/${b.id}`, undefined, b.token);
+    await h.call("GET", `/api/v1/conversations/${group.id}/messages`, undefined, a.token);
+    expect((await h.valkey.smembers(key)).sort()).toEqual([a.id, c.id].sort());
+  });
+});

@@ -68,6 +68,11 @@ export interface LiveEvent {
 }
 
 export const maxPartySize = 8;
+/** The most people in a group conversation, its creator included. */
+export const maxGroupMembers = 32;
+/** Typing is said at most this often, and shown this long after the last word of it. */
+export const typingEveryMs = 2500;
+export const typingShownMs = 5000;
 export const editWindowMs = 15 * 60_000;
 
 /** The name of a conversation: its title, the other person, or the others' first names. */

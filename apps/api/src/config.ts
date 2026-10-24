@@ -1,4 +1,5 @@
 import { createRemoteJWKSet } from "jose";
+import { defaultBlockedLinkDomains } from "./links.js";
 import type { ProviderConfig } from "./providers.js";
 
 const list = (value: string | undefined) =>
@@ -37,5 +38,11 @@ export function config(env = process.env) {
     providers,
     /** TURN REST: the secret shared with the relay, and the STUN/TURN URLs handed to clients. */
     turn: { secret: env.TURN_SECRET ?? "", urls: list(env.TURN_URLS) },
+    /** Domains messages may not link to: the built-in IP loggers unless BLOCKED_LINK_DOMAINS is set
+     *  (empty turns it off). */
+    blockedLinkDomains:
+      env.BLOCKED_LINK_DOMAINS === undefined
+        ? defaultBlockedLinkDomains
+        : list(env.BLOCKED_LINK_DOMAINS).map((domain) => domain.toLowerCase()),
   };
 }

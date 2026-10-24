@@ -28,6 +28,8 @@ export const ErrorCode = {
   handleReserved: "handle_reserved",
   handleCooldown: "handle_cooldown",
   linksNotAllowed: "links_not_allowed",
+  /** A message links to a domain on the server's deny-list. */
+  linkBlocked: "link_blocked",
   payloadTooLarge: "payload_too_large",
   unsupportedMedia: "unsupported_media_type",
   badImage: "bad_image",

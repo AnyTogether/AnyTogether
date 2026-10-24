@@ -10,6 +10,8 @@ import {
   MessageSend,
   type MessageView,
   ReadUpTo,
+  conversationMembersKey,
+  conversationMembersSeconds,
   editWindowMs,
   maxGroupMembers,
 } from "@anytogether/shared";
@@ -21,6 +23,7 @@ import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
+import { blockedLink } from "./links.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { people } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
@@ -62,6 +65,23 @@ export function messageRoutes(deps: Deps) {
 
   const tell = async (userIds: string[], event: GatewayEvent) => {
     for (const userId of new Set(userIds)) await publish(deps.valkey, userId, event);
+  };
+
+  /** The members as the gateway checks them for typing; dropped when they change, kept again the
+   *  next time someone reads or writes there. */
+  const remember = async (conversationId: string, members: string[]) => {
+    const key = conversationMembersKey(conversationId);
+    const write = deps.valkey.multi().del(key);
+    if (members.length) write.sadd(key, ...members).expire(key, conversationMembersSeconds);
+    await write.exec();
+  };
+  const forget = (conversationId: string) => deps.valkey.del(conversationMembersKey(conversationId));
+
+  /** A message may not link to a domain on the deny-list. */
+  const allowedText = (text: string) => {
+    const domain = blockedLink(text, deps.blockedLinkDomains ?? []);
+    if (domain)
+      throw new HttpError(400, ErrorCode.linkBlocked, `Links to ${domain} are not allowed`, { domain });
   };
 
   /** The conversation and the asker's place in it; someone outside it learns nothing. */
@@ -252,6 +272,7 @@ export function messageRoutes(deps: Deps) {
         .update(conversations)
         .set({ updatedAt: new Date() })
         .where(eq(conversations.id, conversation.id));
+      await forget(conversation.id);
       await tell([...current, ...added], {
         type: "conversation.updated",
         data: { conversationId: conversation.id },
@@ -280,6 +301,7 @@ export function messageRoutes(deps: Deps) {
       .returning();
     if (!removed.length) throw new HttpError(404, ErrorCode.notFound, "Not in this conversation");
     const left = await memberIds(conversation.id);
+    await forget(conversation.id);
     if (!left.length) await db.delete(conversations).where(eq(conversations.id, conversation.id));
     await tell(left, { type: "conversation.updated", data: { conversationId: conversation.id } });
     await tell([target], {
@@ -293,6 +315,7 @@ export function messageRoutes(deps: Deps) {
   app.get("/conversations/:id/messages", async (c) => {
     const me = c.get("userId");
     const { conversation } = await membership(c.req.param("id"), me);
+    await remember(conversation.id, await memberIds(conversation.id));
     const limit = Math.min(100, Math.max(1, Number(c.req.query("limit") ?? 50) || 50));
     const after = c.req.query("after");
     const before = c.req.query("before");
@@ -328,7 +351,9 @@ export function messageRoutes(deps: Deps) {
     const input = await body(c, MessageSend);
     await limit("message", me);
     await limit("messageDay", me);
+    allowedText(input.text);
     const members = await memberIds(conversation.id);
+    await remember(conversation.id, members);
     if (conversation.kind === "direct") {
       const other = members.find((id) => id !== me);
       if (!other || !(await who.friends(me, other)))
@@ -408,6 +433,7 @@ export function messageRoutes(deps: Deps) {
     const { text } = await body(c, MessageEdit);
     if (Date.now() - message.createdAt.getTime() > editWindowMs)
       throw new HttpError(403, ErrorCode.forbidden, "A message can be edited for 15 minutes");
+    allowedText(text);
     const [updated] = await db
       .update(messages)
       .set({ text, editedAt: new Date() })
