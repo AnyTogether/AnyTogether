@@ -50,6 +50,16 @@ function Mark({ kind }: { kind: Notice["kind"] }) {
             <rect x="2.5" y="7" width="19" height="11" rx="4" />
             <path d="M7.5 10.5v4M5.5 12.5h4" />
           </>
+        ) : kind === "lfg_request" || kind === "lfg_accepted" ? (
+          <>
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="M19.5 19.5l-4.4-4.4" />
+            {kind === "lfg_accepted" ? (
+              <path d="M7.8 10.6l2 2 3.6-3.8" />
+            ) : (
+              <path d="M10.5 7.8v5.4M7.8 10.5h5.4" />
+            )}
+          </>
         ) : kind === "missed_call" ? (
           <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 6 6L15 14l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2zM15 3l6 6M21 3l-6 6" />
         ) : (
@@ -104,6 +114,22 @@ function Item({
       });
       detail = texts.n_game_invite_hint;
       break;
+    case "lfg_request":
+    case "lfg_accepted": {
+      const game = <b>{localName(notice.data.gameNames ?? {}, language) || notice.data.titleId}</b>;
+      line = rich(
+        notice.kind === "lfg_accepted"
+          ? texts.n_lfg_accepted
+          : count > 1
+            ? texts.n_lfg_requests
+            : texts.n_lfg_request,
+        { name, game, others: count - 1 },
+      );
+      if (notice.kind === "lfg_accepted")
+        detail =
+          notice.data.invite?.kind === "share_play" ? texts.n_lfg_accepted_share : texts.n_lfg_accepted_party;
+      break;
+    }
     case "warning":
       line = texts.n_warning;
       detail = notice.data.reason ? fill(texts.n_warning_reason, { reason: notice.data.reason }) : null;
@@ -150,26 +176,28 @@ function Item({
             {body}
           </button>
         )}
-        {notice.kind === "friend_request" && !notice.read && (
-          <div className="acts notice-acts">
-            <button
-              type="button"
-              className="primary small"
-              disabled={busy}
-              onClick={() => onAnswer(notice, "accept")}
-            >
-              {texts.accept}
-            </button>
-            <button
-              type="button"
-              className="pill"
-              disabled={busy}
-              onClick={() => onAnswer(notice, "decline")}
-            >
-              {texts.decline}
-            </button>
-          </div>
-        )}
+        {(notice.kind === "friend_request" ||
+          (notice.kind === "lfg_request" && count === 1 && notice.data.postId)) &&
+          !notice.read && (
+            <div className="acts notice-acts">
+              <button
+                type="button"
+                className="primary small"
+                disabled={busy}
+                onClick={() => onAnswer(notice, "accept")}
+              >
+                {notice.kind === "lfg_request" ? texts.letIn : texts.accept}
+              </button>
+              <button
+                type="button"
+                className="pill"
+                disabled={busy}
+                onClick={() => onAnswer(notice, "decline")}
+              >
+                {texts.decline}
+              </button>
+            </div>
+          )}
       </div>
       {!notice.read && <span className="unread-dot" />}
     </li>
@@ -230,9 +258,11 @@ export function NotificationList({
   async function answer(notice: Notice, verdict: "accept" | "decline") {
     if (!notice.actor) return;
     setBusy(notice.id);
-    const response = await fetch(`/me/friends/requests/${notice.actor.userId}/${verdict}`, {
-      method: "POST",
-    }).catch(() => undefined);
+    const path =
+      notice.kind === "lfg_request"
+        ? `/me/social/lfg/${notice.data.postId}/requests/${notice.actor.userId}/${verdict}`
+        : `/me/friends/requests/${notice.actor.userId}/${verdict}`;
+    const response = await fetch(path, { method: "POST" }).catch(() => undefined);
     setBusy(null);
     // Answered (here or elsewhere): the API settles the notification and says so.
     if (response?.ok || response?.status === 404) await markRead([notice.id]);

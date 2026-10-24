@@ -1,9 +1,11 @@
 import { AvatarEditor } from "@/components/AvatarEditor";
+import { DiscoverySettings } from "@/components/Discover";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
 import { PushSwitch } from "@/components/PushSwitch";
 import { DeleteAccount, HandleForm, PrivacyForm, ProfileForm, SessionList } from "@/components/Settings";
 import { countryOptions } from "@/lib/countries";
+import type { Discovery } from "@/lib/discover";
 import { strings, ui } from "@/lib/i18n";
 import type { NoticeSetup } from "@/lib/notify";
 import type { Own, SignedIn } from "@/lib/people";
@@ -18,11 +20,12 @@ export const metadata: Metadata = { title: "Settings · AnyTogether" };
 export default async function Settings() {
   const [texts, user] = await Promise.all([strings(), currentUser()]);
   if (!user) redirect("/login?next=/settings");
-  const [own, signedIn, keys, notify] = await Promise.all([
+  const [own, signedIn, keys, notify, discovery] = await Promise.all([
     apiJson<Own>("/me"),
     apiJson<{ sessions: SignedIn[] }>("/auth/sessions"),
     apiJson<{ passkeys: PasskeyRow[]; max: number }>("/auth/passkeys"),
     apiJson<NoticeSetup>("/me/notifications/settings"),
+    apiJson<Discovery>("/me/discovery"),
   ]);
   if (!own.body) redirect("/login?next=/settings");
   const me = own.body;
@@ -30,6 +33,7 @@ export default async function Settings() {
   const sections = [
     ["profile", texts.sectionProfile],
     ["privacy", texts.sectionPrivacy],
+    ["discovery", texts.sectionDiscovery],
     ["notifications", texts.sectionNotifications],
     ["passkeys", texts.sectionPasskeys],
     ["devices", texts.sectionDevices],
@@ -68,6 +72,14 @@ export default async function Settings() {
           <p className="hint section-lead">{texts.privacyLead}</p>
           <PrivacyForm privacy={me.profile.privacy} texts={t} />
         </article>
+
+        {discovery.body && (
+          <article className="card" id="discovery">
+            <h3 className="sub">{texts.sectionDiscovery}</h3>
+            <p className="hint section-lead">{texts.discoveryLead}</p>
+            <DiscoverySettings initial={discovery.body} texts={t} />
+          </article>
+        )}
 
         {notify.body && (
           <article className="card" id="notifications">

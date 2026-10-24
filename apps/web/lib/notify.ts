@@ -10,6 +10,8 @@ export interface Notice {
     | "party_invite"
     | "game_invite"
     | "missed_call"
+    | "lfg_request"
+    | "lfg_accepted"
     | "warning";
   actor: Person | null;
   subjectId: string;
@@ -21,6 +23,9 @@ export interface Notice {
     titleId?: string;
     gameNames?: Record<string, string>;
     reason?: string;
+    postId?: string;
+    purpose?: string;
+    invite?: { kind: "party" | "share_play"; id: string } | null;
   };
   read: boolean;
   createdAt: string;
@@ -41,6 +46,8 @@ export const noticeKinds = [
   "party_invite",
   "game_invite",
   "missed_call",
+  "lfg_request",
+  "lfg_accepted",
 ] as const;
 export type NoticeKind = (typeof noticeKinds)[number];
 export type NoticeSettings = Record<NoticeKind, boolean> & { digest: boolean };
@@ -64,6 +71,10 @@ export function noticeHref(notice: Notice) {
       return "/party";
     case "missed_call":
       return notice.actor ? `/u/${notice.actor.handle}` : null;
+    case "lfg_request":
+      return "/find#mine";
+    case "lfg_accepted":
+      return notice.data.invite?.kind === "share_play" ? `/watch/${notice.data.invite.id}` : "/party";
     default:
       return null;
   }

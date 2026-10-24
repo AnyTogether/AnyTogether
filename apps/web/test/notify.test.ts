@@ -24,6 +24,13 @@ describe("notifications", () => {
     expect(noticeHref(notice("missed_call"))).toBe("/u/ayse");
     expect(noticeHref(notice("game_invite"))).toBeNull();
     expect(noticeHref(notice("warning", { actor: null }))).toBeNull();
+    expect(noticeHref(notice("lfg_request"))).toBe("/find#mine");
+    expect(noticeHref(notice("lfg_accepted", { data: { invite: { kind: "party", id: "p1" } } }))).toBe(
+      "/party",
+    );
+    expect(noticeHref(notice("lfg_accepted", { data: { invite: { kind: "share_play", id: "s1" } } }))).toBe(
+      "/watch/s1",
+    );
   });
 });
 
