@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { Redis } from "ioredis";
 import { createApp } from "./app.js";
 import { config } from "./config.js";
-import { logMailer, resendMailer } from "./mail.js";
+import { logMailer, resendMailer, smtpMailer } from "./mail.js";
 import { createTokenSigner } from "./tokens.js";
 
 const settings = config();
