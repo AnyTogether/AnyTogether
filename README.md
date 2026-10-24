@@ -33,5 +33,4 @@ API, the gateway, the website, Caddy with automatic HTTPS, and optionally a TURN
 
 ## License
 
-AGPL-3.0 (see `LICENSE`). If you run a modified AnyTogether for other people, you must publish
-your changes.
+MIT (see `LICENSE`).
