@@ -2,6 +2,7 @@ import type { Database } from "@anytogether/db";
 import { ErrorCode, problem } from "@anytogether/shared";
 import { Hono } from "hono";
 import type { Redis } from "ioredis";
+import { accountRoutes } from "./account.js";
 import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
 import { HttpError } from "./errors.js";
@@ -54,6 +55,7 @@ export function createApp(deps: Deps) {
   // Before the signed-in routes: avatars are served to anyone.
   v1.route("/", avatarRoutes(deps));
   v1.route("/", profileRoutes(deps));
+  v1.route("/", accountRoutes(deps));
   v1.route("/", friendRoutes(deps));
   v1.route("/", gameRoutes(deps));
   app.route("/api/v1", v1);

@@ -6,6 +6,10 @@ import { HttpError } from "./errors.js";
 export const defaultLimits = {
   /** Avatar uploads per account. */
   avatar: { max: 10, seconds: 3600 },
+  /** Data exports per account. */
+  export: { max: 5, seconds: 3600 },
+  /** Account-deletion codes mailed per account. */
+  deletionCode: { max: 5, seconds: 3600 },
 };
 export type Limits = { [name in keyof typeof defaultLimits]: { max: number; seconds: number } };
 

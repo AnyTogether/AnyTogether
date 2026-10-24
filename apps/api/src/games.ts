@@ -1,4 +1,5 @@
 import {
+  type Database,
   devices,
   earnedTrophies,
   games,
@@ -64,6 +65,23 @@ const nameOf = (texts: Texts) => texts.en?.name ?? Object.values(texts)[0]?.name
 const roundRarity = (rarity: number | null) =>
   rarity === null ? null : Math.round(rarity * 10_000) / 10_000;
 
+/** Rarity = players who earned it / players with the game (rows in library). */
+export async function refreshRarityOf(db: Database, titleIds: string[]) {
+  if (!titleIds.length) return;
+  await db.execute(sql`
+    update trophies t set
+      earned_count = c.earned,
+      rarity = c.earned::real / nullif(c.players, 0)
+    from (
+      select t2.title_id, t2.set_hash, t2.trophy_id,
+        (select count(*) from earned_trophies e
+          where e.title_id = t2.title_id and e.trophy_id = t2.trophy_id)::int earned,
+        (select count(*) from library l where l.title_id = t2.title_id)::int players
+      from trophies t2 where t2.title_id in ${[...new Set(titleIds)]}
+    ) c
+    where t.title_id = c.title_id and t.set_hash = c.set_hash and t.trophy_id = c.trophy_id`);
+}
+
 /** The game catalogue, computers, play sessions, trophy sets, earned trophies and libraries. */
 export function gameRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
@@ -119,22 +137,7 @@ export function gameRoutes(deps: Deps) {
       sql`, `,
     )}`;
 
-  /** Rarity = players who earned it / players with the game (rows in library). */
-  const refreshRarity = async (titleIds: string[]) => {
-    if (!titleIds.length) return;
-    await db.execute(sql`
-      update trophies t set
-        earned_count = c.earned,
-        rarity = c.earned::real / nullif(c.players, 0)
-      from (
-        select t2.title_id, t2.set_hash, t2.trophy_id,
-          (select count(*) from earned_trophies e
-            where e.title_id = t2.title_id and e.trophy_id = t2.trophy_id)::int earned,
-          (select count(*) from library l where l.title_id = t2.title_id)::int players
-        from trophies t2 where t2.title_id in ${[...new Set(titleIds)]}
-      ) c
-      where t.title_id = c.title_id and t.set_hash = c.set_hash and t.trophy_id = c.trophy_id`);
-  };
+  const refreshRarity = (titleIds: string[]) => refreshRarityOf(db, titleIds);
 
   /** Someone whose library or trophies the asker may see, as their privacy settings say. */
   const viewable = async (me: string, handle: string, section: "library" | "trophies") => {

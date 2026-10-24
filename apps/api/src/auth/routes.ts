@@ -14,6 +14,7 @@ import {
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7";
+import { revokeAll } from "../account.js";
 import { findOrCreateAccount } from "../accounts.js";
 import type { Deps } from "../app.js";
 import { HttpError } from "../errors.js";
@@ -267,6 +268,13 @@ export function authRoutes(deps: Deps) {
         current: row.id === c.get("sessionId"),
       })),
     });
+  });
+
+  /** Signs out everywhere; with ?keep=current, everywhere but here. */
+  app.delete("/sessions", requireUser(deps), async (c) => {
+    const keep = c.req.query("keep") === "current" ? c.get("sessionId") : undefined;
+    const ended = await revokeAll(ctx, c.get("userId"), keep);
+    return c.json({ signedOut: ended });
   });
 
   app.delete("/sessions/:id", requireUser(deps), async (c) => {

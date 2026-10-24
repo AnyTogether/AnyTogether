@@ -1,4 +1,4 @@
-import { type Database, profiles, sessions } from "@anytogether/db";
+import { type Database, accounts, auditLog, profiles, sessions } from "@anytogether/db";
 import type { ClientKind, Tokens } from "@anytogether/shared";
 import { ErrorCode, presenceHiddenKey, privacyOf } from "@anytogether/shared";
 import { and, eq, isNull } from "drizzle-orm";
@@ -22,6 +22,17 @@ export async function startSession(
   client: ClientKind,
   deviceName?: string,
 ): Promise<Tokens> {
+  const [account] = await ctx.db.select().from(accounts).where(eq(accounts.id, accountId));
+  if (account?.status === "deleting") {
+    // Signing in within the 14 days keeps the account.
+    await ctx.db
+      .update(accounts)
+      .set({ status: "active", deleteAfter: null })
+      .where(and(eq(accounts.id, accountId), eq(accounts.status, "deleting")));
+    await ctx.db
+      .insert(auditLog)
+      .values({ id: uuidv7(), actorId: accountId, action: "account.deletion_cancelled", target: accountId });
+  }
   const id = uuidv7();
   const refreshToken = secret();
   await ctx.db.insert(sessions).values({

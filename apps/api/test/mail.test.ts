@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { describe, expect, it } from "vitest";
-import { mailerFor, signInMail, smtpMailer } from "../src/mail.js";
+import { deletionMail, mailerFor, signInMail, smtpMailer } from "../src/mail.js";
 
 describe("sign-in mail", () => {
   it("picks the transport the settings name", () => {
@@ -25,6 +25,13 @@ describe("sign-in mail", () => {
     expect(mail.subject).toContain("123456");
     expect(mail.text).toContain("giriş kodun: 123456");
     expect(mail.text).toContain("https://anytogether.test/login/email?token=x");
+  });
+
+  it("says what a deletion code does, in both languages", () => {
+    const mail = deletionMail("246810");
+    expect(mail.subject).toContain("246810");
+    expect(mail.text).toContain("14 days");
+    expect(mail.text).toContain("hesabını silme kodun: 246810");
   });
 
   it("goes out through SMTP from the sign-in address", async () => {
