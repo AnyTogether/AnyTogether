@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/main.js --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/main.js --external:sharp --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -20,6 +20,7 @@
     "jose": "^5.9.6",
     "nodemailer": "^6.10.1",
     "postgres": "^3.4.5",
+    "sharp": "0.35.5",
     "uuidv7": "^1.0.2",
     "zod": "^3.24.1"
   },

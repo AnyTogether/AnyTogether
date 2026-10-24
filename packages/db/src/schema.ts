@@ -119,6 +119,21 @@ export const handleHistory = pgTable(
   (table) => [index().on(table.accountId)],
 );
 
+/** Uploaded avatars, re-encoded to a 256 px JPEG without metadata, served by the hash of their
+ *  bytes; only the account's current one is kept. */
+export const avatars = pgTable(
+  "avatars",
+  {
+    hash: text().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    bytes: bytea().notNull(),
+    createdAt: now(),
+  },
+  (table) => [index().on(table.accountId)],
+);
+
 /** A user's computers, by the launcher's own random ID. */
 export const devices = pgTable(
   "devices",

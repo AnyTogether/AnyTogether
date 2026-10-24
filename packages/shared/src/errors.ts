@@ -24,6 +24,9 @@ export const ErrorCode = {
   handleReserved: "handle_reserved",
   handleCooldown: "handle_cooldown",
   linksNotAllowed: "links_not_allowed",
+  payloadTooLarge: "payload_too_large",
+  unsupportedMedia: "unsupported_media_type",
+  badImage: "bad_image",
   internal: "internal",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

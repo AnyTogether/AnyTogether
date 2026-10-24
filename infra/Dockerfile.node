@@ -1,5 +1,6 @@
 # One image per Node app: docker build -f infra/Dockerfile.node --build-arg APP=api .
-# The app and its packages are bundled into one file; the image holds only that and the migrations.
+# The app and its packages are bundled into one file; the image holds that, the migrations and
+# the few native modules the bundle leaves out.
 FROM node:22-alpine AS build
 ARG APP
 WORKDIR /repo
@@ -9,12 +10,18 @@ COPY apps ./apps
 COPY packages ./packages
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @anytogether/${APP} build
+# Native modules stay out of the bundle (sharp, for the API's avatars) and are installed beside it,
+# at the version the lockfile chose, with the binaries for this image's platform.
+RUN mkdir -p /natives/node_modules && if [ "$APP" = api ]; then cd /natives && \
+    npm install --omit=dev --no-package-lock --no-audit --no-fund \
+      "sharp@$(node -p "require('/repo/apps/api/node_modules/sharp/package.json').version")"; fi
 
 FROM node:22-alpine
 ARG APP
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /repo/apps/${APP}/dist ./dist
+COPY --from=build /natives/node_modules ./node_modules
 COPY --from=build /repo/packages/db/drizzle ./drizzle
 USER node
 CMD ["node", "dist/main.js"]
