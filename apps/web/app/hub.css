@@ -545,7 +545,12 @@
 .product-head {
   display: flex;
   align-items: center;
+  /* The site header's space-between would push the title away from the icon. */
+  justify-content: flex-start;
   gap: 14px;
+}
+.product-head .lines {
+  flex: 1;
 }
 .product-head h3 {
   font-size: 19px;
@@ -672,6 +677,9 @@
   overflow-x: auto;
   white-space: nowrap;
   scrollbar-width: none;
+  /* It scrolls: the end fades out before the copy button instead of stopping mid-word. */
+  padding-right: 36px;
+  mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent);
 }
 .steps {
   margin-top: 18px;
