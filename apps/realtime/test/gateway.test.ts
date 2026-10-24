@@ -439,6 +439,42 @@ describe("the gateway", () => {
     for (const c of [viewer, other]) c.socket.close();
   });
 
+  it("holds at most 20 sockets per user; the next one is closed", async () => {
+    const open = [];
+    for (let i = 0; i < 20; i++) open.push(await signedIn("u1", `s${i}`));
+    const extra = client();
+    await extra.opened;
+    extra.send({ op: "hello", token: await token("u1", "s20") });
+    expect(await extra.closed).toBe(4029);
+    // Another user is not held up, and a closed socket frees its place.
+    const other = await signedIn("u2", "t1");
+    open[0]?.socket.close();
+    await open[0]?.closed;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    open.push(await signedIn("u1", "s21"));
+    for (const c of [...open, other]) c.socket.close();
+  });
+
+  it("merges a user's devices without scanning every key in Valkey", async () => {
+    await valkey.config("RESETSTAT");
+    const mac = await signedIn("u1", "mac");
+    const phone = await signedIn("u1", "phone");
+    phone.send({ op: "heartbeat", presence: { state: "in_game", titleId: "PPSA01234" } });
+    mac.send({ op: "heartbeat", presence: { state: "away" } });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(JSON.parse((await valkey.get("presence:u1")) ?? "{}")).toMatchObject({
+      state: "in_game",
+      titleId: "PPSA01234",
+    });
+    phone.socket.close();
+    await phone.closed;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(JSON.parse((await valkey.get("presence:u1")) ?? "{}")).toMatchObject({ state: "away" });
+    const stats = String(await valkey.info("commandstats"));
+    expect(stats).not.toMatch(/cmdstat_keys:/);
+    mac.socket.close();
+  });
+
   it("keeps presence from heartbeats", async () => {
     const c = await signedIn("u1", "s1");
     c.send({

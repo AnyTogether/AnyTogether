@@ -14,6 +14,7 @@ import {
   gameSessionMembersKey,
   gameSignalKinds,
   presenceKey as mergedPresenceKey,
+  presenceDevicesKey,
   presenceExtraKey,
   presenceHiddenKey,
   realtimeTicketKey,
@@ -42,6 +43,8 @@ export interface GatewayOptions {
 
 /** Close codes the clients act on. */
 export const CloseCode = { unauthorized: 4001, signedOut: 4003, idle: 4008, tooMany: 4029 } as const;
+/** Sockets one user may hold on this gateway: every launcher, phone and browser tab, many times over. */
+const maxSocketsPerUser = 20;
 /** Frames one socket may send in ten seconds: a heartbeat every 25 s and one at each change of
  *  presence fit many times over. */
 const framesPerWindow = 30;
@@ -121,7 +124,11 @@ export async function createGateway(options: GatewayOptions) {
     }
     // Another socket of the same session (a second browser tab) keeps the device here.
     if ([...set].some((other) => other.sessionId === connection.sessionId)) return;
-    await store.del(presenceKey(connection));
+    await store
+      .multi()
+      .del(presenceKey(connection))
+      .srem(presenceDevicesKey(connection.userId), connection.sessionId)
+      .exec();
     await announce(connection.userId);
     // In a call: unless the device is back by then, the API takes it out of its calls.
     if (await store.exists(deviceCallsKey(connection.sessionId)))
@@ -146,10 +153,13 @@ export async function createGateway(options: GatewayOptions) {
       await store.del(mergedPresenceKey(userId));
       return;
     }
-    const keys = await store.keys(`presence:${userId}:*`);
-    const devices = (keys.length ? await store.mget(...keys) : [])
-      .filter(Boolean)
-      .map((value) => JSON.parse(value as string) as Presence);
+    const sessions = await store.smembers(presenceDevicesKey(userId));
+    const kept = sessions.length
+      ? await store.mget(...sessions.map((id) => devicePresenceKey(userId, id)))
+      : [];
+    const gone = sessions.filter((_, index) => !kept[index]);
+    if (gone.length) await store.srem(presenceDevicesKey(userId), ...gone);
+    const devices = kept.filter(Boolean).map((value) => JSON.parse(value as string) as Presence);
     const rank = { in_game: 0, online: 1, away: 2, offline: 3 };
     const merged: Presence = withExtras(
       devices.sort((a, b) => (rank[a.state] ?? 3) - (rank[b.state] ?? 3))[0] ?? { state: "offline" },
@@ -167,6 +177,16 @@ export async function createGateway(options: GatewayOptions) {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       await store.publish(userChannel(friend), message(id));
     }
+  }
+
+  /** This device's own presence, for a minute past its last heartbeat. */
+  async function keepPresence(connection: Connection, presence: Presence) {
+    await store
+      .multi()
+      .set(presenceKey(connection), JSON.stringify(presence), "EX", 60)
+      .sadd(presenceDevicesKey(connection.userId), connection.sessionId)
+      .expire(presenceDevicesKey(connection.userId), 120)
+      .exec();
   }
 
   /** Who says hello: an access token (launchers, the phone), or a one-time ticket the API gave the
@@ -330,6 +350,8 @@ export async function createGateway(options: GatewayOptions) {
           const { userId, sessionId } = await identify(frame);
           if (await store.exists(`revoked:${sessionId}`))
             return socket.close(CloseCode.signedOut, "signed out");
+          if ((byUser.get(userId)?.size ?? 0) >= maxSocketsPerUser)
+            return socket.close(CloseCode.tooMany, "too many sockets");
           connection = {
             socket,
             userId,
@@ -340,7 +362,7 @@ export async function createGateway(options: GatewayOptions) {
           };
           await join(connection);
           send(socket, { op: "ready", session: sessionId, heartbeat });
-          await store.set(presenceKey(connection), JSON.stringify({ state: "online" }), "EX", 60);
+          await keepPresence(connection, { state: "online" });
           await announce(connection.userId);
           if (frame.resume) await replay(connection, frame.resume);
         } catch {
@@ -351,7 +373,7 @@ export async function createGateway(options: GatewayOptions) {
       if (!connection) return socket.close(CloseCode.unauthorized, "say hello first");
       if (frame.op === "heartbeat") {
         connection.lastHeard = Date.now();
-        await store.set(presenceKey(connection), JSON.stringify(devicePresence(frame.presence)), "EX", 60);
+        await keepPresence(connection, devicePresence(frame.presence));
         await announce(connection.userId);
         return;
       }
