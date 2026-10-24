@@ -41,6 +41,8 @@ export const defaultLimits = {
   call: { max: 60, seconds: 3600 },
   /** Game sessions opened by one account. */
   gameSession: { max: 120, seconds: 3600 },
+  /** Reactions to feed items by one account. */
+  reaction: { max: 300, seconds: 3600 },
   /** Gateway tickets for the website, per account (one per socket it opens). */
   realtimeTicket: { max: 60, seconds: 60 },
 };

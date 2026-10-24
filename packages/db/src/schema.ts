@@ -392,6 +392,61 @@ export const earnedTrophies = pgTable(
   ],
 );
 
+/** The activity feed: what someone did, written when it happened. Who may read an item is worked
+ *  out when it is read, from the actor's privacy setting for `section` (and, for a friendship,
+ *  the new friend's too). */
+export const activities = pgTable(
+  "activities",
+  {
+    /** UUIDv7, so the newest has the largest ID; the feed pages by it. */
+    id: uuid().primaryKey(),
+    actorId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** trophy | platinum | first_play | long_session | friendship | milestone */
+    kind: text().notNull(),
+    /** library | trophies | friends: the privacy setting that decides who sees it. */
+    section: text().notNull(),
+    titleId: text().references(() => games.titleId),
+    /** The new friend of a friendship item. */
+    subjectId: uuid().references(() => accounts.id, { onDelete: "cascade" }),
+    /** trophy, platinum: {setHash, trophies: [{id, grade}], count}; long_session, first_play:
+     *  {seconds}; milestone: {kind, value}. */
+    payload: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  (table) => [
+    index("activities_actor").on(table.actorId, table.id.desc()),
+    index().on(table.subjectId),
+    check(
+      "activity_kind",
+      sql`${table.kind} in ('trophy', 'platinum', 'first_play', 'long_session', 'friendship', 'milestone')`,
+    ),
+    check("activity_section", sql`${table.section} in ('library', 'trophies', 'friends')`),
+  ],
+);
+
+/** One of the fixed reactions per person per item. */
+export const activityReactions = pgTable(
+  "activity_reactions",
+  {
+    activityId: uuid()
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    reaction: text().notNull(),
+    createdAt: now(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.activityId, table.accountId] }),
+    index().on(table.accountId),
+    check("reaction", sql`${table.reaction} in ('fire', 'clap', 'wow', 'heart')`),
+  ],
+);
+
 /** A direct conversation (two friends, made once: direct_key is "smaller:larger" user ID) or a group. */
 export const conversations = pgTable(
   "conversations",

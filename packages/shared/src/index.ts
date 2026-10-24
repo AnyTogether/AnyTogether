@@ -9,3 +9,4 @@ export * from "./parties.js";
 export * from "./presence.js";
 export * from "./calls.js";
 export * from "./gameSessions.js";
+export * from "./feed.js";

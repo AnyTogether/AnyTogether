@@ -2,6 +2,8 @@ import { randomInt, timingSafeEqual } from "node:crypto";
 import {
   type Database,
   accounts,
+  activities,
+  activityReactions,
   auditLog,
   avatars,
   blocks,
@@ -160,6 +162,12 @@ export async function exportAccount(db: Database, accountId: string) {
     gamesTaught: (
       await db.select({ titleId: games.titleId }).from(games).where(eq(games.taughtBy, accountId))
     ).map((g) => g.titleId),
+    activity: (
+      await db.select().from(activities).where(eq(activities.actorId, accountId)).orderBy(asc(activities.id))
+    ).map(({ actorId: _, ...item }) => item),
+    reactions: (
+      await db.select().from(activityReactions).where(eq(activityReactions.accountId, accountId))
+    ).map(({ accountId: _, ...reaction }) => reaction),
     friends: pairs.map((p) => {
       const other = p.userA === accountId ? p.userB : p.userA;
       return {

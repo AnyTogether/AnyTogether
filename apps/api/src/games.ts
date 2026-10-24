@@ -22,6 +22,7 @@ import {
   TitleId,
   TrophyBatch,
   TrophySet,
+  freshActivityMs,
   friendsKey,
   privacyOf,
   rarityLabel,
@@ -33,6 +34,7 @@ import type { z } from "zod";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
+import { recordMilestones, recordSessions, recordTrophies, totalsOf } from "./feed.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { blockedBetween, canSee, findProfile, relationOf } from "./people.js";
@@ -281,6 +283,23 @@ export function gameRoutes(deps: Deps) {
     });
 
     const stored = new Set<string>();
+    // For the feed: games played for the first time, and the totals milestones count from.
+    const before = accepted.length ? await totalsOf(db, me) : undefined;
+    const played = new Set(
+      accepted.length
+        ? (
+            await db
+              .selectDistinct({ titleId: playSessions.titleId })
+              .from(playSessions)
+              .where(
+                and(
+                  eq(playSessions.accountId, me),
+                  inArray(playSessions.titleId, [...new Set(accepted.map((a) => a.item.titleId))]),
+                ),
+              )
+          ).map((r) => r.titleId)
+        : [],
+    );
     if (accepted.length) {
       await stubGames(accepted.map((a) => a.item.titleId));
       const inserted = await db
@@ -301,10 +320,12 @@ export function gameRoutes(deps: Deps) {
       for (const row of inserted) stored.add(row.id);
     }
     const titles = new Set<string>();
+    const kept: z.infer<typeof PlaySession>[] = [];
     for (const { index, item } of accepted) {
       if (stored.delete(item.id)) {
         results[index] = { index, status: "stored" };
         titles.add(item.titleId);
+        kept.push(item);
       } else results[index] = { index, status: "duplicate" };
     }
     if (titles.size) {
@@ -314,6 +335,9 @@ export function gameRoutes(deps: Deps) {
         .update(devices)
         .set({ lastSeenAt: new Date() })
         .where(and(eq(devices.accountId, me), inArray(devices.id, deviceIds)));
+      await recordSessions(deps, me, kept, new Set([...titles].filter((t) => !played.has(t))));
+      if (before && kept.some((s) => Date.parse(s.endedAt) > now - freshActivityMs))
+        await recordMilestones(deps, me, before, await totalsOf(db, me));
     }
     return c.json({ results });
   });
@@ -413,6 +437,7 @@ export function gameRoutes(deps: Deps) {
     });
 
     const stored = new Set<string>();
+    const before = accepted.length ? await totalsOf(db, me) : undefined;
     if (accepted.length) {
       const inserted = await db
         .insert(earnedTrophies)
@@ -431,6 +456,7 @@ export function gameRoutes(deps: Deps) {
     }
     const titles = new Set<string>();
     const fresh: { item: z.infer<typeof EarnedTrophy>; grade: Grade; name: string | null }[] = [];
+    const kept: (z.infer<typeof EarnedTrophy> & { grade: Grade })[] = [];
     for (const { index, item } of accepted) {
       if (!stored.delete(`${item.titleId}/${item.trophyId}`)) {
         results[index] = { index, status: "duplicate" };
@@ -439,6 +465,7 @@ export function gameRoutes(deps: Deps) {
       results[index] = { index, status: "stored" };
       titles.add(item.titleId);
       const trophy = byKey.get(key(item));
+      if (trophy) kept.push({ ...item, grade: trophy.grade as Grade });
       if (trophy && Date.parse(item.earnedAt) > now - freshTrophy)
         fresh.push({
           item,
@@ -449,6 +476,9 @@ export function gameRoutes(deps: Deps) {
     if (titles.size) {
       await refreshLibrary(mine(me, [...titles]));
       await refreshRarity([...titles]);
+      await recordTrophies(deps, me, kept);
+      if (before && kept.some((t) => Date.parse(t.earnedAt) > now - freshActivityMs))
+        await recordMilestones(deps, me, before, await totalsOf(db, me));
     }
 
     if (fresh.length) {

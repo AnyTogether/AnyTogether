@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
+import { forgetFriendship, recordFriendship } from "./feed.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { type ProfileRow, blockedBetween, canSee, findProfile, relationOf } from "./people.js";
@@ -92,6 +93,7 @@ export function friendRoutes(deps: Deps) {
         type: "friend.accepted",
         data: { userId: me, handle: mine.handle, displayName: mine.displayName },
       });
+    await recordFriendship(deps, me, other);
   }
 
   async function unfriend(me: string, other: string) {
@@ -101,6 +103,7 @@ export function friendRoutes(deps: Deps) {
       .where(and(eq(friendships.userA, userA), eq(friendships.userB, userB)))
       .returning();
     await deps.valkey.multi().srem(friendsKey(me), other).srem(friendsKey(other), me).exec();
+    await forgetFriendship(deps.db, me, other);
     if (removed[0]?.state === "accepted")
       await publish(deps.valkey, other, { type: "friend.removed", data: { userId: me } });
   }

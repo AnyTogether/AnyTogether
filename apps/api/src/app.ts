@@ -8,6 +8,7 @@ import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
 import { callRoutes } from "./calls.js";
 import { HttpError } from "./errors.js";
+import { feedRoutes } from "./feed.js";
 import { friendRoutes } from "./friends.js";
 import { gameSessionRoutes } from "./gameSessions.js";
 import { gameRoutes } from "./games.js";
@@ -74,6 +75,7 @@ export function createApp(deps: Deps) {
   v1.route("/", accountRoutes(deps));
   v1.route("/", friendRoutes(deps));
   v1.route("/", gameRoutes(deps));
+  v1.route("/", feedRoutes(deps));
   v1.route("/", reportRoutes(deps));
   v1.route("/", messageRoutes(deps));
   const partyPieces = partyService(deps);
