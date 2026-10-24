@@ -1,0 +1,12 @@
+{
+  "name": "@anytogether/e2e",
+  "private": true,
+  "type": "module",
+  "description": "Cross-client end-to-end runs: the launchers, the phone and the website against one local stack",
+  "scripts": {
+    "run": "node run.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "23.11.1"
+  }
+}
