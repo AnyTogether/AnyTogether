@@ -1,11 +1,18 @@
 import type { MessageEvent } from "./messages.js";
+import type { PartyEvent, PartyPresence } from "./parties.js";
 
 /** What the realtime gateway pushes; the API publishes them for each recipient. */
 export type GatewayEvent =
   | { type: "account.signed_out"; data: { sessionId: string } }
   | {
       type: "presence.updated";
-      data: { userId: string; state: PresenceState; titleId?: string; since?: string };
+      data: {
+        userId: string;
+        state: PresenceState;
+        titleId?: string;
+        since?: string;
+        party?: PartyPresence;
+      };
     }
   | { type: "auth.handoff"; data: { handoffId: string; deviceName: string; client: string } }
   | { type: "friend.request"; data: { userId: string; handle: string; displayName: string } }
@@ -24,7 +31,8 @@ export type GatewayEvent =
         name: string | null;
       };
     }
-  | MessageEvent;
+  | MessageEvent
+  | PartyEvent;
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 

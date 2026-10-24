@@ -221,6 +221,30 @@ describe("the gateway", () => {
     friend.socket.close();
   });
 
+  it("adds the API's extras to presence and keeps devices from claiming them", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    await valkey.hset(
+      "presence-extra:u1",
+      "party",
+      JSON.stringify({ id: "p1", size: 2, max: 8, open: false }),
+    );
+    const friend = await signedIn("u2", "s2");
+    const me = await signedIn("u1", "s1");
+    const told = await friend.waitFor((frame) => frame.type === "presence.updated");
+    expect(told.data).toMatchObject({ userId: "u1", state: "online", party: { id: "p1", size: 2 } });
+    me.send({ op: "heartbeat", presence: { state: "in_game", titleId: "PPSA01234", party: { id: "fake" } } });
+    await friend.waitFor((frame) => (frame.data as { state?: string })?.state === "in_game");
+    expect(JSON.parse((await valkey.get("presence:u1")) ?? "{}")).toEqual({
+      state: "in_game",
+      titleId: "PPSA01234",
+      party: { id: "p1", size: 2, max: 8, open: false },
+    });
+    me.socket.close();
+    const gone = await friend.waitFor((frame) => (frame.data as { state?: string })?.state === "offline");
+    expect((gone.data as { party?: unknown }).party).toBeUndefined();
+    friend.socket.close();
+  });
+
   it("keeps presence from heartbeats", async () => {
     const c = await signedIn("u1", "s1");
     c.send({

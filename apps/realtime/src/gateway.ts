@@ -4,9 +4,11 @@ import {
   type ServerFrame,
   friendsKey,
   presenceKey as mergedPresenceKey,
+  presenceExtraKey,
   presenceHiddenKey,
   userChannel,
   userEvents,
+  withExtras,
 } from "@anytogether/shared";
 import { Redis } from "ioredis";
 import { type JWTVerifyGetKey, type KeyLike, jwtVerify } from "jose";
@@ -106,7 +108,10 @@ export async function createGateway(options: GatewayOptions) {
       .filter(Boolean)
       .map((value) => JSON.parse(value as string) as Presence);
     const rank = { in_game: 0, online: 1, away: 2, offline: 3 };
-    const merged: Presence = devices.sort((a, b) => rank[a.state] - rank[b.state])[0] ?? { state: "offline" };
+    const merged: Presence = withExtras(
+      devices.sort((a, b) => (rank[a.state] ?? 3) - (rank[b.state] ?? 3))[0] ?? { state: "offline" },
+      await store.hgetall(presenceExtraKey(userId)),
+    );
     const before = await store.get(mergedPresenceKey(userId));
     const now = JSON.stringify(merged);
     if (merged.state === "offline") await store.del(mergedPresenceKey(userId));
@@ -189,12 +194,7 @@ export async function createGateway(options: GatewayOptions) {
       if (!connection) return socket.close(CloseCode.unauthorized, "say hello first");
       if (frame.op === "heartbeat") {
         connection.lastHeard = Date.now();
-        await store.set(
-          presenceKey(connection),
-          JSON.stringify(frame.presence ?? { state: "online" }),
-          "EX",
-          60,
-        );
+        await store.set(presenceKey(connection), JSON.stringify(devicePresence(frame.presence)), "EX", 60);
         await announce(connection.userId);
       }
     }
@@ -224,6 +224,17 @@ export async function createGateway(options: GatewayOptions) {
       store.disconnect();
       subscriber.disconnect();
     },
+  };
+}
+
+/** What a device may say about itself: its state, and the game and since when while playing. */
+function devicePresence(presence: unknown): Presence {
+  const { state, titleId, since } = (presence ?? {}) as Record<string, unknown>;
+  if (state !== "online" && state !== "away" && state !== "in_game") return { state: "online" };
+  return {
+    state,
+    ...(typeof titleId === "string" ? { titleId: titleId.slice(0, 32) } : {}),
+    ...(typeof since === "string" ? { since: since.slice(0, 40) } : {}),
   };
 }
 

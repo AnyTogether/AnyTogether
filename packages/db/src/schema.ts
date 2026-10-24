@@ -427,3 +427,47 @@ export const messages = pgTable(
     check("text_length", sql`length(${table.text}) <= 4000`),
   ],
 );
+
+/** A group that plays and talks together, at most eight people; the leader may kick and hand over. */
+export const parties = pgTable(
+  "parties",
+  {
+    id: uuid().primaryKey(),
+    leaderId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    privacy: text().notNull().default("invite"),
+    createdAt: now(),
+    endedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [check("privacy", sql`${table.privacy} in ('invite', 'friends')`)],
+);
+
+/** Someone is in at most one party at a time. */
+export const partyMembers = pgTable(
+  "party_members",
+  {
+    partyId: uuid()
+      .notNull()
+      .references(() => parties.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" })
+      .unique(),
+    joinedAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.partyId, table.accountId] })],
+);
+
+export const partyInvites = pgTable(
+  "party_invites",
+  {
+    partyId: uuid()
+      .notNull()
+      .references(() => parties.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    invitedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    createdAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.partyId, table.accountId] }), index().on(table.accountId)],
+);

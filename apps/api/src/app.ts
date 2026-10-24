@@ -12,6 +12,7 @@ import type { Mailer } from "./mail.js";
 import { messageRoutes } from "./messages.js";
 import type { AuthVariables } from "./middleware.js";
 import { reportRoutes } from "./moderation.js";
+import { partyRoutes, partyService } from "./parties.js";
 import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
 import { type Limits, perIp } from "./ratelimit.js";
@@ -64,6 +65,8 @@ export function createApp(deps: Deps) {
   v1.route("/", gameRoutes(deps));
   v1.route("/", reportRoutes(deps));
   v1.route("/", messageRoutes(deps));
+  const partyPieces = partyService(deps);
+  v1.route("/", partyRoutes(deps, partyPieces));
   app.route("/api/v1", v1);
   return app;
 }
