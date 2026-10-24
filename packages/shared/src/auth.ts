@@ -43,6 +43,36 @@ export const TokenRequest = z.discriminatedUnion("grantType", [
   z.object({ grantType: z.literal("handoff"), handoffId: z.string().uuid(), secret: z.string().min(20) }),
 ]);
 
+/** A browser's WebAuthn answer as JSON (base64url fields); the API checks the inside. */
+const credentialJson = z
+  .object({
+    id: z.string().min(1).max(1400),
+    rawId: z.string().min(1).max(1400),
+    type: z.literal("public-key"),
+    response: z.object({ clientDataJSON: z.string().max(4096) }).passthrough(),
+    clientExtensionResults: z.record(z.unknown()).default({}),
+    authenticatorAttachment: z.string().max(40).optional(),
+  })
+  .passthrough();
+
+/** A new passkey for the signed-in account, named so it can be told apart in the list. */
+export const PasskeyCreate = z.object({ name: z.string().trim().min(1).max(60), response: credentialJson });
+/** Signing in with a passkey: the challenge asked for, and what the authenticator signed. */
+export const PasskeyFinish = z.object({
+  challengeId: z.string().min(16).max(64),
+  response: credentialJson,
+  deviceName: z.string().max(80).optional(),
+});
+
+export interface Passkey {
+  id: string;
+  name: string;
+  /** Synced across the user's devices (iCloud Keychain, Google Password Manager, …). */
+  backedUp: boolean;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
 export interface Tokens {
   accessToken: string;
   /** Seconds until the access token expires. */

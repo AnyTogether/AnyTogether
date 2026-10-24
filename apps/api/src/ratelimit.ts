@@ -11,8 +11,13 @@ export const defaultLimits = {
   ip: { max: 600, seconds: 60 },
   /** Every request of one signed-in account. */
   account: { max: 300, seconds: 60 },
-  /** Sign-in attempts from one address: codes asked and tried, provider sign-ins, hand-offs. */
+  /** Sign-in attempts from one address: codes asked and tried, provider and passkey sign-ins,
+   *  hand-offs. */
   signIn: { max: 30, seconds: 900 },
+  /** Passkey challenges asked from one address (the sign-in page asks on every visit). */
+  passkeyChallenge: { max: 120, seconds: 900 },
+  /** Passkeys being added by one account. */
+  passkey: { max: 20, seconds: 3600 },
   /** Token calls from one address: refreshes, and launchers polling for a device code. */
   token: { max: 300, seconds: 600 },
   /** Friend requests sent by one account. */

@@ -13,6 +13,7 @@ import {
   identities,
   library,
   messages,
+  passkeys,
   playSessions,
   profiles,
   sessions,
@@ -96,6 +97,14 @@ export async function exportAccount(db: Database, accountId: string) {
       privacy: privacyOf(profile.privacy),
     },
     avatar: avatar ? `data:image/jpeg;base64,${Buffer.from(avatar.bytes).toString("base64")}` : null,
+    passkeys: (await db.select().from(passkeys).where(eq(passkeys.accountId, accountId))).map((p) => ({
+      id: p.id,
+      name: p.name,
+      deviceType: p.deviceType,
+      backedUp: p.backedUp,
+      createdAt: p.createdAt,
+      lastUsedAt: p.lastUsedAt,
+    })),
     oldHandles: (await db.select().from(handleHistory).where(eq(handleHistory.accountId, accountId))).map(
       (h) => ({ handle: h.handle, releasedAt: h.releasedAt }),
     ),

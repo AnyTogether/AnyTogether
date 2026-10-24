@@ -3,6 +3,7 @@ import { ErrorCode, problem } from "@anytogether/shared";
 import { Hono } from "hono";
 import type { Redis } from "ioredis";
 import { accountRoutes } from "./account.js";
+import { passkeyRoutes } from "./auth/passkeys.js";
 import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
 import { callRoutes } from "./calls.js";
@@ -29,6 +30,8 @@ export interface Deps {
   providers: ProviderConfig;
   /** Where the website is, for links in mails and the device page. */
   publicUrl: string;
+  /** The name passkey prompts show for the site; "AnyTogether" by default. */
+  rpName?: string;
   /** Rate limits other than the defaults (the tests lower or raise them). */
   limits?: Partial<Limits>;
   /** STUN/TURN for calls; without it calls get no ICE servers beyond what the client has. */
@@ -61,6 +64,7 @@ export function createApp(deps: Deps) {
   // Health checks and the gateway's key fetches above; everything else counts per address.
   v1.use("*", perIp(deps.valkey, "ip", deps.limits));
   v1.route("/auth", authRoutes(deps));
+  v1.route("/auth", passkeyRoutes(deps));
 
   // Before the signed-in routes: avatars are served to anyone.
   v1.route("/", avatarRoutes(deps));

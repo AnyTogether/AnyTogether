@@ -23,6 +23,7 @@ const app = createApp({
   tokens: await createTokenSigner(settings.jwtPrivateKey, settings.publicUrl),
   providers: settings.providers,
   publicUrl: settings.publicUrl,
+  rpName: settings.rpName,
   turn: settings.turn,
 });
 serve({ fetch: app.fetch, port: settings.port }, (info) => console.log(`api listening on ${info.port}`));

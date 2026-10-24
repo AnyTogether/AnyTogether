@@ -32,6 +32,10 @@ export const ErrorCode = {
   unsupportedMedia: "unsupported_media_type",
   badImage: "bad_image",
   accountBanned: "account_banned",
+  /** A passkey's challenge was used already or is too old: ask for a new one. */
+  challengeExpired: "challenge_expired",
+  /** The passkey is unknown here (removed, or made for another site) or its signature is wrong. */
+  passkeyInvalid: "passkey_invalid",
   internal: "internal",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

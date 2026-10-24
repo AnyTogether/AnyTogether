@@ -26,6 +26,8 @@ export function config(env = process.env) {
     valkeyUrl: env.VALKEY_URL ?? "redis://127.0.0.1:63799",
     jwtPrivateKey: env.JWT_PRIVATE_KEY?.replace(/\\n/g, "\n") || undefined,
     publicUrl: env.PUBLIC_URL ?? "http://localhost:3000",
+    /** Passkeys belong to PUBLIC_URL's host name; this is the name their prompts show. */
+    rpName: env.WEBAUTHN_RP_NAME || "AnyTogether",
     mail: {
       transport: env.MAIL_TRANSPORT ?? "log",
       smtpUrl: env.SMTP_URL ?? "",
