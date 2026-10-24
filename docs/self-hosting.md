@@ -14,7 +14,7 @@ on one machine with Docker Compose:
 | `valkey` | Valkey: rate limits, sign-in challenges, presence, the event bus (nothing kept on disk) |
 | `coturn` | optional: a STUN/TURN relay so voice calls connect behind strict networks |
 
-AnyTogether is AGPL-3.0: if you run a modified version for other people, publish your changes.
+AnyTogether is MIT licensed: use it, change it and run it however you like.
 
 ## Requirements
 
