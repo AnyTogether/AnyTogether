@@ -1,7 +1,9 @@
 import { Avatar } from "@/components/Avatar";
+import { FeedList } from "@/components/FeedList";
 import { FriendAction } from "@/components/FriendAction";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { flag } from "@/lib/countries";
+import type { FeedPage } from "@/lib/feed";
 import {
   type EarnedTrophy,
   type LibraryGame,
@@ -28,11 +30,12 @@ const clean = (handle: string) => decodeURIComponent(handle).replace(/^@/, "").t
 async function load(handle: string) {
   if (!/^[a-z0-9_.]{1,40}$/.test(handle)) return null;
   const path = `/users/${encodeURIComponent(handle)}`;
-  const [profile, library, trophies, friends] = await Promise.all([
+  const [profile, library, trophies, friends, activity] = await Promise.all([
     apiJson<Profile>(path),
     apiJson<{ games: LibraryGame[] }>(`${path}/library`),
     apiJson<{ trophies: EarnedTrophy[] }>(`${path}/trophies`),
     apiJson<{ friends: Person[] }>(`${path}/friends`),
+    apiJson<FeedPage>(`${path}/activity?limit=8`),
   ]);
   if (!profile.body) return null;
   return {
@@ -40,6 +43,8 @@ async function load(handle: string) {
     games: library.status === 403 ? null : (library.body?.games ?? []),
     trophies: trophies.status === 403 ? null : (trophies.body?.trophies ?? []),
     friends: friends.status === 403 ? null : (friends.body?.friends ?? []),
+    // Items the viewer may not see are left out by the API; older API answers have none.
+    activity: activity.body?.items ?? [],
   };
 }
 
@@ -69,7 +74,7 @@ export default async function UserProfile({ params }: Params) {
   if (!user) redirect(`/login?next=${encodeURIComponent(`/u/${handle}`)}`);
   const loaded = await load(handle);
   if (!loaded) notFound();
-  const { profile, games, trophies, friends } = loaded;
+  const { profile, games, trophies, friends, activity } = loaded;
   // An old handle still finds the person for 30 days; the address shows the new one.
   if (profile.handle.toLowerCase() !== handle) redirect(`/u/${profile.handle}`);
   const { language } = texts;
@@ -139,6 +144,16 @@ export default async function UserProfile({ params }: Params) {
         <div className="in d4">
           <FriendAction profile={profile} texts={ui(texts)} />
         </div>
+      </article>
+
+      <article className="card in d3">
+        <h3 className="sub">{texts.recentActivity}</h3>
+        <FeedList
+          texts={ui(texts)}
+          initial={{ items: activity, next: null }}
+          now={Date.now()}
+          empty={<p className="empty">{texts.noActivity}</p>}
+        />
       </article>
 
       <article className="card in d3">

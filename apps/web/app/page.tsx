@@ -1,4 +1,9 @@
-import { strings } from "@/lib/i18n";
+import { FeedList } from "@/components/FeedList";
+import type { Board, FeedPage } from "@/lib/feed";
+import { type Strings, strings, ui } from "@/lib/i18n";
+import { fill } from "@/lib/people";
+import { apiJson, currentUser } from "@/lib/session";
+import Link from "next/link";
 import type { JSX } from "react";
 
 const icons: (() => JSX.Element)[] = [
@@ -63,8 +68,66 @@ const icons: (() => JSX.Element)[] = [
   () => <path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 7.7l5.4-.8z" />,
 ];
 
+/** Signed in: the friends' feed. Signed out: what AnyTogether is. */
 export default async function Home() {
-  const texts = await strings();
+  const [texts, user] = await Promise.all([strings(), currentUser()]);
+  return user ? <Feed texts={texts} /> : <Landing texts={texts} />;
+}
+
+async function Feed({ texts }: { texts: Strings }) {
+  const [feed, friends, board] = await Promise.all([
+    apiJson<FeedPage>("/me/feed"),
+    apiJson<{ friends: unknown[] }>("/me/friends"),
+    apiJson<Board>("/leaderboards/points?scope=friends&limit=3"),
+  ]);
+  const lonely = (friends.body?.friends.length ?? 0) === 0;
+  const mine = board.body?.me;
+  const number = new Intl.NumberFormat(texts.language);
+  return (
+    <section className="page home">
+      <h2 className="in d1">{texts.home}</h2>
+      <p className="lead in d2">{texts.homeLead}</p>
+      <nav className="switch in d2" aria-label={texts.home}>
+        <Link href="/" aria-current="page">
+          {texts.home}
+        </Link>
+        <Link href="/leaderboards">{texts.leaderboards}</Link>
+      </nav>
+      {mine?.rank && board.body && board.body.total > 1 ? (
+        <Link href="/leaderboards" className="card rank-strip in d3">
+          <span className="sub">{texts.topFriends}</span>
+          <span className="rank-strip-value">
+            <b>{fill(texts.rankOf, { rank: mine.rank, total: board.body.total })}</b>
+            <span className="meta">{fill(texts.pointsValue, { n: number.format(mine.value) })}</span>
+          </span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="chev">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </Link>
+      ) : null}
+      <article className="card feed-card in d3">
+        <FeedList
+          texts={ui(texts)}
+          initial={feed.body ?? { items: [], next: null }}
+          live
+          now={Date.now()}
+          empty={
+            <div className="feed-empty">
+              <p className="empty">{lonely ? texts.feedEmptyNoFriends : texts.feedEmpty}</p>
+              {lonely && (
+                <Link href="/friends" className="pill">
+                  {texts.findFriends}
+                </Link>
+              )}
+            </div>
+          }
+        />
+      </article>
+    </section>
+  );
+}
+
+function Landing({ texts }: { texts: Strings }) {
   return (
     <section className="hero">
       <p className="eyebrow in d1">{texts.eyebrow}</p>

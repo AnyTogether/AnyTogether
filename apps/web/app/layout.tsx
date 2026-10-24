@@ -14,6 +14,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "./social.css";
+import "./feed.css";
 
 const display = Space_Grotesk({
   subsets: ["latin", "latin-ext"],
@@ -50,6 +51,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <div className="side">
           {user ? (
             <nav className="side signed">
+              <Link href="/leaderboards" className="pill nav roomy" aria-label={texts.leaderboards}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
+                  <path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" />
+                </svg>
+                <span className="wide">{texts.leaderboards}</span>
+              </Link>
               <Link href="/messages" className="pill nav" aria-label={texts.messages}>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17h0A1.5 1.5 0 0 1 4 15.5z" />

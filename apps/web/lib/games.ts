@@ -41,14 +41,14 @@ export const trophyText = (texts: TrophyTexts, language: string) =>
   texts ? (texts[language] ?? texts.en ?? Object.values(texts)[0] ?? null) : null;
 
 /** "42 min" under an hour, "3 h 5 min" after. */
-export function playTime(seconds: number, texts: Strings) {
+export function playTime(seconds: number, texts: Pick<Strings, "minutes" | "hours">) {
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return fill(texts.minutes, { m: minutes });
   return fill(texts.hours, { h: Math.floor(minutes / 60), m: minutes % 60 });
 }
 
 /** Hours only, for the totals: "128 h", or minutes under an hour. */
-export function totalTime(seconds: number, texts: Strings) {
+export function totalTime(seconds: number, texts: Pick<Strings, "minutes" | "hoursOnly">) {
   const minutes = Math.floor(seconds / 60);
   return minutes < 60
     ? fill(texts.minutes, { m: minutes })
