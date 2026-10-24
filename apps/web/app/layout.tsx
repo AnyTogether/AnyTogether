@@ -3,6 +3,7 @@ import { CallProvider } from "@/components/Calls";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { LiveProvider } from "@/components/Live";
 import { Mark } from "@/components/Mark";
+import { NotificationBell } from "@/components/NotificationBell";
 import { ShareInvites } from "@/components/ShareInvites";
 import { UnreadBadge } from "@/components/UnreadBadge";
 import { strings } from "@/lib/i18n";
@@ -18,6 +19,7 @@ import "./globals.css";
 import "./social.css";
 import "./feed.css";
 import "./share.css";
+import "./notify.css";
 
 const display = Space_Grotesk({
   subsets: ["latin", "latin-ext"],
@@ -38,11 +40,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: "#07080c" };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const [texts, user, waiting, unread] = await Promise.all([
+  const [texts, user, waiting, unread, notices] = await Promise.all([
     strings(),
     currentUser(),
     incomingRequests(),
     apiJson<{ messages: number }>("/me/conversations/unread"),
+    apiJson<{ unread: number }>("/me/notifications/unread"),
   ]);
   const page = (
     <main>
@@ -93,6 +96,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 <span className="wide">{texts.friends}</span>
                 {waiting > 0 && <b className="badge">{waiting > 99 ? "99+" : waiting}</b>}
               </Link>
+              <NotificationBell
+                initial={notices.body?.unread ?? 0}
+                label={texts.notifications}
+                unreadLabel={texts.unreadNotifications}
+              />
               <Link href={`/u/${user.profile.handle}`} className="tag nav me" aria-label={texts.myProfile}>
                 <Avatar person={{ ...user.profile, avatar: user.profile.avatar ?? null }} size={20} />
                 <span className="wide">@{user.profile.handle}</span>

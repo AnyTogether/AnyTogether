@@ -3,8 +3,8 @@ import { relay } from "@/lib/session";
 const id = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const seq = "[0-9]{1,15}";
 
-/** The API paths the messages, party and watch pages may reach through here, by method; nothing else
- *  passes, and only these query parameters. */
+/** The API paths the messages, party, watch and notification pages may reach through here, by
+ *  method; nothing else passes, and only these query parameters. */
 const allowed: Record<string, RegExp[]> = {
   GET: [
     /^me\/conversations$/,
@@ -17,6 +17,8 @@ const allowed: Record<string, RegExp[]> = {
     /^ice-servers$/,
     /^me\/share-play$/,
     new RegExp(`^share-plays/${id}(/ice-servers)?$`),
+    /^me\/notifications$/,
+    /^me\/notifications\/(unread|settings)$/,
   ],
   POST: [
     /^conversations$/,
@@ -27,11 +29,14 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^calls/${id}/(answer|decline|leave|mute)$`),
     // The website only watches: it never starts a share play or hands out pads.
     new RegExp(`^share-plays/${id}/(join|leave|decline)$`),
+    /^me\/notifications\/read-all$/,
+    new RegExp(`^me/notifications/${id}/read$`),
   ],
   PATCH: [
     new RegExp(`^conversations/${id}$`),
     new RegExp(`^conversations/${id}/messages/${seq}$`),
     new RegExp(`^parties/${id}$`),
+    /^me\/notifications\/settings$/,
   ],
   DELETE: [
     new RegExp(`^conversations/${id}/messages/${seq}$`),

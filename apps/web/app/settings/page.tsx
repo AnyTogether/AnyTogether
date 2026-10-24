@@ -1,8 +1,10 @@
 import { AvatarEditor } from "@/components/AvatarEditor";
+import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
 import { DeleteAccount, HandleForm, PrivacyForm, ProfileForm, SessionList } from "@/components/Settings";
 import { countryOptions } from "@/lib/countries";
 import { strings, ui } from "@/lib/i18n";
+import type { NoticeSetup } from "@/lib/notify";
 import type { Own, SignedIn } from "@/lib/people";
 import { apiJson, currentUser } from "@/lib/session";
 import type { Metadata } from "next";
@@ -10,15 +12,16 @@ import { redirect } from "next/navigation";
 
 export const metadata: Metadata = { title: "Settings · AnyTogether" };
 
-/** The signed-in user's settings: profile, privacy, passkeys, signed-in devices, their data,
+/** The signed-in user's settings: profile, privacy, notifications, passkeys, signed-in devices, their data,
  *  deletion. */
 export default async function Settings() {
   const [texts, user] = await Promise.all([strings(), currentUser()]);
   if (!user) redirect("/login?next=/settings");
-  const [own, signedIn, keys] = await Promise.all([
+  const [own, signedIn, keys, notify] = await Promise.all([
     apiJson<Own>("/me"),
     apiJson<{ sessions: SignedIn[] }>("/auth/sessions"),
     apiJson<{ passkeys: PasskeyRow[]; max: number }>("/auth/passkeys"),
+    apiJson<NoticeSetup>("/me/notifications/settings"),
   ]);
   if (!own.body) redirect("/login?next=/settings");
   const me = own.body;
@@ -26,6 +29,7 @@ export default async function Settings() {
   const sections = [
     ["profile", texts.sectionProfile],
     ["privacy", texts.sectionPrivacy],
+    ["notifications", texts.sectionNotifications],
     ["passkeys", texts.sectionPasskeys],
     ["devices", texts.sectionDevices],
     ["data", texts.sectionData],
@@ -58,6 +62,14 @@ export default async function Settings() {
           <p className="hint section-lead">{texts.privacyLead}</p>
           <PrivacyForm privacy={me.profile.privacy} texts={t} />
         </article>
+
+        {notify.body && (
+          <article className="card" id="notifications">
+            <h3 className="sub">{texts.sectionNotifications}</h3>
+            <p className="hint section-lead">{texts.notifySettingsLead}</p>
+            <NotificationSettings setup={notify.body} texts={t} />
+          </article>
+        )}
 
         <article className="card" id="passkeys">
           <h3 className="sub">
