@@ -769,3 +769,56 @@ export const themeLikes = pgTable(
   },
   (table) => [primaryKey({ columns: [table.themeId, table.accountId] }), index().on(table.accountId)],
 );
+
+/** How a game runs, as players report it from the launcher (opt-in) or the website. Kept, without
+ *  who sent it, when the account is deleted. */
+export const compatReports = pgTable(
+  "compat_reports",
+  {
+    id: uuid().primaryKey(),
+    accountId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    titleId: text()
+      .notNull()
+      .references(() => games.titleId),
+    /** macos | windows | linux */
+    platform: text().notNull(),
+    /** nothing | boots | menus | ingame | playable */
+    status: text().notNull(),
+    launcherVersion: text().notNull(),
+    engineVersion: text(),
+    gameVersion: text(),
+    machine: text(),
+    os: text(),
+    fpsAvg: real(),
+    note: text(),
+    createdAt: now(),
+  },
+  (table) => [
+    index().on(table.titleId, table.platform, table.createdAt.desc()),
+    index().on(table.accountId),
+    check("compat_platform", sql`${table.platform} in ('macos', 'windows', 'linux')`),
+    check("compat_status", sql`${table.status} in ('nothing', 'boots', 'menus', 'ingame', 'playable')`),
+    check("compat_note", sql`length(${table.note}) <= 500`),
+  ],
+);
+
+/** The verdict per game and platform, worked out again from the reports whenever one arrives. */
+export const compatSummaries = pgTable(
+  "compat_summaries",
+  {
+    titleId: text()
+      .notNull()
+      .references(() => games.titleId),
+    platform: text().notNull(),
+    status: text().notNull(),
+    /** The newest launcher version anyone tested. */
+    version: text().notNull(),
+    testedAt: timestamp({ withTimezone: true }).notNull(),
+    reports: integer().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.titleId, table.platform] }),
+    index().on(table.testedAt.desc()),
+    index().on(table.platform, table.status),
+  ],
+);

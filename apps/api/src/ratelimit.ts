@@ -49,6 +49,8 @@ export const defaultLimits = {
   themeUpload: { max: 20, seconds: 86_400 },
   /** Likes and unlikes of themes by one account. */
   themeLike: { max: 300, seconds: 3600 },
+  /** Compatibility reports sent by one account. */
+  compatReport: { max: 60, seconds: 86_400 },
   /** Gateway tickets for the website, per account (one per socket it opens). */
   realtimeTicket: { max: 60, seconds: 60 },
 };

@@ -9,6 +9,7 @@ import { passkeyRoutes } from "./auth/passkeys.js";
 import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
 import { callRoutes } from "./calls.js";
+import { compatRoutes } from "./compat.js";
 import { HttpError } from "./errors.js";
 import { feedRoutes } from "./feed.js";
 import { friendRoutes } from "./friends.js";
@@ -101,8 +102,9 @@ export function createApp(deps: Deps) {
 
   // Before the signed-in routes: avatars are served to anyone.
   v1.route("/", avatarRoutes(deps));
-  // The Theme Hub and downloads are open to anyone too.
+  // The Theme Hub, the compatibility list and downloads are open to anyone too.
   v1.route("/", themeRoutes(deps));
+  v1.route("/", compatRoutes(deps));
   v1.route("/", releaseRoutes(deps));
   v1.route("/", profileRoutes(deps));
   v1.route("/", accountRoutes(deps));
