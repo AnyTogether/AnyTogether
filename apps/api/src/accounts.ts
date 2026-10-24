@@ -62,7 +62,7 @@ export function handleFrom(name: string) {
     .toLocaleLowerCase("tr")
     .normalize("NFKD")
     .replace(/ı/g, "i")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{Mn}/gu, "")
     .replace(/\s+/g, ".")
     .replace(/[^a-z0-9_.]/g, "")
     .replace(/\.{2,}/g, ".")
