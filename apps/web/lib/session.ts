@@ -81,6 +81,13 @@ export async function relay(path: string, init: RequestInit = {}) {
   });
 }
 
+/** Passes a browser's JSON body on to the API as it came (the API checks it). */
+export async function relayBody(request: Request, path: string, method: string) {
+  const text = await request.text().catch(() => "");
+  if (text.length > 16_384) return Response.json({ code: "payload_too_large" }, { status: 413 });
+  return relay(path, { method, ...(text ? { body: text } : {}) });
+}
+
 /** How many friend requests wait for an answer (the header's badge). */
 export async function incomingRequests() {
   const { body } = await apiJson<{ incoming: unknown[] }>("/me/friends/requests");

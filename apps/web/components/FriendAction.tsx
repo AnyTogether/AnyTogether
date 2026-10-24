@@ -52,8 +52,8 @@ export function FriendAction({ profile, texts }: { profile: Profile; texts: UiSt
     body = (
       <>
         <span className="tag">{texts.thisIsYou}</span>
-        <Link href="/friends" className="pill">
-          {texts.friends}
+        <Link href="/settings" className="pill">
+          {texts.editProfile}
         </Link>
       </>
     );

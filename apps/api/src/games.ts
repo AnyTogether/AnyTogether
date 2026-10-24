@@ -477,6 +477,11 @@ export function gameRoutes(deps: Deps) {
   app.get("/users/:handle/library", async (c) => {
     const me = c.get("userId");
     const owner = await viewable(me, c.req.param("handle"), "library");
+    // Trophy counts in the library follow the trophies setting, not the library's.
+    const trophiesShown = canSee(
+      privacyOf(owner.privacy).trophies,
+      await relationOf(db, me, owner.accountId),
+    );
     const rows = await db
       .select({ entry: library, game: games })
       .from(library)
@@ -507,12 +512,13 @@ export function gameRoutes(deps: Deps) {
         firstPlayedAt: entry.firstPlayedAt,
         lastPlayedAt: entry.lastPlayedAt,
         secondsPlayed: entry.secondsPlayed,
-        trophiesEarned: entry.trophiesEarned,
+        trophiesEarned: trophiesShown ? entry.trophiesEarned : null,
         trophiesTotal: entry.trophiesTotal,
-        progress: entry.trophiesTotal
-          ? Math.min(100, Math.floor((entry.trophiesEarned * 100) / entry.trophiesTotal))
-          : null,
-        points: entry.points,
+        progress:
+          trophiesShown && entry.trophiesTotal
+            ? Math.min(100, Math.floor((entry.trophiesEarned * 100) / entry.trophiesTotal))
+            : null,
+        points: trophiesShown ? entry.points : null,
         ...(owner.accountId === me ? { devices: computers.get(entry.titleId) ?? [] } : {}),
       })),
     });

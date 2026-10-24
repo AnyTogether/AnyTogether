@@ -71,10 +71,42 @@ describe("privacy", () => {
     expect(changed.body).toMatchObject({ library: "everyone", trophies: "nobody", friends: "friends" });
 
     expect((await h.call("GET", `${v1}/users/utku/library`, undefined, stranger.token)).status).toBe(200);
+    await h.call(
+      "POST",
+      `${v1}/me/devices`,
+      { id: "0192f0a0-0000-7000-8000-000000000001", platform: "macos", name: "Mac" },
+      utku.token,
+    );
+    await h.call(
+      "POST",
+      `${v1}/me/sessions`,
+      {
+        sessions: [
+          {
+            id: "0192f0a0-0000-7000-8000-000000000002",
+            titleId: "PPSA01234",
+            deviceId: "0192f0a0-0000-7000-8000-000000000001",
+            startedAt: new Date(Date.now() - 7_200_000).toISOString(),
+            endedAt: new Date(Date.now() - 3_600_000).toISOString(),
+          },
+        ],
+      },
+      utku.token,
+    );
+    // With trophies closed, the open library leaves out what was earned.
+    const games = (await h.call("GET", `${v1}/users/utku/library`, undefined, ayse.token)).body.games;
+    expect(games[0]).toMatchObject({
+      titleId: "PPSA01234",
+      secondsPlayed: 3600,
+      trophiesEarned: null,
+      points: null,
+    });
+    const own = (await h.call("GET", `${v1}/users/utku/library`, undefined, utku.token)).body.games;
+    expect(own[0]).toMatchObject({ trophiesEarned: 0, points: 0 });
     expect((await h.call("GET", `${v1}/users/utku/trophies`, undefined, ayse.token)).status).toBe(403);
     expect((await h.call("GET", `${v1}/users/utku/trophies`, undefined, utku.token)).status).toBe(200);
-    const own = await h.call("GET", `${v1}/users/utku`, undefined, utku.token);
-    expect(own.body.visible).toEqual({ library: true, trophies: true, friends: true, presence: true });
+    const card = await h.call("GET", `${v1}/users/utku`, undefined, utku.token);
+    expect(card.body.visible).toEqual({ library: true, trophies: true, friends: true, presence: true });
 
     expect((await setPrivacy(utku, { library: "public" })).status).toBe(400);
     expect((await setPrivacy(utku, { friends: "nobody" })).body.library).toBe("everyone");

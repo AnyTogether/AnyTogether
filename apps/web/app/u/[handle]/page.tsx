@@ -1,5 +1,7 @@
 import { Avatar } from "@/components/Avatar";
 import { FriendAction } from "@/components/FriendAction";
+import { ProfileMenu } from "@/components/ProfileMenu";
+import { flag } from "@/lib/countries";
 import {
   type EarnedTrophy,
   type LibraryGame,
@@ -12,29 +14,47 @@ import {
 } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
-import type { Profile } from "@/lib/people";
+import type { Person, Profile } from "@/lib/people";
 import { apiJson, currentUser } from "@/lib/session";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 type Params = { params: Promise<{ handle: string }> };
 
 const clean = (handle: string) => decodeURIComponent(handle).replace(/^@/, "").toLowerCase();
 
+/** The card, and each part the viewer may open; a part that is private comes back as null. */
 async function load(handle: string) {
   if (!/^[a-z0-9_.]{1,40}$/.test(handle)) return null;
   const path = `/users/${encodeURIComponent(handle)}`;
-  const [profile, library, trophies] = await Promise.all([
+  const [profile, library, trophies, friends] = await Promise.all([
     apiJson<Profile>(path),
     apiJson<{ games: LibraryGame[] }>(`${path}/library`),
     apiJson<{ trophies: EarnedTrophy[] }>(`${path}/trophies`),
+    apiJson<{ friends: Person[] }>(`${path}/friends`),
   ]);
   if (!profile.body) return null;
   return {
     profile: profile.body,
-    games: library.body?.games ?? [],
-    trophies: trophies.body?.trophies ?? [],
+    games: library.status === 403 ? null : (library.body?.games ?? []),
+    trophies: trophies.status === 403 ? null : (trophies.body?.trophies ?? []),
+    friends: friends.status === 403 ? null : (friends.body?.friends ?? []),
   };
+}
+
+function Private({ text }: { text: string }) {
+  return (
+    <div className="private">
+      <span className="lock">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="10.5" width="14" height="10" rx="2.5" />
+          <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+        </svg>
+      </span>
+      <p>{text}</p>
+    </div>
+  );
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -49,34 +69,73 @@ export default async function UserProfile({ params }: Params) {
   if (!user) redirect(`/login?next=${encodeURIComponent(`/u/${handle}`)}`);
   const loaded = await load(handle);
   if (!loaded) notFound();
-  const { profile, games, trophies } = loaded;
+  const { profile, games, trophies, friends } = loaded;
+  // An old handle still finds the person for 30 days; the address shows the new one.
+  if (profile.handle.toLowerCase() !== handle) redirect(`/u/${profile.handle}`);
   const { language } = texts;
-  const seconds = games.reduce((sum, game) => sum + game.secondsPlayed, 0);
-  const earned = games.reduce((sum, game) => sum + game.trophiesEarned, 0);
-  const points = games.reduce((sum, game) => sum + game.points, 0);
+  const self = profile.friendship === "me";
+  const name = { name: profile.displayName };
+  const seconds = (games ?? []).reduce((sum, game) => sum + game.secondsPlayed, 0);
+  const earned = (games ?? []).reduce((sum, game) => sum + (game.trophiesEarned ?? 0), 0);
+  const points = (games ?? []).reduce((sum, game) => sum + (game.points ?? 0), 0);
+  // Trophy counts are left out of an open library when the trophies are private.
+  const countsHidden = (games ?? []).some((game) => game.trophiesEarned === null);
+  const presence = profile.presence;
   const number = new Intl.NumberFormat(language);
   const stats = [
-    [texts.statGames, number.format(games.length)],
+    [texts.statGames, number.format(games?.length ?? 0)],
     [texts.statPlayed, totalTime(seconds, texts)],
-    [texts.statTrophies, number.format(earned)],
-    [texts.statPoints, number.format(points)],
+    [texts.statTrophies, countsHidden ? "–" : number.format(earned)],
+    [texts.statPoints, countsHidden ? "–" : number.format(points)],
   ];
   return (
     <section className="page">
       <article className="card profile in d1">
         <div className="banner" aria-hidden="true" />
-        <Avatar person={profile} size={96} />
+        {!self && <ProfileMenu person={profile} texts={ui(texts)} />}
+        <Avatar
+          person={profile}
+          size={96}
+          presence={presence && presence.state !== "offline" ? presence.state : undefined}
+        />
         <h2 className="in d2">{profile.displayName}</h2>
-        <p className="handle in d2">@{profile.handle}</p>
+        <p className="handle in d2">
+          @{profile.handle}
+          {profile.country && (
+            <span className="country">
+              {" · "}
+              <span aria-hidden="true">{flag(profile.country)}</span>{" "}
+              {new Intl.DisplayNames([language], { type: "region" }).of(profile.country)}
+            </span>
+          )}
+        </p>
+        {presence && presence.state !== "offline" && (
+          <p className={`status in d2 ${presence.state === "in_game" ? "playing" : presence.state}`}>
+            {presence.state === "in_game"
+              ? fill(texts.inGame, {
+                  title:
+                    localName(
+                      games?.find((game) => game.titleId === presence.titleId)?.names ?? {},
+                      language,
+                    ) ||
+                    (presence.titleId ?? "?"),
+                })
+              : presence.state === "online"
+                ? texts.stateOnline
+                : texts.stateAway}
+          </p>
+        )}
         <p className={`bio in d3${profile.bio ? "" : " none"}`}>{profile.bio || texts.noBio}</p>
-        <dl className="stats in d3">
-          {stats.map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
+        {games && (
+          <dl className="stats in d3">
+            {stats.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
         <div className="in d4">
           <FriendAction profile={profile} texts={ui(texts)} />
         </div>
@@ -84,9 +143,11 @@ export default async function UserProfile({ params }: Params) {
 
       <article className="card in d3">
         <h3 className="sub">
-          {texts.library} <span className="n">{games.length}</span>
+          {texts.library} {games ? <span className="n">{games.length}</span> : <PrivateTag texts={texts} />}
         </h3>
-        {games.length === 0 ? (
+        {!games ? (
+          <Private text={fill(texts.privateLibrary, name)} />
+        ) : games.length === 0 ? (
           <p className="empty">{texts.noGames}</p>
         ) : (
           <ul className="games">
@@ -102,9 +163,11 @@ export default async function UserProfile({ params }: Params) {
                 </div>
                 <div className="progress">
                   <span className="meta">
-                    {game.trophiesTotal
-                      ? fill(texts.trophiesOf, { e: game.trophiesEarned, t: game.trophiesTotal })
-                      : texts.noTrophySet}
+                    {game.trophiesEarned === null
+                      ? ""
+                      : game.trophiesTotal
+                        ? fill(texts.trophiesOf, { e: game.trophiesEarned, t: game.trophiesTotal })
+                        : texts.noTrophySet}
                   </span>
                   {game.progress !== null && (
                     <span className="bar" aria-hidden="true">
@@ -119,8 +182,12 @@ export default async function UserProfile({ params }: Params) {
       </article>
 
       <article className="card in d4">
-        <h3 className="sub">{texts.recentTrophies}</h3>
-        {trophies.length === 0 ? (
+        <h3 className="sub">
+          {texts.recentTrophies} {!trophies && <PrivateTag texts={texts} />}
+        </h3>
+        {!trophies ? (
+          <Private text={fill(texts.privateTrophies, name)} />
+        ) : trophies.length === 0 ? (
           <p className="empty">{texts.noTrophies}</p>
         ) : (
           <ul className="trophies">
@@ -155,6 +222,36 @@ export default async function UserProfile({ params }: Params) {
           </ul>
         )}
       </article>
+
+      <article className="card in d4">
+        <h3 className="sub">
+          {texts.friends}{" "}
+          {friends ? <span className="n">{friends.length}</span> : <PrivateTag texts={texts} />}
+        </h3>
+        {!friends ? (
+          <Private text={fill(texts.privateFriends, name)} />
+        ) : friends.length === 0 ? (
+          <p className="empty">{texts.noFriendsYet}</p>
+        ) : (
+          <ul className="friend-grid">
+            {friends.slice(0, 24).map((friend) => (
+              <li key={friend.userId}>
+                <Link href={`/u/${friend.handle}`} className="who">
+                  <Avatar person={friend} size={36} />
+                  <span className="lines">
+                    <span className="name">{friend.displayName}</span>
+                    <span className="meta">@{friend.handle}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
     </section>
   );
+}
+
+function PrivateTag({ texts }: { texts: { privateSection: string } }) {
+  return <span className="tag private-tag">{texts.privateSection}</span>;
 }

@@ -13,10 +13,11 @@ export interface LibraryGame {
   iconUrl: string | null;
   lastPlayedAt: string | null;
   secondsPlayed: number;
-  trophiesEarned: number;
+  /** Null when the owner keeps their trophies from the viewer. */
+  trophiesEarned: number | null;
   trophiesTotal: number;
   progress: number | null;
-  points: number;
+  points: number | null;
 }
 
 /** A trophy someone earned, newest first. Texts are null for a hidden one the viewer lacks. */

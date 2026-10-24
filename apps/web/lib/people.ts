@@ -25,10 +25,45 @@ export interface Requests {
 
 export type Friendship = "me" | "none" | "pending_out" | "pending_in" | "friends";
 
+export type Section = "library" | "trophies" | "friends" | "presence";
+
 export interface Profile extends Person {
   bio: string | null;
   country: string | null;
   friendship: Friendship;
+  /** Which parts the viewer may open (older API answers lack it: then friends and self only). */
+  visible?: Record<Section, boolean>;
+  /** Only when the viewer may see it. */
+  presence?: Presence;
+}
+
+export type Visibility = "everyone" | "friends" | "nobody";
+export type PrivacySection = Section | "search";
+export type Privacy = Record<PrivacySection, Visibility>;
+export const privacySections: PrivacySection[] = ["library", "trophies", "friends", "presence", "search"];
+
+/** The signed-in user's own account and profile, as GET /me gives them. */
+export interface Own {
+  account: { id: string; email: string | null; createdAt: string };
+  profile: {
+    handle: string;
+    displayName: string;
+    bio: string | null;
+    avatar: string | null;
+    country: string | null;
+    handleChangeAt: string | null;
+    privacy: Privacy;
+  };
+}
+
+/** A signed-in launcher, phone or browser (GET /auth/sessions). */
+export interface SignedIn {
+  id: string;
+  client: string;
+  deviceName: string | null;
+  lastSeenAt: string | null;
+  createdAt: string;
+  current: boolean;
 }
 
 /** A user id as the API makes them, so nothing else reaches a path. */
