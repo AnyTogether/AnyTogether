@@ -2,13 +2,15 @@
 # The app and its packages are bundled into one file; the image holds that, the migrations and
 # the few native modules the bundle leaves out.
 FROM node:22-alpine AS build
-ARG APP
 WORKDIR /repo
 RUN corepack enable
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY apps ./apps
 COPY packages ./packages
 RUN pnpm install --frozen-lockfile
+# APP only from here on: up to the install every image (and Dockerfile.web) is the same, so one
+# build machine installs the packages once for all three.
+ARG APP
 RUN pnpm --filter @anytogether/${APP} build
 # Native modules stay out of the bundle (sharp, for the API's avatars) and are installed beside it,
 # at the version the lockfile chose, with the binaries for this image's platform.

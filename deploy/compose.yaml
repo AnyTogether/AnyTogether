@@ -18,8 +18,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: anytogether
     volumes: [postgres:/var/lib/postgresql/data]
+    # Over TCP: while the first start sets up the database, a temporary server answers on the
+    # socket only, and a restore or the API must not reach it before the real one is up.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U anytogether -d anytogether"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U anytogether -d anytogether"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -125,6 +127,12 @@ services:
       api: { condition: service_healthy }
       realtime: { condition: service_healthy }
       web: { condition: service_healthy }
+    # Caddy's admin endpoint answers once the configuration is loaded.
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
   # STUN/TURN for voice calls behind strict NATs (docker compose --profile turn up -d). It uses
   # the host's network for its UDP port range; TURN_SECRET is shared with the API.
@@ -141,8 +149,11 @@ services:
       - -c
       - '[ -n "$$TURN_SECRET" ] || { echo "coturn: set TURN_SECRET in .env first" >&2; exit 1; }; exec docker-entrypoint.sh "$$@"'
       - docker-entrypoint.sh
+    # The image's entrypoint passes every argument through `echo` (for $(detect-external-ip)),
+    # which swallows a lone "-n"; "-c /dev/null" is the same: no config file, flags only.
     command:
-      - -n
+      - -c
+      - /dev/null
       - --log-file=stdout
       - --listening-port=3478
       - --min-port=49160

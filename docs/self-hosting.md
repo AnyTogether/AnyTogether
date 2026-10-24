@@ -21,7 +21,8 @@ AnyTogether is MIT licensed: use it, change it and run it however you like.
 - A Linux machine with a public IPv4 address (IPv6 as well is fine), 2 GB of memory or more
   (building the website needs most of it; running everything takes far less), 10 GB of disk.
 - [Docker Engine](https://docs.docker.com/engine/install/) 24 or newer with the Compose plugin
-  (`docker compose version` prints v2.x).
+  (`docker compose version` prints v2.x). Docker's own packages bring everything; with Ubuntu's,
+  `apt install docker.io docker-compose-v2 docker-buildx`.
 - A host name, such as `together.example.org`, whose DNS A (and AAAA, if the machine has IPv6)
   record points at the machine.
 - Open ports: 80/tcp and 443/tcp and 443/udp (HTTP/3). With the TURN relay also 3478/udp,
@@ -43,7 +44,11 @@ signing key (below). Then:
 ```sh
 docker compose up -d --build     # builds the three app images, then starts everything
 docker compose ps                # every service "healthy" after a minute or two
+curl https://<your DOMAIN>/api/v1/health    # {"ok":true}
 ```
+
+The first build downloads the packages and takes a while (most of it is the website); later ones
+reuse what they can.
 
 Open `https://<your DOMAIN>`, sign in with your email, and read the code from the log while
 `MAIL_TRANSPORT=log`:
@@ -56,7 +61,8 @@ The first sign-in makes the account. Add a passkey in Settings and later sign-in
 at all.
 
 **Just trying it on your own computer**: `DOMAIN=localhost` works without DNS. Caddy then uses
-its own certificate authority and the browser warns about the certificate. To stop the warning,
+its own certificate authority and the browser warns about the certificate (`curl -k` skips the
+check: `curl -k https://localhost/api/v1/health`). To stop the warning,
 trust Caddy's root on your computer: `docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt .`
 and add `root.crt` to the system's trusted certificates.
 
@@ -96,6 +102,9 @@ some mobile networks they need a relay. To run one on the same machine:
 3. Open 3478/udp, 3478/tcp and 49160-49200/udp.
 4. `docker compose --profile turn up -d`
 
+Without `TURN_SECRET` coturn does not start: it stops at once, `docker compose logs coturn` says
+`set TURN_SECRET in .env first`, and Docker keeps trying until it is set and step 4 runs again.
+
 coturn uses the host's network (for its port range), finds the machine's public address by
 itself, hands out credentials only through the API (TURN REST: short-lived, signed with
 `TURN_SECRET`) and refuses to relay into private and loopback addresses. Behind a NAT that hides
@@ -109,7 +118,7 @@ Web Push when the API has a VAPID key pair. Make one once and keep it, since cha
 browser's subscription:
 
 ```sh
-npx web-push generate-vapid-keys
+docker run --rm node:22-alpine npx -y web-push generate-vapid-keys
 ```
 
 Put the two keys in `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`, and a contact the push services
@@ -194,7 +203,13 @@ docker compose up -d
 ```
 
 On a new machine: clone, copy over `.env` (with the same `JWT_PRIVATE_KEY`, or everyone signs in
-again), `docker compose up -d postgres`, restore as above, then `docker compose up -d --build`.
+again), start only the database and wait until it is ready, restore, then start everything:
+
+```sh
+docker compose up -d --wait postgres
+docker compose exec -T postgres pg_restore -U anytogether -d anytogether --clean --if-exists < backups/anytogether-2026-10-24.dump
+docker compose up -d --build
+```
 
 ## Moderation
 
@@ -208,6 +223,9 @@ docker compose exec -e USER=yourname api node dist/admin.js user @handle        
 docker compose exec -e USER=yourname api node dist/admin.js ban @handle --days 7 --reason "spam"
 docker compose exec -e USER=yourname api node dist/admin.js unban @handle
 docker compose exec api node dist/admin.js purge                               # delete accounts past their 14 days now
+docker compose exec -e USER=yourname api node dist/admin.js grant @handle       # make an admin (the admin page at /admin)
+docker compose exec -e USER=yourname api node dist/admin.js revoke @handle      # and back to a normal account
+docker compose exec -e USER=yourname api node dist/admin.js theme <id> hide     # or: show, review
 ```
 
 A ban signs the account out everywhere at once and refuses every way back in (email code,
@@ -229,6 +247,9 @@ docker compose exec -e USER=yourname api node dist/admin.js hub import /tmp/hub
 ## Troubleshooting
 
 - `docker compose ps` shows what is unhealthy; `docker compose logs <service>` says why.
+- The website's build stops with `An error occurred in next/font` (or `Failed to fetch ... from
+  Google Fonts`): the build downloads its fonts from Google Fonts and the connection was too slow
+  or blocked. Run `docker compose up -d --build` again; what was already built is reused.
 - No certificate: the DNS record does not point at the machine yet, or port 80/443 is closed.
   `docker compose logs caddy` names the problem; Caddy retries by itself.
 - Everyone is signed out after a restart: `JWT_PRIVATE_KEY` is empty (the API's log says so).
