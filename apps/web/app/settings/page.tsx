@@ -46,6 +46,11 @@ export default async function Settings() {
             {label}
           </a>
         ))}
+        {user.account.role === "admin" && (
+          <a href="/admin" className="pill admin-link">
+            {texts.admin}
+          </a>
+        )}
       </nav>
 
       <div className="in d3">
