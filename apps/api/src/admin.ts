@@ -34,15 +34,15 @@ export async function run(args: string[], ctx: Parameters<typeof ban>[0]): Promi
       const rows = await listReports(ctx.db, target === "--all");
       if (!rows.length) return "no open reports";
       return rows
-        .map(
-          (r) =>
+        .map((r) => {
+          const said = (r.snapshot as { text?: string } | null)?.text;
+          return (
             `${r.id}  ${r.createdAt.toISOString().slice(0, 16)}  ${r.status}  ${r.reason}\n` +
             `  ${r.targetKind} ${r.target ? `@${r.target}` : r.targetId} (reported ${r.timesReported}×)` +
             ` by ${r.reporter ? `@${r.reporter}` : "a deleted account"}${r.note ? `\n  “${r.note}”` : ""}` +
-            (r.targetKind === "message"
-              ? `\n  said: “${(r.snapshot as { text?: string } | null)?.text ?? ""}”`
-              : ""),
-        )
+            `${r.targetKind === "message" ? `\n  said: “${said ?? ""}”` : ""}`
+          );
+        })
         .join("\n");
     }
     case "report": {
