@@ -491,3 +491,60 @@ export const calls = pgTable(
     index().on(table.calleeId),
   ],
 );
+
+/** A game a launcher hosts for friends to join; one open session per host. What `properties`
+ *  holds is up to the launchers. */
+export const gameSessions = pgTable(
+  "game_sessions",
+  {
+    id: uuid().primaryKey(),
+    hostId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    titleId: text()
+      .notNull()
+      .references(() => games.titleId),
+    gameVersion: text().notNull(),
+    engineBuild: text().notNull(),
+    capacity: integer().notNull(),
+    joinable: boolean().notNull().default(true),
+    properties: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: now(),
+    endedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("one_open_session_per_host").on(table.hostId).where(sql`${table.endedAt} is null`),
+    check("capacity", sql`${table.capacity} between 2 and 16`),
+  ],
+);
+
+/** Who is in a session now, the host included; someone plays in one session at a time. */
+export const gameSessionPlayers = pgTable(
+  "game_session_players",
+  {
+    sessionId: uuid()
+      .notNull()
+      .references(() => gameSessions.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" })
+      .unique(),
+    joinedAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.sessionId, table.accountId] })],
+);
+
+export const gameSessionInvites = pgTable(
+  "game_session_invites",
+  {
+    sessionId: uuid()
+      .notNull()
+      .references(() => gameSessions.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    invitedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    createdAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.sessionId, table.accountId] }), index().on(table.accountId)],
+);

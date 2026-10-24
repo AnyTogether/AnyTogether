@@ -1,4 +1,5 @@
 import type { CallEvent, SignalKind } from "./calls.js";
+import type { GamePresence, GameSessionEvent } from "./gameSessions.js";
 import type { MessageEvent } from "./messages.js";
 import type { PartyEvent, PartyPresence } from "./parties.js";
 
@@ -13,6 +14,7 @@ export type GatewayEvent =
         titleId?: string;
         since?: string;
         party?: PartyPresence;
+        game?: GamePresence;
       };
     }
   | { type: "auth.handoff"; data: { handoffId: string; deviceName: string; client: string } }
@@ -34,7 +36,8 @@ export type GatewayEvent =
     }
   | MessageEvent
   | PartyEvent
-  | CallEvent;
+  | CallEvent
+  | GameSessionEvent;
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 
