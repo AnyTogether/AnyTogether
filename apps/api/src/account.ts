@@ -39,11 +39,7 @@ const codeLifetime = 600;
 const codeAttempts = 5;
 
 /** Signs out every session of the account (all of them, or all but `keep`). */
-export async function revokeAll(
-  ctx: { db: Database; valkey: Redis; tokens: Deps["tokens"] },
-  accountId: string,
-  keep?: string,
-) {
+export async function revokeAll(ctx: { db: Database; valkey: Redis }, accountId: string, keep?: string) {
   const live = await ctx.db
     .select({ id: sessions.id })
     .from(sessions)

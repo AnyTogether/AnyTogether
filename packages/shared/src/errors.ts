@@ -27,6 +27,7 @@ export const ErrorCode = {
   payloadTooLarge: "payload_too_large",
   unsupportedMedia: "unsupported_media_type",
   badImage: "bad_image",
+  accountBanned: "account_banned",
   internal: "internal",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

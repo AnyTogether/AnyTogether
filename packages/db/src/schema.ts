@@ -13,6 +13,7 @@ import {
   real,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -148,6 +149,51 @@ export const devices = pgTable(
     lastSeenAt: timestamp({ withTimezone: true }),
   },
   (table) => [index().on(table.accountId)],
+);
+
+/** Reports from users to the moderators: on a person now, on messages and more later. */
+export const reports = pgTable(
+  "reports",
+  {
+    id: uuid().primaryKey(),
+    reporterId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    /** user (later message, activity, theme, game_name). */
+    targetKind: text().notNull(),
+    targetId: text().notNull(),
+    reason: text().notNull(),
+    note: text(),
+    /** open | actioned | dismissed */
+    status: text().notNull().default("open"),
+    handledBy: text(),
+    handledAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+  },
+  (table) => [
+    index().on(table.status, table.createdAt),
+    index().on(table.targetKind, table.targetId),
+    uniqueIndex("one_open_report")
+      .on(table.reporterId, table.targetKind, table.targetId)
+      .where(sql`${table.status} = 'open'`),
+    check("report_status", sql`${table.status} in ('open', 'actioned', 'dismissed')`),
+    check("report_note", sql`length(${table.note}) <= 500`),
+  ],
+);
+
+/** Bans on an account, on an email address (kept only as its SHA-256), or both; a ban without an
+ *  end lasts until lifted. */
+export const bans = pgTable(
+  "bans",
+  {
+    id: uuid().primaryKey(),
+    accountId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    emailHash: bytea(),
+    reason: text(),
+    createdBy: text(),
+    expiresAt: timestamp({ withTimezone: true }),
+    liftedAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+  },
+  (table) => [index().on(table.accountId), index().on(table.emailHash)],
 );
 
 export const auditLog = pgTable("audit_log", {

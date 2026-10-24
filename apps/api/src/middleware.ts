@@ -3,14 +3,19 @@ import type { MiddlewareHandler } from "hono";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { revokedKey } from "./events.js";
+import { rateLimiter } from "./ratelimit.js";
 
 export type AuthVariables = { userId: string; sessionId: string };
 
-/** A valid access token whose session has not been signed out. */
+/** A valid access token whose session has not been signed out; each request also counts against
+ *  the account's limit. */
 export function requireUser(
-  deps: Pick<Deps, "tokens" | "valkey">,
+  deps: Pick<Deps, "tokens" | "valkey" | "limits">,
 ): MiddlewareHandler<{ Variables: AuthVariables }> {
+  const limit = rateLimiter(deps.valkey, deps.limits);
   return async (c, next) => {
+    // Several route groups each ask; the first one that checked is enough.
+    if (c.get("userId")) return next();
     const header = c.req.header("authorization") ?? "";
     if (!header.startsWith("Bearer ")) throw new HttpError(401, ErrorCode.unauthorized, "Sign in first");
     let claims: Awaited<ReturnType<Deps["tokens"]["verify"]>>;
@@ -21,6 +26,7 @@ export function requireUser(
     }
     if (await deps.valkey.exists(revokedKey(claims.sessionId)))
       throw new HttpError(401, ErrorCode.sessionRevoked, "This sign-in has ended");
+    await limit("account", claims.userId);
     c.set("userId", claims.userId);
     c.set("sessionId", claims.sessionId);
     await next();

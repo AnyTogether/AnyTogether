@@ -20,7 +20,9 @@ import type { Deps } from "../app.js";
 import { HttpError } from "../errors.js";
 import { body, clientKind } from "../http.js";
 import { type AuthVariables, requireUser } from "../middleware.js";
+import { bannedError, isBanned } from "../moderation.js";
 import { verifyProvider } from "../providers.js";
+import { perIp } from "../ratelimit.js";
 import { refresh, revoke, startSession } from "../sessions.js";
 import { hash, secret } from "../tokens.js";
 
@@ -32,10 +34,15 @@ const codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export function authRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   const ctx = { db: deps.db, valkey: deps.valkey, tokens: deps.tokens };
+  const signIn = perIp(deps.valkey, "signIn", deps.limits);
+  for (const path of ["/email/start", "/email/verify", "/oidc/*", "/handoff/start", "/device"])
+    app.post(path, signIn);
+  app.post("/token", perIp(deps.valkey, "token", deps.limits));
 
   app.post("/email/start", async (c) => {
     const { email } = await body(c, EmailStart);
     const address = email.toLowerCase();
+    if (await isBanned(deps.db, { email: address })) throw bannedError();
     const recent = await deps.db
       .select({ id: signInRequests.id })
       .from(signInRequests)

@@ -6,7 +6,17 @@ export async function middleware(request: NextRequest) {
   if (request.cookies.get("at_access") || !request.cookies.get("at_refresh")) return response;
   const refreshed = await fetch(`${process.env.API_URL ?? "http://127.0.0.1:8080"}/api/v1/auth/token`, {
     method: "POST",
-    headers: { "content-type": "application/json", "anytogether-client": "web/0.1" },
+    headers: {
+      "content-type": "application/json",
+      "anytogether-client": "web/0.1",
+      // The API limits token calls per address: the browser's, not the website's.
+      ...Object.fromEntries(
+        ["cf-connecting-ip", "x-real-ip"].flatMap((name) => {
+          const value = request.headers.get(name);
+          return value ? [[name, value]] : [];
+        }),
+      ),
+    },
     body: JSON.stringify({
       grantType: "refresh_token",
       refreshToken: request.cookies.get("at_refresh")?.value,

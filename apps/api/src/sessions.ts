@@ -6,6 +6,7 @@ import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
 import { HttpError } from "./errors.js";
 import { publish, revokedKey } from "./events.js";
+import { bannedError, isBanned, liftExpired } from "./moderation.js";
 import { type TokenSigner, accessLifetime, hash, refreshLifetimeDays, secret } from "./tokens.js";
 
 interface Context {
@@ -23,6 +24,8 @@ export async function startSession(
   deviceName?: string,
 ): Promise<Tokens> {
   const [account] = await ctx.db.select().from(accounts).where(eq(accounts.id, accountId));
+  if (account?.status === "banned" && !(await liftExpired(ctx.db, accountId))) throw bannedError();
+  if (account?.email && (await isBanned(ctx.db, { email: account.email }))) throw bannedError();
   if (account?.status === "deleting") {
     // Signing in within the 14 days keeps the account.
     await ctx.db
@@ -80,7 +83,7 @@ export async function refresh(ctx: Context, refreshToken: string): Promise<Token
 
 /** Ends a session now: its refresh token stops working, its access tokens are refused, its
  *  sockets are told. */
-export async function revoke(ctx: Context, sessionId: string, accountId: string) {
+export async function revoke(ctx: Pick<Context, "db" | "valkey">, sessionId: string, accountId: string) {
   await ctx.db
     .update(sessions)
     .set({ revokedAt: new Date() })

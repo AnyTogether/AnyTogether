@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 export const accessCookie = "at_access";
 export const refreshCookie = "at_refresh";
@@ -12,6 +12,18 @@ export interface Me {
   profile: { handle: string; displayName: string; avatar: string | null };
 }
 
+/** The browser's address as the proxy in front of the website saw it, passed on so the API counts
+ *  its limits per person and not per website. */
+export async function forwardedFor(): Promise<Record<string, string>> {
+  const incoming = await headers().catch(() => undefined);
+  const passed: Record<string, string> = {};
+  for (const name of ["cf-connecting-ip", "x-real-ip"]) {
+    const value = incoming?.get(name);
+    if (value) passed[name] = value;
+  }
+  return passed;
+}
+
 export async function api(path: string, init: RequestInit & { token?: string } = {}) {
   const { token, ...rest } = init;
   return fetch(`${apiUrl()}/api/v1${path}`, {
@@ -20,6 +32,7 @@ export async function api(path: string, init: RequestInit & { token?: string } =
     headers: {
       "content-type": "application/json",
       "anytogether-client": "web/0.1",
+      ...(await forwardedFor()),
       ...(token ? { authorization: `Bearer ${token}` } : {}),
       ...(rest.headers ?? {}),
     },

@@ -10,9 +10,10 @@ import { friendRoutes } from "./friends.js";
 import { gameRoutes } from "./games.js";
 import type { Mailer } from "./mail.js";
 import type { AuthVariables } from "./middleware.js";
+import { reportRoutes } from "./moderation.js";
 import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
-import type { Limits } from "./ratelimit.js";
+import { type Limits, perIp } from "./ratelimit.js";
 import type { TokenSigner } from "./tokens.js";
 
 export interface Deps {
@@ -50,6 +51,8 @@ export function createApp(deps: Deps) {
   const v1 = new Hono<{ Variables: AuthVariables }>();
   v1.get("/health", (c) => c.json({ ok: true }));
   v1.get("/.well-known/jwks.json", async (c) => c.json({ keys: [await deps.tokens.publicJwk()] }));
+  // Health checks and the gateway's key fetches above; everything else counts per address.
+  v1.use("*", perIp(deps.valkey, "ip", deps.limits));
   v1.route("/auth", authRoutes(deps));
 
   // Before the signed-in routes: avatars are served to anyone.
@@ -58,6 +61,7 @@ export function createApp(deps: Deps) {
   v1.route("/", accountRoutes(deps));
   v1.route("/", friendRoutes(deps));
   v1.route("/", gameRoutes(deps));
+  v1.route("/", reportRoutes(deps));
   app.route("/api/v1", v1);
   return app;
 }

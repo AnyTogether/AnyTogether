@@ -9,6 +9,7 @@ import { publish } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { type ProfileRow, blockedBetween, canSee, findProfile, relationOf } from "./people.js";
+import { rateLimiter } from "./ratelimit.js";
 
 const pair = (a: string, b: string) => (a < b ? { userA: a, userB: b } : { userA: b, userB: a });
 const offline = { state: "offline" };
@@ -17,6 +18,7 @@ const offline = { state: "offline" };
 export function friendRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
+  const limit = rateLimiter(deps.valkey, deps.limits);
 
   const profileOf = async (userId: string) =>
     (await deps.db.select().from(profiles).where(eq(profiles.accountId, userId)))[0];
@@ -106,6 +108,7 @@ export function friendRoutes(deps: Deps) {
   app.post("/me/friends/requests", async (c) => {
     const me = c.get("userId");
     const { handle } = await body(c, z.object({ handle: z.string().min(1).max(40) }));
+    await limit("friendRequest", me);
     const target = await findProfile(deps.db, handle);
     if (!target || (await blocked(me, target.accountId)))
       throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
@@ -202,6 +205,7 @@ export function friendRoutes(deps: Deps) {
     const me = c.get("userId");
     const query = (c.req.query("q") ?? "").replace(/^@/, "").trim();
     if (query.length < 2) return c.json({ users: [] });
+    await limit("search", me);
     const pattern = `${query.replace(/[%_\\]/g, "")}%`;
     // Who wants to be found: everyone, or only by friends; never banned accounts or blocks.
     const findable = sql.raw("coalesce(profiles.privacy->>'search', 'everyone')");

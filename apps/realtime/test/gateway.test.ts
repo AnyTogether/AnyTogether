@@ -185,6 +185,12 @@ describe("the gateway", () => {
     friend.socket.close();
   });
 
+  it("closes a socket that sends a flood of frames", async () => {
+    const c = await signedIn("u1", "s1");
+    for (let i = 0; i < 40; i++) c.send({ op: "heartbeat" });
+    expect(await c.closed).toBe(4029);
+  });
+
   it("tells no one about a user who hides their presence", async () => {
     await valkey.sadd("friends:u1", "u2");
     await valkey.set("presence-hidden:u1", "1");

@@ -20,6 +20,7 @@ import { publish } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { type ProfileRow, handleFree } from "./people.js";
+import { rateLimiter } from "./ratelimit.js";
 
 const cooldown = handleCooldownDays * 86_400_000;
 
@@ -34,6 +35,11 @@ export function profileRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const { db } = deps;
+  const limit = rateLimiter(deps.valkey, deps.limits);
+  app.patch("/me/*", async (c, next) => {
+    await limit("profile", c.get("userId"));
+    await next();
+  });
 
   const own = (profile: ProfileRow) => ({
     handle: profile.handle,

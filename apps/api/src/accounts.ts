@@ -2,6 +2,7 @@ import { type Database, accounts, identities, profiles } from "@anytogether/db";
 import { isReservedHandle } from "@anytogether/shared";
 import { and, eq } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
+import { bannedError, isBanned } from "./moderation.js";
 import { handleFree } from "./people.js";
 
 export interface Identity {
@@ -25,6 +26,8 @@ export async function findOrCreateAccount(db: Database, identity: Identity) {
     if (known[0]) return { accountId: known[0].accountId, created: false };
 
     const email = identity.emailVerified ? identity.email?.toLowerCase() : undefined;
+    // A banned address makes no new account and joins no other.
+    if (email && (await isBanned(db, { email }))) throw bannedError();
     if (email) {
       const byEmail = await tx.select({ id: accounts.id }).from(accounts).where(eq(accounts.email, email));
       if (byEmail[0]) {

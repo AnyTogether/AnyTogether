@@ -22,7 +22,10 @@ export interface GatewayOptions {
 }
 
 /** Close codes the clients act on. */
-export const CloseCode = { unauthorized: 4001, signedOut: 4003, idle: 4008 } as const;
+export const CloseCode = { unauthorized: 4001, signedOut: 4003, idle: 4008, tooMany: 4029 } as const;
+/** Frames one socket may send in ten seconds: a heartbeat every 25 s and one at each change of
+ *  presence fit many times over. */
+const framesPerWindow = 30;
 
 interface Connection {
   socket: WebSocket;
@@ -136,12 +139,25 @@ export async function createGateway(options: GatewayOptions) {
 
   wss.on("connection", (socket) => {
     let connection: Connection | undefined;
+    let window = 0;
+    let frames = 0;
     const helloTimer = setTimeout(
       () => socket.close(CloseCode.unauthorized, "say hello first"),
       helloTimeout,
     );
 
-    socket.on("message", async (raw) => {
+    // A frame that fails (Valkey gone for a moment) ends this socket, never the process.
+    socket.on("message", (raw) => {
+      onFrame(raw).catch(() => socket.close(1011, "try again"));
+    });
+
+    async function onFrame(raw: unknown) {
+      const now = Math.floor(Date.now() / 10_000);
+      if (now !== window) {
+        window = now;
+        frames = 0;
+      }
+      if (++frames > framesPerWindow) return socket.close(CloseCode.tooMany, "too many frames");
       let frame: ClientFrame;
       try {
         frame = JSON.parse(String(raw));
@@ -181,7 +197,7 @@ export async function createGateway(options: GatewayOptions) {
         );
         await announce(connection.userId);
       }
-    });
+    }
 
     socket.on("close", () => {
       clearTimeout(helloTimer);
