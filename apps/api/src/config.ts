@@ -28,6 +28,7 @@ export function config(env = process.env) {
     publicUrl: env.PUBLIC_URL ?? "http://localhost:3000",
     mail: {
       transport: env.MAIL_TRANSPORT ?? "log",
+      smtpUrl: env.SMTP_URL ?? "",
       resendKey: env.RESEND_API_KEY ?? "",
       from: env.MAIL_FROM ?? "AnyTogether <signin@kodla.agency>",
     },

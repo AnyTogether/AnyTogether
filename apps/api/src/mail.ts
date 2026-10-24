@@ -55,6 +55,24 @@ export function resendMailer(apiKey: string, from: string, fetcher: typeof fetch
   };
 }
 
+export interface MailSettings {
+  transport: string;
+  smtpUrl: string;
+  resendKey: string;
+  from: string;
+}
+
+/** The mailer MAIL_TRANSPORT names: smtp, resend, or log (development). */
+export function mailerFor(settings: MailSettings): Mailer & { kind: "smtp" | "resend" | "log" } {
+  if (settings.transport === "smtp") {
+    if (!settings.smtpUrl) throw new Error("MAIL_TRANSPORT=smtp needs SMTP_URL");
+    return { kind: "smtp", ...smtpMailer(settings.smtpUrl, settings.from) };
+  }
+  if (settings.transport === "resend")
+    return { kind: "resend", ...resendMailer(settings.resendKey, settings.from) };
+  return { kind: "log", ...logMailer() };
+}
+
 /** Keeps what was sent, for the tests. */
 export function memoryMailer() {
   const sent: { to: string; code: string; link: string }[] = [];

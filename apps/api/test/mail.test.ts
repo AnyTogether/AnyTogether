@@ -1,8 +1,25 @@
 import nodemailer from "nodemailer";
 import { describe, expect, it } from "vitest";
-import { signInMail, smtpMailer } from "../src/mail.js";
+import { mailerFor, signInMail, smtpMailer } from "../src/mail.js";
 
 describe("sign-in mail", () => {
+  it("picks the transport the settings name", () => {
+    expect(
+      mailerFor({ transport: "smtp", smtpUrl: "smtps://u:p@mail.test:465", resendKey: "", from: "x <a@b>" })
+        .kind,
+    ).toBe("smtp");
+    expect(mailerFor({ transport: "resend", smtpUrl: "", resendKey: "k", from: "x <a@b>" }).kind).toBe(
+      "resend",
+    );
+    expect(mailerFor({ transport: "log", smtpUrl: "", resendKey: "", from: "x <a@b>" }).kind).toBe("log");
+  });
+
+  it("refuses SMTP without a server", () => {
+    expect(() => mailerFor({ transport: "smtp", smtpUrl: "", resendKey: "", from: "x <a@b>" })).toThrow(
+      /SMTP_URL/,
+    );
+  });
+
   it("puts the code in the subject and both languages in the text", () => {
     const mail = signInMail("123456", "https://anytogether.test/login/email?token=x");
     expect(mail.subject).toContain("123456");

@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { Redis } from "ioredis";
 import { createApp } from "./app.js";
 import { config } from "./config.js";
-import { logMailer, resendMailer, smtpMailer } from "./mail.js";
+import { mailerFor } from "./mail.js";
 import { createTokenSigner } from "./tokens.js";
 
 const settings = config();
@@ -13,13 +13,12 @@ if (!settings.jwtPrivateKey)
 await runMigrations(settings.databaseUrl);
 const { db } = connect(settings.databaseUrl);
 const valkey = new Redis(settings.valkeyUrl);
+const mailer = mailerFor(settings.mail);
+console.log(`sign-in mail: ${mailer.kind}`);
 const app = createApp({
   db,
   valkey,
-  mailer:
-    settings.mail.transport === "resend"
-      ? resendMailer(settings.mail.resendKey, settings.mail.from)
-      : logMailer(),
+  mailer,
   tokens: await createTokenSigner(settings.jwtPrivateKey, settings.publicUrl),
   providers: settings.providers,
   publicUrl: settings.publicUrl,
