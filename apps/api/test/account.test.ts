@@ -69,6 +69,18 @@ describe("export", () => {
     const ayse = await h.user("ayse@example.com");
     await befriend(utku, ayse);
     await playAndEarn(utku);
+    const chat = await h.call(
+      "POST",
+      `${v1}/conversations`,
+      { members: [ayse.id], group: true, title: "Co-op" },
+      utku.token,
+    );
+    await h.call(
+      "POST",
+      `${v1}/reports`,
+      { targetKind: "user", targetId: ayse.id, reason: "spam" },
+      utku.token,
+    );
     const response = await h.app.request(`${v1}/me/export`, {
       headers: { authorization: `Bearer ${utku.token}` },
     });
@@ -87,6 +99,12 @@ describe("export", () => {
     expect(data.trophies).toEqual([expect.objectContaining({ titleId: "PPSA01234", trophyId: 0 })]);
     expect(data.gamesTaught).toEqual(["PPSA01234"]);
     expect(data.sessions.length).toBeGreaterThan(0);
+    expect(data.conversations).toEqual([
+      expect.objectContaining({ id: chat.body.id, kind: "group", title: "Co-op", createdByMe: true }),
+    ]);
+    expect(data.reportsSent).toEqual([
+      expect.objectContaining({ targetKind: "user", targetId: ayse.id, reason: "spam", status: "open" }),
+    ]);
     expect(text).not.toMatch(/refreshHash|previousHash|codeHash|linkHash|secretHash/);
   });
 });

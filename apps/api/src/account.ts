@@ -7,6 +7,8 @@ import {
   auditLog,
   avatars,
   blocks,
+  conversationMembers,
+  conversations,
   devices,
   earnedTrophies,
   friendships,
@@ -18,6 +20,7 @@ import {
   passkeys,
   playSessions,
   profiles,
+  reports,
   sessions,
   signInRequests,
 } from "@anytogether/db";
@@ -206,6 +209,32 @@ export async function exportAccount(db: Database, accountId: string) {
       text: m.text,
       createdAt: m.createdAt,
       editedAt: m.editedAt,
+    })),
+    conversations: (
+      await db
+        .select({ member: conversationMembers, conversation: conversations })
+        .from(conversationMembers)
+        .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
+        .where(eq(conversationMembers.accountId, accountId))
+        .orderBy(asc(conversationMembers.joinedAt))
+    ).map(({ member, conversation }) => ({
+      id: conversation.id,
+      kind: conversation.kind,
+      title: conversation.title,
+      createdByMe: conversation.createdBy === accountId,
+      joinedAt: member.joinedAt,
+      readSeq: member.readSeq,
+      muted: member.muted,
+    })),
+    reportsSent: (
+      await db.select().from(reports).where(eq(reports.reporterId, accountId)).orderBy(asc(reports.createdAt))
+    ).map((r) => ({
+      targetKind: r.targetKind,
+      targetId: r.targetId,
+      reason: r.reason,
+      note: r.note,
+      status: r.status,
+      createdAt: r.createdAt,
     })),
     auditLog: await db
       .select({ action: auditLog.action, target: auditLog.target, createdAt: auditLog.createdAt })
