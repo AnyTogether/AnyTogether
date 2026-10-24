@@ -487,4 +487,51 @@ describe("the gateway", () => {
     expect(await valkey.ttl("presence:u1:s1")).toBeGreaterThan(50);
     c.socket.close();
   });
+
+  it("delivers public topic events to sockets that watch them, and stops when they stop", async () => {
+    const board = await signedIn("u1", "s1");
+    const game = await signedIn("u2", "s2");
+    const none = await signedIn("u3", "s3");
+    board.send({ op: "watch", topics: ["lfg", "nonsense", "lfg:ppsa1"] });
+    game.send({ op: "watch", topics: ["lfg:PPSA01234"] });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const message = (titleId: string) =>
+      JSON.stringify({
+        id: `${Date.now()}-${Math.random()}`,
+        type: "lfg.changed",
+        data: { postId: "p1", titleId, change: "opened" },
+      });
+    await valkey.publish("topic:lfg", message("PPSA01234"));
+    await valkey.publish("topic:lfg:PPSA01234", message("PPSA01234"));
+    await board.waitFor((frame) => frame.type === "lfg.changed");
+    await game.waitFor((frame) => frame.type === "lfg.changed");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(board.frames.filter((frame) => frame.type === "lfg.changed")).toHaveLength(1);
+    expect(game.frames.filter((frame) => frame.type === "lfg.changed")).toHaveLength(1);
+    expect(none.frames.filter((frame) => frame.op === "event")).toHaveLength(0);
+
+    board.send({ op: "watch", topics: [] });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await valkey.publish("topic:lfg", message("PPSA01234"));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(board.frames.filter((frame) => frame.type === "lfg.changed")).toHaveLength(1);
+    board.send({ op: "watch", topics: "lfg" });
+    expect(await board.waitFor((frame) => frame.op === "error")).toMatchObject({ code: "bad_watch" });
+    for (const c of [board, game, none]) c.socket.close();
+  });
+
+  it("keeps who plays what for game hubs, and forgets a game they stopped or left", async () => {
+    const c = await signedIn("u1", "s1");
+    c.send({ op: "heartbeat", presence: { state: "in_game", titleId: "PPSA01234" } });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(Number(await valkey.zscore("playing:PPSA01234", "u1"))).toBeGreaterThan(Date.now() - 5000);
+    c.send({ op: "heartbeat", presence: { state: "in_game", titleId: "PPSA07777" } });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await valkey.zscore("playing:PPSA01234", "u1")).toBeNull();
+    expect(await valkey.zscore("playing:PPSA07777", "u1")).not.toBeNull();
+    c.socket.close();
+    await c.closed;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(await valkey.zscore("playing:PPSA07777", "u1")).toBeNull();
+  });
 });

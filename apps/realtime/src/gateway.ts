@@ -13,7 +13,9 @@ import {
   friendsKey,
   gameSessionMembersKey,
   gameSignalKinds,
+  maxWatchedTopics,
   presenceKey as mergedPresenceKey,
+  playingKey,
   presenceDevicesKey,
   presenceExtraKey,
   presenceHiddenKey,
@@ -23,6 +25,8 @@ import {
   sharePlayMembersKey,
   shareSignalKinds,
   signalKinds,
+  topicChannel,
+  topicPattern,
   typingEveryMs,
   userChannel,
   userEvents,
@@ -58,6 +62,8 @@ interface Connection {
   signals: { count: number; since: number };
   /** When it last said it is typing, by conversation. */
   typing: Map<string, number>;
+  /** The public topics it watches (the board, the public lists). */
+  topics: Set<string>;
 }
 
 /** Enough for a full party's offers and ICE candidates at once, not for flooding a peer. */
@@ -77,12 +83,44 @@ export async function createGateway(options: GatewayOptions) {
   const store = new Redis(options.valkeyUrl);
   const subscriber = new Redis(options.valkeyUrl);
   const byUser = new Map<string, Set<Connection>>();
+  const byTopic = new Map<string, Set<Connection>>();
   let closing = false;
 
   subscriber.on("message", (channel: string, message: string) => {
+    if (channel.startsWith("topic:")) {
+      for (const connection of byTopic.get(channel.slice("topic:".length)) ?? [])
+        deliver(connection, message);
+      return;
+    }
     const userId = channel.slice("user:".length);
     for (const connection of byUser.get(userId) ?? []) deliver(connection, message);
   });
+
+  /** Replaces the topics a socket watches: only valid ones, at most eight; Valkey is subscribed to a
+   *  topic while any socket here watches it. */
+  async function watch(connection: Connection, wanted: string[]) {
+    const next = new Set(wanted.filter((topic) => topicPattern.test(topic)).slice(0, maxWatchedTopics));
+    for (const topic of connection.topics)
+      if (!next.has(topic)) {
+        const set = byTopic.get(topic);
+        set?.delete(connection);
+        if (set && !set.size) {
+          byTopic.delete(topic);
+          await subscriber.unsubscribe(topicChannel(topic));
+        }
+      }
+    for (const topic of next)
+      if (!connection.topics.has(topic)) {
+        let set = byTopic.get(topic);
+        if (!set) {
+          set = new Set();
+          byTopic.set(topic, set);
+          await subscriber.subscribe(topicChannel(topic));
+        }
+        set.add(connection);
+      }
+    connection.topics = next;
+  }
 
   function send(socket: WebSocket, frame: ServerFrame) {
     if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(frame));
@@ -115,6 +153,7 @@ export async function createGateway(options: GatewayOptions) {
 
   async function leave(connection: Connection) {
     if (closing) return;
+    await watch(connection, []);
     const set = byUser.get(connection.userId);
     if (!set) return;
     set.delete(connection);
@@ -167,6 +206,7 @@ export async function createGateway(options: GatewayOptions) {
     );
     const before = await store.get(mergedPresenceKey(userId));
     const now = JSON.stringify(merged);
+    await keepPlaying(userId, before, merged);
     if (merged.state === "offline") await store.del(mergedPresenceKey(userId));
     else await store.set(mergedPresenceKey(userId), now, "EX", 70);
     if (before === now || (before === null && merged.state === "offline")) return;
@@ -177,6 +217,25 @@ export async function createGateway(options: GatewayOptions) {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       await store.publish(userChannel(friend), message(id));
     }
+  }
+
+  /** Who plays what now, for game hubs: the user's score in the game's playing set is renewed with
+   *  each heartbeat that says so, and they leave the set of a game they stopped. The API reads only
+   *  fresh scores and checks them against the presence kept, and shows only people whose presence
+   *  is public. */
+  async function keepPlaying(userId: string, before: string | null, merged: Presence) {
+    const playing = merged.state === "in_game" && merged.titleId ? merged.titleId : null;
+    let was: string | null = null;
+    try {
+      const old = JSON.parse(before ?? "null") as Presence | null;
+      was = old?.state === "in_game" && old.titleId ? old.titleId : null;
+    } catch {
+      was = null;
+    }
+    const write = store.multi();
+    if (was && was !== playing) write.zrem(playingKey(was), userId);
+    if (playing) write.zadd(playingKey(playing), Date.now(), userId).expire(playingKey(playing), 3600);
+    if (was !== playing || playing) await write.exec();
   }
 
   /** This device's own presence, for a minute past its last heartbeat. */
@@ -359,6 +418,7 @@ export async function createGateway(options: GatewayOptions) {
             lastHeard: Date.now(),
             signals: { count: 0, since: Date.now() },
             typing: new Map(),
+            topics: new Set(),
           };
           await join(connection);
           send(socket, { op: "ready", session: sessionId, heartbeat });
@@ -379,6 +439,11 @@ export async function createGateway(options: GatewayOptions) {
       }
       if (frame.op === "signal") await relaySignal(connection, frame);
       else if (frame.op === "typing") await relayTyping(connection, frame);
+      else if (frame.op === "watch") {
+        if (!Array.isArray(frame.topics) || frame.topics.some((topic) => typeof topic !== "string"))
+          return send(connection.socket, { op: "error", code: "bad_watch", message: "topics: a list" });
+        await watch(connection, frame.topics);
+      }
     }
 
     socket.on("close", () => {
