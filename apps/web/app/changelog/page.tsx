@@ -14,7 +14,7 @@ import Link from "next/link";
 
 export async function generateMetadata() {
   const c = changelogStrings(await language());
-  return pageMetadata(c.meta.title, c.meta.description);
+  return pageMetadata(c.meta.title, c.meta.description, "/changelog");
 }
 
 /** The newest releases open; older ones fold away under their version. */

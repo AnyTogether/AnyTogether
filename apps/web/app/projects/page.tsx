@@ -10,7 +10,7 @@ import Link from "next/link";
 
 export async function generateMetadata() {
   const p = projectsStrings(await language());
-  return pageMetadata(p.meta.title, p.meta.description);
+  return pageMetadata(p.meta.title, p.meta.description, "/projects");
 }
 
 const Arrow = () => (

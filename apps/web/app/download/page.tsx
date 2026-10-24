@@ -21,7 +21,7 @@ import Link from "next/link";
 
 export async function generateMetadata() {
   const d = downloadPageStrings(await language());
-  return pageMetadata(d.meta.title, d.meta.description);
+  return pageMetadata(d.meta.title, d.meta.description, "/download");
 }
 
 const productPage: Record<Platform, string> = {

@@ -9,7 +9,7 @@ import Link from "next/link";
 
 export async function generateMetadata() {
   const r = roadmapStrings(await language());
-  return pageMetadata(r.meta.title, r.meta.description);
+  return pageMetadata(r.meta.title, r.meta.description, "/roadmap");
 }
 
 /** The public roadmap, from lib/roadmap.ts: done, in progress, next and later. */

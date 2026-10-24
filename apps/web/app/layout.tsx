@@ -164,6 +164,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 <li>
                   <Link href="/together">{site.nav.together}</Link>
                 </li>
+                <li>
+                  <Link href="/help">{site.nav.help}</Link>
+                </li>
               </ul>
               <Link href="/download" className="pill accent">
                 <svg viewBox="0 0 24 24" aria-hidden="true">

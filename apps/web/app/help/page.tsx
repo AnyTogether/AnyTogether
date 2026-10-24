@@ -14,7 +14,7 @@ import Link from "next/link";
 
 export async function generateMetadata() {
   const h = helpStrings(await language());
-  return pageMetadata(h.meta.title, h.meta.description);
+  return pageMetadata(h.meta.title, h.meta.description, "/help");
 }
 
 const Arrow = () => (

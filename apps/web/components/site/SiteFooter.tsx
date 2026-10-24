@@ -5,8 +5,8 @@ import Link from "next/link";
 
 const gh = (repo: string) => `https://github.com/utkuhalis/${repo}`;
 
-/** The footer of every page: the products, the community's repositories, the account, and the
- *  language. */
+/** The footer of every page: the products, the project's pages (help, changelog, roadmap, open
+ *  source), the community's repositories, the account, and the language. */
 export function SiteFooter({
   s,
   signedIn,
@@ -57,6 +57,30 @@ export function SiteFooter({
             </li>
             <li>
               <Link href="/find">{s.footer.findPlayers}</Link>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h2>{s.footer.project}</h2>
+          <ul>
+            <li>
+              <Link href="/help">{s.footer.help}</Link>
+            </li>
+            <li>
+              <Link href="/changelog">{s.footer.changelog}</Link>
+            </li>
+            <li>
+              <Link href="/roadmap">{s.footer.roadmap}</Link>
+            </li>
+            <li>
+              <Link href="/projects">{s.footer.openSource}</Link>
+            </li>
+            <li>
+              <a
+                href={`${gh("AnyPS5-ARM")}/blob/main/docs/user/GUIDE.md${language === "tr" ? "#türkçe" : ""}`}
+              >
+                {s.footer.guide}
+              </a>
             </li>
           </ul>
         </div>

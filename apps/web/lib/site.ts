@@ -45,3 +45,11 @@ export const loadProjects = () =>
   quick<{ repos: Record<string, RepoStats | null> }>("/projects", 4000).then(
     (answer) => answer?.repos ?? null,
   );
+
+/** The site's address as the visitor reached it (any self-hosted AnyTogether too). */
+export async function siteOrigin(): Promise<string> {
+  const incoming = await headers();
+  const host = incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "localhost:3000";
+  const proto = incoming.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
