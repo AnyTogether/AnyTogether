@@ -27,6 +27,19 @@ export interface Friend extends Person {
   presence: Presence;
 }
 
+/** The list with one friend's presence changed, as a presence.updated event from the gateway
+ *  gives it ({userId, state, titleId, ...}); the same list when the event is not about a friend
+ *  on it or makes no sense. */
+export function withPresence(friends: Friend[], data: unknown): Friend[] {
+  const { userId, ...presence } = (data && typeof data === "object" ? data : {}) as {
+    userId?: unknown;
+  } & Partial<Presence>;
+  const states: PresenceState[] = ["online", "away", "in_game", "offline"];
+  if (typeof userId !== "string" || !states.includes(presence.state as PresenceState)) return friends;
+  if (!friends.some((f) => f.userId === userId)) return friends;
+  return friends.map((f) => (f.userId === userId ? { ...f, presence: presence as Presence } : f));
+}
+
 export interface Requests {
   incoming: (Person & { askedAt: string })[];
   outgoing: (Person & { askedAt: string })[];

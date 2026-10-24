@@ -2,8 +2,18 @@
 
 import { Avatar } from "@/components/Avatar";
 import { CallButton } from "@/components/Calls";
+import { useLive, useLiveEvents } from "@/components/Live";
 import type { UiStrings } from "@/lib/i18n";
-import { type Friend, type Person, type Requests, byPresence, fill, isUserId, playedFor } from "@/lib/people";
+import {
+  type Friend,
+  type Person,
+  type Requests,
+  byPresence,
+  fill,
+  isUserId,
+  playedFor,
+  withPresence,
+} from "@/lib/people";
 import type { ShareInvite } from "@/lib/share";
 import { social } from "@/lib/social";
 import Link from "next/link";
@@ -18,7 +28,13 @@ const json = (body: unknown) => ({
   body: JSON.stringify(body),
 });
 
-/** The friends page: add by handle, answer requests, and the list with presence, polled every 15 s. */
+/** How often the list is read again: rarely while the gateway brings presence live, every 15 s while
+ *  the socket is down. */
+const slowPoll = 120_000;
+const fastPoll = 15_000;
+
+/** The friends page: add by handle, answer requests, and the list with presence, kept live by the
+ *  gateway (presence.updated changes a row as it happens) with a slow poll behind it. */
 export function FriendsBoard({
   texts,
   me,
@@ -65,17 +81,33 @@ export function FriendsBoard({
     });
   }, []);
 
+  const { status } = useLive();
+  useLiveEvents((event) => {
+    if (event.type === "presence.updated") {
+      setFriends((list) => withPresence(list, event.data));
+      setNow(Date.now());
+    } else if (
+      // Someone new on the list or off it, or the socket back after a gap: read it all again.
+      event.type === "friend.request" ||
+      event.type === "friend.accepted" ||
+      event.type === "friend.removed" ||
+      event.type === "live.ready"
+    ) {
+      reload().catch(() => undefined);
+    }
+  });
+
   useEffect(() => {
     const tick = () => {
       if (!document.hidden) reload().catch(() => undefined);
     };
-    const timer = setInterval(tick, 15_000);
+    const timer = setInterval(tick, status === "ready" ? slowPoll : fastPoll);
     document.addEventListener("visibilitychange", tick);
     return () => {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [reload]);
+  }, [reload, status]);
 
   async function act(userId: string, path: string, init: RequestInit) {
     setBusy(userId);
