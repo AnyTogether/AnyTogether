@@ -72,13 +72,14 @@ export interface BoardGame extends GameCard {
   mine: boolean;
 }
 
-/** "just now", "5 minutes ago", "3 hours ago", "yesterday", in the reader's language. */
-export function since(iso: string, language: string, now = Date.now()) {
+/** "just now", "5 minutes ago", "3 hours ago", "yesterday", in the reader's language; older ones
+ *  as a date, in the given time zone (the reader's own when left out). */
+export function since(iso: string, language: string, now = Date.now(), timeZone?: string) {
   const seconds = Math.round((new Date(iso).getTime() - now) / 1000);
   const format = new Intl.RelativeTimeFormat(language, { numeric: "auto", style: "short" });
   if (seconds > -60) return format.format(0, "second");
   if (seconds > -3600) return format.format(Math.round(seconds / 60), "minute");
   if (seconds > -86_400) return format.format(Math.round(seconds / 3600), "hour");
   if (seconds > -7 * 86_400) return format.format(Math.round(seconds / 86_400), "day");
-  return new Date(iso).toLocaleDateString(language, { day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString(language, { day: "numeric", month: "short", timeZone });
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { When } from "@/components/When";
+
 import { Avatar } from "@/components/Avatar";
 import {
   type AdminBanRow,
@@ -976,9 +978,7 @@ function AuditPanel({
             <li key={entry.id}>
               <p className="audit-line">{line(entry)}</p>
               <p className="meta">
-                <time dateTime={entry.createdAt} title={new Date(entry.createdAt).toLocaleString(language)}>
-                  {since(entry.createdAt, language, now)}
-                </time>
+                <When iso={entry.createdAt} language={language} now={now} />
                 {extra(entry) && <span> · {extra(entry)}</span>}
               </p>
             </li>

@@ -1,5 +1,7 @@
 "use client";
 
+import { When } from "@/components/When";
+
 import { Avatar } from "@/components/Avatar";
 import { useLiveEvents } from "@/components/Live";
 import { type Activity, type FeedPage, type Reaction, reactions, since } from "@/lib/feed";
@@ -133,9 +135,7 @@ function Item({
           {item.highlight === "platinum" && <span className="flair platinum">{texts.platinumTag}</span>}
           {item.highlight === "rare" && <span className="flair rare">{texts.rare}</span>}
           {item.kind === "milestone" && <span className="flair milestone">{texts.milestoneTag}</span>}
-          <time dateTime={item.createdAt} title={new Date(item.createdAt).toLocaleString(language)}>
-            {since(item.createdAt, language, now)}
-          </time>
+          <When iso={item.createdAt} language={language} now={now} />
           {single?.rarity != null && (
             <span>{fill(texts.ofPlayers, { p: rarityPercent(single.rarity, language) })}</span>
           )}

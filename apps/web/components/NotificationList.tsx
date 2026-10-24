@@ -1,5 +1,7 @@
 "use client";
 
+import { When } from "@/components/When";
+
 import { Avatar } from "@/components/Avatar";
 import { useLiveEvents } from "@/components/Live";
 import { since } from "@/lib/feed";
@@ -146,9 +148,7 @@ function Item({
       <p className="activity-line">{line}</p>
       {detail && <p className="notice-detail">{detail}</p>}
       <p className="activity-meta">
-        <time dateTime={notice.updatedAt} title={new Date(notice.updatedAt).toLocaleString(language)}>
-          {since(notice.updatedAt, language, now)}
-        </time>
+        <When iso={notice.updatedAt} language={language} now={now} />
       </p>
     </>
   );
