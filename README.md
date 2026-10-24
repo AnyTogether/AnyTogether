@@ -27,11 +27,11 @@ real server (`e2e/`, last run 2026-10-24: every check passed).
 | Friends and presence | ✅ | ✅ | ✅ | ✅ |
 | Messages and group chats, typing | ✅ | ✅ | ✅ | ✅ |
 | Parties | ✅ | ✅ | ✅ | ✅ |
-| Voice chat and 1:1 calls, mute | ✅ | ✅ | ✅ | ✅ |
+| Voice chat and 1:1 calls, mute | ✅ | ✅ | ✅¹ | ✅ |
 | Play time and trophies sync | ✅ | – | ✅ | ✅ (profiles) |
 | Joining a friend's game | ✅ | – | ✅ | – |
 
-"–": not a feature of that client. The clients: [AnyPS5-ARM](https://github.com/utkuhalis/AnyPS5-ARM)
+"–": not a feature of that client. ¹ Built, not yet part of the cross-client run. The clients: [AnyPS5-ARM](https://github.com/utkuhalis/AnyPS5-ARM)
 (macOS launcher, phone app), [AnyPS5-Desktop](https://github.com/utkuhalis/AnyPS5-Desktop) (Windows
 and Linux). How to run the cross-client checks: [e2e/README.md](e2e/README.md).
 
