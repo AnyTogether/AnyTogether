@@ -92,9 +92,11 @@ const errorOf = (status: number, code: string | undefined, texts: UiStrings) =>
       ? texts.linkBlocked
       : code === "full"
         ? texts.partyFull
-        : status === 409 && code === "conflict"
-          ? texts.postClosed
-          : texts.failed;
+        : code === "not_party_leader"
+          ? texts.notPartyLeader
+          : status === 409 && code === "conflict"
+            ? texts.postClosed
+            : texts.failed;
 
 /** The next time of day `hhmm` happens, from now: today, or tomorrow when it has passed. */
 function nextAt(hhmm: string) {

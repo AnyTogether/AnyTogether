@@ -45,6 +45,11 @@ const post = (user: User, input: Record<string, unknown> = {}) =>
     { titleId: "PPSA01234", purpose: "online", languages: ["en"], slots: 2, ...input },
     user.token,
   );
+async function befriend(a: User, b: User) {
+  await h.call("POST", `${v1}/me/friends/requests`, { handle: b.handle }, a.token);
+  await h.call("POST", `${v1}/me/friends/requests/${a.id}/accept`, {}, b.token);
+}
+
 const board = (user: User, query = "") => h.call("GET", `${v1}/lfg${query}`, undefined, user.token);
 
 describe("looking for group", () => {
@@ -386,5 +391,53 @@ describe("looking for group", () => {
     expect(
       (await h.call("GET", `${v1}/me/notifications`, undefined, kenji.token)).body.notifications,
     ).toEqual([]);
+  });
+
+  it("lets in only into a party the poster leads: in someone else's party, yes is refused", async () => {
+    h = await harness(roomy);
+    const lead = await h.user("lead@example.com");
+    const mira = await h.user("mira@example.com");
+    const kenji = await h.user("kenji@example.com");
+    await befriend(lead, mira);
+    const party = (await h.call("POST", `${v1}/parties`, {}, lead.token)).body.id as string;
+    await h.call("POST", `${v1}/parties/${party}/invites`, { userIds: [mira.id] }, lead.token);
+    expect((await h.call("POST", `${v1}/parties/${party}/join`, {}, mira.token)).status).toBe(200);
+
+    const id = (await post(mira)).body.id as string;
+    await h.call("POST", `${v1}/lfg/${id}/requests`, {}, kenji.token);
+    const refused = await h.call("POST", `${v1}/lfg/${id}/requests/${kenji.id}/accept`, {}, mira.token);
+    expect(refused.status).toBe(403);
+    expect(refused.body).toMatchObject({
+      code: "not_party_leader",
+      title: "Only your party's leader can bring players in",
+    });
+    // Nothing changed: kenji still waits, is invited nowhere, and no slot is used.
+    const mine = await h.call("GET", `${v1}/lfg/${id}`, undefined, mira.token);
+    expect(mine.body).toMatchObject({ filled: 0, status: "open" });
+    expect(mine.body.requests[0]).toMatchObject({ status: "pending", invite: null });
+    const kenjiParty = await h.call("GET", `${v1}/me/party`, undefined, kenji.token);
+    expect(kenjiParty.body).toMatchObject({ party: null, invites: [] });
+    // Saying no is still the poster's to do.
+    expect(
+      (await h.call("POST", `${v1}/lfg/${id}/requests/${kenji.id}/decline`, {}, mira.token)).status,
+    ).toBe(200);
+
+    // Once mira leads the party, her yes brings players into it.
+    const sol = await h.user("sol@example.com");
+    await h.call("POST", `${v1}/lfg/${id}/requests`, {}, sol.token);
+    await h.call("POST", `${v1}/parties/${party}/leader`, { userId: mira.id }, lead.token);
+    const accepted = await h.call("POST", `${v1}/lfg/${id}/requests/${sol.id}/accept`, {}, mira.token);
+    expect(accepted.status).toBe(200);
+    const solParty = await h.call("GET", `${v1}/me/party`, undefined, sol.token);
+    expect(solParty.body.invites).toMatchObject([{ partyId: party }]);
+
+    // With no party at all, a yes makes one led by the poster, as before.
+    const solo = await h.user("solo@example.com");
+    const soloPost = (await post(solo)).body.id as string;
+    await h.call("POST", `${v1}/lfg/${soloPost}/requests`, {}, kenji.token);
+    const made = await h.call("POST", `${v1}/lfg/${soloPost}/requests/${kenji.id}/accept`, {}, solo.token);
+    expect(made.status).toBe(200);
+    const soloParty = await h.call("GET", `${v1}/me/party`, undefined, solo.token);
+    expect(soloParty.body.party).toMatchObject({ leaderId: solo.id });
   });
 });

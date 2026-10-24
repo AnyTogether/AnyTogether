@@ -481,7 +481,8 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
   }
 
   /** Where a player the poster lets in goes: the share play the poster hosts for co-op, otherwise
-   *  the poster's party (a new one when they are in none). Invites are quiet: the player hears of
+   *  the poster's party if they lead it (a new one when they are in none; refused when someone
+   *  else leads theirs). Invites are quiet: the player hears of
    *  them in the answer and its notification. */
   async function inviteFor(post: Post, userId: string): Promise<LfgInvite> {
     if (post.purpose === "coop") {
@@ -491,8 +492,12 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
         return { kind: "share_play", id: share.id };
       }
     }
-    const party = (await parties.partyOf(post.authorId)) ?? (await parties.create(post.authorId, "invite"));
+    const current = await parties.partyOf(post.authorId);
+    const party = current ?? (await parties.create(post.authorId, "invite"));
     const members = await parties.memberIds(party.id);
+    // Only its leader brings strangers into a party (one with no leader left: its first member).
+    if (current && (party.leaderId ?? members[0]) !== post.authorId)
+      throw new HttpError(403, ErrorCode.notPartyLeader, "Only your party's leader can bring players in");
     if (!members.includes(userId)) {
       if (members.length >= maxPartySize)
         throw new HttpError(409, ErrorCode.full, `Your party has ${maxPartySize} people already`);

@@ -9,6 +9,8 @@ export const ErrorCode = {
   unknownTrophy: "unknown_trophy",
   /** A party, group or game session has no room left. */
   full: "full",
+  /** Only a party's leader may do this for the party (e.g. let a looking-for-group player in). */
+  notPartyLeader: "not_party_leader",
   /** Joining a game session needs the same game version and engine build. */
   versionMismatch: "version_mismatch",
   rateLimited: "rate_limited",

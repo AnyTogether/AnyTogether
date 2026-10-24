@@ -77,6 +77,7 @@ function Item({
   onOpen,
   onAnswer,
   busy,
+  error,
 }: {
   notice: Notice;
   texts: UiStrings;
@@ -84,6 +85,8 @@ function Item({
   onOpen: (notice: Notice) => void;
   onAnswer: (notice: Notice, answer: "accept" | "decline") => void;
   busy: boolean;
+  /** Why the last answer did not go through. */
+  error?: string | null;
 }) {
   const { language } = texts;
   const name = <b>{notice.actor?.displayName ?? texts.n_someone}</b>;
@@ -198,6 +201,11 @@ function Item({
               </button>
             </div>
           )}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
       </div>
       {!notice.read && <span className="unread-dot" />}
     </li>
@@ -220,6 +228,7 @@ export function NotificationList({
   const [more, setMore] = useState(initial.more);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [failed, setFailed] = useState<{ id: string; text: string } | null>(null);
   const [now, setNow] = useState(renderedAt);
 
   useEffect(() => {
@@ -262,10 +271,25 @@ export function NotificationList({
       notice.kind === "lfg_request"
         ? `/me/social/lfg/${notice.data.postId}/requests/${notice.actor.userId}/${verdict}`
         : `/me/friends/requests/${notice.actor.userId}/${verdict}`;
+    setFailed(null);
     const response = await fetch(path, { method: "POST" }).catch(() => undefined);
     setBusy(null);
     // Answered (here or elsewhere): the API settles the notification and says so.
     if (response?.ok || response?.status === 404) await markRead([notice.id]);
+    else {
+      const code = ((await response?.json().catch(() => null)) as { code?: string } | null)?.code;
+      setFailed({
+        id: notice.id,
+        text:
+          code === "not_party_leader"
+            ? texts.notPartyLeader
+            : code === "full"
+              ? texts.partyFull
+              : code === "conflict"
+                ? texts.postClosed
+                : texts.failed,
+      });
+    }
     router.refresh();
   }
 
@@ -305,6 +329,7 @@ export function NotificationList({
               onOpen={open}
               onAnswer={answer}
               busy={busy === notice.id}
+              error={failed?.id === notice.id ? failed.text : null}
             />
           ))}
         </ul>

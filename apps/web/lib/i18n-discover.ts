@@ -83,6 +83,8 @@ export const discoverEn = {
   posting: "Posting…",
   tooManyOpen: "You have 3 open posts. Close one first.",
   postClosed: "That post just closed.",
+  notPartyLeader:
+    "Only your party's leader can bring players in. Ask them to make you leader, or leave the party first.",
   badTitleId: "A title ID is four capitals and five digits: PPSA01234.",
   // Parties & live
   liveNow: "Live now",
@@ -240,6 +242,8 @@ export const discoverTr: typeof discoverEn = {
   posting: "Gönderiliyor…",
   tooManyOpen: "3 açık ilanın var. Önce birini kapat.",
   postClosed: "Bu ilan az önce kapandı.",
+  notPartyLeader:
+    "Partine yalnızca liderin oyuncu alabilir. Seni lider yapmasını iste ya da önce partiden ayrıl.",
   badTitleId: "Title ID dört büyük harf ve beş rakamdır: PPSA01234.",
   liveNow: "Şu an canlı",
   liveLead: "Sahiplerinin herkese açtığı share play'ler. Bir yer kap.",
