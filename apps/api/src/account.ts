@@ -21,7 +21,15 @@ import {
   sessions,
   signInRequests,
 } from "@anytogether/db";
-import { ErrorCode, friendsKey, presenceHiddenKey, presenceKey, privacyOf } from "@anytogether/shared";
+import {
+  ErrorCode,
+  friendsKey,
+  presenceExtraKey,
+  presenceHiddenKey,
+  presenceKey,
+  privacyOf,
+  userEvents,
+} from "@anytogether/shared";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Redis } from "ioredis";
@@ -41,6 +49,8 @@ export const deletionGraceDays = 14;
 const deletionKey = (accountId: string) => `delete-code:${accountId}`;
 const codeLifetime = 600;
 const codeAttempts = 5;
+/** Days an expired sign-in request is kept before the hourly purge removes it. */
+const signInRequestDays = 30;
 
 /** Signs out every session of the account (all of them, or all but `keep`). */
 export async function revokeAll(ctx: { db: Database; valkey: Redis }, accountId: string, keep?: string) {
@@ -207,11 +217,15 @@ export async function exportAccount(db: Database, accountId: string) {
 /** Deletes the accounts whose 14 days are over: everything of theirs goes with the row (the
  *  foreign keys cascade); what others keep (games they taught) loses the name. */
 export async function purgeDeletedAccounts(ctx: { db: Database; valkey: Redis }, now = new Date()) {
+  // Sign-in requests are of no use a while after they expired (they hold the address mailed).
+  await ctx.db
+    .delete(signInRequests)
+    .where(lte(signInRequests.expiresAt, new Date(now.getTime() - signInRequestDays * 86_400_000)));
   const due = await ctx.db
-    .select({ id: accounts.id })
+    .select({ id: accounts.id, email: accounts.email })
     .from(accounts)
     .where(and(eq(accounts.status, "deleting"), lte(accounts.deleteAfter, now)));
-  for (const { id } of due) {
+  for (const { id, email } of due) {
     const pairs = await ctx.db
       .select()
       .from(friendships)
@@ -226,11 +240,22 @@ export async function purgeDeletedAccounts(ctx: { db: Database; valkey: Redis },
         .set({ text: null, attachments: [], deletedAt: now })
         .where(and(eq(messages.authorId, id), isNull(messages.deletedAt)));
       await tx.delete(accounts).where(and(eq(accounts.id, id), eq(accounts.status, "deleting")));
+      // The codes mailed to the address name it; they go with the account.
+      if (email) await tx.delete(signInRequests).where(eq(signInRequests.email, email));
       await tx.insert(auditLog).values({ id: uuidv7(), action: "account.deleted", target: id });
     });
     const multi = ctx.valkey.multi();
     for (const pair of pairs) multi.srem(friendsKey(pair.userA === id ? pair.userB : pair.userA), id);
-    await multi.del(friendsKey(id), presenceKey(id), presenceHiddenKey(id), deletionKey(id)).exec();
+    await multi
+      .del(
+        friendsKey(id),
+        presenceKey(id),
+        presenceHiddenKey(id),
+        presenceExtraKey(id),
+        userEvents(id),
+        deletionKey(id),
+      )
+      .exec();
     // One player fewer for every game they had.
     await refreshRarityOf(ctx.db, titles);
   }

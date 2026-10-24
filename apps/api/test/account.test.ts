@@ -1,4 +1,4 @@
-import { accounts, auditLog, games, trophies } from "@anytogether/db";
+import { accounts, auditLog, games, signInRequests, trophies } from "@anytogether/db";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { purgeDeletedAccounts } from "../src/account.js";
@@ -149,9 +149,26 @@ describe("deleting the account", () => {
     expect(trophy).toMatchObject({ earnedCount: 1, rarity: 1 });
     const logged = await h.deps.db.select().from(auditLog).where(eq(auditLog.target, utku.id));
     expect(logged.map((entry) => entry.action)).toContain("account.deleted");
+    // The sign-in codes mailed to the address and the events kept for its sockets go too.
+    expect(
+      await h.deps.db.select().from(signInRequests).where(eq(signInRequests.email, "utku@example.com")),
+    ).toEqual([]);
+    expect(await h.valkey.exists(`events:${utku.id}`)).toBe(0);
     // The address can start again from nothing.
     const fresh = await h.user("utku@example.com");
     expect(fresh.id).not.toBe(utku.id);
+  });
+
+  it("drops sign-in requests a month after they expired", async () => {
+    await h.call("POST", `${v1}/auth/email/start`, { email: "old@example.com" });
+    await h.deps.db
+      .update(signInRequests)
+      .set({ expiresAt: new Date(Date.now() - 31 * 86_400_000) })
+      .where(eq(signInRequests.email, "old@example.com"));
+    await h.call("POST", `${v1}/auth/email/start`, { email: "new@example.com" });
+    await purgeDeletedAccounts(h.deps);
+    const left = await h.deps.db.select({ email: signInRequests.email }).from(signInRequests);
+    expect(left.map((r) => r.email)).toEqual(["new@example.com"]);
   });
 
   it("confirms with the handle when the account has no email", async () => {
