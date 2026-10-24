@@ -1,13 +1,13 @@
 import "server-only";
 import { headers } from "next/headers";
-import { type Platform, type PublicStats, type Releases, detectPlatform } from "./downloads";
+import { type Platform, type PublicStats, type Release, type Releases, detectPlatform } from "./downloads";
 import { api } from "./session";
 
 /** The releases and totals the public pages show. Neither may hold a page up: each waits a short
  *  while and the page carries on without it. */
-async function quick<T>(path: string): Promise<T | null> {
+async function quick<T>(path: string, wait = 1500): Promise<T | null> {
   try {
-    const response = await api(path, { signal: AbortSignal.timeout(1500) });
+    const response = await api(path, { signal: AbortSignal.timeout(wait) });
     return response.ok ? ((await response.json()) as T) : null;
   } catch {
     return null;
@@ -22,3 +22,26 @@ export async function visitorPlatform(): Promise<Platform | null> {
   const incoming = await headers();
   return detectPlatform(incoming.get("user-agent"), incoming.get("sec-ch-ua-platform"));
 }
+
+export interface History {
+  macos: Release[] | null;
+  desktop: Release[] | null;
+}
+export interface RepoStats {
+  repo: string;
+  description: string;
+  stars: number;
+  forks: number;
+  openIssues: number;
+  license: string | null;
+  pushedAt: string;
+  url: string;
+}
+
+/** Every release of both projects, for the changelog (GitHub can take a moment the first time). */
+export const loadHistory = () => quick<History>("/releases/history", 4000);
+/** The repositories' stars, forks and last push, for the projects page. */
+export const loadProjects = () =>
+  quick<{ repos: Record<string, RepoStats | null> }>("/projects", 4000).then(
+    (answer) => answer?.repos ?? null,
+  );

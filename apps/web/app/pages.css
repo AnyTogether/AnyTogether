@@ -1,0 +1,307 @@
+/* The reference pages: downloads, changelog, roadmap, projects and help. They share the product
+   pages' type, lines and panels (site.css); this adds what only they need. */
+
+/* Shared */
+.pg-hero {
+  padding-top: clamp(48px, 8vh, 96px);
+  max-width: 860px;
+}
+.pg-title {
+  margin-top: 22px;
+  font-size: clamp(40px, 6.2vw, 76px);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+  font-weight: 700;
+  text-wrap: balance;
+}
+.pg-hero .cta-row {
+  margin-top: 30px;
+}
+.pg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 0;
+  list-style: none;
+}
+.pg-chips .release {
+  max-width: 100%;
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.pg-notice {
+  margin-top: 28px;
+  padding: 14px 16px;
+  border: 1px solid rgba(245, 184, 75, 0.3);
+  border-radius: 14px;
+  background: rgba(245, 184, 75, 0.06);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.pg-notice a {
+  color: var(--ink);
+}
+.pg-muted {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--mute);
+}
+.pg-label {
+  font: 500 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.pg-sec {
+  margin-top: clamp(80px, 10vw, 128px);
+  scroll-margin-top: 72px;
+}
+.pg-panel {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(10, 12, 18, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.pg-foot-note {
+  margin-top: 48px;
+  max-width: 80ch;
+}
+.pg a:not([class]) {
+  color: var(--ink);
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.18s ease;
+}
+.pg a:not([class]):hover {
+  text-decoration-color: currentColor;
+}
+.pg .toc {
+  margin-top: 48px;
+}
+
+/* Downloads */
+.dl-plat {
+  margin-top: 28px;
+  padding: clamp(22px, 3vw, 36px);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(10, 12, 18, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  scroll-margin-top: 72px;
+}
+.toc + .dl-plat {
+  margin-top: 36px;
+}
+.dl-plat.current {
+  border-color: rgba(143, 176, 255, 0.4);
+  box-shadow: 0 0 0 1px rgba(143, 176, 255, 0.12), 0 30px 70px -30px rgba(79, 124, 255, 0.35);
+}
+.dl-plat-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+}
+.dl-plat-head .ico.plat {
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border-radius: 13px;
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.03);
+  stroke-width: 1.6;
+}
+.dl-plat-head h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(22px, 2.6vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.dl-plat-body {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: clamp(24px, 4vw, 48px);
+}
+.dl-files {
+  list-style: none;
+  padding: 0;
+  min-width: 0;
+}
+.dl-plat > .dl-files {
+  margin-top: 18px;
+}
+.dl-file {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+.dl-file:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.dl-file-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.dl-file-name {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+.dl-kind {
+  font: 500 10.5px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c);
+}
+.dl-file-name code {
+  font: 500 14px / 1.35 var(--font-mono), monospace;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.dl-get {
+  flex: none;
+}
+.dl-what {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--mute);
+}
+.dl-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font: 400 12px / 1.4 var(--font-mono), monospace;
+}
+.dl-meta div {
+  display: flex;
+  gap: 7px;
+}
+.dl-meta dt {
+  color: var(--mute);
+}
+.dl-meta dd {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.dl-file .term-line {
+  margin-top: 0;
+}
+.dl-sum {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+}
+.dl-sum-label {
+  flex: none;
+  font: 500 10.5px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.06em;
+  color: var(--mute);
+}
+.dl-sum code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 400 11.5px / 1.4 var(--font-mono), monospace;
+  color: var(--ink-2);
+}
+.dl-guide {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding-left: clamp(24px, 4vw, 48px);
+  border-left: 1px solid var(--line);
+}
+.dl-guide .pg-label + .install-steps,
+.dl-guide .pg-label + .reqs {
+  margin-top: -2px;
+}
+.dl-guide .pg-label:not(:first-child) {
+  margin-top: 12px;
+}
+.dl-guide .install-steps li {
+  font-size: 14px;
+}
+.dl-guide .reqs {
+  margin-top: 0;
+}
+.dl-guide .reqs div {
+  grid-template-columns: 88px 1fr;
+  font-size: 13.5px;
+}
+.dl-verify {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: clamp(28px, 5vw, 64px);
+  align-items: start;
+}
+.dl-commands {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+.dl-commands dt {
+  font: 500 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.dl-commands .term-line code {
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .dl-plat-body,
+  .dl-verify {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dl-guide {
+    padding: 22px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .pg .toc {
+    margin-top: 36px;
+  }
+}
+@media (max-width: 520px) {
+  .dl-plat {
+    padding: 20px 16px;
+    border-radius: 18px;
+  }
+  .dl-get span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .dl-get {
+    padding: 11px;
+  }
+  .dl-get .ico {
+    width: 16px;
+    height: 16px;
+  }
+}

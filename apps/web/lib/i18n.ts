@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { compatEn, compatTr } from "./i18n-compat";
 import { discoverEn, discoverTr } from "./i18n-discover";
-import { downloadsEn, downloadsTr } from "./i18n-downloads";
 import { feedEn, feedTr } from "./i18n-feed";
 import { notifyEn, notifyTr } from "./i18n-notify";
 import { shareEn, shareTr } from "./i18n-share";
@@ -433,7 +432,6 @@ export type Strings = typeof en &
   typeof shareEn &
   typeof notifyEn &
   typeof themesEn &
-  typeof downloadsEn &
   typeof compatEn &
   typeof discoverEn;
 /** What client components get: the same texts (kept as its own name for them). */
@@ -455,7 +453,6 @@ export async function strings(): Promise<Strings> {
         ...shareTr,
         ...notifyTr,
         ...themesTr,
-        ...downloadsTr,
         ...compatTr,
         ...discoverTr,
       }
@@ -466,7 +463,6 @@ export async function strings(): Promise<Strings> {
         ...shareEn,
         ...notifyEn,
         ...themesEn,
-        ...downloadsEn,
         ...compatEn,
         ...discoverEn,
       };

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { type Releases, detectPlatform, filesFor, pickDownload, statsWorthShowing } from "../lib/downloads";
+import {
+  type Releases,
+  classifyFile,
+  detectPlatform,
+  downloadGroups,
+  filesFor,
+  pickDownload,
+  statsWorthShowing,
+} from "../lib/downloads";
 
 const releases: Releases = {
   macos: {
@@ -138,5 +146,94 @@ describe("the front page's totals", () => {
       "players",
       "trophies",
     ]);
+  });
+});
+
+describe("the downloads page", () => {
+  const both: Releases = {
+    desktop: releases.desktop,
+    macos: releases.macos && {
+      ...releases.macos,
+      assets: [
+        ...releases.macos.assets,
+        {
+          name: "install.sh",
+          size: 1562,
+          url: "https://github.com/x/install.sh",
+          sha256: "025b",
+          updatedAt: "2026-10-24T21:37:45Z",
+        },
+        {
+          name: "AnyPS5-toolkit-macos-0.2.15-arm.zip",
+          size: 40_000_000,
+          url: "https://github.com/x/toolkit.zip",
+          sha256: null,
+        },
+        // AnyPS5-ARM's release carries the Desktop files too.
+        {
+          name: "AnyPS5-Desktop-windows-x64.zip",
+          size: 20_000_000,
+          url: "https://github.com/arm/win.zip",
+          sha256: null,
+        },
+        { name: "notes.pdf", size: 10, url: "https://github.com/x/notes.pdf", sha256: null },
+      ],
+    },
+  };
+
+  it("knows each file's platform and kind", () => {
+    expect(classifyFile("AnyPS5-Desktop-Setup-0.1.1-x64.exe")).toMatchObject({
+      platform: "windows",
+      kind: "installer",
+    });
+    expect(classifyFile("anyps5-desktop_0.1.1_amd64.deb")).toMatchObject({ platform: "linux", kind: "deb" });
+    expect(classifyFile("AnyPS5-toolkit-macos-0.2.15-arm.zip")).toMatchObject({
+      platform: "mac",
+      kind: "engine",
+    });
+    expect(classifyFile("AnyPS5-toolkit-windows-0.2.15.zip")).toMatchObject({
+      platform: "windows",
+      kind: "engine",
+    });
+    expect(classifyFile("notes.pdf")).toBeNull();
+  });
+
+  it("lists every file once, by platform, the visitor's first, installers first", () => {
+    const { groups, other } = downloadGroups(both, "linux");
+    expect(groups.map((g) => g.platform)).toEqual(["linux", "mac", "windows", "iphone", "android"]);
+    const names = (platform: string) => groups.find((g) => g.platform === platform)?.files.map((f) => f.name);
+    expect(names("mac")).toEqual(["AnyPS5-macOS.zip", "install.sh", "AnyPS5-toolkit-macos-0.2.15-arm.zip"]);
+    expect(names("windows")).toEqual([
+      "AnyPS5-Desktop-Setup-0.1.1-x64.exe",
+      "AnyPS5-Desktop-windows-x64.zip",
+    ]);
+    expect(names("linux")).toEqual([
+      "AnyPS5-Desktop-0.1.1-x86_64.AppImage",
+      "anyps5-desktop_0.1.1_amd64.deb",
+      "AnyPS5-Desktop-linux-x64.tar.gz",
+    ]);
+    // The Windows zip both releases carry is listed once, from AnyPS5 Desktop's.
+    const zip = groups.find((g) => g.platform === "windows")?.files[1];
+    expect(zip).toMatchObject({ url: "https://github.com/x/win.zip", version: "0.1.1" });
+    const script = groups.find((g) => g.platform === "mac")?.files[1];
+    expect(script).toMatchObject({ sha256: "025b", date: "2026-10-24T21:37:45Z", version: "0.2.15" });
+    // A file without its own date gets its release's.
+    expect(groups.find((g) => g.platform === "mac")?.files[0]?.date).toBe("2026-10-25T00:00:00Z");
+    expect(other.map((f) => f.name)).toEqual(["notes.pdf"]);
+  });
+
+  it("falls back to the files whose names never change when GitHub's answer is not here", () => {
+    const { groups, other } = downloadGroups(null, null);
+    expect(groups.map((g) => g.platform)).toEqual(["mac", "windows", "linux", "iphone", "android"]);
+    expect(groups[0]?.files.map((f) => f.url)).toEqual([
+      "https://github.com/utkuhalis/AnyPS5-ARM/releases/latest/download/AnyPS5-macOS.zip",
+      "https://github.com/utkuhalis/AnyPS5-ARM/releases/latest/download/install.sh",
+    ]);
+    expect(groups[1]?.files[0]).toMatchObject({ size: null, sha256: null, version: null, kind: "portable" });
+    expect(other).toEqual([]);
+    // Only the project GitHub did not answer for falls back.
+    const half = downloadGroups({ macos: releases.macos, desktop: null }, null);
+    expect(half.groups[1]?.files.map((f) => f.name)).toEqual(["AnyPS5-Desktop-windows-x64.zip"]);
+    expect(half.groups[1]?.files[0]?.version).toBeNull();
   });
 });

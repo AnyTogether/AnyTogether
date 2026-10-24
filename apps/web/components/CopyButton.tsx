@@ -2,14 +2,20 @@
 
 import { useState } from "react";
 
-/** Copies a command or a checksum, and says so for a moment. */
-export function CopyButton({ text, label, done }: { text: string; label: string; done: string }) {
+/** Copies a command or a checksum, and says so for a moment. `name` tells screen readers what is
+ *  copied when the page has several such buttons. */
+export function CopyButton({
+  text,
+  label,
+  done,
+  name,
+}: { text: string; label: string; done: string; name?: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
       type="button"
       className={`pill copy${copied ? " on" : ""}`}
-      aria-label={copied ? done : label}
+      aria-label={copied ? done : (name ?? label)}
       onClick={async () => {
         await navigator.clipboard?.writeText(text).catch(() => undefined);
         setCopied(true);

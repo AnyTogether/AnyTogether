@@ -9,13 +9,18 @@ export interface Asset {
   size: number;
   url: string;
   sha256: string | null;
+  /** When the file was uploaded (answers cached before the API said so leave it out). */
+  updatedAt?: string;
 }
 export interface Release {
   repo: string;
   version: string;
   tag: string;
+  name?: string;
   publishedAt: string;
   url: string;
+  notes?: string;
+  prerelease?: boolean;
   assets: Asset[];
 }
 export interface Releases {
@@ -198,4 +203,128 @@ export function statsWorthShowing(stats: PublicStats | null): (keyof PublicStats
     (key) => typeof stats[key] === "number" && stats[key] >= statFloors[key],
   );
   return shown.length >= 2 ? shown : [];
+}
+
+/** What a release file is, for its line on the downloads page. */
+export type FileKind =
+  | "app"
+  | "script"
+  | "engine"
+  | "installer"
+  | "portable"
+  | "appimage"
+  | "deb"
+  | "archive"
+  | "apk"
+  | "ipa"
+  | "other";
+
+export interface DownloadFile {
+  name: string;
+  kind: FileKind;
+  url: string;
+  size: number | null;
+  sha256: string | null;
+  /** The file's upload date, else its release's; empty when the release is not known. */
+  date: string;
+  version: string | null;
+  repo: string;
+}
+
+export interface PlatformFiles {
+  platform: Platform;
+  files: DownloadFile[];
+}
+
+/** Each file name's platform and kind; the order of the rules is the order on the page. */
+const fileRules: [Platform, FileKind, (name: string) => boolean][] = [
+  ["mac", "app", (n) => n === "AnyPS5-macOS.zip"],
+  ["mac", "script", (n) => n === "install.sh"],
+  ["mac", "engine", (n) => /^AnyPS5-toolkit-macos.*\.zip$/i.test(n)],
+  ["windows", "installer", (n) => /^AnyPS5-Desktop-Setup-.*\.(exe|msi)$/i.test(n)],
+  ["windows", "portable", (n) => /windows.*\.zip$/i.test(n) && !/toolkit/i.test(n)],
+  ["windows", "engine", (n) => /^AnyPS5-toolkit-windows/i.test(n)],
+  ["linux", "appimage", (n) => /\.AppImage$/i.test(n)],
+  ["linux", "deb", (n) => /\.deb$/i.test(n)],
+  ["linux", "archive", (n) => /linux.*\.tar\.gz$/i.test(n) && !/toolkit/i.test(n)],
+  ["linux", "engine", (n) => /^AnyPS5-toolkit-linux/i.test(n)],
+  ["iphone", "ipa", (n) => /\.ipa$/i.test(n)],
+  ["android", "apk", (n) => /\.apk$/i.test(n)],
+];
+
+/** Where a file belongs: its platform and kind, or null for a file of no known platform. */
+export function classifyFile(name: string): { platform: Platform; kind: FileKind; rank: number } | null {
+  const index = fileRules.findIndex(([, , test]) => test(name));
+  const rule = fileRules[index];
+  return rule ? { platform: rule[0], kind: rule[1], rank: index } : null;
+}
+
+/** The files whose names never change, for when GitHub's answer is not here. */
+const stableFiles: [Platform, string, string][] = [
+  ["mac", repos.mac, "AnyPS5-macOS.zip"],
+  ["mac", repos.mac, "install.sh"],
+  ["windows", repos.desktop, "AnyPS5-Desktop-windows-x64.zip"],
+  ["linux", repos.desktop, "AnyPS5-Desktop-linux-x64.tar.gz"],
+  ["iphone", repos.mac, "AnyPS5-Remote.ipa"],
+  ["android", repos.mac, "AnyPS5-Remote.apk"],
+];
+
+/** Every file of both latest releases, by platform: the visitor's platform first, then the usual
+ *  order; within one, installers before the rest. AnyPS5 Desktop's own release goes first, so a
+ *  Windows or Linux file AnyPS5-ARM's release carries too is listed once, with Desktop's version.
+ *  Files of no known platform are kept apart, so nothing a release offers is left out. */
+export function downloadGroups(
+  releases: Releases | null,
+  visitor: Platform | null,
+): { groups: PlatformFiles[]; other: DownloadFile[] } {
+  const seen = new Set<string>();
+  const placed: (DownloadFile & { platform: Platform | null; rank: number })[] = [];
+  for (const release of [releases?.desktop, releases?.macos]) {
+    if (!release) continue;
+    for (const asset of release.assets) {
+      if (seen.has(asset.name)) continue;
+      seen.add(asset.name);
+      const where = classifyFile(asset.name);
+      placed.push({
+        name: asset.name,
+        kind: where?.kind ?? "other",
+        platform: where?.platform ?? null,
+        rank: where?.rank ?? fileRules.length,
+        url: asset.url,
+        size: asset.size || null,
+        sha256: asset.sha256,
+        date: asset.updatedAt || release.publishedAt,
+        version: release.version,
+        repo: release.repo,
+      });
+    }
+  }
+  // A project GitHub did not answer for: its files by their unchanging names.
+  for (const [platform, repo, name] of stableFiles) {
+    const known = repo === repos.desktop ? releases?.desktop : releases?.macos;
+    if (known || seen.has(name)) continue;
+    const where = classifyFile(name);
+    placed.push({
+      name,
+      kind: where?.kind ?? "other",
+      platform,
+      rank: where?.rank ?? 0,
+      url: latest(repo, name),
+      size: null,
+      sha256: null,
+      date: "",
+      version: null,
+      repo,
+    });
+  }
+  const order = visitor ? [visitor, ...platformOrder.filter((p) => p !== visitor)] : platformOrder;
+  const strip = ({ platform: _p, rank: _r, ...file }: (typeof placed)[number]): DownloadFile => file;
+  const groups = order.map((platform) => ({
+    platform,
+    files: placed
+      .filter((f) => f.platform === platform)
+      .sort((a, b) => a.rank - b.rank)
+      .map(strip),
+  }));
+  return { groups, other: placed.filter((f) => f.platform === null).map(strip) };
 }
