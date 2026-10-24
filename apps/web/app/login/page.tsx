@@ -1,12 +1,13 @@
 import { LoginForm } from "@/components/LoginForm";
 import { PasskeySignIn } from "@/components/Passkeys";
 import { strings } from "@/lib/i18n";
+import { samePath } from "@/lib/paths";
 
 export default async function Login({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const texts = await strings();
   const { next } = await searchParams;
   // Only paths on this site, never another address.
-  const target = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const target = samePath(next ?? null);
   return (
     <section className="narrow">
       <h2 className="in d1">{texts.loginTitle}</h2>
