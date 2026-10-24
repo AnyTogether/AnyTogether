@@ -305,3 +305,316 @@
     height: 16px;
   }
 }
+
+/* Changelog */
+.cl-filter {
+  margin-top: 44px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+.cl-filter ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.cl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--ink-2);
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+.cl-chip .meta {
+  font: 400 11px / 1 var(--font-mono), monospace;
+  color: var(--mute);
+}
+.cl-chip:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: var(--ink);
+}
+.cl-chip[aria-current="page"] {
+  color: #07080c;
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.cl-chip[aria-current="page"] .meta {
+  color: rgba(7, 8, 12, 0.6);
+}
+.cl-count {
+  margin-left: auto;
+  font: 400 12px / 1 var(--font-mono), monospace;
+  color: var(--mute);
+}
+.cl-none {
+  margin-top: 40px;
+}
+.cl-list {
+  margin-top: 36px;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+.cl-entry {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: clamp(20px, 4vw, 48px);
+  padding: clamp(32px, 4vw, 48px) 0;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 24px;
+}
+.cl-side {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  position: sticky;
+  top: 24px;
+  align-self: start;
+}
+.cl-date {
+  font: 500 13px / 1.3 var(--font-mono), monospace;
+  color: var(--ink-2);
+}
+.cl-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  font: 500 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+}
+.cl-project::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--a);
+  box-shadow: 0 0 10px var(--a);
+}
+.cl-project.desktop::before {
+  background: var(--c);
+  box-shadow: 0 0 10px var(--c);
+}
+.cl-head {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.cl-head h2 {
+  font-size: clamp(30px, 3.6vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cl-version {
+  text-decoration: none;
+}
+.cl-version:hover {
+  color: #fff;
+}
+.cl-entry.folded {
+  padding: clamp(24px, 3vw, 32px) 0;
+}
+.cl-entry.folded .cl-head h2 {
+  font-size: clamp(24px, 2.6vw, 30px);
+}
+.cl-entry.folded .cl-files {
+  margin-top: 18px;
+}
+.cl-name {
+  flex-basis: 100%;
+  font-size: 14px;
+  color: var(--mute);
+}
+.cl-name:empty {
+  display: none;
+}
+.cl-more {
+  margin-top: 18px;
+}
+.cl-more summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  list-style: none;
+  transition: border-color 0.2s ease;
+}
+.cl-more summary::-webkit-details-marker {
+  display: none;
+}
+.cl-more summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-top: -3px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+  transition: transform 0.2s var(--ease-out);
+}
+.cl-more[open] summary::after {
+  margin-top: 3px;
+  transform: rotate(-135deg);
+}
+.cl-more summary:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.cl-files {
+  margin-top: 26px;
+}
+.cl-files ul {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.cl-files .file-link {
+  max-width: 100%;
+}
+.cl-files .file-link span:not(.meta) {
+  overflow-wrap: anywhere;
+}
+.file-link.ghosted {
+  border-style: dashed;
+  color: var(--ink-2);
+}
+
+/* Release notes, from GitHub, after sanitising */
+.prose {
+  margin-top: 18px;
+  max-width: 72ch;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  overflow-wrap: break-word;
+}
+.prose > * + * {
+  margin-top: 14px;
+}
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  margin-top: 28px;
+  font-size: 13px;
+  font-family: var(--font-mono), monospace;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.prose h3 {
+  font-size: 17px;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.prose strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.prose a {
+  color: var(--ink);
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 3px;
+}
+.prose a:hover {
+  text-decoration-color: currentColor;
+}
+.prose ul,
+.prose ol {
+  padding-left: 20px;
+}
+.prose li + li {
+  margin-top: 8px;
+}
+.prose li::marker {
+  color: var(--mute);
+}
+.prose code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  font: 400 0.86em / 1.4 var(--font-mono), monospace;
+  color: var(--ink);
+}
+.prose pre {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  overflow-x: auto;
+}
+.prose pre code {
+  padding: 0;
+  background: none;
+  font-size: 12.5px;
+  white-space: pre;
+}
+.prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.prose th,
+.prose td {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+.prose blockquote {
+  padding-left: 14px;
+  border-left: 2px solid var(--line-2);
+  color: var(--mute);
+}
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 760px) {
+  .cl-entry {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .cl-side {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+  }
+  .cl-count {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+  .prose {
+    font-size: 14.5px;
+  }
+}
+.cl-files .file-link .meta {
+  white-space: nowrap;
+}
