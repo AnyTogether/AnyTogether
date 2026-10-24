@@ -1,6 +1,8 @@
 import { type Database, accounts, identities, profiles } from "@anytogether/db";
+import { isReservedHandle } from "@anytogether/shared";
 import { and, eq } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
+import { handleFree } from "./people.js";
 
 export interface Identity {
   provider: "apple" | "google" | "discord" | "email";
@@ -36,14 +38,12 @@ export async function findOrCreateAccount(db: Database, identity: Identity) {
     const accountId = uuidv7();
     await tx.insert(accounts).values({ id: accountId, email: email ?? null });
     await tx.insert(identities).values({ accountId, provider: identity.provider, subject: identity.subject });
-    const base = handleFrom(identity.name ?? email?.split("@")[0] ?? "player");
+    const wanted = handleFrom(identity.name ?? email?.split("@")[0] ?? "player");
+    const base = isReservedHandle(wanted) ? "player" : wanted;
     let handle = base;
+    // A reserved name ("admin", "anytogether…") starts from "player"; a taken or held one gets digits.
     for (let attempt = 0; attempt < 20; attempt++) {
-      const taken = await tx
-        .select({ id: profiles.accountId })
-        .from(profiles)
-        .where(eq(profiles.handle, handle));
-      if (!taken[0]) break;
+      if (await handleFree(tx, handle)) break;
       handle = `${base.slice(0, 15)}${Math.floor(1000 + Math.random() * 9000)}`;
     }
     await tx.insert(profiles).values({

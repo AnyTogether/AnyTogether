@@ -1,8 +1,6 @@
 import {
-  blocks,
   devices,
   earnedTrophies,
-  friendships,
   games,
   library,
   playSessions,
@@ -27,7 +25,7 @@ import {
   rarityLabel,
   trophyPoints,
 } from "@anytogether/shared";
-import { type SQL, and, asc, count, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { type SQL, and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { z } from "zod";
 import type { Deps } from "./app.js";
@@ -35,6 +33,7 @@ import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { areFriends, blockedBetween, findProfile } from "./people.js";
 
 /** Clocks drift; a time a little ahead of ours is still believed. */
 const clockSlack = 5 * 60_000;
@@ -138,33 +137,13 @@ export function gameRoutes(deps: Deps) {
 
   /** Someone whose library and trophies the asker may see: themselves or a friend. */
   const viewable = async (me: string, handle: string) => {
-    const profile = (
-      await db
-        .select()
-        .from(profiles)
-        .where(eq(profiles.handle, handle.replace(/^@/, "")))
-    )[0];
+    const profile = await findProfile(db, handle);
     if (!profile) throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
     if (profile.accountId === me) return profile;
-    const other = profile.accountId;
-    const blocked = await db
-      .select()
-      .from(blocks)
-      .where(
-        or(
-          and(eq(blocks.blocker, me), eq(blocks.blocked, other)),
-          and(eq(blocks.blocker, other), eq(blocks.blocked, me)),
-        ),
-      );
-    if (blocked.length) throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
-    const [userA, userB] = me < other ? [me, other] : [other, me];
-    const friends = await db
-      .select()
-      .from(friendships)
-      .where(
-        and(eq(friendships.userA, userA), eq(friendships.userB, userB), eq(friendships.state, "accepted")),
-      );
-    if (!friends.length) throw new HttpError(403, ErrorCode.forbidden, "Only friends can see this");
+    if (await blockedBetween(db, me, profile.accountId))
+      throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
+    if (!(await areFriends(db, me, profile.accountId)))
+      throw new HttpError(403, ErrorCode.forbidden, "Only friends can see this");
     return profile;
   };
 

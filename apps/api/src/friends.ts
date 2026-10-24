@@ -8,6 +8,7 @@ import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { blockedBetween, findProfile } from "./people.js";
 
 const pair = (a: string, b: string) => (a < b ? { userA: a, userB: b } : { userA: b, userB: a });
 const offline = { state: "offline" };
@@ -30,18 +31,7 @@ export function friendRoutes(deps: Deps) {
     displayName: profile.displayName,
     avatar: profile.avatarUrl,
   });
-  const blocked = async (a: string, b: string) =>
-    (
-      await deps.db
-        .select()
-        .from(blocks)
-        .where(
-          or(
-            and(eq(blocks.blocker, a), eq(blocks.blocked, b)),
-            and(eq(blocks.blocker, b), eq(blocks.blocked, a)),
-          ),
-        )
-    ).length > 0;
+  const blocked = (a: string, b: string) => blockedBetween(deps.db, a, b);
   const row = async (a: string, b: string) => {
     const { userA, userB } = pair(a, b);
     return (
@@ -81,12 +71,7 @@ export function friendRoutes(deps: Deps) {
   app.post("/me/friends/requests", async (c) => {
     const me = c.get("userId");
     const { handle } = await body(c, z.object({ handle: z.string().min(1).max(40) }));
-    const target = (
-      await deps.db
-        .select()
-        .from(profiles)
-        .where(eq(profiles.handle, handle.replace(/^@/, "")))
-    )[0];
+    const target = await findProfile(deps.db, handle);
     if (!target || (await blocked(me, target.accountId)))
       throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
     if (target.accountId === me) throw new HttpError(400, ErrorCode.badRequest, "That is you");
@@ -214,12 +199,7 @@ export function friendRoutes(deps: Deps) {
 
   app.get("/users/:handle", async (c) => {
     const me = c.get("userId");
-    const profile = (
-      await deps.db
-        .select()
-        .from(profiles)
-        .where(eq(profiles.handle, c.req.param("handle").replace(/^@/, "")))
-    )[0];
+    const profile = await findProfile(deps.db, c.req.param("handle"));
     if (!profile || (await blocked(me, profile.accountId)))
       throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
     const existing = profile.accountId === me ? undefined : await row(me, profile.accountId);

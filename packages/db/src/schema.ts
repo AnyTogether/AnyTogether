@@ -105,6 +105,20 @@ export const profiles = pgTable(
   (table) => [check("bio_length", sql`length(${table.bio}) <= 160`)],
 );
 
+/** Handles given up, held for their last owner for 30 days: nobody else takes them, and the old
+ *  handle still leads to the profile. */
+export const handleHistory = pgTable(
+  "handle_history",
+  {
+    handle: citext().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    releasedAt: now(),
+  },
+  (table) => [index().on(table.accountId)],
+);
+
 /** A user's computers, by the launcher's own random ID. */
 export const devices = pgTable(
   "devices",

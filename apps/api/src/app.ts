@@ -1,6 +1,5 @@
-import { type Database, accounts, profiles } from "@anytogether/db";
+import type { Database } from "@anytogether/db";
 import { ErrorCode, problem } from "@anytogether/shared";
-import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Redis } from "ioredis";
 import { authRoutes } from "./auth/routes.js";
@@ -8,7 +7,8 @@ import { HttpError } from "./errors.js";
 import { friendRoutes } from "./friends.js";
 import { gameRoutes } from "./games.js";
 import type { Mailer } from "./mail.js";
-import { type AuthVariables, requireUser } from "./middleware.js";
+import type { AuthVariables } from "./middleware.js";
+import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
 import type { TokenSigner } from "./tokens.js";
 
@@ -32,6 +32,7 @@ export function createApp(deps: Deps) {
         : problem(500, ErrorCode.internal, "Something went wrong");
     if (!(error instanceof HttpError)) console.error(error);
     return c.newResponse(JSON.stringify(body), body.status as 400, {
+      ...(error instanceof HttpError ? error.headers : {}),
       "content-type": "application/problem+json",
     });
   });
@@ -46,23 +47,7 @@ export function createApp(deps: Deps) {
   v1.get("/.well-known/jwks.json", async (c) => c.json({ keys: [await deps.tokens.publicJwk()] }));
   v1.route("/auth", authRoutes(deps));
 
-  v1.get("/me", requireUser(deps), async (c) => {
-    const userId = c.get("userId");
-    const [account] = await deps.db.select().from(accounts).where(eq(accounts.id, userId));
-    const [profile] = await deps.db.select().from(profiles).where(eq(profiles.accountId, userId));
-    if (!account || !profile) throw new HttpError(401, ErrorCode.unauthorized, "No such account");
-    return c.json({
-      account: { id: account.id, email: account.email, createdAt: account.createdAt },
-      profile: {
-        handle: profile.handle,
-        displayName: profile.displayName,
-        bio: profile.bio,
-        avatar: profile.avatarUrl,
-        country: profile.country,
-      },
-    });
-  });
-
+  v1.route("/", profileRoutes(deps));
   v1.route("/", friendRoutes(deps));
   v1.route("/", gameRoutes(deps));
   app.route("/api/v1", v1);

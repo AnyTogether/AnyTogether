@@ -20,6 +20,10 @@ export const ErrorCode = {
   expired: "expired_token",
   refreshReused: "refresh_reused",
   sessionRevoked: "session_revoked",
+  handleTaken: "handle_taken",
+  handleReserved: "handle_reserved",
+  handleCooldown: "handle_cooldown",
+  linksNotAllowed: "links_not_allowed",
   internal: "internal",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
