@@ -7,6 +7,7 @@ import { uuidv7 } from "uuidv7";
 import { HttpError } from "./errors.js";
 import { publish, revokedKey } from "./events.js";
 import { bannedError, isBanned, liftExpired } from "./moderation.js";
+import { forgetPush } from "./notifications.js";
 import { type TokenSigner, accessLifetime, hash, refreshLifetimeDays, secret } from "./tokens.js";
 
 interface Context {
@@ -89,6 +90,8 @@ export async function revoke(ctx: Pick<Context, "db" | "valkey">, sessionId: str
     .set({ revokedAt: new Date() })
     .where(and(eq(sessions.id, sessionId), isNull(sessions.revokedAt)));
   await ctx.valkey.set(revokedKey(sessionId), "1", "EX", accessLifetime + 60);
+  // Its browser gets no more push notifications.
+  await forgetPush(ctx.db, sessionId);
   await publish(ctx.valkey, accountId, { type: "account.signed_out", data: { sessionId } });
 }
 

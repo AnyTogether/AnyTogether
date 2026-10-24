@@ -124,6 +124,9 @@ export const profiles = pgTable(
     country: text(),
     avatarUrl: text(),
     privacy: jsonb().notNull().default({}),
+    /** Which notifications to get, each kind on or off, and the mail digest (see
+     *  notificationSettingsOf); only what was changed is stored. */
+    notificationSettings: jsonb().notNull().default({}),
     stats: jsonb().notNull().default({}),
   },
   (table) => [check("bio_length", sql`length(${table.bio}) <= 160`)],
@@ -638,4 +641,62 @@ export const gameSessionInvites = pgTable(
     createdAt: now(),
   },
   (table) => [primaryKey({ columns: [table.sessionId, table.accountId] }), index().on(table.accountId)],
+);
+
+/** What happened to someone while they looked away: a friend request, a missed call, messages.
+ *  Messages gather in one unread notification per conversation. */
+export const notifications = pgTable(
+  "notifications",
+  {
+    /** UUIDv7, so the newest has the largest ID; the list pages by it. */
+    id: uuid().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** friend_request | friend_accepted | message | party_invite | game_invite | missed_call | warning */
+    kind: text().notNull(),
+    actorId: uuid().references(() => accounts.id, { onDelete: "cascade" }),
+    /** What it is about: the conversation, party, game session or call; for a friend request or
+     *  acceptance the other person; for a warning its own ID. */
+    subjectId: text().notNull(),
+    data: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    readAt: timestamp({ withTimezone: true }),
+    /** Put in a mail digest; a notification is mailed at most once. */
+    mailedAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  (table) => [
+    index("notifications_by_account").on(table.accountId, table.id.desc()),
+    index("notifications_unread").on(table.accountId).where(sql`${table.readAt} is null`),
+    // One unread notification per kind and subject: more messages gather into it.
+    uniqueIndex("one_unread_notification")
+      .on(table.accountId, table.kind, table.subjectId)
+      .where(sql`${table.readAt} is null`),
+    check(
+      "notification_kind",
+      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'warning')`,
+    ),
+  ],
+);
+
+/** Web Push subscriptions, one per browser, tied to its sign-in: signing out ends it. */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    sessionId: uuid()
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    endpoint: text().notNull().unique(),
+    p256dh: text().notNull(),
+    auth: text().notNull(),
+    /** The language the device shows its notifications in: en or tr. */
+    lang: text().notNull().default("en"),
+    createdAt: now(),
+  },
+  (table) => [index().on(table.accountId), index().on(table.sessionId)],
 );

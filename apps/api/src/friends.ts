@@ -9,6 +9,7 @@ import { publish } from "./events.js";
 import { forgetFriendship, recordFriendship } from "./feed.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import type { Notifier } from "./notifications.js";
 import { type ProfileRow, blockedBetween, canSee, findProfile, relationOf } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
 
@@ -16,7 +17,7 @@ const pair = (a: string, b: string) => (a < b ? { userA: a, userB: b } : { userA
 const offline = { state: "offline" };
 
 /** Friends and people: requests by handle, a request back makes friends at once, blocks end it all. */
-export function friendRoutes(deps: Deps) {
+export function friendRoutes(deps: Deps, notes: Notifier) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const limit = rateLimiter(deps.valkey, deps.limits);
@@ -94,6 +95,8 @@ export function friendRoutes(deps: Deps) {
         data: { userId: me, handle: mine.handle, displayName: mine.displayName },
       });
     await recordFriendship(deps, me, other);
+    await notes.settle(me, "friend_request", other);
+    await notes.notify(other, { kind: "friend_accepted", actorId: me, subjectId: me });
   }
 
   async function unfriend(me: string, other: string) {
@@ -104,6 +107,11 @@ export function friendRoutes(deps: Deps) {
       .returning();
     await deps.valkey.multi().srem(friendsKey(me), other).srem(friendsKey(other), me).exec();
     await forgetFriendship(deps.db, me, other);
+    // A request withdrawn or declined is no longer news for either of them.
+    if (removed[0]?.state === "pending") {
+      await notes.withdraw(other, "friend_request", me);
+      await notes.settle(me, "friend_request", other);
+    }
     if (removed[0]?.state === "accepted")
       await publish(deps.valkey, other, { type: "friend.removed", data: { userId: me } });
   }
@@ -132,6 +140,7 @@ export function friendRoutes(deps: Deps) {
         type: "friend.request",
         data: { userId: me, handle: mine.handle, displayName: mine.displayName },
       });
+    await notes.notify(target.accountId, { kind: "friend_request", actorId: me, subjectId: me });
     return c.json({ state: "pending" }, 201);
   });
 

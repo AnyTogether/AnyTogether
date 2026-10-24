@@ -24,6 +24,7 @@ import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import type { Notifier } from "./notifications.js";
 import { people } from "./people.js";
 import { setPresenceExtra } from "./presence.js";
 import { rateLimiter } from "./ratelimit.js";
@@ -33,7 +34,7 @@ type Session = typeof gameSessions.$inferSelect;
 /** Joining a friend's game: a launcher opens a session for the title it runs, friends see it is
  *  joinable, invites go to friends, and a joiner with the same game version and engine build gets
  *  the details. */
-export function gameSessionRoutes(deps: Deps) {
+export function gameSessionRoutes(deps: Deps, notes: Notifier) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const { db } = deps;
@@ -158,6 +159,7 @@ export function gameSessionRoutes(deps: Deps) {
       type: "game_session.ended",
       data: { sessionId: session.id },
     });
+    for (const invite of invites) await notes.withdraw(invite.accountId, "game_invite", session.id);
   }
 
   /** Out of whatever session someone plays in: the host's ends, a player's goes on without them. */
@@ -341,6 +343,19 @@ export function gameSessionRoutes(deps: Deps) {
           },
         },
       );
+    if (fresh.length) {
+      const [game] = await db
+        .select({ names: games.names })
+        .from(games)
+        .where(eq(games.titleId, session.titleId));
+      for (const invite of fresh)
+        await notes.notify(invite.accountId, {
+          kind: "game_invite",
+          actorId: me,
+          subjectId: session.id,
+          data: { sessionId: session.id, titleId: session.titleId, gameNames: game?.names ?? {} },
+        });
+    }
     return c.json({ invited: fresh.map((i) => i.accountId) });
   });
 
@@ -379,6 +394,7 @@ export function gameSessionRoutes(deps: Deps) {
     });
     if (joined === "ended") throw new HttpError(404, ErrorCode.notFound, "No such game session");
     if (joined === "full") throw new HttpError(409, ErrorCode.full, "This game is full");
+    await notes.settle(me, "game_invite", session.id);
     await changed(session);
     return c.json(await view(session, undefined, true));
   });
@@ -397,6 +413,7 @@ export function gameSessionRoutes(deps: Deps) {
           .returning()
       : [];
     if (!removed.length) throw new HttpError(404, ErrorCode.notFound, "No such invite");
+    await notes.settle(c.get("userId"), "game_invite", session?.id ?? "");
     return c.body(null, 204);
   });
 

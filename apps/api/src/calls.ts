@@ -126,7 +126,9 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     return call;
   };
 
-  async function end(call: Call, reason: "ended" | "declined" | "party_ended") {
+  /** Ends the call for everyone; a direct call that nobody answered, ended by anyone but the
+   *  callee (`by`), is a missed call for the callee. */
+  async function end(call: Call, reason: "ended" | "declined" | "party_ended", by?: string) {
     const [ended] = await db
       .update(calls)
       .set({ endedAt: new Date() })
@@ -139,6 +141,13 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     for (const device of devices) cleanup.srem(deviceCallsKey(device), call.id);
     await cleanup.exec();
     await tell(members, { type: "call.ended", data: { callId: call.id, partyId: call.partyId, reason } });
+    if (!ended.partyId && ended.calleeId && !ended.answeredAt && reason === "ended" && by !== ended.calleeId)
+      await parties.notes.notify(ended.calleeId, {
+        kind: "missed_call",
+        actorId: ended.startedBy,
+        subjectId: ended.id,
+        data: { callId: ended.id },
+      });
   }
 
   /** Out of the call: a direct call ends; a party call ends when its last voice leaves. */
@@ -148,7 +157,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     await valkey.srem(callMutedKey(call.id), me);
     if (device) await valkey.srem(deviceCallsKey(device), call.id);
     if (!stillMember) await valkey.srem(callMembersKey(call.id), me);
-    if (!call.partyId) return end(call, "ended");
+    if (!call.partyId) return end(call, "ended", me);
     if (removed)
       await tell([...(await valkey.smembers(callMembersKey(call.id))), me], {
         type: "call.left",

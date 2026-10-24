@@ -2,6 +2,7 @@ import type { CallEvent, SignalKind } from "./calls.js";
 import type { FeedEvent } from "./feed.js";
 import type { GamePresence, GameSessionEvent, GameSignalKind } from "./gameSessions.js";
 import type { MessageEvent } from "./messages.js";
+import type { NotificationEvent } from "./notifications.js";
 import type { PartyEvent, PartyPresence } from "./parties.js";
 import type { SharePlayEvent, SharePresence } from "./sharePlays.js";
 
@@ -42,7 +43,8 @@ export type GatewayEvent =
   | CallEvent
   | GameSessionEvent
   | SharePlayEvent
-  | FeedEvent;
+  | FeedEvent
+  | NotificationEvent;
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 

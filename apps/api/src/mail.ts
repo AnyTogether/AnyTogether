@@ -1,10 +1,19 @@
 import nodemailer from "nodemailer";
 
-/** Sends sign-in codes and account-deletion codes. Development prints them; production uses SMTP
- *  or Resend. */
+/** Sends sign-in codes, account-deletion codes and the notification digest. Development prints
+ *  them; production uses SMTP or Resend. */
 export interface Mailer {
   signInCode(to: string, code: string, link: string): Promise<void>;
   deletionCode(to: string, code: string): Promise<void>;
+  digest(to: string, items: DigestItem[], siteUrl: string): Promise<void>;
+}
+
+/** One line of the digest: messages from someone (in a group with a title), or a friend request. */
+export interface DigestItem {
+  kind: "message" | "friend_request";
+  name: string;
+  title: string | null;
+  count: number;
 }
 
 export function logMailer(): Mailer {
@@ -14,6 +23,9 @@ export function logMailer(): Mailer {
     },
     async deletionCode(to, code) {
       console.log(`[mail] deletion code for ${to}: ${code}`);
+    },
+    async digest(to, items) {
+      console.log(`[mail] digest for ${to}: ${items.length} item(s)`);
     },
   };
 }
@@ -51,6 +63,46 @@ export function deletionMail(code: string) {
   };
 }
 
+/** What waited while someone was away, in English and Turkish, with no message text (a mailbox
+ *  is read in more places than the site). */
+export function digestMail(items: DigestItem[], siteUrl: string) {
+  const messages = items.filter((i) => i.kind === "message");
+  const requests = items.filter((i) => i.kind === "friend_request");
+  const total = messages.reduce((sum, i) => sum + i.count, 0);
+  const from = (i: DigestItem) => (i.title ? `${i.name} (${i.title})` : i.name);
+  const lines = (lang: "en" | "tr") => [
+    ...messages.map((i) =>
+      lang === "en"
+        ? `· ${i.count} ${i.count === 1 ? "message" : "messages"} from ${from(i)}`
+        : `· ${from(i)}: ${i.count} mesaj`,
+    ),
+    ...requests.map((i) =>
+      lang === "en" ? `· ${i.name} wants to be your friend` : `· ${i.name} arkadaşın olmak istiyor`,
+    ),
+  ];
+  const parts = [
+    ...(total ? [`${total} new ${total === 1 ? "message" : "messages"}`] : []),
+    ...(requests.length
+      ? [`${requests.length} friend ${requests.length === 1 ? "request" : "requests"}`]
+      : []),
+  ];
+  return {
+    subject: `${parts.join(", ")} · AnyTogether`,
+    text: [
+      "While you were away:",
+      ...lines("en"),
+      "",
+      "Sen yokken:",
+      ...lines("tr"),
+      "",
+      `${siteUrl}/notifications`,
+      "",
+      `You get this at most every 6 hours because you turned it on. Turn it off: ${siteUrl}/settings#notifications`,
+      `Bunu açtığın için en fazla 6 saatte bir alırsın. Kapatmak için: ${siteUrl}/settings#notifications`,
+    ].join("\n"),
+  };
+}
+
 /** Any SMTP server, from a URL: smtps://user:password@host:465 or smtp://…:587 (STARTTLS). */
 export function smtpMailer(
   url: string,
@@ -63,6 +115,9 @@ export function smtpMailer(
     },
     async deletionCode(to, code) {
       await transport.sendMail({ from, to, ...deletionMail(code) });
+    },
+    async digest(to, items, siteUrl) {
+      await transport.sendMail({ from, to, ...digestMail(items, siteUrl) });
     },
   };
 }
@@ -79,6 +134,7 @@ export function resendMailer(apiKey: string, from: string, fetcher: typeof fetch
   return {
     signInCode: (to, code, link) => send(to, signInMail(code, link)),
     deletionCode: (to, code) => send(to, deletionMail(code)),
+    digest: (to, items, siteUrl) => send(to, digestMail(items, siteUrl)),
   };
 }
 
@@ -102,7 +158,13 @@ export function mailerFor(settings: MailSettings): Mailer & { kind: "smtp" | "re
 
 /** Keeps what was sent, for the tests. */
 export function memoryMailer() {
-  const sent: { to: string; code: string; link: string; kind: "sign-in" | "deletion" }[] = [];
+  const sent: {
+    to: string;
+    code: string;
+    link: string;
+    kind: "sign-in" | "deletion" | "digest";
+    text?: string;
+  }[] = [];
   return {
     sent,
     async signInCode(to: string, code: string, link: string) {
@@ -110,6 +172,10 @@ export function memoryMailer() {
     },
     async deletionCode(to: string, code: string) {
       sent.push({ to, code, link: "", kind: "deletion" });
+    },
+    async digest(to: string, items: DigestItem[], siteUrl: string) {
+      const mail = digestMail(items, siteUrl);
+      sent.push({ to, code: "", link: "", kind: "digest", text: `${mail.subject}\n${mail.text}` });
     },
     lastCode: (to: string, kind: "sign-in" | "deletion" = "sign-in") =>
       [...sent].reverse().find((mail) => mail.to === to && mail.kind === kind)?.code ?? "",

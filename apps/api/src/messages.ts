@@ -25,6 +25,7 @@ import { publish } from "./events.js";
 import { body } from "./http.js";
 import { blockedLink } from "./links.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import type { Notifier } from "./notifications.js";
 import { people } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
 
@@ -48,7 +49,7 @@ export const messageView = (m: Message): MessageView => ({
 
 /** Direct conversations between friends and groups made by a member: send, edit for 15 minutes,
  *  delete, read state and unread counts. Every change reaches the members' gateway channels. */
-export function messageRoutes(deps: Deps) {
+export function messageRoutes(deps: Deps, notes: Notifier) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const { db } = deps;
@@ -410,6 +411,32 @@ export function messageRoutes(deps: Deps) {
     if (!stored) return resent();
     const view = messageView(stored);
     await tell(members, { type: "message.created", data: view });
+    // Writing in it means reading it; the others, unless they muted it, get a notification while
+    // none of their devices is connected.
+    await notes.settle(me, "message", conversation.id);
+    const muted = new Set(
+      (
+        await db
+          .select({ id: conversationMembers.accountId })
+          .from(conversationMembers)
+          .where(
+            and(eq(conversationMembers.conversationId, conversation.id), eq(conversationMembers.muted, true)),
+          )
+      ).map((m) => m.id),
+    );
+    for (const member of members)
+      if (member !== me && !muted.has(member))
+        await notes.notify(member, {
+          kind: "message",
+          actorId: me,
+          subjectId: conversation.id,
+          data: {
+            conversationId: conversation.id,
+            title: conversation.title,
+            group: conversation.kind === "group",
+            text: input.text.length > 140 ? `${input.text.slice(0, 139)}…` : input.text,
+          },
+        });
     return c.json(view, 201);
   });
 
@@ -482,6 +509,7 @@ export function messageRoutes(deps: Deps) {
         type: "conversation.read",
         data: { conversationId: conversation.id, userId: me, upToSeq: upTo },
       });
+    if (upTo >= conversation.lastSeq) await notes.settle(me, "message", conversation.id);
     return c.body(null, 204);
   });
 

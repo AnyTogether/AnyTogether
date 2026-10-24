@@ -18,6 +18,7 @@ import type { Mailer } from "./mail.js";
 import { messageRoutes } from "./messages.js";
 import type { AuthVariables } from "./middleware.js";
 import { reportRoutes } from "./moderation.js";
+import { type PushSender, notificationRoutes, notifier } from "./notifications.js";
 import { partyRoutes, partyService } from "./parties.js";
 import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
@@ -48,6 +49,8 @@ export interface Deps {
   gameIconHosts?: string[];
   /** Domains messages may not link to (none when left out). */
   blockedLinkDomains?: string[];
+  /** Web Push with the server's VAPID keys; without it no push notifications are sent. */
+  push?: PushSender;
 }
 
 export function createApp(deps: Deps) {
@@ -92,17 +95,19 @@ export function createApp(deps: Deps) {
   v1.route("/", avatarRoutes(deps));
   v1.route("/", profileRoutes(deps));
   v1.route("/", accountRoutes(deps));
-  v1.route("/", friendRoutes(deps));
+  const notes = notifier(deps);
+  v1.route("/", notificationRoutes(deps, notes));
+  v1.route("/", friendRoutes(deps, notes));
   v1.route("/", gameRoutes(deps));
   v1.route("/", feedRoutes(deps));
   v1.route("/", leaderboardRoutes(deps));
   v1.route("/", reportRoutes(deps));
-  v1.route("/", messageRoutes(deps));
-  const partyPieces = partyService(deps);
+  v1.route("/", messageRoutes(deps, notes));
+  const partyPieces = partyService(deps, notes);
   v1.route("/", partyRoutes(deps, partyPieces));
   const calls = callRoutes(deps, partyPieces);
   v1.route("/", calls);
-  v1.route("/", gameSessionRoutes(deps));
+  v1.route("/", gameSessionRoutes(deps, notes));
   const shares = sharePlayRoutes(deps);
   v1.route("/", shares);
   v1.route("/", realtimeRoutes(deps));
@@ -111,6 +116,7 @@ export function createApp(deps: Deps) {
   const sweepDepartures = async (now = Date.now()) =>
     (await calls.sweepDepartures(now)) + (await shares.sweepDepartures(now));
   return Object.assign(app, {
+    notes,
     sweepDepartures,
     sweepCalls: calls.sweepDepartures,
     sweepShares: shares.sweepDepartures,

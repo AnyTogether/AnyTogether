@@ -60,6 +60,9 @@ services:
       TURN_URLS: ${TURN_URLS:-}
       GAME_ICON_HOSTS: ${GAME_ICON_HOSTS:-}
       CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-cf-connecting-ip}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     depends_on:
       postgres: { condition: service_healthy }
       valkey: { condition: service_healthy }

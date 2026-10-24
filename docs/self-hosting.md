@@ -102,6 +102,22 @@ itself, hands out credentials only through the API (TURN REST: short-lived, sign
 the public address, replace `$$(detect-external-ip)` in `compose.yaml` with `public/private`
 addresses (`--external-ip=203.0.113.7/10.0.0.5`).
 
+### Push notifications
+
+Browsers get notifications (friend requests, invites, missed calls, messages while away) through
+Web Push when the API has a VAPID key pair. Make one once and keep it, since changing it ends every
+browser's subscription:
+
+```sh
+npx web-push generate-vapid-keys
+```
+
+Put the two keys in `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`, and a contact the push services
+can reach in `VAPID_SUBJECT` (`mailto:you@example.org`). Without all three the site keeps its
+notification list but offers no push. The optional mail digest of missed messages and friend
+requests (each person turns it on in Settings; at most one mail per 6 hours) uses the sign-in mail
+settings above.
+
 ### Passkeys
 
 Passkeys belong to `DOMAIN`: they keep working across upgrades and restarts, but moving the site to
@@ -136,6 +152,8 @@ rest.
 | `TURN_URLS` | api | `.env` | STUN/TURN URLs handed to callers, comma separated |
 | `CLIENT_IP_HEADER` | api | `.env`, `cf-connecting-ip` | where per-address rate limits read the visitor's address: `cf-connecting-ip` (Cloudflare's header, then `X-Real-IP`; right behind Cloudflare or behind the bundled Caddy, which drops a CF-Connecting-IP sent by visitors), `x-real-ip` (your proxy sets `X-Real-IP` and passes CF-Connecting-IP through untouched, e.g. Traefik without Cloudflare) or `socket` (nothing in front of the API) |
 | `GAME_ICON_HOSTS` | api | `.env` | hosts (and their subdomains) a game's icon URL may point at, comma separated; launchers load icons for everyone who sees the game, so empty keeps none |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | api | `.env` | the Web Push key pair (`npx web-push generate-vapid-keys`); empty: no push notifications |
+| `VAPID_SUBJECT` | api | `.env` | a `mailto:` (or `https:`) contact for the push services |
 | `GATEWAY_PUBLIC_URL` | web | not set | where browsers open the gateway socket, when it is not `wss://<site>/rt` |
 | `HOSTNAME`, `NODE_ENV` | web | set by the image | the website listens on all addresses, in production mode (HTTPS-only cookies) |
 | `USER` | api's admin tool | your shell's | the name recorded with a ban or a handled report; `admin` when unset |

@@ -19,13 +19,14 @@ import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import type { Notifier } from "./notifications.js";
 import { people } from "./people.js";
 import { setPresenceExtra } from "./presence.js";
 
 type Party = typeof parties.$inferSelect;
 
 /** The party pieces the call routes need too. */
-export function partyService(deps: Pick<Deps, "db" | "valkey">) {
+export function partyService(deps: Pick<Deps, "db" | "valkey">, notes: Notifier) {
   const { db } = deps;
   const who = people(db);
 
@@ -125,8 +126,13 @@ export function partyService(deps: Pick<Deps, "db" | "valkey">) {
           .set({ endedAt: new Date() })
           .where(eq(parties.id, partyId))
           .returning();
-        await tx.delete(partyInvites).where(eq(partyInvites.partyId, partyId));
-        return { party: ended as Party, left: [] as string[], ended: true };
+        const invited = await tx.delete(partyInvites).where(eq(partyInvites.partyId, partyId)).returning();
+        return {
+          party: ended as Party,
+          left: [] as string[],
+          ended: true,
+          invited: invited.map((i) => i.accountId),
+        };
       }
       let current = party;
       if (party.leaderId === userId || !party.leaderId) {
@@ -137,13 +143,15 @@ export function partyService(deps: Pick<Deps, "db" | "valkey">) {
           .returning();
         current = moved as Party;
       }
-      return { party: current, left: left.map((m) => m.accountId), ended: false };
+      return { party: current, left: left.map((m) => m.accountId), ended: false, invited: [] as string[] };
     });
     if (!result) return false;
     await setPresenceExtra(deps.valkey, userId, "party", null);
     for (const hook of leaveHooks) await hook(partyId, userId, result.ended);
     if (result.ended) {
       await tell([userId], { type: "party.ended", data: { partyId } });
+      // An invite to a party that is over is no longer news.
+      for (const invitee of result.invited) await notes.withdraw(invitee, "party_invite", partyId);
       return true;
     }
     await tell([...result.left, userId], {
@@ -154,7 +162,7 @@ export function partyService(deps: Pick<Deps, "db" | "valkey">) {
     return true;
   }
 
-  return { live, partyOf, memberIds, view, announce, leave, showInPresence, tell, leaveHooks, callOf };
+  return { live, partyOf, memberIds, view, announce, leave, showInPresence, tell, leaveHooks, callOf, notes };
 }
 
 export type PartyService = ReturnType<typeof partyService>;
@@ -165,7 +173,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
   app.use("*", requireUser(deps));
   const { db } = deps;
   const who = people(db);
-  const { live, partyOf, memberIds, view, announce, leave, showInPresence, tell } = service;
+  const { live, partyOf, memberIds, view, announce, leave, showInPresence, tell, notes } = service;
 
   const invited = async (partyId: string, userId: string) =>
     (
@@ -276,6 +284,13 @@ export function partyRoutes(deps: Deps, service: PartyService) {
         fresh.map((i) => i.accountId),
         { type: "party.invite", data: { partyId: party.id, from, size: members.length } },
       );
+    for (const invite of fresh)
+      await notes.notify(invite.accountId, {
+        kind: "party_invite",
+        actorId: me,
+        subjectId: party.id,
+        data: { partyId: party.id, size: members.length },
+      });
     return c.json(await announce(party));
   });
 
@@ -301,6 +316,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
     if (joined === "ended") throw new HttpError(404, ErrorCode.notFound, "No such party");
     if (joined === "full")
       throw new HttpError(409, ErrorCode.full, `A party has at most ${maxPartySize} people`);
+    await notes.settle(me, "party_invite", party.id);
     const everyone = await memberIds(party.id);
     const member = await who.card(me);
     if (member)
@@ -322,6 +338,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
           .returning()
       : [];
     if (!party || !removed.length) throw new HttpError(404, ErrorCode.notFound, "No such invite");
+    await notes.settle(me, "party_invite", party.id);
     await announce(party);
     return c.body(null, 204);
   });

@@ -49,6 +49,13 @@ export function config(env = process.env) {
     gameIconHosts: list(env.GAME_ICON_HOSTS).map((host) => host.toLowerCase()),
     /** Domains messages may not link to: the built-in IP loggers unless BLOCKED_LINK_DOMAINS is set
      *  (empty turns it off). */
+    /** Web Push: the VAPID key pair (npx web-push generate-vapid-keys) and a mailto: or https:
+     *  contact for push services. Without all three no push notifications are sent. */
+    vapid: {
+      publicKey: env.VAPID_PUBLIC_KEY ?? "",
+      privateKey: env.VAPID_PRIVATE_KEY ?? "",
+      subject: env.VAPID_SUBJECT ?? "",
+    },
     blockedLinkDomains:
       env.BLOCKED_LINK_DOMAINS === undefined
         ? defaultBlockedLinkDomains

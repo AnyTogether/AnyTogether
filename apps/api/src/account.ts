@@ -17,9 +17,11 @@ import {
   identities,
   library,
   messages,
+  notifications,
   passkeys,
   playSessions,
   profiles,
+  pushSubscriptions,
   reports,
   sessions,
   signInRequests,
@@ -27,6 +29,7 @@ import {
 import {
   ErrorCode,
   friendsKey,
+  notificationSettingsOf,
   presenceExtraKey,
   presenceHiddenKey,
   presenceKey,
@@ -110,6 +113,7 @@ export async function exportAccount(db: Database, accountId: string) {
       country: profile.country,
       avatarUrl: profile.avatarUrl,
       privacy: privacyOf(profile.privacy),
+      notificationSettings: notificationSettingsOf(profile.notificationSettings),
     },
     avatar: avatar ? `data:image/jpeg;base64,${Buffer.from(avatar.bytes).toString("base64")}` : null,
     passkeys: (await db.select().from(passkeys).where(eq(passkeys.accountId, accountId))).map((p) => ({
@@ -236,6 +240,16 @@ export async function exportAccount(db: Database, accountId: string) {
       status: r.status,
       createdAt: r.createdAt,
     })),
+    notifications: (
+      await db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.accountId, accountId))
+        .orderBy(asc(notifications.id))
+    ).map(({ accountId: _, ...n }) => n),
+    pushSubscriptions: (
+      await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.accountId, accountId))
+    ).map((p) => ({ service: new URL(p.endpoint).host, lang: p.lang, createdAt: p.createdAt })),
     auditLog: await db
       .select({ action: auditLog.action, target: auditLog.target, createdAt: auditLog.createdAt })
       .from(auditLog)
