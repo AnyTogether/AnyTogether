@@ -1,0 +1,30 @@
+# One host name, automatic HTTPS (Let's Encrypt, or Caddy's own CA for "localhost").
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# The API and the website count rate limits per visitor from X-Real-IP (or Cloudflare's
+	# CF-Connecting-IP): set the first to the real address and drop the second, so nobody can
+	# pick their own. Behind Cloudflare, remove the "-Cf-Connecting-Ip" lines.
+	handle /api/* {
+		reverse_proxy api:8080 {
+			header_up X-Real-IP {remote_host}
+			header_up -Cf-Connecting-Ip
+		}
+	}
+	handle /rt* {
+		reverse_proxy realtime:8081 {
+			header_up X-Real-IP {remote_host}
+			header_up -Cf-Connecting-Ip
+		}
+	}
+	handle {
+		reverse_proxy web:3000 {
+			header_up X-Real-IP {remote_host}
+			header_up -Cf-Connecting-Ip
+		}
+	}
+}

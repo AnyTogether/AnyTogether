@@ -1,0 +1,160 @@
+# Your own AnyTogether on one machine: cp .env.example .env, fill it in, docker compose up -d.
+# See docs/self-hosting.md. The optional TURN relay for calls starts with --profile turn.
+name: anytogether
+
+x-node: &node
+  restart: unless-stopped
+  init: true
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: anytogether
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: anytogether
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anytogether -d anytogether"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # Rate limits, sign-in challenges, presence and the event bus: nothing that must survive a
+  # restart, so nothing is written to disk.
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # Runs the database migrations when it starts.
+  api:
+    <<: *node
+    build: { context: .., dockerfile: infra/Dockerfile.node, args: { APP: api } }
+    image: anytogether-api:local
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://anytogether:${POSTGRES_PASSWORD}@postgres:5432/anytogether
+      VALKEY_URL: redis://valkey:6379
+      PUBLIC_URL: https://${DOMAIN:?set DOMAIN in .env}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-log}
+      SMTP_URL: ${SMTP_URL:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-AnyTogether <signin@localhost>}
+      APPLE_CLIENT_IDS: ${APPLE_CLIENT_IDS:-}
+      GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+      WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+      TURN_URLS: ${TURN_URLS:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+      valkey: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 6
+
+  realtime:
+    <<: *node
+    build: { context: .., dockerfile: infra/Dockerfile.node, args: { APP: realtime } }
+    image: anytogether-realtime:local
+    environment:
+      PORT: "8081"
+      API_URL: http://api:8080
+      VALKEY_URL: redis://valkey:6379
+      PUBLIC_URL: https://${DOMAIN}
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  web:
+    <<: *node
+    build: { context: .., dockerfile: infra/Dockerfile.web }
+    image: anytogether-web:local
+    environment:
+      PORT: "3000"
+      API_URL: http://api:8080
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:3000/login"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 6
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api: { condition: service_healthy }
+      realtime: { condition: service_healthy }
+      web: { condition: service_healthy }
+
+  # STUN/TURN for voice calls behind strict NATs (docker compose --profile turn up -d). It uses
+  # the host's network for its UDP port range; TURN_SECRET is shared with the API.
+  coturn:
+    image: coturn/coturn:4.6
+    profiles: [turn]
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=3478
+      - --min-port=49160
+      - --max-port=49200
+      - --fingerprint
+      - --use-auth-secret
+      - --static-auth-secret=${TURN_SECRET:-}
+      - --realm=${DOMAIN}
+      - --external-ip=$$(detect-external-ip)
+      - --no-cli
+      - --no-tls
+      - --no-dtls
+      - --no-multicast-peers
+      # Relay only to the internet, never into this machine's or a private network.
+      - --denied-peer-ip=0.0.0.0-0.255.255.255
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=100.64.0.0-100.127.255.255
+      - --denied-peer-ip=127.0.0.0-127.255.255.255
+      - --denied-peer-ip=169.254.0.0-169.254.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+      - --denied-peer-ip=::1
+      - --denied-peer-ip=fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+      - --denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+
+volumes:
+  postgres:
+  caddy-data:
+  caddy-config:

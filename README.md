@@ -13,7 +13,8 @@ The plan lives on the `anytogether` branch of
 - `apps/worker`: background jobs (pg-boss)
 - `packages/shared`: schemas, error codes, gateway events
 - `packages/db`: Drizzle schema and SQL migrations
-- `infra/`: local development services
+- `infra/`: local development services and the Dockerfiles
+- `deploy/`: Docker Compose for running your own AnyTogether ([docs/self-hosting.md](docs/self-hosting.md))
 
 ## Development
 
@@ -23,6 +24,12 @@ pnpm dev:db                       # PostgreSQL and Valkey on the loopback (Docke
 pnpm --filter @anytogether/db migrate
 pnpm test
 ```
+
+## Running your own
+
+`deploy/` runs the whole thing on one machine with `docker compose up -d`: PostgreSQL, Valkey, the
+API, the gateway, the website, Caddy with automatic HTTPS, and optionally a TURN relay. See
+[docs/self-hosting.md](docs/self-hosting.md).
 
 ## License
 
