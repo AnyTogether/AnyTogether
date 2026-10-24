@@ -161,7 +161,11 @@ describe("notifications", () => {
 
     // Hidden presence keeps no merged key: the device's own key still counts.
     await h.call("PATCH", `${v1}/me/privacy`, { presence: "nobody" }, ayse.token);
-    await h.valkey.set(`presence:${ayse.id}:phone`, JSON.stringify({ state: "online" }), "EX", 60);
+    await h.valkey
+      .multi()
+      .set(`presence:${ayse.id}:phone`, JSON.stringify({ state: "online" }), "EX", 60)
+      .sadd(`presence-devices:${ayse.id}`, "phone")
+      .exec();
     await send("hidden but here");
     expect((await list(ayse)).body.unread).toBe(0);
   });

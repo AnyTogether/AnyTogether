@@ -1,3 +1,4 @@
+import { fromAnotherSite } from "@/lib/origin";
 import { relay } from "@/lib/session";
 
 const id = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
@@ -25,8 +26,7 @@ async function pass(request: Request, { params }: { params: Promise<{ path: stri
   if (!allowed[request.method]?.some((pattern) => pattern.test(path)))
     return Response.json({ code: "not_found", title: "Not found" }, { status: 404 });
   // A changing call must come from this website's own pages.
-  const origin = request.headers.get("origin");
-  if (request.method !== "GET" && (!origin || new URL(origin).host !== new URL(request.url).host))
+  if (request.method !== "GET" && fromAnotherSite(request))
     return Response.json({ code: "forbidden", title: "Not from this website" }, { status: 403 });
   const url = new URL(request.url);
   const search = new URLSearchParams();

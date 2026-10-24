@@ -1,10 +1,8 @@
+import { fromAnotherSite } from "@/lib/origin";
 import { relayBody } from "@/lib/session";
 
-/** Refuses a changing call that does not come from this website's own pages (or its worker). */
-const foreign = (request: Request) => {
-  const origin = request.headers.get("origin");
-  return !origin || new URL(origin).host !== new URL(request.url).host;
-};
+/** Only this website's own pages (and its worker) may change it; the middleware checks too. */
+const foreign = fromAnotherSite;
 
 /** This browser's push subscription: {endpoint, keys, lang}, tied to its sign-in. */
 export async function POST(request: Request) {

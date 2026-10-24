@@ -310,7 +310,7 @@ function ReportsPanel({
   return (
     <>
       <div className="admin-bar">
-        <div className="seg-mini" role="group">
+        <div className="seg-mini">
           {(["open", "all"] as const).map((value) => (
             <button
               key={value}
@@ -328,11 +328,7 @@ function ReportsPanel({
           ))}
         </div>
       </div>
-      {notice && (
-        <p className="notice success" role="status">
-          {notice}
-        </p>
-      )}
+      {notice && <output className="notice success">{notice}</output>}
       {page.reports.length ? (
         <ul className="reports">
           {page.reports.map((report) => (
@@ -445,7 +441,7 @@ function BansPanel({
   return (
     <>
       <div className="admin-bar">
-        <div className="seg-mini" role="group">
+        <div className="seg-mini">
           {[false, true].map((value) => (
             <button
               key={String(value)}
@@ -536,7 +532,6 @@ function PeoplePanel({ initialQuery, texts, now }: { initialQuery: string; texts
     <>
       <form
         className="search admin-search"
-        role="search"
         onSubmit={(event) => {
           event.preventDefault();
           find();

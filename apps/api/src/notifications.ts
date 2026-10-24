@@ -6,8 +6,10 @@ import {
   type NotificationView,
   PushSubscriptionInput,
   PushUnsubscribe,
+  devicePresenceKey,
   digestEveryMs,
   notificationSettingsOf,
+  presenceDevicesKey,
   presenceHiddenKey,
   presenceKey,
 } from "@anytogether/shared";
@@ -53,11 +55,13 @@ export function webPushSender(vapid: { publicKey: string; privateKey: string; su
 }
 
 /** Whether any of the user's devices has a gateway socket open now. Hidden presence keeps no merged
- *  key, so then the devices' own keys are looked at. */
+ *  key, so then the devices' own keys (listed in their set, as the gateway keeps them) decide. */
 export async function hasLiveSocket(valkey: Redis, userId: string) {
   if (await valkey.exists(presenceKey(userId))) return true;
   if (!(await valkey.exists(presenceHiddenKey(userId)))) return false;
-  return (await valkey.keys(`presence:${userId}:*`)).length > 0;
+  const devices = await valkey.smembers(presenceDevicesKey(userId));
+  if (!devices.length) return false;
+  return (await valkey.mget(...devices.map((id) => devicePresenceKey(userId, id)))).some(Boolean);
 }
 
 const iso = (date: Date) => date.toISOString();

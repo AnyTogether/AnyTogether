@@ -463,11 +463,7 @@ const tr: typeof en = {
   ],
 };
 
-export type Strings = typeof en &
-  typeof socialEn &
-  typeof feedEn &
-  typeof shareEn &
-  typeof notifyEn;
+export type Strings = typeof en & typeof socialEn & typeof feedEn & typeof shareEn & typeof notifyEn;
 /** What client components get: everything but the landing page's feature list. */
 export type UiStrings = Omit<Strings, "features">;
 export const ui = ({ features: _, ...rest }: Strings): UiStrings => rest;
