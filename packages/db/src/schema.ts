@@ -65,6 +65,29 @@ export const sessions = pgTable(
   (table) => [index().on(table.accountId), index().on(table.refreshHash), index().on(table.previousHash)],
 );
 
+/** Passkeys (WebAuthn discoverable credentials): a way in with no email, at most 10 per account.
+ *  The authenticator's own ID is the key; the public key is COSE, as the browser sent it. */
+export const passkeys = pgTable(
+  "passkeys",
+  {
+    id: text().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    publicKey: bytea().notNull(),
+    /** The signature counter; most synced passkeys always send 0. */
+    counter: bigint({ mode: "number" }).notNull().default(0),
+    transports: jsonb().$type<string[]>().notNull().default([]),
+    /** singleDevice or multiDevice (synced, e.g. iCloud Keychain or Google Password Manager). */
+    deviceType: text().notNull(),
+    backedUp: boolean().notNull().default(false),
+    lastUsedAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+  },
+  (table) => [index().on(table.accountId), check("passkey_name", sql`length(${table.name}) <= 60`)],
+);
+
 /** Short-lived sign-in requests: email codes, hand-offs to the phone, device codes. */
 export const signInRequests = pgTable(
   "sign_in_requests",
