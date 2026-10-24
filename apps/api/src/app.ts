@@ -9,6 +9,7 @@ import { HttpError } from "./errors.js";
 import { friendRoutes } from "./friends.js";
 import { gameRoutes } from "./games.js";
 import type { Mailer } from "./mail.js";
+import { messageRoutes } from "./messages.js";
 import type { AuthVariables } from "./middleware.js";
 import { reportRoutes } from "./moderation.js";
 import { profileRoutes } from "./profile.js";
@@ -62,6 +63,7 @@ export function createApp(deps: Deps) {
   v1.route("/", friendRoutes(deps));
   v1.route("/", gameRoutes(deps));
   v1.route("/", reportRoutes(deps));
+  v1.route("/", messageRoutes(deps));
   app.route("/api/v1", v1);
   return app;
 }

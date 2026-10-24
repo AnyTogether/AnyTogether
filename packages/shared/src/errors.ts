@@ -7,6 +7,10 @@ export const ErrorCode = {
   conflict: "conflict",
   unknownDevice: "unknown_device",
   unknownTrophy: "unknown_trophy",
+  /** A party, group or game session has no room left. */
+  full: "full",
+  /** Joining a game session needs the same game version and engine build. */
+  versionMismatch: "version_mismatch",
   rateLimited: "rate_limited",
   upgradeRequired: "upgrade_required",
   providerDisabled: "provider_disabled",

@@ -4,3 +4,4 @@ export * from "./events.js";
 export * from "./games.js";
 export * from "./profile.js";
 export * from "./moderation.js";
+export * from "./messages.js";

@@ -1,6 +1,6 @@
 import { type Database, accounts, blocks, friendships, handleHistory, profiles } from "@anytogether/db";
-import { type Visibility, handleHoldDays, isReservedHandle } from "@anytogether/shared";
-import { and, eq, gt, ne, or } from "drizzle-orm";
+import { type MemberView, type Visibility, handleHoldDays, isReservedHandle } from "@anytogether/shared";
+import { and, eq, gt, inArray, ne, or } from "drizzle-orm";
 
 type Querier = Pick<Database, "select">;
 export type ProfileRow = typeof profiles.$inferSelect;
@@ -81,3 +81,62 @@ export async function relationOf(db: Querier, viewer: string, owner: string): Pr
 
 export const canSee = (visibility: Visibility, relation: Relation) =>
   relation === "me" || visibility === "everyone" || (visibility === "friends" && relation === "friend");
+
+/** Who may reach whom, and how people are shown, for messages, parties, calls and game sessions. */
+export function people(db: Database) {
+  const pair = (a: string, b: string) => (a < b ? [a, b] : [b, a]) as [string, string];
+
+  const blocked = (a: string, b: string) => blockedBetween(db, a, b);
+  const friends = (a: string, b: string) => areFriends(db, a, b);
+
+  /** Of `others`, the ones who are `me`'s friends (a block always ends a friendship). */
+  const friendsAmong = async (me: string, others: string[]) => {
+    if (!others.length) return new Set<string>();
+    const rows = await db
+      .select({ userA: friendships.userA, userB: friendships.userB })
+      .from(friendships)
+      .where(
+        and(
+          eq(friendships.state, "accepted"),
+          or(
+            and(eq(friendships.userA, me), inArray(friendships.userB, others)),
+            and(eq(friendships.userB, me), inArray(friendships.userA, others)),
+          ),
+        ),
+      );
+    return new Set(rows.map((r) => (r.userA === me ? r.userB : r.userA)));
+  };
+
+  /** Of `others`, the ones with a block either way with `me`. */
+  const blockedAmong = async (me: string, others: string[]) => {
+    if (!others.length) return new Set<string>();
+    const rows = await db
+      .select({ blocker: blocks.blocker, blocked: blocks.blocked })
+      .from(blocks)
+      .where(
+        or(
+          and(eq(blocks.blocker, me), inArray(blocks.blocked, others)),
+          and(eq(blocks.blocked, me), inArray(blocks.blocker, others)),
+        ),
+      );
+    return new Set(rows.map((r) => (r.blocker === me ? r.blocked : r.blocker)));
+  };
+
+  /** Name cards by user ID, for the users that exist. */
+  const cards = async (ids: string[]) => {
+    const unique = [...new Set(ids)];
+    const rows = unique.length
+      ? await db.select().from(profiles).where(inArray(profiles.accountId, unique))
+      : [];
+    return new Map<string, MemberView>(
+      rows.map((p) => [
+        p.accountId,
+        { userId: p.accountId, handle: p.handle, displayName: p.displayName, avatar: p.avatarUrl },
+      ]),
+    );
+  };
+
+  const card = async (id: string) => (await cards([id])).get(id) ?? null;
+
+  return { pair, blocked, friends, friendsAmong, blockedAmong, cards, card };
+}

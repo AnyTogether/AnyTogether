@@ -1,3 +1,5 @@
+import type { MessageEvent } from "./messages.js";
+
 /** What the realtime gateway pushes; the API publishes them for each recipient. */
 export type GatewayEvent =
   | { type: "account.signed_out"; data: { sessionId: string } }
@@ -21,7 +23,8 @@ export type GatewayEvent =
         grade: "bronze" | "silver" | "gold" | "platinum";
         name: string | null;
       };
-    };
+    }
+  | MessageEvent;
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 

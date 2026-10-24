@@ -365,3 +365,65 @@ export const earnedTrophies = pgTable(
     index().on(table.accountId, table.earnedAt.desc()),
   ],
 );
+
+/** A direct conversation (two friends, made once: direct_key is "smaller:larger" user ID) or a group. */
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid().primaryKey(),
+    kind: text().notNull(),
+    title: text(),
+    directKey: text().unique(),
+    createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    /** The newest message's seq; a message takes last_seq + 1 in the same transaction. */
+    lastSeq: bigint({ mode: "number" }).notNull().default(0),
+    createdAt: now(),
+    /** The last message or change, for ordering the list. */
+    updatedAt: now(),
+  },
+  (table) => [
+    check("kind", sql`${table.kind} in ('direct', 'group')`),
+    check("direct_key", sql`(${table.kind} = 'direct') = (${table.directKey} is not null)`),
+  ],
+);
+
+export const conversationMembers = pgTable(
+  "conversation_members",
+  {
+    conversationId: uuid()
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    readSeq: bigint({ mode: "number" }).notNull().default(0),
+    muted: boolean().notNull().default(false),
+    joinedAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.conversationId, table.accountId] }), index().on(table.accountId)],
+);
+
+/** Text only for now; attachments stays an empty list until uploads exist. A deleted message is
+ *  emptied at once and keeps only its place. */
+export const messages = pgTable(
+  "messages",
+  {
+    conversationId: uuid()
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    seq: bigint({ mode: "number" }).notNull(),
+    /** The client's UUID, so a resent message is stored once. */
+    id: uuid().notNull().unique(),
+    authorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    text: text(),
+    attachments: jsonb().notNull().default([]),
+    replyTo: bigint({ mode: "number" }),
+    editedAt: timestamp({ withTimezone: true }),
+    deletedAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.conversationId, table.seq] }),
+    check("text_length", sql`length(${table.text}) <= 4000`),
+  ],
+);
