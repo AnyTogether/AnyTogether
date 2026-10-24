@@ -493,7 +493,12 @@ describe("theme hub", () => {
 
     const ctx = { db: h.deps.db, valkey: h.valkey };
     expect(await run(["reports"], ctx)).toContain("theme: “Neon Nights”");
-    expect(await run(["theme", theme.id, "show"], ctx)).toBe("theme “Neon Nights” is published");
+    expect(await run(["theme", theme.id, "show"], ctx)).toBe(
+      "theme “Neon Nights” is published; 3 open report(s) closed",
+    );
+    expect((await h.call("GET", `${v1}/themes`)).body.themes).toHaveLength(1);
+    // Its old reports were dismissed: one more does not send it straight back to review.
+    expect((await report((await h.user("e@example.com")).token)).status).toBe(201);
     expect((await h.call("GET", `${v1}/themes`)).body.themes).toHaveLength(1);
     expect(await run(["theme", theme.id, "hide"], ctx)).toContain("hidden");
     expect((await h.call("GET", `${v1}/themes`)).body.themes).toHaveLength(0);

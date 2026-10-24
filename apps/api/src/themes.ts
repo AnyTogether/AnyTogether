@@ -22,6 +22,7 @@ import { uuidv7 } from "uuidv7";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { body } from "./http.js";
+import { curatorHandle } from "./hubImport.js";
 import { type AuthVariables, optionalUser, requireUser } from "./middleware.js";
 import { clientIp, rateLimiter } from "./ratelimit.js";
 import { type BlobStore, postgresStore, readAll, streamOf } from "./storage.js";
@@ -128,6 +129,36 @@ export async function setThemeStatus(
     },
   });
   return row;
+}
+
+/** A moderator's verdict closes the open reports on a theme: hiding it acts on them, putting it
+ *  back dismisses them (left open, they would count again with the next report and send it
+ *  straight back to review). Holding it for review leaves them open. */
+export async function settleThemeReports(
+  db: Database,
+  id: string,
+  status: ThemeStatus,
+  by?: string,
+  actorId?: string,
+) {
+  if (status === "review") return 0;
+  const verdict = status === "hidden" ? "actioned" : "dismissed";
+  const closed = await db
+    .update(reports)
+    .set({ status: verdict, handledBy: by ?? "admin", handledAt: new Date() })
+    .where(and(eq(reports.targetKind, "theme"), eq(reports.targetId, id), eq(reports.status, "open")))
+    .returning({ id: reports.id });
+  if (closed.length)
+    await db.insert(auditLog).values(
+      closed.map((r) => ({
+        id: uuidv7(),
+        actorId: actorId ?? null,
+        action: `report.${verdict}`,
+        target: r.id,
+        data: { by },
+      })),
+    );
+  return closed.length;
 }
 
 /** After a report: a published theme that enough people reported waits for a moderator. */
@@ -373,7 +404,11 @@ export function themeRoutes(deps: Deps) {
         return {
           id: theme.id,
           name: theme.name,
-          author: maker?.displayName ?? "",
+          // The curator's themes name who made them (as their file does), not the curator.
+          author:
+            maker?.handle === curatorHandle && typeof theme.design.author === "string"
+              ? theme.design.author
+              : (maker?.displayName ?? ""),
           version: theme.version,
           style: theme.style,
           ...theme.colors,

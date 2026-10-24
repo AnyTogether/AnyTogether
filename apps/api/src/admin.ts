@@ -20,7 +20,7 @@ import { purgeDeletedAccounts } from "./account.js";
 import { config } from "./config.js";
 import { importHub } from "./hubImport.js";
 import { ban, findAccount, handleReport, isBanned, listReports, unban } from "./moderation.js";
-import { setThemeStatus } from "./themes.js";
+import { setThemeStatus, settleThemeReports } from "./themes.js";
 
 const usage = `usage: admin reports [--all]
        admin report <id> dismiss|action
@@ -123,7 +123,8 @@ export async function run(
               : null;
       if (!target || !status) return usage;
       const theme = await setThemeStatus(ctx.db, target, status, by);
-      return `theme “${theme.name}” is ${status}`;
+      const closed = await settleThemeReports(ctx.db, theme.id, status, by);
+      return `theme “${theme.name}” is ${status}${closed ? `; ${closed} open report(s) closed` : ""}`;
     }
     case "hub": {
       // The themes of the old GitHub hub (or any folder like it), shared by @anyps5.

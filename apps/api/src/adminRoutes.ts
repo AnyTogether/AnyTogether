@@ -34,7 +34,7 @@ import { ban, emailHash, handleReport, liveBan } from "./moderation.js";
 import type { Notifier } from "./notifications.js";
 import { people } from "./people.js";
 import { readAll } from "./storage.js";
-import { setThemeStatus, stillKey, themeFiles } from "./themes.js";
+import { setThemeStatus, settleThemeReports, stillKey, themeFiles } from "./themes.js";
 
 type AdminVariables = AuthVariables & { adminHandle: string };
 type Report = typeof reports.$inferSelect;
@@ -229,7 +229,7 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
 
   /** Closes a report and every other open one on the same person, message, post or theme. */
   const closeReports = async (
-    report: { id?: string; targetKind: string; targetId: string },
+    report: Pick<Report, "id" | "targetKind" | "targetId">,
     verdict: "actioned" | "dismissed",
     by: string,
     actorId: string,
@@ -241,7 +241,7 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
         and(
           eq(reports.status, "open"),
           or(
-            ...(report.id ? [eq(reports.id, report.id)] : []),
+            eq(reports.id, report.id),
             and(eq(reports.targetKind, report.targetKind), eq(reports.targetId, report.targetId)),
           ),
         ),
@@ -477,15 +477,7 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
     const by = c.get("adminHandle");
     const actorId = c.get("userId");
     await setThemeStatus(db, theme.id, input.status, by, { actorId });
-    const closed =
-      input.status === "review"
-        ? 0
-        : await closeReports(
-            { targetKind: "theme", targetId: theme.id },
-            input.status === "hidden" ? "actioned" : "dismissed",
-            by,
-            actorId,
-          );
+    const closed = await settleThemeReports(db, theme.id, input.status, by, actorId);
     const [fresh] = await db.select().from(themes).where(eq(themes.id, theme.id));
     const [view] = await themeViews([fresh as ThemeRow]);
     return c.json({ theme: view, closed });

@@ -127,13 +127,12 @@ describe("hub import", () => {
     );
     expect(json).toMatchObject({ id: byName.Glow?.id, author: "Someone Else", name: "Glow", version: 1 });
 
-    // The old launchers' index lists them too.
+    // The old launchers' index lists them too, with who made them.
     const index = await h.call("GET", `${v1}/hub/themes.json`);
-    expect(index.body.themes.map((t: { name: string }) => t.name).sort()).toEqual([
-      "Glow",
-      "Meadow",
-      "Red Room",
-    ]);
+    const authors = Object.fromEntries(
+      index.body.themes.map((t: { name: string; author: string }) => [t.name, t.author]),
+    );
+    expect(authors).toEqual({ Glow: "Someone Else", Meadow: "AnyPS5", "Red Room": "AnyPS5" });
 
     // Again: nothing new, nothing changed.
     const second = await cli("hub", "import", folder);
