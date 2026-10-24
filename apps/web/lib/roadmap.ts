@@ -268,6 +268,19 @@ export const roadmap: RoadmapItem[] = [
     },
   },
 
+  {
+    id: "opus",
+    status: "progress",
+    areas: ["mac", "online"],
+    en: {
+      t: "Opus game sound in share play",
+      d: "The game's sound as a stereo Opus track, about 128 kbit/s instead of 1.5 Mbit/s, for hosts on slow uploads. Watching in a browser plays it already; the Mac launcher sends it from its next release.",
+    },
+    tr: {
+      t: "Birlikte oynamada Opus oyun sesi",
+      d: "Oyun sesi stereo bir Opus izi olarak; 1,5 Mbit/s yerine yaklaşık 128 kbit/s, yükleme hızı düşük olanlar için. Tarayıcıda izlerken şimdiden çalıyor; Mac launcher'ı bir sonraki sürümünden itibaren gönderiyor.",
+    },
+  },
   // Next
   {
     id: "notarized",
@@ -306,19 +319,6 @@ export const roadmap: RoadmapItem[] = [
     tr: {
       t: "Windows oyunlarında telefon kumandası",
       d: "AnyPS5 Remote, AnyPS5 Desktop ile zaten eşleşiyor; onunla oynamak için Windows'a AnyPS5-ARM'dan derlenmiş motor gerekiyor.",
-    },
-  },
-  {
-    id: "opus",
-    status: "next",
-    areas: ["mac", "online"],
-    en: {
-      t: "Opus game sound in share play",
-      d: "The game's sound as an Opus track, about 128 kbit/s instead of 1.5 Mbit/s, for hosts on slow uploads.",
-    },
-    tr: {
-      t: "Birlikte oynamada Opus oyun sesi",
-      d: "Oyun sesi bir Opus izi olarak; 1,5 Mbit/s yerine yaklaşık 128 kbit/s, yükleme hızı düşük olanlar için.",
     },
   },
   {
