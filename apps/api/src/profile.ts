@@ -62,7 +62,7 @@ export function profileRoutes(deps: Deps) {
     const [account] = await db.select().from(accounts).where(eq(accounts.id, userId));
     if (!account) throw new HttpError(401, ErrorCode.unauthorized, "No such account");
     return c.json({
-      account: { id: account.id, email: account.email, createdAt: account.createdAt },
+      account: { id: account.id, email: account.email, role: account.role, createdAt: account.createdAt },
       profile: own(await load(userId)),
     });
   });

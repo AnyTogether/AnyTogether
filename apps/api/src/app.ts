@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { Redis } from "ioredis";
 import { accountRoutes } from "./account.js";
+import { adminRoutes } from "./adminRoutes.js";
 import { passkeyRoutes } from "./auth/passkeys.js";
 import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
@@ -111,6 +112,7 @@ export function createApp(deps: Deps) {
   const shares = sharePlayRoutes(deps);
   v1.route("/", shares);
   v1.route("/", realtimeRoutes(deps));
+  v1.route("/", adminRoutes(deps, notes));
   app.route("/api/v1", v1);
   /** Devices whose socket went: out of their calls and share plays. */
   const sweepDepartures = async (now = Date.now()) =>

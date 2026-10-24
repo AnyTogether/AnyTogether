@@ -5,11 +5,15 @@
  *   pnpm --filter @anytogether/api admin ban <@handle|email|id> [--days 7] [--reason "spam"]
  *   pnpm --filter @anytogether/api admin unban <@handle|email|id>
  *   pnpm --filter @anytogether/api admin user <@handle|email|id>
+ *   pnpm --filter @anytogether/api admin grant <@handle|email|id>    (the admin page at /admin)
+ *   pnpm --filter @anytogether/api admin revoke <@handle|email|id>
  *   pnpm --filter @anytogether/api admin purge
  *
  * In the API's container: node dist/admin.js <the same>. */
-import { connect } from "@anytogether/db";
+import { accounts, auditLog, connect } from "@anytogether/db";
+import { eq } from "drizzle-orm";
 import { Redis } from "ioredis";
+import { uuidv7 } from "uuidv7";
 import { purgeDeletedAccounts } from "./account.js";
 import { config } from "./config.js";
 import { ban, findAccount, handleReport, isBanned, listReports, unban } from "./moderation.js";
@@ -19,6 +23,8 @@ const usage = `usage: admin reports [--all]
        admin ban <@handle|email|id> [--days N] [--reason text]
        admin unban <@handle|email|id>
        admin user <@handle|email|id>
+       admin grant <@handle|email|id>
+       admin revoke <@handle|email|id>
        admin purge`;
 
 /** Runs one command and returns what to print; the tests call it directly. */
@@ -73,6 +79,26 @@ export async function run(args: string[], ctx: Parameters<typeof ban>[0]): Promi
         `created ${account.createdAt.toISOString()}${account.deleteAfter ? `  deleted after ${account.deleteAfter.toISOString()}` : ""}`,
         `banned now: ${await isBanned(ctx.db, { accountId: account.id, email: account.email })}`,
       ].join("\n");
+    }
+    case "grant":
+    case "revoke": {
+      if (!target) return usage;
+      const found = await findAccount(ctx.db, target);
+      if (!found) return `no account for ${target}`;
+      const role = command === "grant" ? "admin" : "user";
+      const name = found.profile?.handle ? `@${found.profile.handle}` : target;
+      if (found.account.role === role)
+        return `${name} is ${command === "grant" ? "already" : "not"} an admin`;
+      await ctx.db.update(accounts).set({ role }).where(eq(accounts.id, found.account.id));
+      await ctx.db.insert(auditLog).values({
+        id: uuidv7(),
+        action: `role.${command}`,
+        target: found.account.id,
+        data: { role, by },
+      });
+      return command === "grant"
+        ? `${name} is an admin now; the admin page is at /admin`
+        : `${name} is no longer an admin`;
     }
     case "purge":
       return `deleted ${await purgeDeletedAccounts(ctx)} account(s)`;

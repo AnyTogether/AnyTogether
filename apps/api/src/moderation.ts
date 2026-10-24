@@ -23,8 +23,9 @@ import { hash } from "./tokens.js";
 
 type Ctx = { db: Database; valkey: Redis };
 
-const emailHash = (email: string) => hash(email.trim().toLowerCase());
-const live = () => and(isNull(bans.liftedAt), or(isNull(bans.expiresAt), gt(bans.expiresAt, new Date())));
+export const emailHash = (email: string) => hash(email.trim().toLowerCase());
+export const liveBan = () =>
+  and(isNull(bans.liftedAt), or(isNull(bans.expiresAt), gt(bans.expiresAt, new Date())));
 
 /** Whether a ban in force covers this account or this address. */
 export async function isBanned(db: Database, who: { accountId?: string; email?: string | null }) {
@@ -36,7 +37,7 @@ export async function isBanned(db: Database, who: { accountId?: string; email?: 
   const found = await db
     .select({ id: bans.id })
     .from(bans)
-    .where(and(live(), or(...matches)))
+    .where(and(liveBan(), or(...matches)))
     .limit(1);
   return found.length > 0;
 }
@@ -66,7 +67,7 @@ export async function findAccount(db: Database, who: string) {
 export async function ban(
   ctx: Ctx,
   who: string,
-  options: { reason?: string; days?: number; by?: string } = {},
+  options: { reason?: string; days?: number; by?: string; actorId?: string } = {},
 ) {
   const found = await findAccount(ctx.db, who);
   const email = found?.account.email ?? (who.includes("@") ? who.trim().toLowerCase() : null);
@@ -87,6 +88,7 @@ export async function ban(
   }
   await ctx.db.insert(auditLog).values({
     id: uuidv7(),
+    actorId: options.actorId ?? null,
     action: "ban",
     target: found?.account.id ?? "email",
     data: { reason: options.reason ?? null, days: options.days ?? null, by: options.by ?? null },
@@ -95,7 +97,7 @@ export async function ban(
 }
 
 /** Lifts every ban on the account and its email. */
-export async function unban(ctx: Ctx, who: string, by?: string) {
+export async function unban(ctx: Ctx, who: string, by?: string, actorId?: string) {
   const found = await findAccount(ctx.db, who);
   const email = found?.account.email ?? (who.includes("@") ? who.trim().toLowerCase() : null);
   const matches = [
@@ -112,6 +114,7 @@ export async function unban(ctx: Ctx, who: string, by?: string) {
     await ctx.db.update(accounts).set({ status: "active" }).where(eq(accounts.id, found.account.id));
   await ctx.db.insert(auditLog).values({
     id: uuidv7(),
+    actorId: actorId ?? null,
     action: "unban",
     target: found?.account.id ?? "email",
     data: { by: by ?? null },
@@ -177,14 +180,26 @@ export async function listReports(db: Database, all = false, limit = 50) {
   }));
 }
 
-export async function handleReport(db: Database, id: string, verdict: "actioned" | "dismissed", by?: string) {
+export async function handleReport(
+  db: Database,
+  id: string,
+  verdict: "actioned" | "dismissed",
+  by?: string,
+  actorId?: string,
+) {
   const [row] = await db
     .update(reports)
     .set({ status: verdict, handledBy: by ?? "admin", handledAt: new Date() })
     .where(eq(reports.id, id))
     .returning({ id: reports.id });
   if (!row) throw new Error(`No report ${id}`);
-  await db.insert(auditLog).values({ id: uuidv7(), action: `report.${verdict}`, target: id, data: { by } });
+  await db.insert(auditLog).values({
+    id: uuidv7(),
+    actorId: actorId ?? null,
+    action: `report.${verdict}`,
+    target: id,
+    data: { by },
+  });
 }
 
 /** POST /reports: a user reports someone (later a message or more) to the moderators. */
