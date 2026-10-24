@@ -1,0 +1,33 @@
+name: check
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: anytogether
+          POSTGRES_PASSWORD: anytogether
+          POSTGRES_DB: anytogether
+        ports: ["54329:5432"]
+        options: >-
+          --health-cmd "pg_isready -U anytogether" --health-interval 2s --health-retries 30
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports: ["63799:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test

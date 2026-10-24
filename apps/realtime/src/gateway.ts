@@ -85,7 +85,9 @@ export async function createGateway(options: GatewayOptions) {
     for (const message of messages.slice(index + 1)) deliver(connection, message);
   }
 
-  const server = createServer((_request, response) => {
+  const server = createServer((request, response) => {
+    if (request.url === "/health")
+      return response.writeHead(200, { "content-type": "application/json" }).end('{"ok":true}');
     response.writeHead(426, { "content-type": "text/plain" }).end("WebSocket only");
   });
   const wss = new WebSocketServer({ server, path: "/rt", maxPayload: 64 * 1024 });
