@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar } from "@/components/Avatar";
+import { CallButton } from "@/components/Calls";
 import type { UiStrings } from "@/lib/i18n";
 import { type Friend, type Person, type Requests, byPresence, fill, isUserId, playedFor } from "@/lib/people";
 import Link from "next/link";
@@ -202,6 +203,10 @@ export function FriendsBoard({
                     <Status friend={friend} now={now} texts={texts} />
                   </Who>
                   <div className="acts">
+                    <CallButton
+                      person={friend}
+                      label={fill(texts.callFriend, { name: friend.displayName })}
+                    />
                     <FriendMenu
                       friend={friend}
                       texts={texts}

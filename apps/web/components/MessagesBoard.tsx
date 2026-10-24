@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar } from "@/components/Avatar";
+import { CallButton } from "@/components/Calls";
 import { useLive, useLiveEvents } from "@/components/Live";
 import type { UiStrings } from "@/lib/i18n";
 import { type Person, fill } from "@/lib/people";
@@ -481,6 +482,9 @@ function ThreadView({
                 : ""}
           </span>
         </span>
+        {!group && others[0] && (
+          <CallButton person={others[0]} label={fill(texts.callFriend, { name: others[0].displayName })} />
+        )}
         {group && (
           <Menu label={texts.conversationOptions}>
             {(close) => (

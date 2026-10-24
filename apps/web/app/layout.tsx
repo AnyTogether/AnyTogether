@@ -1,9 +1,11 @@
 import { Avatar } from "@/components/Avatar";
+import { CallProvider } from "@/components/Calls";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { LiveProvider } from "@/components/Live";
 import { Mark } from "@/components/Mark";
 import { UnreadBadge } from "@/components/UnreadBadge";
 import { strings } from "@/lib/i18n";
+import { callStrings } from "@/lib/i18n-social";
 import { fill } from "@/lib/people";
 import { apiJson, currentUser, incomingRequests } from "@/lib/session";
 import type { Metadata, Viewport } from "next";
@@ -131,7 +133,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <div className="glow" />
         <div className="grid" />
-        {user ? <LiveProvider me={user.account.id}>{page}</LiveProvider> : page}
+        {user ? (
+          <LiveProvider me={user.account.id}>
+            <CallProvider texts={callStrings(texts)}>{page}</CallProvider>
+          </LiveProvider>
+        ) : (
+          page
+        )}
       </body>
     </html>
   );

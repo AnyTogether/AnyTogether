@@ -711,3 +711,222 @@ svg.big {
     transition: none;
   }
 }
+
+/* Calls between friends: the incoming card and the call itself, on every page. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.call-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+.call-card,
+.call-panel {
+  pointer-events: auto;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(14, 16, 23, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  animation: call-in 0.42s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.call-card {
+  top: 18px;
+  left: 50%;
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px 14px 14px 16px;
+  translate: -50% 0;
+  --from: -14px;
+}
+.call-panel {
+  left: 24px;
+  bottom: 24px;
+  width: min(340px, calc(100vw - 32px));
+  padding: 16px;
+  --from: 14px;
+}
+body.in-call main {
+  padding-bottom: 128px;
+}
+@keyframes call-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--from)) scale(0.97);
+  }
+}
+.call-card .lines,
+.call-panel .lines {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.call-card .name,
+.call-panel .name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.call-card .meta,
+.call-panel .meta {
+  font: 400 12px / 1.3 var(--font-mono), monospace;
+  color: var(--mute);
+  font-variant-numeric: tabular-nums;
+}
+.call-panel.is-live .meta {
+  color: var(--c);
+}
+.call-panel.is-ended {
+  opacity: 0.92;
+}
+.call-panel.is-ended .meta {
+  color: var(--ink);
+}
+.call-acts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.round {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  transition: transform 0.16s cubic-bezier(0.32, 0.72, 0, 1), filter 0.2s ease;
+}
+.round svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+.round:active {
+  transform: scale(0.94);
+}
+.round:hover {
+  filter: brightness(1.08);
+}
+.round.pick {
+  color: #062019;
+  background: var(--c);
+  box-shadow: 0 0 0 4px rgba(47, 224, 196, 0.12);
+}
+.round.hang {
+  color: #2a0a0f;
+  background: var(--danger);
+}
+.round:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+svg.hang-up {
+  transform: rotate(135deg);
+}
+.mic.small-mic {
+  width: 44px;
+  height: 44px;
+}
+.mic.small-mic svg {
+  width: 20px;
+  height: 20px;
+}
+.call-face {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-grid;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease;
+}
+.call-face.speaking {
+  box-shadow: 0 0 0 2px #0d0f15, 0 0 0 4px var(--c), 0 0 22px rgba(47, 224, 196, 0.45);
+}
+.call-face.calling::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(47, 224, 196, 0.55);
+  animation: call-pulse 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+@keyframes call-pulse {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+.muted-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--danger);
+  background: #13151d;
+  border: 1px solid rgba(255, 107, 122, 0.45);
+}
+.muted-badge svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.2;
+}
+.pill.icon.call-btn svg {
+  width: 16px;
+  height: 16px;
+}
+@media (max-width: 520px) {
+  .call-card {
+    top: 12px;
+  }
+  /* On a phone the call sits on top, above the page, like the system's own call bar. */
+  .call-panel {
+    top: 12px;
+    right: 16px;
+    left: 16px;
+    bottom: auto;
+    width: auto;
+    padding: 12px;
+    gap: 12px;
+    --from: -14px;
+  }
+  .call-panel .call-face.big .avatar {
+    --size: 48px !important;
+  }
+  body.in-call main {
+    padding-top: 104px;
+    padding-bottom: 28px;
+  }
+  body.in-call .chat {
+    height: calc(100dvh - 240px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .call-card,
+  .call-panel,
+  .call-face.calling::after {
+    animation: none;
+  }
+}
