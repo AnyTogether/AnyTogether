@@ -1,3 +1,4 @@
+import type { CallEvent, SignalKind } from "./calls.js";
 import type { MessageEvent } from "./messages.js";
 import type { PartyEvent, PartyPresence } from "./parties.js";
 
@@ -32,7 +33,8 @@ export type GatewayEvent =
       };
     }
   | MessageEvent
-  | PartyEvent;
+  | PartyEvent
+  | CallEvent;
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 
@@ -42,7 +44,9 @@ export type ClientFrame =
   | {
       op: "heartbeat";
       presence?: { state: Exclude<PresenceState, "offline">; titleId?: string; since?: string };
-    };
+    }
+  /** WebRTC signalling to a peer in the same call: `device` is their session, or "*" for all. */
+  | { op: "signal"; to: string; device?: string; call: string; kind: SignalKind; data: unknown };
 
 export type ServerFrame =
   | { op: "ready"; session: string; heartbeat: number }

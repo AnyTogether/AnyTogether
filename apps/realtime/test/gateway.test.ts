@@ -245,6 +245,46 @@ describe("the gateway", () => {
     friend.socket.close();
   });
 
+  it("relays signals only between members of the call, to one device or all", async () => {
+    await valkey.sadd("call:c1:members", "u1", "u2");
+    const caller = await signedIn("u1", "mac");
+    const phone = await signedIn("u2", "phone");
+    const laptop = await signedIn("u2", "laptop");
+    const outsider = await signedIn("u3", "s3");
+
+    caller.send({
+      op: "signal",
+      to: "u2",
+      device: "laptop",
+      call: "c1",
+      kind: "offer",
+      data: { sdp: "v=0" },
+    });
+    const offer = await laptop.waitFor((frame) => frame.type === "signal");
+    expect(offer.data).toEqual({
+      call: "c1",
+      from: "u1",
+      device: "mac",
+      kind: "offer",
+      data: { sdp: "v=0" },
+    });
+    caller.send({ op: "signal", to: "u2", call: "c1", kind: "candidate", data: { candidate: "x" } });
+    await phone.waitFor((frame) => (frame.data as { kind?: string })?.kind === "candidate");
+    expect(phone.frames.filter((frame) => frame.type === "signal")).toHaveLength(1);
+
+    outsider.send({ op: "signal", to: "u1", call: "c1", kind: "offer", data: {} });
+    expect(await outsider.waitFor((frame) => frame.op === "error")).toMatchObject({ code: "not_in_call" });
+    caller.send({ op: "signal", to: "u3", call: "c1", kind: "offer", data: {} });
+    expect(await caller.waitFor((frame) => frame.op === "error")).toMatchObject({ code: "not_in_call" });
+    caller.send({ op: "signal", to: "u2", call: "c1", kind: "shout", data: {} });
+    expect(await caller.waitFor((frame) => frame.code === "bad_signal")).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(caller.frames.filter((frame) => frame.type === "signal")).toHaveLength(0);
+    // Signals are passed on, never kept for a replay.
+    expect(await valkey.xlen("events:u2")).toBe(0);
+    for (const c of [caller, phone, laptop, outsider]) c.socket.close();
+  });
+
   it("keeps presence from heartbeats", async () => {
     const c = await signedIn("u1", "s1");
     c.send({

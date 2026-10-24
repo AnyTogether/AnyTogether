@@ -33,5 +33,7 @@ export function config(env = process.env) {
       from: env.MAIL_FROM ?? "AnyTogether <signin@kodla.agency>",
     },
     providers,
+    /** TURN REST: the secret shared with the relay, and the STUN/TURN URLs handed to clients. */
+    turn: { secret: env.TURN_SECRET ?? "", urls: list(env.TURN_URLS) },
   };
 }

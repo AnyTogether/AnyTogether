@@ -2,10 +2,12 @@ import { createServer } from "node:http";
 import {
   type ClientFrame,
   type ServerFrame,
+  callMembersKey,
   friendsKey,
   presenceKey as mergedPresenceKey,
   presenceExtraKey,
   presenceHiddenKey,
+  signalKinds,
   userChannel,
   userEvents,
   withExtras,
@@ -34,7 +36,12 @@ interface Connection {
   userId: string;
   sessionId: string;
   lastHeard: number;
+  /** Signals sent in the current window, and when it started. */
+  signals: { count: number; since: number };
 }
+
+/** Enough for a full party's offers and ICE candidates at once, not for flooding a peer. */
+const signalLimit = { count: 300, windowMs: 10_000 };
 
 interface Presence {
   state: "online" | "away" | "in_game" | "offline";
@@ -62,11 +69,14 @@ export async function createGateway(options: GatewayOptions) {
   }
 
   function deliver(connection: Connection, message: string) {
-    const { id, type, data } = JSON.parse(message) as {
+    const { id, type, data, device } = JSON.parse(message) as {
       id: string;
       type: string;
       data: { sessionId?: string };
+      device?: string;
     };
+    // A signal for one device of the user reaches only that socket.
+    if (device && device !== connection.sessionId) return;
     send(connection.socket, { op: "event", id, type: type as never, data });
     if (type === "account.signed_out" && data?.sessionId === connection.sessionId) {
       connection.socket.close(CloseCode.signedOut, "signed out");
@@ -126,6 +136,38 @@ export async function createGateway(options: GatewayOptions) {
     }
   }
 
+  /** WebRTC signalling between two members of the same call, as the API set it up; passed on
+   *  through the peer's channel and never stored. */
+  async function relaySignal(connection: Connection, frame: Extract<ClientFrame, { op: "signal" }>) {
+    const { to, call, kind, device } = frame;
+    if (
+      typeof to !== "string" ||
+      typeof call !== "string" ||
+      !signalKinds.includes(kind) ||
+      (device !== undefined && typeof device !== "string")
+    )
+      return send(connection.socket, { op: "error", code: "bad_signal", message: "to, call and kind" });
+    const now = Date.now();
+    if (now - connection.signals.since > signalLimit.windowMs) connection.signals = { count: 0, since: now };
+    if (++connection.signals.count > signalLimit.count)
+      return connection.socket.close(CloseCode.tooMany, "too many signals");
+    const members = callMembersKey(call);
+    const [[, from], [, peer]] = (await store
+      .multi()
+      .sismember(members, connection.userId)
+      .sismember(members, to)
+      .exec()) as [[null, number], [null, number]];
+    if (!from || !peer || to === connection.userId)
+      return send(connection.socket, { op: "error", code: "not_in_call", message: "not in that call" });
+    const message = JSON.stringify({
+      id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
+      type: "signal",
+      data: { call, from: connection.userId, device: connection.sessionId, kind, data: frame.data ?? null },
+      ...(device && device !== "*" ? { device } : {}),
+    });
+    await store.publish(userChannel(to), message);
+  }
+
   /** The events after `resume` still kept for the user (the API keeps five minutes of them). */
   async function replay(connection: Connection, resume: string) {
     const entries = await store.xrange(userEvents(connection.userId), "-", "+");
@@ -162,13 +204,16 @@ export async function createGateway(options: GatewayOptions) {
         window = now;
         frames = 0;
       }
-      if (++frames > framesPerWindow) return socket.close(CloseCode.tooMany, "too many frames");
       let frame: ClientFrame;
       try {
         frame = JSON.parse(String(raw));
       } catch {
         return socket.close(1003, "not JSON");
       }
+      // Signals have a budget of their own (a voice call's setup sends dozens at once).
+      const signalling = frame.op === "signal" && connection !== undefined;
+      if (!signalling && ++frames > framesPerWindow)
+        return socket.close(CloseCode.tooMany, "too many frames");
       if (frame.op === "hello" && !connection) {
         clearTimeout(helloTimer);
         try {
@@ -180,7 +225,13 @@ export async function createGateway(options: GatewayOptions) {
           if (!payload.sub || typeof payload.sid !== "string") throw new Error("incomplete");
           if (await store.exists(`revoked:${payload.sid}`))
             return socket.close(CloseCode.signedOut, "signed out");
-          connection = { socket, userId: payload.sub, sessionId: payload.sid, lastHeard: Date.now() };
+          connection = {
+            socket,
+            userId: payload.sub,
+            sessionId: payload.sid,
+            lastHeard: Date.now(),
+            signals: { count: 0, since: Date.now() },
+          };
           await join(connection);
           send(socket, { op: "ready", session: payload.sid, heartbeat });
           await store.set(presenceKey(connection), JSON.stringify({ state: "online" }), "EX", 60);
@@ -196,7 +247,9 @@ export async function createGateway(options: GatewayOptions) {
         connection.lastHeard = Date.now();
         await store.set(presenceKey(connection), JSON.stringify(devicePresence(frame.presence)), "EX", 60);
         await announce(connection.userId);
+        return;
       }
+      if (frame.op === "signal") await relaySignal(connection, frame);
     }
 
     socket.on("close", () => {

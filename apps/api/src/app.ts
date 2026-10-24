@@ -5,6 +5,7 @@ import type { Redis } from "ioredis";
 import { accountRoutes } from "./account.js";
 import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
+import { callRoutes } from "./calls.js";
 import { HttpError } from "./errors.js";
 import { friendRoutes } from "./friends.js";
 import { gameRoutes } from "./games.js";
@@ -28,6 +29,8 @@ export interface Deps {
   publicUrl: string;
   /** Rate limits other than the defaults (the tests lower or raise them). */
   limits?: Partial<Limits>;
+  /** STUN/TURN for calls; without it calls get no ICE servers beyond what the client has. */
+  turn?: { secret: string; urls: string[] };
 }
 
 export function createApp(deps: Deps) {
@@ -67,6 +70,7 @@ export function createApp(deps: Deps) {
   v1.route("/", messageRoutes(deps));
   const partyPieces = partyService(deps);
   v1.route("/", partyRoutes(deps, partyPieces));
+  v1.route("/", callRoutes(deps, partyPieces));
   app.route("/api/v1", v1);
   return app;
 }

@@ -471,3 +471,23 @@ export const partyInvites = pgTable(
   },
   (table) => [primaryKey({ columns: [table.partyId, table.accountId] }), index().on(table.accountId)],
 );
+
+/** Set up by the API; the media itself goes peer to peer and is never seen by the server. Who may
+ *  signal and who is in the call now live in Valkey. */
+export const calls = pgTable(
+  "calls",
+  {
+    id: uuid().primaryKey(),
+    partyId: uuid().references(() => parties.id, { onDelete: "set null" }),
+    startedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    /** The person called, for a call between two friends. */
+    calleeId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    startedAt: now(),
+    answeredAt: timestamp({ withTimezone: true }),
+    endedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("one_call_per_party").on(table.partyId).where(sql`${table.endedAt} is null`),
+    index().on(table.calleeId),
+  ],
+);
