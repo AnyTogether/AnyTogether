@@ -3,7 +3,7 @@ import { relay } from "@/lib/session";
 const id = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const seq = "[0-9]{1,15}";
 
-/** The API paths the messages and party pages may reach through here, by method; nothing else
+/** The API paths the messages, party and watch pages may reach through here, by method; nothing else
  *  passes, and only these query parameters. */
 const allowed: Record<string, RegExp[]> = {
   GET: [
@@ -15,6 +15,8 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^parties/${id}$`),
     new RegExp(`^calls/${id}$`),
     /^ice-servers$/,
+    /^me\/share-play$/,
+    new RegExp(`^share-plays/${id}(/ice-servers)?$`),
   ],
   POST: [
     /^conversations$/,
@@ -23,6 +25,8 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^parties/${id}/(invites|join|decline|leave|kick|leader)$`),
     /^calls$/,
     new RegExp(`^calls/${id}/(answer|decline|leave|mute)$`),
+    // The website only watches: it never starts a share play or hands out pads.
+    new RegExp(`^share-plays/${id}/(join|leave|decline)$`),
   ],
   PATCH: [
     new RegExp(`^conversations/${id}$`),

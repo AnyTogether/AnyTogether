@@ -3,8 +3,10 @@ import { CallProvider } from "@/components/Calls";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { LiveProvider } from "@/components/Live";
 import { Mark } from "@/components/Mark";
+import { ShareInvites } from "@/components/ShareInvites";
 import { UnreadBadge } from "@/components/UnreadBadge";
 import { strings } from "@/lib/i18n";
+import { shareInviteStrings } from "@/lib/i18n-share";
 import { callStrings } from "@/lib/i18n-social";
 import { fill } from "@/lib/people";
 import { apiJson, currentUser, incomingRequests } from "@/lib/session";
@@ -15,6 +17,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import "./social.css";
 import "./feed.css";
+import "./share.css";
 
 const display = Space_Grotesk({
   subsets: ["latin", "latin-ext"],
@@ -144,6 +147,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         {user ? (
           <LiveProvider me={user.account.id}>
             <CallProvider texts={callStrings(texts)}>{page}</CallProvider>
+            <ShareInvites texts={shareInviteStrings(texts)} />
           </LiveProvider>
         ) : (
           page

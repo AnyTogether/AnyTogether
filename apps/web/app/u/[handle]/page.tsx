@@ -130,6 +130,16 @@ export default async function UserProfile({ params }: Params) {
                 : texts.stateAway}
           </p>
         )}
+        {presence?.share && profile.friendship === "friends" && (
+          <Link href={`/watch/${presence.share.sharePlayId}`} className="pill watch-btn watch-link in d2">
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
+              <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+              <circle cx="12" cy="12" r="2.8" />
+            </svg>
+            {fill(texts.shareWatchFriend, name)}
+            <span className="watch-game">· {presence.share.title ?? presence.share.titleId}</span>
+          </Link>
+        )}
         <p className={`bio in d3${profile.bio ? "" : " none"}`}>{profile.bio || texts.noBio}</p>
         {games && (
           <dl className="stats in d3">

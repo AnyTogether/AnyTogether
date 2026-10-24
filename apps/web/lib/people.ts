@@ -12,6 +12,15 @@ export interface Presence {
   state: PresenceState;
   titleId?: string;
   since?: string;
+  /** While they share play the game they run (older API answers lack it). */
+  share?: {
+    sharePlayId: string;
+    titleId: string;
+    title: string | null;
+    open: boolean;
+    viewers: number;
+    maxViewers: number;
+  };
 }
 
 export interface Friend extends Person {

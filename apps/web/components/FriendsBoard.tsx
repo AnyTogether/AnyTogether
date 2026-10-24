@@ -4,6 +4,8 @@ import { Avatar } from "@/components/Avatar";
 import { CallButton } from "@/components/Calls";
 import type { UiStrings } from "@/lib/i18n";
 import { type Friend, type Person, type Requests, byPresence, fill, isUserId, playedFor } from "@/lib/people";
+import type { ShareInvite } from "@/lib/share";
+import { social } from "@/lib/social";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
@@ -37,8 +39,12 @@ export function FriendsBoard({
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const waiting = useRef(initialRequests.incoming.length);
+  const [shareInvites, setShareInvites] = useState<ShareInvite[]>([]);
 
   const reload = useCallback(async () => {
+    social<{ invites: ShareInvite[] }>("me/share-play").then((mine) => {
+      if (mine.body) setShareInvites(mine.body.invites);
+    });
     const [list, asks] = await Promise.all([fetch("/me/friends"), fetch("/me/friends/requests")]);
     if (list.ok) setFriends(((await list.json()) as { friends: Friend[] }).friends);
     if (asks.ok) {
@@ -52,6 +58,12 @@ export function FriendsBoard({
     }
     setNow(Date.now());
   }, [router]);
+
+  useEffect(() => {
+    social<{ invites: ShareInvite[] }>("me/share-play").then((mine) => {
+      if (mine.body) setShareInvites(mine.body.invites);
+    });
+  }, []);
 
   useEffect(() => {
     const tick = () => {
@@ -156,6 +168,46 @@ export function FriendsBoard({
           </p>
         )}
 
+        {shareInvites.length > 0 && (
+          <div className="card">
+            <h3 className="sub">
+              {texts.shareInvitesTitle} <span className="n">{shareInvites.length}</span>
+            </h3>
+            <ul className="people">
+              {shareInvites.map((invite) => (
+                <li key={invite.sharePlayId} className="person share-row">
+                  {invite.from ? (
+                    <Who person={invite.from}>
+                      <span className="status sharing">
+                        <span className="live-dot" aria-hidden="true" />
+                        {fill(texts.shareSharing, { game: invite.title ?? invite.titleId })}
+                      </span>
+                    </Who>
+                  ) : (
+                    <span className="who" />
+                  )}
+                  <div className="acts">
+                    <button
+                      type="button"
+                      className="pill"
+                      onClick={() => {
+                        setShareInvites((list) => list.filter((i) => i.sharePlayId !== invite.sharePlayId));
+                        social(`share-plays/${invite.sharePlayId}/decline`, { method: "POST" });
+                      }}
+                    >
+                      {texts.decline}
+                    </button>
+                    <Link href={`/watch/${invite.sharePlayId}`} className="pill watch-btn">
+                      <EyeIcon />
+                      {texts.shareWatch}
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {requests.incoming.length > 0 && (
           <div className="card">
             <h3 className="sub">
@@ -203,6 +255,17 @@ export function FriendsBoard({
                     <Status friend={friend} now={now} texts={texts} />
                   </Who>
                   <div className="acts">
+                    {friend.presence.share && (
+                      <Link
+                        href={`/watch/${friend.presence.share.sharePlayId}`}
+                        className="pill watch-btn"
+                        aria-label={fill(texts.shareWatchFriend, { name: friend.displayName })}
+                        title={fill(texts.shareWatchFriend, { name: friend.displayName })}
+                      >
+                        <EyeIcon />
+                        <span className="wide">{texts.shareWatch}</span>
+                      </Link>
+                    )}
                     <CallButton
                       person={friend}
                       label={fill(texts.callFriend, { name: friend.displayName })}
@@ -275,7 +338,20 @@ function Who({
 }
 
 function Status({ friend, now, texts }: { friend: Friend; now: number; texts: UiStrings }) {
-  const { state, titleId, since } = friend.presence;
+  const { state, titleId, since, share } = friend.presence;
+  if (share) {
+    const [before, after] = texts.shareSharing.split("{game}");
+    return (
+      <span className="status sharing">
+        <span className="what">
+          {before}
+          <b>{share.title ?? share.titleId}</b>
+          {after}
+        </span>{" "}
+        <span className="time">· {fill(texts.shareSeats, { n: share.viewers, max: share.maxViewers })}</span>
+      </span>
+    );
+  }
   if (state === "in_game") {
     const time = playedFor(since, now, texts);
     const [before, after] = texts.inGame.split("{title}");
@@ -499,5 +575,14 @@ function Search({
         </ul>
       )}
     </form>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="2.8" />
+    </svg>
   );
 }

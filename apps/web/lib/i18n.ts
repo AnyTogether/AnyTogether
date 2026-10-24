@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { feedEn, feedTr } from "./i18n-feed";
+import { shareEn, shareTr } from "./i18n-share";
 import { socialEn, socialTr } from "./i18n-social";
 
 export const languages = ["en", "tr"] as const;
@@ -461,7 +462,7 @@ const tr: typeof en = {
   ],
 };
 
-export type Strings = typeof en & typeof socialEn & typeof feedEn;
+export type Strings = typeof en & typeof socialEn & typeof feedEn & typeof shareEn;
 /** What client components get: everything but the landing page's feature list. */
 export type UiStrings = Omit<Strings, "features">;
 export const ui = ({ features: _, ...rest }: Strings): UiStrings => rest;
@@ -473,5 +474,7 @@ export async function language(): Promise<Language> {
 
 /** The texts in the chosen language. */
 export async function strings(): Promise<Strings> {
-  return (await language()) === "tr" ? { ...tr, ...socialTr, ...feedTr } : { ...en, ...socialEn, ...feedEn };
+  return (await language()) === "tr"
+    ? { ...tr, ...socialTr, ...feedTr, ...shareTr }
+    : { ...en, ...socialEn, ...feedEn, ...shareEn };
 }
