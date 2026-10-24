@@ -43,7 +43,8 @@ export type PresenceState = "online" | "away" | "in_game" | "offline";
 
 /** Frames on the gateway socket. */
 export type ClientFrame =
-  | { op: "hello"; token: string; client?: string; resume?: string }
+  /** `token` is an access token; a browser, which never holds one, sends a one-time `ticket`. */
+  | { op: "hello"; token?: string; ticket?: string; client?: string; resume?: string }
   | {
       op: "heartbeat";
       presence?: { state: Exclude<PresenceState, "offline">; titleId?: string; since?: string };
@@ -58,6 +59,9 @@ export type ServerFrame =
 
 export const userChannel = (userId: string) => `user:${userId}`;
 export const userEvents = (userId: string) => `events:${userId}`;
+/** A one-time gateway ticket by the SHA-256 of its secret (hex): {userId, sessionId}, 30 s. */
+export const realtimeTicketKey = (hash: string) => `rt-ticket:${hash}`;
+export const realtimeTicketSeconds = 30;
 
 /** Each user's friends, kept by the API for the gateway's presence fan-out. */
 export const friendsKey = (userId: string) => `friends:${userId}`;

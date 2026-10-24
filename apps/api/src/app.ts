@@ -18,6 +18,7 @@ import { partyRoutes, partyService } from "./parties.js";
 import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
 import { type Limits, perIp } from "./ratelimit.js";
+import { realtimeRoutes } from "./realtime.js";
 import type { TokenSigner } from "./tokens.js";
 
 export interface Deps {
@@ -73,6 +74,7 @@ export function createApp(deps: Deps) {
   v1.route("/", partyRoutes(deps, partyPieces));
   v1.route("/", callRoutes(deps, partyPieces));
   v1.route("/", gameSessionRoutes(deps));
+  v1.route("/", realtimeRoutes(deps));
   app.route("/api/v1", v1);
   return app;
 }

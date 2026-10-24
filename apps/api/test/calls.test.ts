@@ -173,3 +173,21 @@ describe("party calls", () => {
     expect(fresh.body.expiresAt).not.toBeNull();
   });
 });
+
+describe("gateway tickets", () => {
+  it("are made for a signed-in user, kept 30 seconds by their hash", async () => {
+    h = await harness();
+    const a = await h.user("ticket@example.com");
+    const made = await h.call("POST", "/api/v1/realtime/ticket", {}, a.token);
+    expect(made.status).toBe(201);
+    expect(made.body.expiresIn).toBe(30);
+    const { createHash } = await import("node:crypto");
+    const key = `rt-ticket:${createHash("sha256").update(made.body.ticket).digest("hex")}`;
+    expect(JSON.parse((await h.valkey.get(key)) ?? "{}")).toEqual({
+      userId: a.id,
+      sessionId: deviceOf(a.token),
+    });
+    expect(await h.valkey.ttl(key)).toBeGreaterThan(25);
+    expect((await h.call("POST", "/api/v1/realtime/ticket", {})).status).toBe(401);
+  });
+});

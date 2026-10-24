@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import {
   type ClientFrame,
@@ -7,6 +8,7 @@ import {
   presenceKey as mergedPresenceKey,
   presenceExtraKey,
   presenceHiddenKey,
+  realtimeTicketKey,
   signalKinds,
   userChannel,
   userEvents,
@@ -136,6 +138,26 @@ export async function createGateway(options: GatewayOptions) {
     }
   }
 
+  /** Who says hello: an access token (launchers, the phone), or a one-time ticket the API gave the
+   *  website's server for its browser, used up here. */
+  async function identify(frame: Extract<ClientFrame, { op: "hello" }>) {
+    if (typeof frame.ticket === "string" && frame.ticket.length >= 20 && frame.ticket.length <= 100) {
+      const hash = createHash("sha256").update(frame.ticket).digest("hex");
+      const stored = await store.getdel(realtimeTicketKey(hash));
+      if (!stored) throw new Error("unknown ticket");
+      const { userId, sessionId } = JSON.parse(stored) as { userId: string; sessionId: string };
+      return { userId, sessionId };
+    }
+    if (typeof frame.token !== "string") throw new Error("no token");
+    const { payload } = await jwtVerify(frame.token, options.keys as KeyLike, {
+      issuer: options.issuer,
+      audience: "anytogether",
+      algorithms: ["EdDSA"],
+    });
+    if (!payload.sub || typeof payload.sid !== "string") throw new Error("incomplete");
+    return { userId: payload.sub, sessionId: payload.sid };
+  }
+
   /** WebRTC signalling between two members of the same call, as the API set it up; passed on
    *  through the peer's channel and never stored. */
   async function relaySignal(connection: Connection, frame: Extract<ClientFrame, { op: "signal" }>) {
@@ -217,23 +239,18 @@ export async function createGateway(options: GatewayOptions) {
       if (frame.op === "hello" && !connection) {
         clearTimeout(helloTimer);
         try {
-          const { payload } = await jwtVerify(frame.token, options.keys as KeyLike, {
-            issuer: options.issuer,
-            audience: "anytogether",
-            algorithms: ["EdDSA"],
-          });
-          if (!payload.sub || typeof payload.sid !== "string") throw new Error("incomplete");
-          if (await store.exists(`revoked:${payload.sid}`))
+          const { userId, sessionId } = await identify(frame);
+          if (await store.exists(`revoked:${sessionId}`))
             return socket.close(CloseCode.signedOut, "signed out");
           connection = {
             socket,
-            userId: payload.sub,
-            sessionId: payload.sid,
+            userId,
+            sessionId,
             lastHeard: Date.now(),
             signals: { count: 0, since: Date.now() },
           };
           await join(connection);
-          send(socket, { op: "ready", session: payload.sid, heartbeat });
+          send(socket, { op: "ready", session: sessionId, heartbeat });
           await store.set(presenceKey(connection), JSON.stringify({ state: "online" }), "EX", 60);
           await announce(connection.userId);
           if (frame.resume) await replay(connection, frame.resume);

@@ -105,6 +105,23 @@ describe("the gateway", () => {
     expect(await c.closed).toBe(4001);
   });
 
+  it("takes a one-time ticket instead of a token, once", async () => {
+    const { createHash } = await import("node:crypto");
+    const ticket = "a-ticket-from-the-api-0123456789";
+    const key = `rt-ticket:${createHash("sha256").update(ticket).digest("hex")}`;
+    await valkey.set(key, JSON.stringify({ userId: "u1", sessionId: "web1" }), "EX", 30);
+    const c = client();
+    await c.opened;
+    c.send({ op: "hello", ticket, client: "web/0.1" });
+    expect(await c.waitFor((frame) => frame.op === "ready")).toMatchObject({ session: "web1" });
+    expect(await valkey.exists(key)).toBe(0);
+    const again = client();
+    await again.opened;
+    again.send({ op: "hello", ticket });
+    expect(await again.closed).toBe(4001);
+    c.socket.close();
+  });
+
   it("closes a socket that never says hello", async () => {
     const c = client();
     await c.opened;
