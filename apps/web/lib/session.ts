@@ -41,3 +41,35 @@ export const cookieOptions = (maxAge: number) => ({
   path: "/",
   maxAge,
 });
+
+/** The signed-in browser's access token, read from its HttpOnly cookie. */
+export async function accessToken() {
+  return (await cookies()).get(accessCookie)?.value;
+}
+
+/** A GET for the signed-in user, parsed; null when signed out or when the API says no. */
+export async function apiJson<T>(path: string): Promise<{ status: number; body: T | null }> {
+  const token = await accessToken();
+  if (!token) return { status: 401, body: null };
+  const response = await api(path, { token }).catch(() => undefined);
+  if (!response) return { status: 502, body: null };
+  return { status: response.status, body: response.ok ? ((await response.json()) as T) : null };
+}
+
+/** Passes a browser's call to the API with its access token and hands the answer back as is. */
+export async function relay(path: string, init: RequestInit = {}) {
+  const token = await accessToken();
+  if (!token) return Response.json({ code: "unauthorized", title: "Sign in first" }, { status: 401 });
+  const response = await api(path, { ...init, token }).catch(() => undefined);
+  if (!response) return Response.json({ code: "unavailable", title: "Try again" }, { status: 502 });
+  return new Response(response.status === 204 ? null : await response.text(), {
+    status: response.status,
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
+  });
+}
+
+/** How many friend requests wait for an answer (the header's badge). */
+export async function incomingRequests() {
+  const { body } = await apiJson<{ incoming: unknown[] }>("/me/friends/requests");
+  return body?.incoming.length ?? 0;
+}
