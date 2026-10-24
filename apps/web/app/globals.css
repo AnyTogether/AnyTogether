@@ -804,9 +804,142 @@ button:disabled {
   .banner {
     margin: 0 -16px;
   }
+  .stats dd {
+    font-size: 16px;
+  }
+  .bar {
+    width: 64px;
+  }
+  .rarity {
+    display: none;
+  }
   .features {
     grid-template-columns: 1fr;
   }
+}
+.stats {
+  margin: 22px auto 0;
+  max-width: 420px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.stats > div {
+  padding: 12px 6px;
+}
+.stats > div + div {
+  border-left: 1px solid var(--line);
+}
+.stats dt {
+  font: 500 10.5px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.stats dd {
+  margin-top: 7px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.empty {
+  margin-top: 12px;
+  color: var(--mute);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+.games,
+.trophies {
+  list-style: none;
+  padding: 0;
+  margin-top: 8px;
+}
+.game,
+.trophy {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  min-width: 0;
+}
+.game + .game,
+.trophy + .trophy {
+  border-top: 1px solid var(--line);
+}
+.game .lines,
+.trophy .lines {
+  flex: 1;
+  min-width: 0;
+}
+.game .name,
+.trophy .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.progress {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  flex: none;
+}
+.bar {
+  display: block;
+  width: 96px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--a), var(--c));
+}
+.cup {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  --tone: #c88b57;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
+}
+.cup.silver {
+  --tone: #cbd0d6;
+}
+.cup.gold {
+  --tone: #e8c15a;
+}
+.cup.platinum {
+  --tone: #b9c8e2;
+}
+.cup svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rarity {
+  flex: none;
+  font: 400 11.5px / 1.2 var(--font-mono), monospace;
+  color: var(--mute);
+  text-align: right;
+  white-space: nowrap;
+}
+.rarity.very_rare,
+.rarity.ultra_rare {
+  color: var(--b);
 }
 @media (prefers-reduced-motion: reduce) {
   .glow,
