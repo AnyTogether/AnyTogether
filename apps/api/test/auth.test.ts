@@ -293,6 +293,17 @@ describe("the service", () => {
     expect((await h.call("GET", "/api/v1/health")).body).toEqual({ ok: true });
   });
 
+  it("refuses a request body over 8 MB before reading it all", async () => {
+    const huge = JSON.stringify({ email: "a@example.com", padding: "x".repeat(9 * 1024 * 1024) });
+    const response = await h.app.request("/api/v1/auth/email/start", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: huge,
+    });
+    expect(response.status).toBe(413);
+    expect((await response.json()).code).toBe("payload_too_large");
+  });
+
   it("speaks problem details with a stable code", async () => {
     const bad = await h.call("POST", "/api/v1/auth/email/start", { email: "not an email" });
     expect(bad.status).toBe(400);

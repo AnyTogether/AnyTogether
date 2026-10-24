@@ -1,6 +1,7 @@
 import type { Database } from "@anytogether/db";
 import { ErrorCode, problem } from "@anytogether/shared";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import type { Redis } from "ioredis";
 import { accountRoutes } from "./account.js";
 import { passkeyRoutes } from "./auth/passkeys.js";
@@ -24,6 +25,8 @@ import { type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
 import { sharePlayRoutes } from "./sharePlays.js";
 import type { TokenSigner } from "./tokens.js";
+
+export const maxBodyBytes = 8 * 1024 * 1024;
 
 export interface Deps {
   db: Database;
@@ -70,6 +73,16 @@ export function createApp(deps: Deps) {
   v1.get("/.well-known/jwks.json", async (c) => c.json({ keys: [await deps.tokens.publicJwk()] }));
   // Health checks and the gateway's key fetches above; everything else counts per address.
   v1.use("*", perIp(deps.valkey, "ip", deps.limits));
+  // No request is read into memory past 8 MB (the biggest are trophy sets in many languages).
+  v1.use(
+    "*",
+    bodyLimit({
+      maxSize: maxBodyBytes,
+      onError: () => {
+        throw new HttpError(413, ErrorCode.payloadTooLarge, "The request is too large");
+      },
+    }),
+  );
   v1.route("/auth", authRoutes(deps));
   v1.route("/auth", passkeyRoutes(deps));
 
