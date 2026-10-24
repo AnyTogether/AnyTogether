@@ -25,7 +25,7 @@ export async function fakeProvider(issuer: string) {
 
 export async function harness(overrides: Partial<Deps> = {}) {
   const { db, client } = connect(testDatabaseUrl, 4);
-  await client`truncate accounts, sign_in_requests, audit_log, friendships, blocks cascade`;
+  await client`truncate accounts, sign_in_requests, audit_log, friendships, blocks, devices, games, play_sessions, library, trophy_sets, trophies, earned_trophies cascade`;
   const valkey = new Redis(process.env.TEST_VALKEY_URL ?? "redis://127.0.0.1:63799/1");
   await valkey.flushdb();
   const mailer = memoryMailer();

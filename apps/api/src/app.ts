@@ -6,6 +6,7 @@ import type { Redis } from "ioredis";
 import { authRoutes } from "./auth/routes.js";
 import { HttpError } from "./errors.js";
 import { friendRoutes } from "./friends.js";
+import { gameRoutes } from "./games.js";
 import type { Mailer } from "./mail.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import type { ProviderConfig } from "./providers.js";
@@ -63,6 +64,7 @@ export function createApp(deps: Deps) {
   });
 
   v1.route("/", friendRoutes(deps));
+  v1.route("/", gameRoutes(deps));
   app.route("/api/v1", v1);
   return app;
 }

@@ -15,6 +15,13 @@
       "when": 1792851080208,
       "tag": "0001_colorful_caretaker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792851514878,
+      "tag": "0002_wooden_proemial_gods",
+      "breakpoints": true
     }
   ]
 }

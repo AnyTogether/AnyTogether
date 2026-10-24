@@ -8,7 +8,20 @@ export type GatewayEvent =
   | { type: "auth.handoff"; data: { handoffId: string; deviceName: string; client: string } }
   | { type: "friend.request"; data: { userId: string; handle: string; displayName: string } }
   | { type: "friend.accepted"; data: { userId: string; handle: string; displayName: string } }
-  | { type: "friend.removed"; data: { userId: string } };
+  | { type: "friend.removed"; data: { userId: string } }
+  | {
+      type: "trophy.earned";
+      /** name is null for a hidden trophy: friends who have not earned it do not learn it. */
+      data: {
+        userId: string;
+        handle: string;
+        displayName: string;
+        titleId: string;
+        trophyId: number;
+        grade: "bronze" | "silver" | "gold" | "platinum";
+        name: string | null;
+      };
+    };
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 
