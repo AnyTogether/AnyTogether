@@ -1,9 +1,9 @@
 import { accessToken, api } from "@/lib/session";
 
 /** "Download my data": the API's JSON file, handed to the browser as a download. */
-export async function GET(request: Request) {
+export async function GET() {
   const token = await accessToken();
-  if (!token) return Response.redirect(new URL("/login?next=/settings", request.url), 303);
+  if (!token) return new Response(null, { status: 303, headers: { location: "/login?next=/settings" } });
   const response = await api("/me/export", { token }).catch(() => undefined);
   if (!response) return Response.json({ code: "unavailable", title: "Try again" }, { status: 502 });
   return new Response(response.body, {

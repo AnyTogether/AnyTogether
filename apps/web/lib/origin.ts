@@ -21,3 +21,21 @@ export function fromAnotherSite(request: Request) {
 
 /** Methods that change nothing and may come from anywhere (links, other sites' navigations). */
 export const safeMethods = ["GET", "HEAD", "OPTIONS"];
+
+/** Whether a request comes from this website's own pages: its Origin names the host the request
+ *  was sent to. That host is the Host header, which the proxy passes on: request.url cannot be
+ *  used, as Next builds it from the address the server listens on (http://[::]:3000 in the
+ *  container, localhost behind any proxy), which no browser's Origin ever matches. A request with
+ *  no Origin is refused unless `required` is false (GETs, and browsers that send none on
+ *  same-origin requests). */
+export function fromThisSite(request: Request, { required = true }: { required?: boolean } = {}) {
+  const origin = request.headers.get("origin");
+  if (!origin) return !required;
+  const host = request.headers.get("host");
+  if (!host) return false;
+  try {
+    return new URL(origin).host === host.toLowerCase();
+  } catch {
+    return false;
+  }
+}

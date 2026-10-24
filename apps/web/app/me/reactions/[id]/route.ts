@@ -1,3 +1,4 @@
+import { fromThisSite } from "@/lib/origin";
 import { relay, relayBody } from "@/lib/session";
 
 const activityId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -7,8 +8,7 @@ type Params = { params: Promise<{ id: string }> };
 async function check(request: Request, { params }: Params) {
   const { id } = await params;
   if (!activityId.test(id)) return { refused: Response.json({ code: "not_found" }, { status: 404 }) };
-  const origin = request.headers.get("origin");
-  if (origin && new URL(origin).host !== new URL(request.url).host)
+  if (!fromThisSite(request, { required: false }))
     return { refused: Response.json({ code: "forbidden", title: "Not from this website" }, { status: 403 }) };
   return { id };
 }
