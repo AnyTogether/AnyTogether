@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar } from "@/components/Avatar";
+import { PartyListing } from "@/components/Discover";
 import { useLive, useLiveEvents } from "@/components/Live";
 import { Menu } from "@/components/MessagesBoard";
 import type { UiStrings } from "@/lib/i18n";
@@ -41,11 +42,14 @@ export function PartyBoard({
   initialParty,
   initialInvites,
   initialFriends,
+  games = [],
 }: {
   texts: UiStrings;
   initialParty: Party | null;
   initialInvites: PartyInvite[];
   initialFriends: FriendWithParty[];
+  /** The leader's games, to list a public party with. */
+  games?: { titleId: string; name: string }[];
 }) {
   const { me, session, send, status } = useLive();
   const [party, setParty] = useState(initialParty);
@@ -167,6 +171,8 @@ export function PartyBoard({
       case "party.invite":
       case "party.updated":
       case "party.member_joined":
+      case "party.request":
+      case "party.request_cancelled":
         return reload();
       case "presence.updated":
         setFriends((all) =>
@@ -440,6 +446,8 @@ export function PartyBoard({
         </div>
 
         {notice && <p className={`notice ${notice.kind}`}>{notice.text}</p>}
+
+        <PartyListing party={party} leader={leader} games={games} texts={texts} onChange={reload} />
 
         <div className="card raise">
           <div className="members-head">

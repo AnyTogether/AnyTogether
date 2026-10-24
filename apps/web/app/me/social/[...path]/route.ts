@@ -3,9 +3,10 @@ import { relay } from "@/lib/session";
 
 const id = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const seq = "[0-9]{1,15}";
+const title = "[A-Z]{4}[0-9]{5}";
 
-/** The API paths the messages, party, watch and notification pages may reach through here, by
- *  method; nothing else passes, and only these query parameters. */
+/** The API paths the messages, party, watch, notification and Find players pages may reach
+ *  through here, by method; nothing else passes, and only these query parameters. */
 const allowed: Record<string, RegExp[]> = {
   GET: [
     /^me\/conversations$/,
@@ -20,6 +21,14 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^share-plays/${id}(/ice-servers)?$`),
     /^me\/notifications$/,
     /^me\/notifications\/(unread|settings)$/,
+    /^lfg$/,
+    /^lfg\/games$/,
+    /^me\/lfg$/,
+    new RegExp(`^lfg/${id}$`),
+    /^(parties|share-plays)\/public$/,
+    /^discover\/(players|suggestions)$/,
+    /^me\/discovery$/,
+    new RegExp(`^games/${title}/hub$`),
   ],
   POST: [
     /^conversations$/,
@@ -32,19 +41,26 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^share-plays/${id}/(join|leave|decline)$`),
     /^me\/notifications\/read-all$/,
     new RegExp(`^me/notifications/${id}/read$`),
+    /^lfg$/,
+    new RegExp(`^(lfg|parties|share-plays)/${id}/requests$`),
+    // A share play's requests are answered by its host, in the launcher.
+    new RegExp(`^(lfg|parties)/${id}/requests/${id}/(accept|decline)$`),
   ],
   PATCH: [
     new RegExp(`^conversations/${id}$`),
     new RegExp(`^conversations/${id}/messages/${seq}$`),
     new RegExp(`^parties/${id}$`),
     /^me\/notifications\/settings$/,
+    /^me\/discovery$/,
   ],
   DELETE: [
     new RegExp(`^conversations/${id}/messages/${seq}$`),
     new RegExp(`^conversations/${id}/members/${id}$`),
+    new RegExp(`^lfg/${id}$`),
+    new RegExp(`^(lfg|parties|share-plays)/${id}/requests/me$`),
   ],
 };
-const queries = ["before", "after", "limit"];
+const queries = ["before", "after", "limit", "titleId", "purpose", "language", "now", "live"];
 
 async function pass(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const path = (await params).path.join("/");

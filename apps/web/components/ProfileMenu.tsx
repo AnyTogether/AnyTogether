@@ -2,7 +2,7 @@
 
 import type { UiStrings } from "@/lib/i18n";
 import { fill } from "@/lib/people";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 const reasons = [
   "spam",
@@ -15,8 +15,9 @@ const reasons = [
   "other",
 ] as const;
 
-/** What a report is about: a person (by default), or a theme with its own words for the sheet. */
-type Target = { kind?: "user" | "theme"; lead?: string };
+/** What a report is about: a person (by default), a theme or a looking-for-group post, with its own
+ *  words for the menu item, the sheet's title and its lead. */
+type Target = { kind?: "user" | "theme" | "lfg"; lead?: string; label?: string; title?: string };
 
 /** The ⋯ on someone's profile card (or a theme's page); for now it holds "Report", which opens the
  *  report sheet. */
@@ -25,6 +26,8 @@ export function ProfileMenu({
   texts,
   kind,
   lead,
+  label,
+  title,
 }: {
   person: { userId: string; displayName: string };
   texts: UiStrings;
@@ -76,11 +79,11 @@ export function ProfileMenu({
               dialog.current?.showModal();
             }}
           >
-            {texts.report}
+            {label ?? texts.report}
           </button>
         </div>
       )}
-      <ReportSheet dialog={dialog} person={person} texts={texts} kind={kind} lead={lead} />
+      <ReportSheet dialog={dialog} person={person} texts={texts} kind={kind} lead={lead} title={title} />
     </div>
   );
 }
@@ -91,6 +94,7 @@ function ReportSheet({
   texts,
   kind = "user",
   lead,
+  title,
 }: {
   dialog: React.RefObject<HTMLDialogElement | null>;
   person: { userId: string; displayName: string };
@@ -100,6 +104,8 @@ function ReportSheet({
   const [note, setNote] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
+  // Several report sheets can be on one page (one per post).
+  const heading = useId();
 
   const close = () => {
     dialog.current?.close();
@@ -114,7 +120,7 @@ function ReportSheet({
     <dialog
       ref={dialog}
       className="sheet"
-      aria-labelledby="report-title"
+      aria-labelledby={heading}
       onClick={(event) => {
         // A tap on the dimmed backdrop closes it.
         if (event.target === event.currentTarget) close();
@@ -124,7 +130,7 @@ function ReportSheet({
       }}
     >
       <div className="sheet-body">
-        <h3 id="report-title">{fill(texts.reportTitle, { name: person.displayName })}</h3>
+        <h3 id={heading}>{title ?? fill(texts.reportTitle, { name: person.displayName })}</h3>
         {state === "sent" ? (
           <>
             <p className="notice success">{texts.reportSent}</p>

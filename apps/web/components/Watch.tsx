@@ -25,7 +25,7 @@ import { social } from "@/lib/social";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Phase = "joining" | "watching" | "ended" | "removed" | "gone" | "full";
+type Phase = "joining" | "watching" | "ended" | "removed" | "gone" | "full" | "ask" | "asked";
 type Quality = "good" | "ok" | "poor";
 
 /** Pad packets this often while the viewer holds a pad, and at once on every change. */
@@ -114,9 +114,13 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
 
   /** Joins (again, after the socket came back: the seat moves to this device and keeps its pad). */
   const join = useCallback(async () => {
-    const joined = await social<SharePlayJoin>(`share-plays/${id}/join`, { method: "POST" });
+    const joined = await social<SharePlayJoin & { join?: string }>(`share-plays/${id}/join`, {
+      method: "POST",
+    });
     if (!joined.ok || !joined.body) {
       if (!joined.status) return;
+      // A public share play that takes requests: ask the host first.
+      if (joined.status === 403 && joined.body?.join === "request") return finish("ask", false);
       finish(joined.status === 409 ? "full" : "gone", false);
       return;
     }
@@ -162,6 +166,13 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
   useLiveEvents((event) => {
     const data = event.data;
     switch (event.type) {
+      case "share_play.request_answered":
+        if (data?.sharePlayId !== id) return;
+        if (data.answer === "accepted") {
+          joinedOnce.current = false;
+          setPhase("joining");
+        } else setPhase("gone");
+        return;
       case "share_play.signal":
         if (data?.sharePlayId !== id) return;
         if (conn.current) conn.current.onSignal(data as ShareSignal);
@@ -369,6 +380,44 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
     else
       (video.current as HTMLVideoElement & { webkitEnterFullscreen?: () => void })?.webkitEnterFullscreen?.();
   }
+
+  if (phase === "ask" || phase === "asked")
+    return (
+      <section className="page narrowish watch-over">
+        <div className="card in d1">
+          <h3 className="sub">{texts.shareTitle}</h3>
+          <output className="over-line">
+            {phase === "asked" ? texts.askedState : fill(texts.shareSharing, { game })}
+            {host && <> · {fill(texts.hostedBy, { name: hostName })}</>}
+          </output>
+          {phase === "ask" ? (
+            <button
+              type="button"
+              className="primary small"
+              onClick={async () => {
+                const asked = await social(`share-plays/${id}/requests`, { method: "POST" });
+                if (asked.ok) setPhase("asked");
+                else setNotice(asked.status === 429 ? texts.tooMany : texts.failed);
+              }}
+            >
+              {texts.askToJoin}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="pill"
+              onClick={async () => {
+                await social(`share-plays/${id}/requests/me`, { method: "DELETE" });
+                setPhase("ask");
+              }}
+            >
+              {texts.takeBack}
+            </button>
+          )}
+          {notice && <p className="error">{notice}</p>}
+        </div>
+      </section>
+    );
 
   if (phase !== "joining" && phase !== "watching") {
     const message =

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { compatEn, compatTr } from "./i18n-compat";
+import { discoverEn, discoverTr } from "./i18n-discover";
 import { downloadsEn, downloadsTr } from "./i18n-downloads";
 import { feedEn, feedTr } from "./i18n-feed";
 import { notifyEn, notifyTr } from "./i18n-notify";
@@ -473,7 +474,8 @@ export type Strings = typeof en &
   typeof notifyEn &
   typeof themesEn &
   typeof downloadsEn &
-  typeof compatEn;
+  typeof compatEn &
+  typeof discoverEn;
 /** What client components get: everything but the landing page's feature list. */
 export type UiStrings = Omit<Strings, "features">;
 export const ui = ({ features: _, ...rest }: Strings): UiStrings => rest;
@@ -486,6 +488,26 @@ export async function language(): Promise<Language> {
 /** The texts in the chosen language. */
 export async function strings(): Promise<Strings> {
   return (await language()) === "tr"
-    ? { ...tr, ...socialTr, ...feedTr, ...shareTr, ...notifyTr, ...themesTr, ...downloadsTr, ...compatTr }
-    : { ...en, ...socialEn, ...feedEn, ...shareEn, ...notifyEn, ...themesEn, ...downloadsEn, ...compatEn };
+    ? {
+        ...tr,
+        ...socialTr,
+        ...feedTr,
+        ...shareTr,
+        ...notifyTr,
+        ...themesTr,
+        ...downloadsTr,
+        ...compatTr,
+        ...discoverTr,
+      }
+    : {
+        ...en,
+        ...socialEn,
+        ...feedEn,
+        ...shareEn,
+        ...notifyEn,
+        ...themesEn,
+        ...downloadsEn,
+        ...compatEn,
+        ...discoverEn,
+      };
 }

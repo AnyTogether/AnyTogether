@@ -21,6 +21,7 @@ import "./feed.css";
 import "./share.css";
 import "./notify.css";
 import "./hub.css";
+import "./discover.css";
 
 const display = Space_Grotesk({
   subsets: ["latin", "latin-ext"],
@@ -64,6 +65,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                   <path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" />
                 </svg>
                 <span className="wide">{texts.leaderboards}</span>
+              </Link>
+              <Link href="/find" className="pill nav" aria-label={texts.findPlayers}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20.5 20.5l-4.6-4.6" />
+                  <circle cx="11" cy="9.4" r="2.2" />
+                  <path d="M7.4 14.6c.8-1.5 2.1-2.3 3.6-2.3s2.8.8 3.6 2.3" />
+                </svg>
+                <span className="wide">{texts.findPlayers}</span>
               </Link>
               <Link href="/messages" className="pill nav" aria-label={texts.messages}>
                 <svg viewBox="0 0 24 24" aria-hidden="true">

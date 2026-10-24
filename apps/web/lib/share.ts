@@ -20,6 +20,8 @@ export interface SharePlay {
   open: boolean;
   maxViewers: number;
   viewers: ShareViewer[];
+  /** Listed in public, and how (older API answers lack it). */
+  public?: { join: "request" | "open"; language: string | null; live: boolean } | null;
   startedAt: string;
 }
 

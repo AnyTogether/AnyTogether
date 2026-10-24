@@ -13,6 +13,8 @@ interface Live {
   status: Status;
   send: (frame: object) => boolean;
   subscribe: (listener: Listener) => () => void;
+  /** Sets (or, with null, drops) one component's public topics; the socket watches all of them. */
+  watch: (key: symbol, topics: string[] | null) => void;
 }
 
 const LiveContext = createContext<Live | null>(null);
@@ -27,6 +29,13 @@ export function LiveProvider({ me, children }: { me: string; children: ReactNode
   const [session, setSession] = useState<string | null>(null);
   const listeners = useRef(new Set<Listener>());
   const socket = useRef<WebSocket | null>(null);
+  const watchers = useRef(new Map<symbol, string[]>());
+  /** Tells the gateway every topic the page's components watch (again after each reconnect). */
+  const sendWatch = useCallback(() => {
+    const topics = [...new Set([...watchers.current.values()].flat())].slice(0, 8);
+    if (socket.current?.readyState === WebSocket.OPEN)
+      socket.current.send(JSON.stringify({ op: "watch", topics }));
+  }, []);
 
   useEffect(() => {
     let stopped = false;
@@ -75,6 +84,7 @@ export function LiveProvider({ me, children }: { me: string; children: ReactNode
           setStatus("ready");
           clearInterval(beat);
           beat = setInterval(heartbeat, (frame.heartbeat ?? 25) * 1000);
+          if (watchers.current.size) sendWatch();
           for (const listener of listeners.current) listener({ id: "", type: "live.ready", data: null });
           return;
         }
@@ -111,7 +121,7 @@ export function LiveProvider({ me, children }: { me: string; children: ReactNode
       document.removeEventListener("visibilitychange", visibility);
       socket.current?.close(1000, "page closed");
     };
-  }, []);
+  }, [sendWatch]);
 
   const send = useCallback((frame: object) => {
     if (socket.current?.readyState !== WebSocket.OPEN) return false;
@@ -126,8 +136,19 @@ export function LiveProvider({ me, children }: { me: string; children: ReactNode
     };
   }, []);
 
+  const watch = useCallback(
+    (key: symbol, topics: string[] | null) => {
+      if (topics) watchers.current.set(key, topics);
+      else watchers.current.delete(key);
+      sendWatch();
+    },
+    [sendWatch],
+  );
+
   return (
-    <LiveContext.Provider value={{ me, session, status, send, subscribe }}>{children}</LiveContext.Provider>
+    <LiveContext.Provider value={{ me, session, status, send, subscribe, watch }}>
+      {children}
+    </LiveContext.Provider>
   );
 }
 
@@ -143,4 +164,15 @@ export function useLiveEvents(handler: Listener) {
   const latest = useRef(handler);
   latest.current = handler;
   useEffect(() => subscribe((event) => latest.current(event)), [subscribe]);
+}
+
+/** Watches public topics (the board, the public lists) while the component is shown. */
+export function useWatch(topics: string[]) {
+  const { watch } = useLive();
+  const key = topics.join(",");
+  useEffect(() => {
+    const id = Symbol(key);
+    watch(id, key ? key.split(",") : []);
+    return () => watch(id, null);
+  }, [watch, key]);
 }

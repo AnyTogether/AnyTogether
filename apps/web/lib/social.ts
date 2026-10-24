@@ -37,6 +37,10 @@ export interface Party {
   members: PartyMember[];
   invited: Person[];
   call: { id: string; in: string[]; muted?: string[] } | null;
+  /** Listed in public, and how (older API answers lack it). */
+  public?: { join: "request" | "open"; titleId: string | null; language: string | null } | null;
+  /** Who asked to join a public party (members only). */
+  requests?: Person[];
   createdAt: string;
 }
 
