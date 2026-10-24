@@ -43,6 +43,13 @@
       "when": 1792855605976,
       "tag": "0005_worried_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792856455538,
+      "tag": "0006_clever_zaran",
+      "breakpoints": true
     }
   ]
 }
