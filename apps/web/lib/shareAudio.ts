@@ -1,7 +1,9 @@
-/** The host's game sound as it arrives on the "audio" data channel (5 ms of 16-bit stereo at
- *  48 kHz a packet), played with a small jitter buffer: playback starts once ~50 ms are queued,
- *  anything beyond ~150 ms is dropped so it never drifts behind the picture, and an underrun plays
- *  silence until the buffer has filled again. */
+/** The host's game sound, both ways it comes: as an Opus audio track on the connection (the
+ *  browser decodes it and holds it in its own jitter buffer; see shareOpus.ts), or from launchers
+ *  without the track as PCM on the "audio" data channel (5 ms of 16-bit stereo at 48 kHz a packet),
+ *  played with a small jitter buffer: playback starts once ~50 ms are queued, anything beyond
+ *  ~150 ms is dropped so it never drifts behind the picture, and an underrun plays silence until the
+ *  buffer has filled again. Both go through one gain, so volume and mute apply to either. */
 
 export interface AudioStats {
   /** Frames (48 kHz) handed to the speakers, received, and thrown away for being late or too many. */
@@ -118,10 +120,17 @@ registerProcessor("share-pcm", SharePcm);
 export class ShareAudio {
   private context: AudioContext | null = null;
   private gain: GainNode | null = null;
+  private analyser: AnalyserNode | null = null;
+  private probe: Float32Array<ArrayBuffer> | null = null;
   private node: AudioWorkletNode | null = null;
   private fallback: { ring: PcmRing; processor: ScriptProcessorNode } | null = null;
   private ready: Promise<void> | null = null;
   private lastNumber: number | null = null;
+  private track: MediaStreamTrack | null = null;
+  private trackSource: MediaStreamAudioSourceNode | null = null;
+  /** Chrome sends a remote track's sound into Web Audio only while a media element plays it too:
+   *  a muted one, never heard itself. */
+  private trackElement: HTMLAudioElement | null = null;
   private volume = 1;
   private muted = false;
   latest: AudioStats = { played: 0, received: 0, dropped: 0, underruns: 0, bufferedMs: 0 };
@@ -147,8 +156,13 @@ export class ShareAudio {
     const context = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
     this.context = context;
     const gain = context.createGain();
-    gain.connect(context.destination);
+    // What reaches the speakers, measured on the way.
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 2048;
+    gain.connect(analyser);
+    analyser.connect(context.destination);
     this.gain = gain;
+    this.analyser = analyser;
     this.apply();
     try {
       const url = URL.createObjectURL(new Blob([workletSource()], { type: "text/javascript" }));
@@ -171,7 +185,59 @@ export class ShareAudio {
       processor.connect(gain);
       this.fallback = { ring, processor };
     }
+    this.connectTrack();
     await context.resume().catch(() => {});
+  }
+
+  /** The Opus track from the connection: played through the same gain as the PCM. */
+  playTrack(track: MediaStreamTrack) {
+    if (this.track === track) return;
+    this.dropTrack();
+    this.track = track;
+    const element = new Audio();
+    element.muted = true;
+    element.srcObject = new MediaStream([track]);
+    element.play().catch(() => {});
+    this.trackElement = element;
+    track.addEventListener("ended", () => {
+      if (this.track === track) this.dropTrack();
+    });
+    this.connectTrack();
+  }
+
+  /** The level (RMS, 0-1) of the last ~40 ms that went to the speakers, after volume and mute. */
+  outputLevel() {
+    if (!this.analyser) return 0;
+    this.probe ??= new Float32Array(this.analyser.fftSize);
+    this.analyser.getFloatTimeDomainData(this.probe);
+    let sum = 0;
+    for (const value of this.probe) sum += value * value;
+    return Math.sqrt(sum / this.probe.length);
+  }
+
+  /** Whether the sound comes as the Opus track now. */
+  get onTrack() {
+    return this.track?.readyState === "live";
+  }
+
+  private connectTrack() {
+    if (!this.context || !this.gain || !this.track || this.trackSource) return;
+    try {
+      const source = this.context.createMediaStreamSource(new MediaStream([this.track]));
+      source.connect(this.gain);
+      this.trackSource = source;
+    } catch {}
+  }
+
+  private dropTrack() {
+    this.trackSource?.disconnect();
+    this.trackSource = null;
+    if (this.trackElement) {
+      this.trackElement.pause();
+      this.trackElement.srcObject = null;
+    }
+    this.trackElement = null;
+    this.track = null;
   }
 
   /** One packet from the channel. */
@@ -203,10 +269,12 @@ export class ShareAudio {
   }
 
   close() {
+    this.dropTrack();
     this.node?.disconnect();
     this.fallback?.processor.disconnect();
     this.context?.close().catch(() => {});
     this.context = null;
+    this.analyser = null;
     this.node = null;
     this.fallback = null;
     this.ready = null;

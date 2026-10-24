@@ -1,5 +1,13 @@
 import { type PadOutput, decodeAudio, decodePadOutput } from "@/lib/share";
 import type { ShareAudio } from "@/lib/shareAudio";
+import {
+  type TrackStats,
+  audioHello,
+  canPlayOpusTrack,
+  stereoOpus,
+  trackFrom,
+  trackRates,
+} from "@/lib/shareOpus";
 
 export type ShareSignalKind = "offer" | "answer" | "candidate" | "bye" | "renegotiate" | "message";
 
@@ -28,6 +36,16 @@ export interface LinkStats {
   path: "direct" | "relay" | null;
   codec: string | null;
   framesDecoded: number;
+  /** The game's sound: "opus" once it comes as the track, else "pcm" (the data channel). */
+  audio: "opus" | "pcm";
+  audioChannels: number | null;
+  audioKbps: number | null;
+  /** The track's jitter buffer hold over the last second, milliseconds. */
+  audioBufferMs: number | null;
+  /** Share of the track's samples made up for lost packets in the last second, 0-1. */
+  audioConcealed: number;
+  /** Samples of the track played so far (48 kHz, both sides counted once). */
+  audioSamples: number;
 }
 
 const emptyStats = (): LinkStats => ({
@@ -42,6 +60,12 @@ const emptyStats = (): LinkStats => ({
   path: null,
   codec: null,
   framesDecoded: 0,
+  audio: "pcm",
+  audioChannels: null,
+  audioKbps: null,
+  audioBufferMs: null,
+  audioConcealed: 0,
+  audioSamples: 0,
 });
 
 /** How long after joining the viewer waits for the host's own offer before asking for one, and
@@ -50,8 +74,9 @@ const askAfterMs = 1500;
 const askEveryMs = 5000;
 
 /** The viewer's side of share play: the host always offers; this answers, shows the picture,
- *  plays the sound from the "audio" channel and sends the pad on the "pad" channel (both
- *  unordered, no retransmits, made by the host). */
+ *  asks for the game's sound as an Opus track and plays it (or, from launchers without it, the PCM
+ *  on the "audio" channel), and sends the pad on the "pad" channel (both channels unordered, no
+ *  retransmits, made by the host). */
 export class ShareConnection {
   private pc: RTCPeerConnection | null = null;
   private queued: RTCIceCandidateInit[] = [];
@@ -59,7 +84,13 @@ export class ShareConnection {
   private pad: RTCDataChannel | null = null;
   private asker: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
-  private previous: { at: number; bytes: number; lost: number; received: number } | null = null;
+  private previous: {
+    at: number;
+    bytes: number;
+    lost: number;
+    received: number;
+    track: TrackStats | null;
+  } | null = null;
   state: LinkState = "waiting";
   stream: MediaStream | null = null;
   stats: LinkStats = emptyStats();
@@ -124,7 +155,13 @@ export class ShareConnection {
       if (pc.signalingState === "have-local-offer") await pc.setLocalDescription({ type: "rollback" });
       await pc.setRemoteDescription(data as RTCSessionDescriptionInit);
       for (const candidate of this.queued.splice(0)) await pc.addIceCandidate(candidate).catch(() => {});
-      await pc.setLocalDescription(await pc.createAnswer());
+      const answer = await pc.createAnswer();
+      // Stereo asked for, or the browser decodes the game's sound as mono.
+      try {
+        await pc.setLocalDescription({ type: "answer", sdp: stereoOpus(answer.sdp ?? "") });
+      } catch {
+        await pc.setLocalDescription(answer);
+      }
       this.options.signal(this.options.hostDevice, "answer", pc.localDescription?.toJSON());
       if (this.state !== "connected") this.set("connecting");
       return;
@@ -156,6 +193,10 @@ export class ShareConnection {
       try {
         receiver.playoutDelayHint = 0;
       } catch {}
+      if (event.track.kind === "audio") {
+        this.options.audio.playTrack(event.track);
+        return;
+      }
       if (event.track.kind !== "video") return;
       this.stream = event.streams[0] ?? new MediaStream([event.track]);
       this.options.onChange();
@@ -163,6 +204,12 @@ export class ShareConnection {
     pc.ondatachannel = ({ channel }) => {
       channel.binaryType = "arraybuffer";
       if (channel.label === "audio") {
+        // The hello: a launcher that knows it sends the sound as the Opus track instead.
+        const hello = () => {
+          if (canPlayOpusTrack() && channel.readyState === "open") channel.send(audioHello());
+        };
+        if (channel.readyState === "open") hello();
+        else channel.onopen = hello;
         channel.onmessage = (message) => {
           if (!(message.data instanceof ArrayBuffer)) return;
           const packet = decodeAudio(message.data);
@@ -218,6 +265,7 @@ export class ShareConnection {
     for (const entry of report.values()) byId.set(entry.id, entry);
     let bytes = 0;
     let received = 0;
+    let track: TrackStats | null = null;
     for (const entry of report.values()) {
       if (entry.type === "transport" && entry.selectedCandidatePairId)
         pair = byId.get(entry.selectedCandidatePairId) as RTCIceCandidatePairStats | undefined;
@@ -233,6 +281,14 @@ export class ShareConnection {
           next.jitterMs = (entry.jitterBufferDelay / entry.jitterBufferEmittedCount) * 1000;
         const codec = entry.codecId ? byId.get(entry.codecId) : undefined;
         next.codec = typeof codec?.mimeType === "string" ? codec.mimeType.replace(/^video\//, "") : null;
+      }
+      if (entry.type === "inbound-rtp" && entry.kind === "audio") {
+        track = trackFrom(entry);
+        const codec = entry.codecId ? byId.get(entry.codecId) : undefined;
+        if (typeof codec?.mimeType === "string" && /opus/i.test(codec.mimeType) && track.samples > 0)
+          next.audio = "opus";
+        next.audioChannels = typeof codec?.channels === "number" ? codec.channels : null;
+        next.audioSamples = track.samples - track.concealed;
       }
     }
     if (!pair)
@@ -252,7 +308,17 @@ export class ShareConnection {
       const gotNow = Math.max(0, received - this.previous.received);
       next.lossRate = lostNow + gotNow ? lostNow / (lostNow + gotNow) : 0;
     }
-    this.previous = { at: now, bytes, lost: next.lost, received };
+    if (track) {
+      const rates = trackRates(
+        track,
+        this.previous?.track ?? null,
+        this.previous ? (now - this.previous.at) / 1000 : 0,
+      );
+      next.audioKbps = rates.kbps;
+      next.audioBufferMs = rates.bufferMs;
+      next.audioConcealed = rates.concealed;
+    }
+    this.previous = { at: now, bytes, lost: next.lost, received, track };
     this.stats = next;
     return next;
   }

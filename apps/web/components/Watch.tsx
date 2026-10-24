@@ -59,6 +59,7 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [stats, setStats] = useState<LinkStats | null>(null);
   const [audioStats, setAudioStats] = useState<AudioStats | null>(null);
+  const [audioOut, setAudioOut] = useState(0);
   const [soundOn, setSoundOn] = useState(false);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(0.9);
@@ -249,6 +250,7 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
       setStats({ ...(await current.measure()) });
       if (audio.current) {
         setAudioStats({ ...audio.current.latest });
+        setAudioOut(audio.current.outputLevel());
         setSoundOn(audio.current.running);
       }
     }, 1000);
@@ -469,7 +471,14 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
         aria-label={fill(texts.shareWatching, { name: hostName })}
         data-link={link}
         data-frames={stats?.framesDecoded ?? 0}
-        data-sound={audioStats?.played ?? 0}
+        data-sound={stats?.audio === "opus" ? stats.audioSamples : (audioStats?.played ?? 0)}
+        data-audio={stats?.audio ?? "pcm"}
+        data-audio-channels={stats?.audioChannels ?? 0}
+        data-audio-kbps={stats?.audioKbps?.toFixed(1) ?? ""}
+        data-audio-buffer={stats?.audioBufferMs?.toFixed(1) ?? ""}
+        data-pcm={audioStats?.received ?? 0}
+        data-audio-out={audioOut.toFixed(3)}
+        data-audio-concealed={stats?.audioConcealed.toFixed(4) ?? ""}
         onPointerDown={() => {
           if (!soundOn) enableSound();
         }}
@@ -594,7 +603,15 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
             </div>
             <div>
               <dt>{texts.shareStatAudio}</dt>
-              <dd>{audioStats && soundOn ? ms(audioStats.bufferedMs) : "–"}</dd>
+              <dd>
+                {!soundOn
+                  ? "–"
+                  : stats?.audio === "opus"
+                    ? `${ms(stats.audioBufferMs)} · Opus${stats.audioKbps ? ` ${Math.round(stats.audioKbps)} kbit/s` : ""}`
+                    : audioStats
+                      ? `${ms(audioStats.bufferedMs)} · PCM`
+                      : "–"}
+              </dd>
             </div>
             <div>
               <dt>{texts.shareStatLost}</dt>
