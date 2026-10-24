@@ -1,6 +1,7 @@
 import { AvatarEditor } from "@/components/AvatarEditor";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
+import { PushSwitch } from "@/components/PushSwitch";
 import { DeleteAccount, HandleForm, PrivacyForm, ProfileForm, SessionList } from "@/components/Settings";
 import { countryOptions } from "@/lib/countries";
 import { strings, ui } from "@/lib/i18n";
@@ -67,7 +68,9 @@ export default async function Settings() {
           <article className="card" id="notifications">
             <h3 className="sub">{texts.sectionNotifications}</h3>
             <p className="hint section-lead">{texts.notifySettingsLead}</p>
-            <NotificationSettings setup={notify.body} texts={t} />
+            <NotificationSettings setup={notify.body} texts={t}>
+              <PushSwitch publicKey={notify.body.push?.publicKey ?? null} texts={t} />
+            </NotificationSettings>
           </article>
         )}
 

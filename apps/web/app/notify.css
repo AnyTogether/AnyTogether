@@ -217,11 +217,19 @@ span.toggle {
   background: rgba(47, 224, 196, 0.04);
 }
 .push-box .lines {
-  flex: 1;
-  gap: 3px;
+  flex: 1 1 200px;
+  gap: 4px;
 }
 .push-box .lines > span {
   white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.push-box .meta {
+  font: 400 13px / 1.45 var(--font-display), system-ui, sans-serif;
+}
+.push-box > button {
+  flex: none;
 }
 .push-box b {
   font-size: 14px;
@@ -263,7 +271,7 @@ span.toggle {
   .push-box {
     flex-wrap: wrap;
   }
-  .push-box .pill {
+  .push-box > button {
     margin-left: 50px;
   }
 }
