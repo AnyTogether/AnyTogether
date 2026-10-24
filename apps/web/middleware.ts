@@ -1,7 +1,13 @@
+import { fromAnotherSite, safeMethods } from "@/lib/origin";
 import { type NextRequest, NextResponse } from "next/server";
 
-/** Keeps the access token fresh: when it has expired and a refresh token is there, turn it in. */
+/** Refuses changes sent by other sites' pages; keeps the access token fresh: when it has expired
+ *  and a refresh token is there, turn it in. */
 export async function middleware(request: NextRequest) {
+  if (!safeMethods.includes(request.method) && fromAnotherSite(request))
+    return NextResponse.json({ code: "forbidden", title: "Not from this website" }, { status: 403 });
+  // Signing in and out keeps its own cookies.
+  if (request.nextUrl.pathname.startsWith("/auth/")) return NextResponse.next();
   const response = NextResponse.next();
   if (request.cookies.get("at_access") || !request.cookies.get("at_refresh")) return response;
   const refreshed = await fetch(`${process.env.API_URL ?? "http://127.0.0.1:8080"}/api/v1/auth/token`, {
@@ -47,4 +53,4 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next({ request, headers: response.headers });
 }
 
-export const config = { matcher: ["/((?!_next/|api/|auth/|favicon).*)"] };
+export const config = { matcher: ["/((?!_next/|api/|favicon).*)"] };
