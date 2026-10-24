@@ -47,6 +47,8 @@ export function config(env = process.env) {
     /** Hosts game icons may come from (GAME_ICON_HOSTS); launchers load them for everyone who
      *  sees the game, so none are kept unless set. */
     gameIconHosts: list(env.GAME_ICON_HOSTS).map((host) => host.toLowerCase()),
+    /** Optional: a GitHub token, so release checks get more than 60 calls an hour. */
+    githubToken: env.GITHUB_TOKEN || undefined,
     /** Domains messages may not link to: the built-in IP loggers unless BLOCKED_LINK_DOMAINS is set
      *  (empty turns it off). */
     /** Web Push: the VAPID key pair (npx web-push generate-vapid-keys) and a mailto: or https:

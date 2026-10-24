@@ -35,6 +35,7 @@ const app = createApp({
   gameIconHosts: settings.gameIconHosts,
   clientIpHeader: settings.clientIpHeader,
   push,
+  githubToken: settings.githubToken,
 });
 serve({ fetch: app.fetch, port: settings.port }, (info) => console.log(`api listening on ${info.port}`));
 

@@ -139,6 +139,14 @@ function Landing({ texts }: { texts: Strings }) {
       <p className="lead in d3">
         <b>AnyTogether</b> {texts.lead}
       </p>
+      <div className="hero-links in d3">
+        <Link href="/download" className="pill accent">
+          {texts.downloads}
+        </Link>
+        <Link href="/themes" className="pill">
+          {texts.themes}
+        </Link>
+      </div>
       <div className="features in d4">
         {texts.features.map(([title, detail], index) => (
           <div className="f" key={title}>

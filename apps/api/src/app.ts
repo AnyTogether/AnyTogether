@@ -25,6 +25,7 @@ import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
 import { type ClientIpHeader, type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
+import { releaseRoutes } from "./releases.js";
 import { sharePlayRoutes } from "./sharePlays.js";
 import type { BlobStore } from "./storage.js";
 import { isThemeUpload, themeRoutes } from "./themes.js";
@@ -56,6 +57,9 @@ export interface Deps {
   push?: PushSender;
   /** Where theme files are kept: PostgreSQL when left out. */
   blobs?: BlobStore;
+  /** How GitHub is asked for releases (the tests answer themselves), and a token for more calls. */
+  githubFetch?: typeof fetch;
+  githubToken?: string;
 }
 
 export function createApp(deps: Deps) {
@@ -97,8 +101,9 @@ export function createApp(deps: Deps) {
 
   // Before the signed-in routes: avatars are served to anyone.
   v1.route("/", avatarRoutes(deps));
-  // The Theme Hub is open to anyone too.
+  // The Theme Hub and downloads are open to anyone too.
   v1.route("/", themeRoutes(deps));
+  v1.route("/", releaseRoutes(deps));
   v1.route("/", profileRoutes(deps));
   v1.route("/", accountRoutes(deps));
   const notes = notifier(deps);

@@ -140,6 +140,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <span>&copy; 2026 AnyTogether</span>
           <nav className="foot-links" aria-label="AnyTogether">
             <Link href="/themes">{texts.themes}</Link>
+            <Link href="/download">{texts.downloads}</Link>
           </nav>
         </div>
         <div className="foot-end">
