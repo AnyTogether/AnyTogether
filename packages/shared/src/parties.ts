@@ -27,8 +27,8 @@ export interface PartyView {
   members: (MemberView & { joinedAt: string })[];
   /** People invited who have not answered yet. */
   invited: MemberView[];
-  /** The party's voice call while one runs: its ID and who is in it. */
-  call: { id: string; in: string[] } | null;
+  /** The party's voice call while one runs: its ID, who is in it and who of them is muted. */
+  call: { id: string; in: string[]; muted: string[] } | null;
   createdAt: string;
 }
 

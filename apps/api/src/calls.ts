@@ -3,13 +3,18 @@ import { calls } from "@anytogether/db";
 import {
   CallCreate,
   type CallJoin,
+  CallMute,
   type CallPeer,
   type CallView,
   ErrorCode,
   type GatewayEvent,
   type IceServer,
+  callDeparturesKey,
   callInKey,
   callMembersKey,
+  callMutedKey,
+  deviceCallsKey,
+  devicePresenceKey,
   turnCredentialSeconds,
 } from "@anytogether/shared";
 import { and, eq, isNull } from "drizzle-orm";
@@ -19,6 +24,7 @@ import { z } from "zod";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
+import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import type { PartyService } from "./parties.js";
 import { people } from "./people.js";
@@ -60,8 +66,18 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     for (const userId of new Set(userIds)) await publish(valkey, userId, event);
   };
 
-  const peers = async (callId: string): Promise<CallPeer[]> =>
-    Object.entries(await valkey.hgetall(callInKey(callId))).map(([userId, device]) => ({ userId, device }));
+  const peers = async (callId: string): Promise<CallPeer[]> => {
+    const [[, inCall], [, muted]] = (await valkey
+      .multi()
+      .hgetall(callInKey(callId))
+      .smembers(callMutedKey(callId))
+      .exec()) as [[null, Record<string, string>], [null, string[]]];
+    return Object.entries(inCall).map(([userId, device]) => ({
+      userId,
+      device,
+      muted: muted.includes(userId),
+    }));
+  };
 
   const view = async (call: Call): Promise<CallView> => ({
     id: call.id,
@@ -80,14 +96,16 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     ...iceServers(deps.turn, me),
   });
 
-  /** May signal in it, and is in it now on `device`. */
+  /** May signal in it, and is in it now on `device` (which, when its socket goes, leaves it). */
   const enter = async (callId: string, userIds: string[], me: string, device: string) => {
     await valkey
       .multi()
       .sadd(callMembersKey(callId), ...userIds)
       .hset(callInKey(callId), me, device)
+      .sadd(deviceCallsKey(device), callId)
       .expire(callMembersKey(callId), keep)
       .expire(callInKey(callId), keep)
+      .expire(deviceCallsKey(device), keep)
       .exec();
   };
 
@@ -116,13 +134,19 @@ export function callRoutes(deps: Deps, parties: PartyService) {
       .returning();
     if (!ended) return;
     const members = await valkey.smembers(callMembersKey(call.id));
-    await valkey.del(callMembersKey(call.id), callInKey(call.id));
+    const devices = Object.values(await valkey.hgetall(callInKey(call.id)));
+    const cleanup = valkey.multi().del(callMembersKey(call.id), callInKey(call.id), callMutedKey(call.id));
+    for (const device of devices) cleanup.srem(deviceCallsKey(device), call.id);
+    await cleanup.exec();
     await tell(members, { type: "call.ended", data: { callId: call.id, partyId: call.partyId, reason } });
   }
 
   /** Out of the call: a direct call ends; a party call ends when its last voice leaves. */
   async function leaveCall(call: Call, me: string, stillMember: boolean) {
+    const device = await valkey.hget(callInKey(call.id), me);
     const removed = await valkey.hdel(callInKey(call.id), me);
+    await valkey.srem(callMutedKey(call.id), me);
+    if (device) await valkey.srem(deviceCallsKey(device), call.id);
     if (!stillMember) await valkey.srem(callMembersKey(call.id), me);
     if (!call.partyId) return end(call, "ended");
     if (removed)
@@ -144,7 +168,13 @@ export function callRoutes(deps: Deps, parties: PartyService) {
   // The party view shows its call; leaving the party leaves its call.
   parties.callOf.current = async (partyId) => {
     const call = await partyCall(partyId);
-    return call ? { id: call.id, in: (await peers(call.id)).map((p) => p.userId) } : null;
+    if (!call) return null;
+    const now = await peers(call.id);
+    return {
+      id: call.id,
+      in: now.map((p) => p.userId),
+      muted: now.filter((p) => p.muted).map((p) => p.userId),
+    };
   };
   parties.leaveHooks.push(async (partyId, userId, ended) => {
     const call = await partyCall(partyId);
@@ -225,19 +255,70 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     return c.body(null, 204);
   });
 
-  app.post("/calls/:id/leave", async (c) => {
-    const me = c.get("userId");
-    const call = await asMember(c.req.param("id"), me);
+  /** Out of a call by choice or because the device went away; the party shows it. */
+  async function leaveAndShow(call: Call, me: string) {
     await leaveCall(call, me, true);
     if (call.partyId) {
       const party = await parties.live(call.partyId);
       if (party) await parties.announce(party);
     }
+  }
+
+  app.post("/calls/:id/leave", async (c) => {
+    const me = c.get("userId");
+    const call = await asMember(c.req.param("id"), me);
+    await leaveAndShow(call, me);
     return c.body(null, 204);
+  });
+
+  /** Muted or not: every member hears it, and the party view shows it. */
+  app.post("/calls/:id/mute", async (c) => {
+    const me = c.get("userId");
+    const call = await asMember(c.req.param("id"), me);
+    const { muted } = await body(c, CallMute);
+    if (!(await valkey.hexists(callInKey(call.id), me)))
+      throw new HttpError(409, ErrorCode.conflict, "Join the call first");
+    const changed = muted
+      ? await valkey.sadd(callMutedKey(call.id), me)
+      : await valkey.srem(callMutedKey(call.id), me);
+    await valkey.expire(callMutedKey(call.id), keep);
+    if (changed) {
+      await tell(await valkey.smembers(callMembersKey(call.id)), {
+        type: "call.updated",
+        data: { callId: call.id, partyId: call.partyId, userId: me, muted },
+      });
+      if (call.partyId) {
+        const party = await parties.live(call.partyId);
+        if (party) await parties.announce(party);
+      }
+    }
+    return c.json(await view(call));
   });
 
   /** Fresh relay credentials for a call that outlives them. */
   app.get("/ice-servers", (c) => c.json(iceServers(deps.turn, c.get("userId"))));
 
-  return app;
+  /** Devices whose gateway socket closed (the gateway notes them) and did not come back within
+   *  the grace are taken out of the calls they were in: the others hear `call.left`, and a call
+   *  with nobody left ends. Run every few seconds; returns how many devices it took out. */
+  async function sweepDepartures(now = Date.now()) {
+    const due = await valkey.zrangebyscore(callDeparturesKey, 0, now, "LIMIT", 0, 100);
+    let gone = 0;
+    for (const entry of due) {
+      // Another API process may have taken it already.
+      if (!(await valkey.zrem(callDeparturesKey, entry))) continue;
+      const [userId, device] = entry.split(":") as [string, string];
+      if (!userId || !device || (await valkey.exists(devicePresenceKey(userId, device)))) continue;
+      for (const callId of await valkey.smembers(deviceCallsKey(device))) {
+        const call = await live(callId);
+        if (call && (await valkey.hget(callInKey(call.id), userId)) === device)
+          await leaveAndShow(call, userId);
+        else await valkey.srem(deviceCallsKey(device), callId);
+      }
+      gone++;
+    }
+    return gone;
+  }
+
+  return Object.assign(app, { sweepDepartures });
 }

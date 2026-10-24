@@ -307,6 +307,25 @@ describe("the gateway", () => {
     for (const c of [caller, phone, laptop, outsider]) c.socket.close();
   });
 
+  it("notes a device that goes while in a call, unless another tab of it is still here", async () => {
+    await valkey.sadd("device-calls:web1", "c1");
+    const tab = await signedIn("u1", "web1");
+    const other = await signedIn("u1", "web1");
+    const phone = await signedIn("u1", "phone");
+    other.socket.close();
+    phone.socket.close();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await valkey.zcard("call-departures")).toBe(0);
+    expect(await valkey.exists("presence:u1:web1")).toBe(1);
+    const before = Date.now();
+    tab.socket.close();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const due = Number(await valkey.zscore("call-departures", "u1:web1"));
+    expect(due).toBeGreaterThanOrEqual(before + 20_000);
+    expect(due).toBeLessThan(before + 21_000);
+    expect(await valkey.exists("presence:u1:web1")).toBe(0);
+  });
+
   it("keeps presence from heartbeats", async () => {
     const c = await signedIn("u1", "s1");
     c.send({

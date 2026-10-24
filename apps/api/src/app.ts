@@ -76,9 +76,10 @@ export function createApp(deps: Deps) {
   v1.route("/", messageRoutes(deps));
   const partyPieces = partyService(deps);
   v1.route("/", partyRoutes(deps, partyPieces));
-  v1.route("/", callRoutes(deps, partyPieces));
+  const calls = callRoutes(deps, partyPieces);
+  v1.route("/", calls);
   v1.route("/", gameSessionRoutes(deps));
   v1.route("/", realtimeRoutes(deps));
   app.route("/api/v1", v1);
-  return app;
+  return Object.assign(app, { sweepDepartures: calls.sweepDepartures });
 }

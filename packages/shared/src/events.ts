@@ -65,6 +65,9 @@ export const realtimeTicketSeconds = 30;
 
 /** Each user's friends, kept by the API for the gateway's presence fan-out. */
 export const friendsKey = (userId: string) => `friends:${userId}`;
+/** One device's presence while its socket is open, kept by the gateway (60 s, renewed by
+ *  heartbeats): the API reads it to tell a device that is still there from one that is gone. */
+export const devicePresenceKey = (userId: string, sessionId: string) => `presence:${userId}:${sessionId}`;
 /** A user's presence merged over their devices, kept by the gateway. */
 export const presenceKey = (userId: string) => `presence:${userId}`;
 /** Set (by the API) while a user hides their presence from everyone: the gateway then keeps it to

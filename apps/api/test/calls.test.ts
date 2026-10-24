@@ -68,7 +68,9 @@ describe("direct calls", () => {
     const started = await h.call("POST", "/api/v1/calls", { userId: callee.id }, caller.token);
     expect(started.status).toBe(201);
     expect(started.body.call).toMatchObject({ kind: "direct", calleeId: callee.id, answeredAt: null });
-    expect(started.body.call.in).toEqual([{ userId: caller.id, device: deviceOf(caller.token) }]);
+    expect(started.body.call.in).toEqual([
+      { userId: caller.id, device: deviceOf(caller.token), muted: false },
+    ]);
     expect(started.body.iceServers[1].username).toMatch(new RegExp(`^\\d+:${caller.id}$`));
     const callId = started.body.call.id as string;
     expect(await h.valkey.smembers(`call:${callId}:members`)).toEqual(
@@ -171,6 +173,124 @@ describe("party calls", () => {
     const fresh = await h.call("GET", "/api/v1/ice-servers", undefined, a.token);
     expect(fresh.body.iceServers).toHaveLength(2);
     expect(fresh.body.expiresAt).not.toBeNull();
+  });
+});
+
+describe("devices that go away", () => {
+  /** What the gateway notes when a device's socket closes, due now. */
+  const departed = (user: User) =>
+    h.valkey.zadd("call-departures", Date.now() - 1, `${user.id}:${deviceOf(user.token)}`);
+
+  it("leave the party call when the device does not come back, and the last one out ends it", async () => {
+    h = await harness();
+    const a = await h.user("da@example.com");
+    const b = await h.user("db@example.com");
+    await befriend(a, b);
+    const party = await h.call("POST", "/api/v1/parties", { privacy: "friends" }, a.token);
+    const partyId = party.body.id as string;
+    await h.call("POST", `/api/v1/parties/${partyId}/join`, {}, b.token);
+    const callId = (await h.call("POST", "/api/v1/calls", { partyId }, a.token)).body.call.id as string;
+    await h.call("POST", "/api/v1/calls", { partyId }, b.token);
+    expect(await h.valkey.smembers(`device-calls:${deviceOf(b.token)}`)).toEqual([callId]);
+    const aHears = await listen(a.id);
+
+    // Back on the gateway within the grace: still in the call.
+    await h.valkey.set(`presence:${b.id}:${deviceOf(b.token)}`, '{"state":"online"}');
+    await departed(b);
+    expect(await h.app.sweepDepartures()).toBe(0);
+    expect((await h.call("GET", `/api/v1/calls/${callId}`, undefined, a.token)).body.in).toHaveLength(2);
+
+    await h.valkey.del(`presence:${b.id}:${deviceOf(b.token)}`);
+    await departed(b);
+    expect(await h.app.sweepDepartures()).toBe(1);
+    await settle();
+    expect(aHears.heard.find((e) => e.type === "call.left")?.data).toMatchObject({ callId, userId: b.id });
+    const now = await h.call("GET", `/api/v1/calls/${callId}`, undefined, a.token);
+    expect(now.body.in.map((p: { userId: string }) => p.userId)).toEqual([a.id]);
+    expect((await h.call("GET", `/api/v1/parties/${partyId}`, undefined, a.token)).body.call.in).toEqual([
+      a.id,
+    ]);
+    expect(await h.valkey.exists(`device-calls:${deviceOf(b.token)}`)).toBe(0);
+    // Still in the party, so they may join its call again.
+    expect((await h.call("POST", "/api/v1/calls", { partyId }, b.token)).body.call.id).toBe(callId);
+    await h.call("POST", `/api/v1/calls/${callId}/leave`, {}, b.token);
+
+    await departed(a);
+    expect(await h.app.sweepDepartures()).toBe(1);
+    await settle();
+    expect(aHears.heard.find((e) => e.type === "call.ended")?.data).toMatchObject({ callId, partyId });
+    aHears.stop();
+    expect((await h.call("GET", `/api/v1/parties/${partyId}`, undefined, a.token)).body.call).toBeNull();
+    expect(await h.valkey.zcard("call-departures")).toBe(0);
+  });
+
+  it("end a direct call that is still ringing when the caller's device goes", async () => {
+    h = await harness();
+    const caller = await h.user("dc1@example.com");
+    const callee = await h.user("dc2@example.com");
+    await befriend(caller, callee);
+    const started = await h.call("POST", "/api/v1/calls", { userId: callee.id }, caller.token);
+    const calleeHears = await listen(callee.id);
+    // Not due yet: nothing happens.
+    await h.valkey.zadd("call-departures", Date.now() + 60_000, `${caller.id}:${deviceOf(caller.token)}`);
+    expect(await h.app.sweepDepartures()).toBe(0);
+    expect(await h.app.sweepDepartures(Date.now() + 61_000)).toBe(1);
+    await settle();
+    expect(calleeHears.heard.find((e) => e.type === "call.ended")?.data).toMatchObject({
+      callId: started.body.call.id,
+      reason: "ended",
+    });
+    calleeHears.stop();
+    expect(
+      (await h.call("GET", `/api/v1/calls/${started.body.call.id}`, undefined, callee.token)).status,
+    ).toBe(404);
+  });
+});
+
+describe("muting", () => {
+  it("tells the others and shows in the call and the party", async () => {
+    h = await harness();
+    const a = await h.user("ma@example.com");
+    const b = await h.user("mb@example.com");
+    await befriend(a, b);
+    const party = await h.call("POST", "/api/v1/parties", { privacy: "friends" }, a.token);
+    const partyId = party.body.id as string;
+    await h.call("POST", `/api/v1/parties/${partyId}/join`, {}, b.token);
+    const callId = (await h.call("POST", "/api/v1/calls", { partyId }, a.token)).body.call.id as string;
+    // In the party but not in its call yet: nothing to mute.
+    expect((await h.call("POST", `/api/v1/calls/${callId}/mute`, { muted: true }, b.token)).status).toBe(404);
+    await h.call("POST", "/api/v1/calls", { partyId }, b.token);
+    const bHears = await listen(b.id);
+    expect((await h.call("POST", `/api/v1/calls/${callId}/mute`, {}, a.token)).status).toBe(400);
+    const muted = await h.call("POST", `/api/v1/calls/${callId}/mute`, { muted: true }, a.token);
+    expect(muted.status).toBe(200);
+    expect(muted.body.in.find((p: { userId: string }) => p.userId === a.id).muted).toBe(true);
+    await settle();
+    expect(bHears.heard.find((e) => e.type === "call.updated")?.data).toEqual({
+      callId,
+      partyId,
+      userId: a.id,
+      muted: true,
+    });
+    expect((await h.call("GET", `/api/v1/parties/${partyId}`, undefined, b.token)).body.call.muted).toEqual([
+      a.id,
+    ]);
+    // Saying it again changes nothing and tells no one.
+    const before = bHears.heard.filter((e) => e.type === "call.updated").length;
+    await h.call("POST", `/api/v1/calls/${callId}/mute`, { muted: true }, a.token);
+    await settle();
+    expect(bHears.heard.filter((e) => e.type === "call.updated")).toHaveLength(before);
+    await h.call("POST", `/api/v1/calls/${callId}/mute`, { muted: false }, a.token);
+    expect(
+      (await h.call("GET", `/api/v1/calls/${callId}`, undefined, b.token)).body.in.every(
+        (p: { muted: boolean }) => !p.muted,
+      ),
+    ).toBe(true);
+    // Leaving forgets it.
+    await h.call("POST", `/api/v1/calls/${callId}/mute`, { muted: true }, a.token);
+    await h.call("POST", `/api/v1/calls/${callId}/leave`, {}, a.token);
+    expect(await h.valkey.sismember(`call:${callId}:muted`, a.id)).toBe(0);
+    bHears.stop();
   });
 });
 

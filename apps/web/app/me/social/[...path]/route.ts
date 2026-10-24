@@ -22,7 +22,7 @@ const allowed: Record<string, RegExp[]> = {
     /^parties$/,
     new RegExp(`^parties/${id}/(invites|join|decline|leave|kick|leader)$`),
     /^calls$/,
-    new RegExp(`^calls/${id}/(answer|decline|leave)$`),
+    new RegExp(`^calls/${id}/(answer|decline|leave|mute)$`),
   ],
   PATCH: [
     new RegExp(`^conversations/${id}$`),

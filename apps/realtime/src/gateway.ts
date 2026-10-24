@@ -3,7 +3,11 @@ import { createServer } from "node:http";
 import {
   type ClientFrame,
   type ServerFrame,
+  callDepartureGraceMs,
+  callDeparturesKey,
   callMembersKey,
+  deviceCallsKey,
+  devicePresenceKey,
   friendsKey,
   presenceKey as mergedPresenceKey,
   presenceExtraKey,
@@ -104,8 +108,17 @@ export async function createGateway(options: GatewayOptions) {
       byUser.delete(connection.userId);
       await subscriber.unsubscribe(userChannel(connection.userId));
     }
+    // Another socket of the same session (a second browser tab) keeps the device here.
+    if ([...set].some((other) => other.sessionId === connection.sessionId)) return;
     await store.del(presenceKey(connection));
     await announce(connection.userId);
+    // In a call: unless the device is back by then, the API takes it out of its calls.
+    if (await store.exists(deviceCallsKey(connection.sessionId)))
+      await store.zadd(
+        callDeparturesKey,
+        Date.now() + callDepartureGraceMs,
+        `${connection.userId}:${connection.sessionId}`,
+      );
   }
 
   /** The user's presence over all their devices (in a game > online > away), kept and, when it
@@ -308,4 +321,4 @@ function devicePresence(presence: unknown): Presence {
   };
 }
 
-const presenceKey = (connection: Connection) => `presence:${connection.userId}:${connection.sessionId}`;
+const presenceKey = (connection: Connection) => devicePresenceKey(connection.userId, connection.sessionId);

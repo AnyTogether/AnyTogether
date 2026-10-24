@@ -36,7 +36,7 @@ export interface Party {
   privacy: "invite" | "friends";
   members: PartyMember[];
   invited: Person[];
-  call: { id: string; in: string[] } | null;
+  call: { id: string; in: string[]; muted?: string[] } | null;
   createdAt: string;
 }
 
@@ -50,6 +50,7 @@ export interface PartyInvite {
 export interface CallPeer {
   userId: string;
   device: string;
+  muted?: boolean;
 }
 
 export interface CallJoin {

@@ -108,6 +108,18 @@ export function PartyBoard({
   const talking = micOn && (prefs.mode === "open" || held);
   useEffect(() => mesh.current?.setTalking(talking), [talking]);
 
+  // The others see who muted themselves (push-to-talk not held is not muted).
+  const toldMuted = useRef(false);
+  useEffect(() => {
+    if (!callId) {
+      toldMuted.current = false;
+      return;
+    }
+    if (toldMuted.current === !micOn) return;
+    toldMuted.current = !micOn;
+    social(`calls/${callId}/mute`, { method: "POST", ...json({ muted: !micOn }) });
+  }, [callId, micOn]);
+
   // Push to talk: hold the key anywhere on the page but in a text field.
   useEffect(() => {
     const down = (event: KeyboardEvent) => {
@@ -165,6 +177,7 @@ export function PartyBoard({
         if (data.callId === callIdRef.current) mesh.current?.drop(data.userId, false);
         return reload();
       case "call.joined":
+      case "call.updated":
         return reload();
       case "call.ended":
         if (data.callId === callIdRef.current) stopVoice(false);
@@ -228,6 +241,7 @@ export function PartyBoard({
   const openParties = friends.filter((f) => f.presence.party?.open && f.presence.party.id !== party?.id);
   const leader = party?.leaderId === me;
   const inVoice = new Set(party?.call?.in ?? []);
+  const mutedSet = new Set(party?.call?.muted ?? []);
   const peerState = new Map(voice?.peers.map((p) => [p.userId, p]));
   const connected = voice?.peers.filter((p) => p.state === "connected").length ?? 0;
   const connecting = voice?.peers.filter((p) => p.state !== "connected").length ?? 0;
@@ -456,6 +470,7 @@ export function PartyBoard({
               const peer = peerState.get(member.userId);
               const speaking = self ? !!voice?.speaking && talking : !!peer?.speaking;
               const voiceIn = self ? !!mesh.current : inVoice.has(member.userId);
+              const muted = self ? !micOn : mutedSet.has(member.userId);
               return (
                 <li key={member.userId} className="person">
                   <span className={`ring${speaking ? " speaking" : ""}`}>
@@ -469,8 +484,8 @@ export function PartyBoard({
                     <span className="meta member-meta">
                       {party.leaderId === member.userId && <span className="crown">{texts.leader}</span>}
                       {voiceIn && (
-                        <span className={`in-voice${self && !micOn ? " muted" : ""}`}>
-                          {self && !micOn
+                        <span className={`in-voice${muted ? " muted" : ""}`}>
+                          {muted
                             ? texts.muted
                             : speaking
                               ? texts.speaking
