@@ -293,7 +293,7 @@ export function themeRoutes(deps: Deps) {
 
   const authorName = async (me: string) => {
     const [profile] = await db
-      .select({ displayName: profiles.displayName, handle: profiles.handle })
+      .select({ displayName: profiles.displayName, handle: profiles.handle, avatar: profiles.avatarUrl })
       .from(profiles)
       .where(eq(profiles.accountId, me));
     if (!profile) throw new HttpError(401, ErrorCode.unauthorized, "No such account");
@@ -475,14 +475,7 @@ export function themeRoutes(deps: Deps) {
           ErrorCode.conflict,
           "You shared this theme already: send it as a new version",
         );
-      return c.json(
-        await detail(
-          row,
-          { userId: me, handle: profile.handle, displayName: profile.displayName, avatar: null },
-          me,
-        ),
-        201,
-      );
+      return c.json(await detail(row, { userId: me, ...profile }, me), 201);
     } catch (error) {
       await store.deletePrefix(`themes/${id}/`);
       throw error;

@@ -93,3 +93,34 @@ export async function incomingRequests() {
   const { body } = await apiJson<{ incoming: unknown[] }>("/me/friends/requests");
   return body?.incoming.length ?? 0;
 }
+
+/** A GET anyone may make, with the access token when signed in (for "liked" and "mine"). */
+export async function publicJson<T>(path: string): Promise<{ status: number; body: T | null }> {
+  const token = await accessToken();
+  const response = await api(path, token ? { token } : {}).catch(() => undefined);
+  if (!response) return { status: 502, body: null };
+  return { status: response.status, body: response.ok ? ((await response.json()) as T) : null };
+}
+
+/** Passes a browser's upload (a multipart form, files and all) on to the API as it came. */
+export async function relayUpload(request: Request, path: string, maxBytes: number) {
+  const token = await accessToken();
+  if (!token) return Response.json({ code: "unauthorized", title: "Sign in first" }, { status: 401 });
+  const tooBig = () =>
+    Response.json({ code: "payload_too_large", title: "That is too big" }, { status: 413 });
+  if (Number(request.headers.get("content-length") ?? 0) > maxBytes) return tooBig();
+  const bytes = await request.arrayBuffer().catch(() => undefined);
+  if (!bytes) return Response.json({ code: "bad_request", title: "The upload broke off" }, { status: 400 });
+  if (bytes.byteLength > maxBytes) return tooBig();
+  const response = await api(path, {
+    method: "POST",
+    token,
+    body: bytes,
+    headers: { "content-type": request.headers.get("content-type") ?? "application/octet-stream" },
+  }).catch(() => undefined);
+  if (!response) return Response.json({ code: "unavailable", title: "Try again" }, { status: 502 });
+  return new Response(await response.text(), {
+    status: response.status,
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
+  });
+}

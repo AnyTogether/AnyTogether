@@ -3,6 +3,7 @@ import { feedEn, feedTr } from "./i18n-feed";
 import { notifyEn, notifyTr } from "./i18n-notify";
 import { shareEn, shareTr } from "./i18n-share";
 import { socialEn, socialTr } from "./i18n-social";
+import { themesEn, themesTr } from "./i18n-themes";
 
 export const languages = ["en", "tr"] as const;
 export type Language = (typeof languages)[number];
@@ -463,7 +464,12 @@ const tr: typeof en = {
   ],
 };
 
-export type Strings = typeof en & typeof socialEn & typeof feedEn & typeof shareEn & typeof notifyEn;
+export type Strings = typeof en &
+  typeof socialEn &
+  typeof feedEn &
+  typeof shareEn &
+  typeof notifyEn &
+  typeof themesEn;
 /** What client components get: everything but the landing page's feature list. */
 export type UiStrings = Omit<Strings, "features">;
 export const ui = ({ features: _, ...rest }: Strings): UiStrings => rest;
@@ -476,6 +482,6 @@ export async function language(): Promise<Language> {
 /** The texts in the chosen language. */
 export async function strings(): Promise<Strings> {
   return (await language()) === "tr"
-    ? { ...tr, ...socialTr, ...feedTr, ...shareTr, ...notifyTr }
-    : { ...en, ...socialEn, ...feedEn, ...shareEn, ...notifyEn };
+    ? { ...tr, ...socialTr, ...feedTr, ...shareTr, ...notifyTr, ...themesTr }
+    : { ...en, ...socialEn, ...feedEn, ...shareEn, ...notifyEn, ...themesEn };
 }

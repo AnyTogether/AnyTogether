@@ -20,6 +20,7 @@ import "./social.css";
 import "./feed.css";
 import "./share.css";
 import "./notify.css";
+import "./hub.css";
 
 const display = Space_Grotesk({
   subsets: ["latin", "latin-ext"],
@@ -135,7 +136,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </header>
       {children}
       <footer className="in d4">
-        <span>&copy; 2026 AnyTogether</span>
+        <div className="foot-start">
+          <span>&copy; 2026 AnyTogether</span>
+          <nav className="foot-links" aria-label="AnyTogether">
+            <Link href="/themes">{texts.themes}</Link>
+          </nav>
+        </div>
         <div className="foot-end">
           <span>
             {texts.madeBy.split("{link}")[0]}

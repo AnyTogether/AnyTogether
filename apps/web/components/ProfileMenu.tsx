@@ -15,14 +15,20 @@ const reasons = [
   "other",
 ] as const;
 
-/** The ⋯ on someone's profile card; for now it holds "Report", which opens the report sheet. */
+/** What a report is about: a person (by default), or a theme with its own words for the sheet. */
+type Target = { kind?: "user" | "theme"; lead?: string };
+
+/** The ⋯ on someone's profile card (or a theme's page); for now it holds "Report", which opens the
+ *  report sheet. */
 export function ProfileMenu({
   person,
   texts,
+  kind,
+  lead,
 }: {
   person: { userId: string; displayName: string };
   texts: UiStrings;
-}) {
+} & Target) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -74,7 +80,7 @@ export function ProfileMenu({
           </button>
         </div>
       )}
-      <ReportSheet dialog={dialog} person={person} texts={texts} />
+      <ReportSheet dialog={dialog} person={person} texts={texts} kind={kind} lead={lead} />
     </div>
   );
 }
@@ -83,11 +89,13 @@ function ReportSheet({
   dialog,
   person,
   texts,
+  kind = "user",
+  lead,
 }: {
   dialog: React.RefObject<HTMLDialogElement | null>;
   person: { userId: string; displayName: string };
   texts: UiStrings;
-}) {
+} & Target) {
   const [reason, setReason] = useState<(typeof reasons)[number] | null>(null);
   const [note, setNote] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
@@ -138,7 +146,7 @@ function ReportSheet({
                 method: "POST",
                 headers: { "content-type": "application/json" },
                 body: JSON.stringify({
-                  targetKind: "user",
+                  targetKind: kind,
                   targetId: person.userId,
                   reason,
                   ...(note.trim() ? { note: note.trim() } : {}),
@@ -149,7 +157,7 @@ function ReportSheet({
               setError(response?.status === 429 ? texts.tooMany : texts.failed);
             }}
           >
-            <p className="hint">{fill(texts.reportLead, { name: person.displayName })}</p>
+            <p className="hint">{lead ?? fill(texts.reportLead, { name: person.displayName })}</p>
             <fieldset className="reasons">
               <legend className="visually-hidden">{texts.report}</legend>
               {reasons.map((value) => (
