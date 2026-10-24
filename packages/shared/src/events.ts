@@ -3,6 +3,7 @@ import type { FeedEvent } from "./feed.js";
 import type { GamePresence, GameSessionEvent, GameSignalKind } from "./gameSessions.js";
 import type { MessageEvent } from "./messages.js";
 import type { PartyEvent, PartyPresence } from "./parties.js";
+import type { SharePlayEvent, SharePresence } from "./sharePlays.js";
 
 /** What the realtime gateway pushes; the API publishes them for each recipient. */
 export type GatewayEvent =
@@ -16,6 +17,7 @@ export type GatewayEvent =
         since?: string;
         party?: PartyPresence;
         game?: GamePresence;
+        share?: SharePresence;
       };
     }
   | { type: "auth.handoff"; data: { handoffId: string; deviceName: string; client: string } }
@@ -39,6 +41,7 @@ export type GatewayEvent =
   | PartyEvent
   | CallEvent
   | GameSessionEvent
+  | SharePlayEvent
   | FeedEvent;
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
@@ -64,6 +67,17 @@ export type ClientFrame =
       kind: GameSignalKind;
       data: unknown;
       call?: undefined;
+    }
+  /** The same between the host and a viewer of a share play (`share` is its ID). */
+  | {
+      op: "signal";
+      to: string;
+      device?: string;
+      share: string;
+      kind: GameSignalKind;
+      data: unknown;
+      call?: undefined;
+      session?: undefined;
     };
 
 export type ServerFrame =

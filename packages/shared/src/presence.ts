@@ -1,6 +1,6 @@
 /** What the API adds to a user's presence beside the devices' own state: the party they are in,
- *  the game session they host. Kept in a Valkey hash, one JSON value per field. */
-export const presenceExtras = ["party", "game"] as const;
+ *  the game session they host, the game they share. Kept in a Valkey hash, one JSON value per field. */
+export const presenceExtras = ["party", "game", "share"] as const;
 export type PresenceExtra = (typeof presenceExtras)[number];
 
 export const presenceExtraKey = (userId: string) => `presence-extra:${userId}`;

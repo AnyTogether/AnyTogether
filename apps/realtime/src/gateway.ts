@@ -9,6 +9,7 @@ import {
   conversationMembersKey,
   deviceCallsKey,
   devicePresenceKey,
+  deviceSharePlaysKey,
   friendsKey,
   gameSessionMembersKey,
   gameSignalKinds,
@@ -16,6 +17,9 @@ import {
   presenceExtraKey,
   presenceHiddenKey,
   realtimeTicketKey,
+  shareDeparturesKey,
+  sharePlayMembersKey,
+  shareSignalKinds,
   signalKinds,
   typingEveryMs,
   userChannel,
@@ -125,6 +129,13 @@ export async function createGateway(options: GatewayOptions) {
         Date.now() + callDepartureGraceMs,
         `${connection.userId}:${connection.sessionId}`,
       );
+    // Hosting or watching a share play: the same, for the share play.
+    if (await store.exists(deviceSharePlaysKey(connection.sessionId)))
+      await store.zadd(
+        shareDeparturesKey,
+        Date.now() + callDepartureGraceMs,
+        `${connection.userId}:${connection.sessionId}`,
+      );
   }
 
   /** The user's presence over all their devices (in a game > online > away), kept and, when it
@@ -177,29 +188,36 @@ export async function createGateway(options: GatewayOptions) {
     return { userId: payload.sub, sessionId: payload.sid };
   }
 
-  /** WebRTC signalling between two members of the same call, or two players of the same game
-   *  session, as the API set them up; passed on through the peer's channel and never stored. */
+  /** WebRTC signalling between two members of the same call, two players of the same game
+   *  session, or a share play's host and a viewer, as the API set them up; passed on through the
+   *  peer's channel and never stored. */
   async function relaySignal(connection: Connection, frame: Extract<ClientFrame, { op: "signal" }>) {
     const { to, kind, device } = frame;
     const call = typeof frame.call === "string" ? frame.call : undefined;
-    const raw = frame as { session?: unknown };
+    const raw = frame as { session?: unknown; share?: unknown };
     const session = !call && typeof raw.session === "string" ? raw.session : undefined;
+    const share = !call && !session && typeof raw.share === "string" ? raw.share : undefined;
+    const kinds = call ? signalKinds : share ? shareSignalKinds : gameSignalKinds;
     if (
       typeof to !== "string" ||
-      !(call ?? session) ||
-      !(call ? signalKinds : gameSignalKinds).includes(kind as never) ||
+      !(call ?? session ?? share) ||
+      !kinds.includes(kind as never) ||
       (device !== undefined && typeof device !== "string")
     )
       return send(connection.socket, {
         op: "error",
         code: "bad_signal",
-        message: "to, call or session, and kind",
+        message: "to, call, session or share, and kind",
       });
     const now = Date.now();
     if (now - connection.signals.since > signalLimit.windowMs) connection.signals = { count: 0, since: now };
     if (++connection.signals.count > signalLimit.count)
       return connection.socket.close(CloseCode.tooMany, "too many signals");
-    const members = call ? callMembersKey(call) : gameSessionMembersKey(session as string);
+    const members = call
+      ? callMembersKey(call)
+      : share
+        ? sharePlayMembersKey(share)
+        : gameSessionMembersKey(session as string);
     const [[, from], [, peer]] = (await store
       .multi()
       .sismember(members, connection.userId)
@@ -210,14 +228,18 @@ export async function createGateway(options: GatewayOptions) {
         connection.socket,
         call
           ? { op: "error", code: "not_in_call", message: "not in that call" }
-          : { op: "error", code: "not_in_session", message: "not in that game session" },
+          : share
+            ? { op: "error", code: "not_in_share_play", message: "not in that share play" }
+            : { op: "error", code: "not_in_session", message: "not in that game session" },
       );
     const signal = { from: connection.userId, device: connection.sessionId, kind, data: frame.data ?? null };
     const message = JSON.stringify({
       id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
       ...(call
         ? { type: "signal", data: { call, ...signal } }
-        : { type: "game_session.signal", data: { sessionId: session, ...signal } }),
+        : share
+          ? { type: "share_play.signal", data: { sharePlayId: share, ...signal } }
+          : { type: "game_session.signal", data: { sessionId: session, ...signal } }),
       ...(device && device !== "*" ? { device } : {}),
     });
     await store.publish(userChannel(to), message);

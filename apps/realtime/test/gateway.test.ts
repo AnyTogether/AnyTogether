@@ -383,6 +383,47 @@ describe("the gateway", () => {
     for (const c of [host, guest, caller]) c.socket.close();
   });
 
+  it("relays signals between a share play's host and viewers only, and notes a departing device", async () => {
+    await valkey.sadd("share-play:sp1:members", "u1", "u2");
+    await valkey.sadd("game-session:g1:members", "u1", "u3");
+    const host = await signedIn("u1", "mac");
+    const viewer = await signedIn("u2", "web");
+    const player = await signedIn("u3", "s3");
+    host.send({ op: "signal", to: "u2", device: "web", share: "sp1", kind: "offer", data: { sdp: "v=0" } });
+    const got = await viewer.waitFor((frame) => frame.type === "share_play.signal");
+    expect(got.data).toEqual({
+      sharePlayId: "sp1",
+      from: "u1",
+      device: "mac",
+      kind: "offer",
+      data: { sdp: "v=0" },
+    });
+    viewer.send({ op: "signal", to: "u1", device: "mac", share: "sp1", kind: "renegotiate", data: null });
+    expect((await host.waitFor((frame) => frame.type === "share_play.signal")).data).toMatchObject({
+      kind: "renegotiate",
+      from: "u2",
+    });
+    // A game session's player is not a viewer.
+    player.send({ op: "signal", to: "u1", share: "sp1", kind: "offer", data: {} });
+    expect(await player.waitFor((frame) => frame.op === "error")).toMatchObject({
+      code: "not_in_share_play",
+    });
+    host.send({ op: "signal", to: "u2", share: "sp1", kind: "shout", data: {} });
+    expect(await host.waitFor((frame) => frame.code === "bad_signal")).toBeTruthy();
+    expect(await valkey.xlen("events:u2")).toBe(0);
+
+    // The viewer's device watches; when its socket closes the API is told to take it out later.
+    await valkey.sadd("device-shares:web", "sp1");
+    viewer.socket.close();
+    await viewer.closed;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const [entry, score] = await valkey.zrange("share-departures", 0, -1, "WITHSCORES");
+    expect(entry).toBe("u2:web");
+    expect(Number(score)).toBeGreaterThan(Date.now());
+    expect(await valkey.zcard("call-departures")).toBe(0);
+    for (const c of [host, player]) c.socket.close();
+  });
+
   it("keeps presence from heartbeats", async () => {
     const c = await signedIn("u1", "s1");
     c.send({

@@ -22,6 +22,7 @@ import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
 import { type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
+import { sharePlayRoutes } from "./sharePlays.js";
 import type { TokenSigner } from "./tokens.js";
 
 export interface Deps {
@@ -85,7 +86,16 @@ export function createApp(deps: Deps) {
   const calls = callRoutes(deps, partyPieces);
   v1.route("/", calls);
   v1.route("/", gameSessionRoutes(deps));
+  const shares = sharePlayRoutes(deps);
+  v1.route("/", shares);
   v1.route("/", realtimeRoutes(deps));
   app.route("/api/v1", v1);
-  return Object.assign(app, { sweepDepartures: calls.sweepDepartures });
+  /** Devices whose socket went: out of their calls and share plays. */
+  const sweepDepartures = async (now = Date.now()) =>
+    (await calls.sweepDepartures(now)) + (await shares.sweepDepartures(now));
+  return Object.assign(app, {
+    sweepDepartures,
+    sweepCalls: calls.sweepDepartures,
+    sweepShares: shares.sweepDepartures,
+  });
 }
