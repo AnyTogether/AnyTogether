@@ -1,0 +1,40 @@
+import { type NextRequest, NextResponse } from "next/server";
+
+/** Keeps the access token fresh: when it has expired and a refresh token is there, turn it in. */
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next();
+  if (request.cookies.get("at_access") || !request.cookies.get("at_refresh")) return response;
+  const refreshed = await fetch(`${process.env.API_URL ?? "http://127.0.0.1:8080"}/api/v1/auth/token`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "anytogether-client": "web/0.1" },
+    body: JSON.stringify({
+      grantType: "refresh_token",
+      refreshToken: request.cookies.get("at_refresh")?.value,
+    }),
+  }).catch(() => undefined);
+  const secure = process.env.NODE_ENV === "production";
+  if (!refreshed?.ok) {
+    response.cookies.delete("at_refresh");
+    return response;
+  }
+  const tokens = await refreshed.json();
+  response.cookies.set("at_access", tokens.accessToken, {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: tokens.expiresIn,
+  });
+  response.cookies.set("at_refresh", tokens.refreshToken, {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 90 * 86_400,
+  });
+  // The page being rendered sees the new token too.
+  request.cookies.set("at_access", tokens.accessToken);
+  return NextResponse.next({ request, headers: response.headers });
+}
+
+export const config = { matcher: ["/((?!_next/|api/|auth/|favicon).*)"] };

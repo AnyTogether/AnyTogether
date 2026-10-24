@@ -1,0 +1,91 @@
+import { headers } from "next/headers";
+
+const en = {
+  inDevelopment: "in development",
+  eyebrow: "For AnyPS5 · Coming soon",
+  heroA: "Play",
+  heroB: "together.",
+  heroC: "Anywhere.",
+  lead: "is the online home of the AnyPS5 launchers on macOS, Windows and Linux. Your profile, your games, your trophies, your friends, parties and voice chat, plus every download you need. All in one place, in your own theme.",
+  signIn: "Sign in",
+  signOut: "Sign out",
+  hello: "Signed in as",
+  loginTitle: "Sign in to AnyTogether",
+  loginLead: "No password, no sign-up form. The first time makes your account.",
+  email: "Email",
+  sendCode: "Email me a code",
+  codeSent: "We sent a 6-digit code to",
+  code: "Code",
+  verify: "Sign in",
+  otherEmail: "Use another email",
+  linkTitle: "Sign in a launcher",
+  linkLead: "Type the code your launcher shows.",
+  approve: "Sign it in",
+  approved: "Done. The launcher is signed in.",
+  signInFirst: "Sign in first, then come back to this page.",
+  checking: "Signing you in…",
+  failed: "That did not work",
+  features: [
+    ["Profiles", "Your gamer card, avatar, bio and stats, styled your way."],
+    ["Trophies", "Every trophy you earn, with rarity, date and progress."],
+    ["Voice chat", "Party voice while you play, straight from player to player."],
+    ["Parties", "Start a party, invite friends and jump into the same game."],
+    ["Friends", "Add friends, see who is online and what they are playing."],
+    ["Messages", "Direct and group chats that follow you from launcher to web."],
+    ["Game library", "What you played, for how long and when, all synced."],
+    ["Activity feed", "Unlocks, sessions and highlights from your friends."],
+    ["Themes", "Make your profile and launcher look exactly how you want."],
+    ["Downloads", "Official links for the launchers, updates and tools."],
+    ["Share play", "Stream your session and let a friend watch or take over."],
+    ["Leaderboards", "Compare trophies and playtime with friends and the world."],
+  ],
+};
+
+const tr: typeof en = {
+  inDevelopment: "geliştiriliyor",
+  eyebrow: "AnyPS5 için · Yakında",
+  heroA: "Birlikte",
+  heroB: "oyna.",
+  heroC: "Her yerden.",
+  lead: "macOS, Windows ve Linux'taki AnyPS5 launcher'larının online evi. Profilin, oyunların, kupaların, arkadaşların, partiler ve sesli sohbet, ihtiyacın olan her indirme. Hepsi tek yerde, kendi temanla.",
+  signIn: "Giriş yap",
+  signOut: "Çıkış yap",
+  hello: "Giriş yapan:",
+  loginTitle: "AnyTogether'a giriş",
+  loginLead: "Şifre yok, kayıt formu yok. İlk girişte hesabın açılır.",
+  email: "E-posta",
+  sendCode: "Bana kod gönder",
+  codeSent: "6 haneli kodu gönderdik:",
+  code: "Kod",
+  verify: "Giriş yap",
+  otherEmail: "Başka bir e-posta",
+  linkTitle: "Bir launcher'a giriş yap",
+  linkLead: "Launcher'ın gösterdiği kodu yaz.",
+  approve: "Giriş yap",
+  approved: "Tamam. Launcher'a giriş yapıldı.",
+  signInFirst: "Önce giriş yap, sonra bu sayfaya dön.",
+  checking: "Giriş yapılıyor…",
+  failed: "Olmadı",
+  features: [
+    ["Profiller", "Oyuncu kartın, avatarın, bion ve istatistiklerin, kendi tarzınla."],
+    ["Kupalar", "Kazandığın her kupa; nadirliği, tarihi ve ilerlemesiyle."],
+    ["Sesli sohbet", "Oynarken parti sesi, doğrudan oyuncudan oyuncuya."],
+    ["Partiler", "Parti kur, arkadaşlarını çağır, aynı oyuna atlayın."],
+    ["Arkadaşlar", "Arkadaş ekle, kim çevrimiçi ve ne oynuyor gör."],
+    ["Mesajlar", "Launcher'dan web'e seni takip eden birebir ve grup sohbetleri."],
+    ["Oyun kütüphanesi", "Ne oynadın, ne kadar ve ne zaman; hepsi senkron."],
+    ["Aktivite akışı", "Arkadaşlarından kupalar, oturumlar ve öne çıkanlar."],
+    ["Temalar", "Profilin ve launcher'ın tam istediğin gibi görünsün."],
+    ["İndirmeler", "Launcher'lar, güncellemeler ve araçlar için resmi bağlantılar."],
+    ["Share play", "Oyununu yayınla, arkadaşın izlesin ya da kontrolü devralsın."],
+    ["Liderlik tabloları", "Kupaları ve oynama süresini arkadaşlarınla ve dünyayla karşılaştır."],
+  ],
+};
+
+export type Strings = typeof en;
+
+/** English, or Turkish when the browser asks for it first. */
+export async function strings(): Promise<Strings> {
+  const accept = (await headers()).get("accept-language") ?? "";
+  return accept.toLowerCase().startsWith("tr") ? tr : en;
+}

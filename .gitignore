@@ -8,3 +8,6 @@ coverage/
 *.log
 .DS_Store
 apps/*/dist/
+apps/web/.next/
+apps/web/next-env.d.ts
+*.tsbuildinfo
