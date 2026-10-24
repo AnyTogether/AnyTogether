@@ -12,6 +12,7 @@ import { feedRoutes } from "./feed.js";
 import { friendRoutes } from "./friends.js";
 import { gameSessionRoutes } from "./gameSessions.js";
 import { gameRoutes } from "./games.js";
+import { leaderboardRoutes } from "./leaderboards.js";
 import type { Mailer } from "./mail.js";
 import { messageRoutes } from "./messages.js";
 import type { AuthVariables } from "./middleware.js";
@@ -76,6 +77,7 @@ export function createApp(deps: Deps) {
   v1.route("/", friendRoutes(deps));
   v1.route("/", gameRoutes(deps));
   v1.route("/", feedRoutes(deps));
+  v1.route("/", leaderboardRoutes(deps));
   v1.route("/", reportRoutes(deps));
   v1.route("/", messageRoutes(deps));
   const partyPieces = partyService(deps);

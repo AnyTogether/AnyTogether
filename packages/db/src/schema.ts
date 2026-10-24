@@ -326,7 +326,13 @@ export const library = pgTable(
     /** Bronze 15, silver 30, gold 90, platinum 300. */
     points: integer().notNull().default(0),
   },
-  (table) => [primaryKey({ columns: [table.accountId, table.titleId] }), index().on(table.titleId)],
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.titleId] }),
+    index().on(table.titleId),
+    // Per game leaderboards.
+    index("library_by_points").on(table.titleId, table.points.desc()),
+    index("library_by_time").on(table.titleId, table.secondsPlayed.desc()),
+  ],
 );
 
 /** A game's trophy set by the hash of its trophy file; another version is kept beside it. */
@@ -389,6 +395,10 @@ export const earnedTrophies = pgTable(
     }),
     index("earned_by_game").on(table.titleId, table.trophyId),
     index().on(table.accountId, table.earnedAt.desc()),
+    // Who has flagged trophies, kept off global leaderboards.
+    index("earned_flagged")
+      .on(table.accountId, table.titleId)
+      .where(sql`${table.flagged}`),
   ],
 );
 
