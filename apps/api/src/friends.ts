@@ -1,5 +1,5 @@
-import { blocks, friendships, profiles } from "@anytogether/db";
-import { ErrorCode, friendsKey, presenceKey } from "@anytogether/shared";
+import { accounts, blocks, friendships, profiles } from "@anytogether/db";
+import { ErrorCode, friendsKey, presenceKey, privacyOf } from "@anytogether/shared";
 import { and, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -8,7 +8,7 @@ import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
-import { blockedBetween, findProfile } from "./people.js";
+import { type ProfileRow, blockedBetween, canSee, findProfile, relationOf } from "./people.js";
 
 const pair = (a: string, b: string) => (a < b ? { userA: a, userB: b } : { userA: b, userB: a });
 const offline = { state: "offline" };
@@ -32,6 +32,41 @@ export function friendRoutes(deps: Deps) {
     avatar: profile.avatarUrl,
   });
   const blocked = (a: string, b: string) => blockedBetween(deps.db, a, b);
+  /** Profiles of accounts in good standing: banned ones and ones being deleted are left out. */
+  const activePeople = async (ids: string[]): Promise<ProfileRow[]> =>
+    ids.length
+      ? (
+          await deps.db
+            .select({ profile: profiles })
+            .from(profiles)
+            .innerJoin(accounts, eq(accounts.id, profiles.accountId))
+            .where(and(inArray(profiles.accountId, ids), eq(accounts.status, "active")))
+        ).map((r) => r.profile)
+      : [];
+  const friendIds = async (userId: string) =>
+    (
+      await deps.db
+        .select()
+        .from(friendships)
+        .where(
+          and(
+            eq(friendships.state, "accepted"),
+            or(eq(friendships.userA, userId), eq(friendships.userB, userId)),
+          ),
+        )
+    ).map((r) => (r.userA === userId ? r.userB : r.userA));
+  /** What the gateway keeps, unless the person hides it from friends. */
+  const presenceOf = async (people: ProfileRow[], relation: "me" | "friend" | "other") => {
+    const kept = people.length ? await deps.valkey.mget(...people.map((p) => presenceKey(p.accountId))) : [];
+    return new Map(
+      people.map((p, index) => [
+        p.accountId,
+        kept[index] && canSee(privacyOf(p.privacy).presence, relation)
+          ? JSON.parse(kept[index] as string)
+          : offline,
+      ]),
+    );
+  };
   const row = async (a: string, b: string) => {
     const { userA, userB } = pair(a, b);
     return (
@@ -101,10 +136,7 @@ export function friendRoutes(deps: Deps) {
       .from(friendships)
       .where(and(eq(friendships.state, "pending"), or(eq(friendships.userA, me), eq(friendships.userB, me))));
     const others = rows.map((r) => (r.userA === me ? r.userB : r.userA));
-    const people = others.length
-      ? await deps.db.select().from(profiles).where(inArray(profiles.accountId, others))
-      : [];
-    const byId = new Map(people.map((p) => [p.accountId, p]));
+    const byId = new Map((await activePeople(others)).map((p) => [p.accountId, p]));
     const shown = (r: (typeof rows)[number]) => {
       const other = byId.get(r.userA === me ? r.userB : r.userA);
       return other ? { ...card(other), askedAt: r.createdAt } : null;
@@ -133,20 +165,8 @@ export function friendRoutes(deps: Deps) {
   });
 
   app.get("/me/friends", async (c) => {
-    const me = c.get("userId");
-    const rows = await deps.db
-      .select()
-      .from(friendships)
-      .where(
-        and(eq(friendships.state, "accepted"), or(eq(friendships.userA, me), eq(friendships.userB, me))),
-      );
-    const others = rows.map((r) => (r.userA === me ? r.userB : r.userA));
-    if (others.length === 0) return c.json({ friends: [] });
-    const people = await deps.db.select().from(profiles).where(inArray(profiles.accountId, others));
-    const presence = await deps.valkey.mget(...others.map(presenceKey));
-    const byId = new Map(
-      others.map((id, index) => [id, presence[index] ? JSON.parse(presence[index] as string) : offline]),
-    );
+    const people = await activePeople(await friendIds(c.get("userId")));
+    const byId = await presenceOf(people, "friend");
     const friends = people.map((p) => ({ ...card(p), presence: byId.get(p.accountId) ?? offline }));
     // Playing first, then online, then the rest, each by name.
     const rank = (state: string) =>
@@ -183,18 +203,25 @@ export function friendRoutes(deps: Deps) {
     const query = (c.req.query("q") ?? "").replace(/^@/, "").trim();
     if (query.length < 2) return c.json({ users: [] });
     const pattern = `${query.replace(/[%_\\]/g, "")}%`;
+    // Who wants to be found: everyone, or only by friends; never banned accounts or blocks.
+    const findable = sql.raw("coalesce(profiles.privacy->>'search', 'everyone')");
     const found = await deps.db
-      .select()
+      .select({ profile: profiles })
       .from(profiles)
+      .innerJoin(accounts, eq(accounts.id, profiles.accountId))
       .where(
         and(
           ne(profiles.accountId, me),
+          eq(accounts.status, "active"),
           or(ilike(profiles.handle, pattern), ilike(profiles.displayName, pattern)),
           sql`not exists (select 1 from blocks where (blocker = ${me} and blocked = ${profiles.accountId}) or (blocker = ${profiles.accountId} and blocked = ${me}))`,
+          sql`(${findable} = 'everyone' or (${findable} = 'friends' and exists (select 1 from friendships f
+            where f.state = 'accepted' and ((f.user_a = ${me} and f.user_b = ${profiles.accountId})
+              or (f.user_b = ${me} and f.user_a = ${profiles.accountId})))))`,
         ),
       )
       .limit(20);
-    return c.json({ users: found.map(card) });
+    return c.json({ users: found.map((r) => card(r.profile)) });
   });
 
   app.get("/users/:handle", async (c) => {
@@ -213,7 +240,55 @@ export function friendRoutes(deps: Deps) {
             : existing.askedBy === me
               ? "pending_out"
               : "pending_in";
-    return c.json({ ...card(profile), bio: profile.bio, country: profile.country, friendship });
+    const relation = friendship === "me" ? "me" : friendship === "friends" ? "friend" : "other";
+    const privacy = privacyOf(profile.privacy);
+    // Which parts the asker may open; the card itself is shown to anyone not blocked.
+    const visible = {
+      library: canSee(privacy.library, relation),
+      trophies: canSee(privacy.trophies, relation),
+      friends: canSee(privacy.friends, relation),
+      presence: canSee(privacy.presence, relation),
+    };
+    return c.json({
+      ...card(profile),
+      bio: profile.bio,
+      country: profile.country,
+      friendship,
+      visible,
+      ...(visible.presence
+        ? { presence: (await presenceOf([profile], relation)).get(profile.accountId) }
+        : {}),
+    });
+  });
+
+  app.get("/users/:handle/friends", async (c) => {
+    const me = c.get("userId");
+    const profile = await findProfile(deps.db, c.req.param("handle"));
+    if (!profile || (await blocked(me, profile.accountId)))
+      throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
+    const relation = await relationOf(deps.db, me, profile.accountId);
+    if (!canSee(privacyOf(profile.privacy).friends, relation))
+      throw new HttpError(403, ErrorCode.forbidden, "This friends list is private", { section: "friends" });
+    const ids = await friendIds(profile.accountId);
+    // Nobody the asker blocked, or who blocked the asker, shows up in someone else's list.
+    const hidden = new Set(
+      ids.length && relation !== "me"
+        ? (
+            await deps.db
+              .select()
+              .from(blocks)
+              .where(
+                or(
+                  and(eq(blocks.blocker, me), inArray(blocks.blocked, ids)),
+                  and(eq(blocks.blocked, me), inArray(blocks.blocker, ids)),
+                ),
+              )
+          ).map((b) => (b.blocker === me ? b.blocked : b.blocker))
+        : [],
+    );
+    const people = (await activePeople(ids.filter((id) => !hidden.has(id)))).map(card);
+    people.sort((x, y) => x.displayName.localeCompare(y.displayName));
+    return c.json({ friends: people });
   });
 
   return app;

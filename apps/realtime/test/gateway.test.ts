@@ -185,6 +185,19 @@ describe("the gateway", () => {
     friend.socket.close();
   });
 
+  it("tells no one about a user who hides their presence", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    await valkey.set("presence-hidden:u1", "1");
+    const friend = await signedIn("u2", "s2");
+    const me = await signedIn("u1", "s1");
+    me.send({ op: "heartbeat", presence: { state: "in_game", titleId: "PPSA01234" } });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(friend.frames.filter((frame) => frame.type === "presence.updated")).toEqual([]);
+    expect(await valkey.get("presence:u1")).toBeNull();
+    me.socket.close();
+    friend.socket.close();
+  });
+
   it("merges a user's devices: playing on one wins over online on another", async () => {
     await valkey.sadd("friends:u1", "u2");
     const friend = await signedIn("u2", "s2");

@@ -4,6 +4,7 @@ import {
   type ServerFrame,
   friendsKey,
   presenceKey as mergedPresenceKey,
+  presenceHiddenKey,
   userChannel,
   userEvents,
 } from "@anytogether/shared";
@@ -91,8 +92,12 @@ export async function createGateway(options: GatewayOptions) {
   }
 
   /** The user's presence over all their devices (in a game > online > away), kept and, when it
-   *  changed, sent to every friend. */
+   *  changed, sent to every friend; unless they hide it, when nothing is kept or sent. */
   async function announce(userId: string) {
+    if (await store.exists(presenceHiddenKey(userId))) {
+      await store.del(mergedPresenceKey(userId));
+      return;
+    }
     const keys = await store.keys(`presence:${userId}:*`);
     const devices = (keys.length ? await store.mget(...keys) : [])
       .filter(Boolean)

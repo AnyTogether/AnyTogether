@@ -45,3 +45,6 @@ export const userEvents = (userId: string) => `events:${userId}`;
 export const friendsKey = (userId: string) => `friends:${userId}`;
 /** A user's presence merged over their devices, kept by the gateway. */
 export const presenceKey = (userId: string) => `presence:${userId}`;
+/** Set (by the API) while a user hides their presence from everyone: the gateway then keeps it to
+ *  itself and tells no one. */
+export const presenceHiddenKey = (userId: string) => `presence-hidden:${userId}`;

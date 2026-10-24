@@ -1,5 +1,5 @@
 import { type Database, accounts, blocks, friendships, handleHistory, profiles } from "@anytogether/db";
-import { handleHoldDays, isReservedHandle } from "@anytogether/shared";
+import { type Visibility, handleHoldDays, isReservedHandle } from "@anytogether/shared";
 import { and, eq, gt, ne, or } from "drizzle-orm";
 
 type Querier = Pick<Database, "select">;
@@ -70,3 +70,14 @@ export async function areFriends(db: Querier, a: string, b: string) {
     );
   return rows.length > 0;
 }
+
+/** Who is looking, as privacy settings see it. */
+export type Relation = "me" | "friend" | "other";
+
+export async function relationOf(db: Querier, viewer: string, owner: string): Promise<Relation> {
+  if (viewer === owner) return "me";
+  return (await areFriends(db, viewer, owner)) ? "friend" : "other";
+}
+
+export const canSee = (visibility: Visibility, relation: Relation) =>
+  relation === "me" || visibility === "everyone" || (visibility === "friends" && relation === "friend");

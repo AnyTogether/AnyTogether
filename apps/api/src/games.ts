@@ -22,6 +22,7 @@ import {
   TrophyBatch,
   TrophySet,
   friendsKey,
+  privacyOf,
   rarityLabel,
   trophyPoints,
 } from "@anytogether/shared";
@@ -33,7 +34,7 @@ import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
-import { areFriends, blockedBetween, findProfile } from "./people.js";
+import { blockedBetween, canSee, findProfile, relationOf } from "./people.js";
 
 /** Clocks drift; a time a little ahead of ours is still believed. */
 const clockSlack = 5 * 60_000;
@@ -135,15 +136,16 @@ export function gameRoutes(deps: Deps) {
       where t.title_id = c.title_id and t.set_hash = c.set_hash and t.trophy_id = c.trophy_id`);
   };
 
-  /** Someone whose library and trophies the asker may see: themselves or a friend. */
-  const viewable = async (me: string, handle: string) => {
+  /** Someone whose library or trophies the asker may see, as their privacy settings say. */
+  const viewable = async (me: string, handle: string, section: "library" | "trophies") => {
     const profile = await findProfile(db, handle);
     if (!profile) throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
     if (profile.accountId === me) return profile;
     if (await blockedBetween(db, me, profile.accountId))
       throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
-    if (!(await areFriends(db, me, profile.accountId)))
-      throw new HttpError(403, ErrorCode.forbidden, "Only friends can see this");
+    // The code stays "forbidden" for the launchers that know it; `section` says which part is private.
+    if (!canSee(privacyOf(profile.privacy)[section], await relationOf(db, me, profile.accountId)))
+      throw new HttpError(403, ErrorCode.forbidden, "This is private", { section });
     return profile;
   };
 
@@ -449,7 +451,8 @@ export function gameRoutes(deps: Deps) {
     if (fresh.length) {
       const friends = await deps.valkey.smembers(friendsKey(me));
       const profile = (await db.select().from(profiles).where(eq(profiles.accountId, me)))[0];
-      if (friends.length && profile)
+      // Trophies hidden from everyone are not told to friends either.
+      if (friends.length && profile && privacyOf(profile.privacy).trophies !== "nobody")
         for (const { item, grade, name } of fresh)
           for (const friend of friends)
             await publish(deps.valkey, friend, {
@@ -470,7 +473,7 @@ export function gameRoutes(deps: Deps) {
 
   app.get("/users/:handle/library", async (c) => {
     const me = c.get("userId");
-    const owner = await viewable(me, c.req.param("handle"));
+    const owner = await viewable(me, c.req.param("handle"), "library");
     const rows = await db
       .select({ entry: library, game: games })
       .from(library)
@@ -516,7 +519,7 @@ export function gameRoutes(deps: Deps) {
     const me = c.get("userId");
     const query = c.req.query("titleId");
     const titleId = query === undefined ? undefined : param(TitleId, query, "titleId");
-    const owner = await viewable(me, c.req.param("handle"));
+    const owner = await viewable(me, c.req.param("handle"), "trophies");
     const self = owner.accountId === me;
     /** Hidden trophies the asker earned themselves, whose texts they may see. */
     const askerHas = async (titleIds: string[]) =>

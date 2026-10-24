@@ -1,6 +1,6 @@
 import { type Database, profiles, sessions } from "@anytogether/db";
 import type { ClientKind, Tokens } from "@anytogether/shared";
-import { ErrorCode } from "@anytogether/shared";
+import { ErrorCode, presenceHiddenKey, privacyOf } from "@anytogether/shared";
 import { and, eq, isNull } from "drizzle-orm";
 import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
@@ -87,6 +87,11 @@ async function tokensFor(
 ): Promise<Tokens> {
   const profile = (await ctx.db.select().from(profiles).where(eq(profiles.accountId, accountId)))[0];
   if (!profile) throw new HttpError(500, ErrorCode.internal, "Account without a profile");
+  // Valkey keeps nothing across a restart: every sign-in and refresh tells the gateway again
+  // whether this user hides their presence.
+  if (privacyOf(profile.privacy).presence === "nobody")
+    await ctx.valkey.set(presenceHiddenKey(accountId), "1");
+  else await ctx.valkey.del(presenceHiddenKey(accountId));
   return {
     accessToken: await ctx.tokens.sign({ userId: accountId, sessionId }),
     expiresIn: accessLifetime,

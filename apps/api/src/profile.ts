@@ -2,15 +2,21 @@ import { accounts, handleHistory, profiles } from "@anytogether/db";
 import {
   ErrorCode,
   HandleChange,
+  PrivacyUpdate,
   ProfileUpdate,
+  friendsKey,
   handleCooldownDays,
   hasLink,
   isReservedHandle,
+  presenceHiddenKey,
+  presenceKey,
+  privacyOf,
 } from "@anytogether/shared";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
+import { publish } from "./events.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { type ProfileRow, handleFree } from "./people.js";
@@ -37,6 +43,7 @@ export function profileRoutes(deps: Deps) {
     country: profile.country,
     handleChangedAt: profile.handleChangedAt,
     handleChangeAt: nextHandleChange(profile),
+    privacy: privacyOf(profile.privacy),
   });
   const load = async (userId: string) => {
     const [profile] = await db.select().from(profiles).where(eq(profiles.accountId, userId));
@@ -114,6 +121,24 @@ export function profileRoutes(deps: Deps) {
       throw error;
     }
     return c.json(own(await load(userId)));
+  });
+
+  app.patch("/me/privacy", async (c) => {
+    const userId = c.get("userId");
+    const input = await body(c, PrivacyUpdate);
+    const before = privacyOf((await load(userId)).privacy);
+    const privacy = privacyOf({ ...before, ...input });
+    await db.update(profiles).set({ privacy }).where(eq(profiles.accountId, userId));
+    if (privacy.presence === "nobody" && before.presence !== "nobody") {
+      // Friends see the account go offline now; the gateway keeps quiet from here on.
+      await deps.valkey.multi().set(presenceHiddenKey(userId), "1").del(presenceKey(userId)).exec();
+      for (const friend of await deps.valkey.smembers(friendsKey(userId)))
+        await publish(deps.valkey, friend, { type: "presence.updated", data: { userId, state: "offline" } });
+    } else if (privacy.presence !== "nobody" && before.presence === "nobody") {
+      // The next heartbeat finds no presence kept and tells the friends again.
+      await deps.valkey.multi().del(presenceHiddenKey(userId)).del(presenceKey(userId)).exec();
+    }
+    return c.json(privacy);
   });
 
   return app;

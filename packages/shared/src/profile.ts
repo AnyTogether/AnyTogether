@@ -128,3 +128,40 @@ export const ProfileUpdate = z.object({
 });
 
 export const HandleChange = z.object({ handle: Handle });
+
+/** Who may see a part of a profile. The owner always sees everything. */
+export const visibilities = ["everyone", "friends", "nobody"] as const;
+export type Visibility = (typeof visibilities)[number];
+const VisibilityValue = z.enum(visibilities);
+
+/** library: games and play time; trophies; friends: the friends list; presence: online and what is
+ *  being played; search: who finds the account by name (a request to the exact handle always works). */
+export const privacySections = ["library", "trophies", "friends", "presence", "search"] as const;
+export type PrivacySection = (typeof privacySections)[number];
+export type Privacy = Record<PrivacySection, Visibility>;
+export const defaultPrivacy: Privacy = {
+  library: "friends",
+  trophies: "friends",
+  friends: "friends",
+  presence: "friends",
+  search: "everyone",
+};
+
+/** The stored settings over the defaults; anything unknown is ignored. */
+export function privacyOf(stored: unknown): Privacy {
+  const saved = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
+  const result = { ...defaultPrivacy };
+  for (const section of privacySections) {
+    const value = saved[section];
+    if (visibilities.includes(value as Visibility)) result[section] = value as Visibility;
+  }
+  return result;
+}
+
+/** PATCH /me/privacy: only the sections sent change. */
+export const PrivacyUpdate = z.object(
+  Object.fromEntries(privacySections.map((section) => [section, VisibilityValue.optional()])) as Record<
+    PrivacySection,
+    z.ZodOptional<typeof VisibilityValue>
+  >,
+);
