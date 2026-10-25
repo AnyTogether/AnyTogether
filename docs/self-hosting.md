@@ -10,7 +10,7 @@ on one machine with Docker Compose:
 | `web` | the website (Next.js) |
 | `api` | the REST API under `/api/v1`; it applies the database migrations when it starts |
 | `realtime` | the WebSocket gateway on `/rt`: presence, messages, call signalling |
-| `postgres` | PostgreSQL 17, the only place data is kept |
+| `postgres` | PostgreSQL 17, where the data is kept (cloud saves and media, when on, are files beside it) |
 | `valkey` | Valkey: rate limits, sign-in challenges, presence, the event bus (nothing kept on disk) |
 | `coturn` | optional: a STUN/TURN relay so voice calls connect behind strict networks |
 
@@ -127,6 +127,35 @@ notification list but offers no push. The optional mail digest of missed message
 requests (each person turns it on in Settings; at most one mail per 6 hours) uses the sign-in mail
 settings above.
 
+### Cloud saves and media
+
+Launchers can keep game saves in the cloud, and people can send photos, clips and voice notes in
+messages and pin screenshots and clips to their profile. Both use one quota per account (100 MB by
+default) and stay **off**, hidden in every client, until the API has somewhere to keep the files:
+
+- **On this machine**: `STORAGE_DIR=/data/files` in `.env`. Compose already mounts the `files`
+  Docker volume there for the API (`docker volume inspect anytogether_files` shows where it lives
+  on the host). To use a disk of your choice instead, replace `files:/data/files` under `api:` in
+  `compose.yaml` with a host folder, `/srv/anytogether-files:/data/files`, owned by uid 1000 (the
+  container's `node` user): `sudo mkdir -p /srv/anytogether-files && sudo chown 1000:1000 /srv/anytogether-files`.
+- **In a bucket**: any S3-compatible storage (Cloudflare R2, AWS S3, MinIO, Backblaze B2…). Fill in
+  `S3_ENDPOINT` (for R2 `https://<account id>.r2.cloudflarestorage.com`), `S3_BUCKET`,
+  `S3_ACCESS_KEY` and `S3_SECRET_KEY` with a key that may read, write, list and delete in that
+  bucket, and `S3_REGION` for AWS (`auto` suits R2). The bucket stays private: every file is
+  served through the API, with links that expire. Uploads wait on the API's own disk (in the
+  `files` volume) until they are complete.
+
+Then `docker compose up -d`. The API's log says `cloud saves and media: on (filesystem, 100 MB per
+account)`; with a folder it cannot write to or a bucket it cannot list, it says why and keeps them
+off rather than failing. `curl https://<your DOMAIN>/api/v1/storage` answers `{"enabled":true,…}`.
+
+`STORAGE_QUOTA_MB` sets the quota and `SAVE_MAX_MB` the biggest save (50 MB by default; photos are
+at most 10 MB, clips 25 MB and voice notes 1 MB and a minute). Plan the disk as accounts × quota at
+most. Files are kept by their SHA-256, once per account; what nothing uses any more (unfinished
+uploads after a day, media never sent or pinned, the files of deleted accounts) is removed by the
+API every hour. Links to files are signed with `FILE_LINK_SECRET`, or with a key made from
+`JWT_PRIVATE_KEY` when it is empty.
+
 ### Passkeys
 
 Passkeys belong to `DOMAIN`: they keep working across upgrades and restarts, but moving the site to
@@ -163,6 +192,13 @@ rest.
 | `GAME_ICON_HOSTS` | api | `.env` | hosts (and their subdomains) a game's icon URL may point at, comma separated; launchers load icons for everyone who sees the game, so empty keeps none |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | api | `.env` | the Web Push key pair (`npx web-push generate-vapid-keys`); empty: no push notifications |
 | `VAPID_SUBJECT` | api | `.env` | a `mailto:` (or `https:`) contact for the push services |
+| `STORAGE_DIR` | api | `.env` | the folder for cloud saves and media (`/data/files`, the `files` volume); with the S3 settings empty, cloud saves and media are off without it |
+| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | api | `.env` | an S3-compatible bucket for them instead (all four, or S3 stays off) |
+| `S3_REGION` | api | `.env`, `auto` | the bucket's region (`auto` for R2) |
+| `STORAGE_QUOTA_MB` | api | `.env`, `100` | megabytes per account, saves and media together |
+| `SAVE_MAX_MB` | api | `.env`, `50` | the biggest save archive |
+| `STORAGE_STAGING_DIR` | api | not set | where uploads to a bucket wait (the system's temporary folder by default) |
+| `FILE_LINK_SECRET` | api | `.env` | signs the expiring links to files; empty: derived from `JWT_PRIVATE_KEY` |
 | `GATEWAY_PUBLIC_URL` | web | not set | where browsers open the gateway socket, when it is not `wss://<site>/rt` |
 | `HOSTNAME`, `NODE_ENV` | web | set by the image | the website listens on all addresses, in production mode (HTTPS-only cookies) |
 | `USER` | api's admin tool | your shell's | the name recorded with a ban or a handled report; `admin` when unset |
@@ -182,12 +218,21 @@ indexes), so a running website keeps working while the new images start. Back up
 
 ## Backup and restore
 
-All data is in PostgreSQL (profiles, avatars, messages, trophies, everything); Valkey holds nothing
-worth keeping, and Caddy's certificates are fetched again if lost. One dump is a full backup:
+All data is in PostgreSQL (profiles, avatars, messages, trophies, everything) and, with cloud saves
+and media on, in the `files` volume (or the bucket); Valkey holds nothing worth keeping, and Caddy's
+certificates are fetched again if lost. A dump is a full backup of the database:
 
 ```sh
 mkdir -p backups
 docker compose exec -T postgres pg_dump -U anytogether -Fc anytogether > backups/anytogether-$(date +%F).dump
+```
+
+With `STORAGE_DIR`, copy the files volume too, after the dump (files nothing in the dump knows
+about are cleaned up after a restore):
+
+```sh
+docker run --rm -v anytogether_files:/data/files:ro -v "$PWD/backups":/out alpine \
+  tar czf /out/files-$(date +%F).tar.gz -C /data files
 ```
 
 Run it nightly from cron, copy the files off the machine, and keep them as long as your privacy

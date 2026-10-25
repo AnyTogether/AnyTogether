@@ -13,3 +13,4 @@ apps/web/next-env.d.ts
 *.tsbuildinfo
 deploy/backups/
 e2e/.run/
+.files/

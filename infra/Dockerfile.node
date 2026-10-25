@@ -25,5 +25,7 @@ WORKDIR /app
 COPY --from=build /repo/apps/${APP}/dist ./dist
 COPY --from=build /natives/node_modules ./node_modules
 COPY --from=build /repo/packages/db/drizzle ./drizzle
+# The API's files volume (cloud saves and media) starts out owned by the user it runs as.
+RUN mkdir -p /data/files && chown node:node /data/files
 USER node
 CMD ["node", "dist/main.js"]
