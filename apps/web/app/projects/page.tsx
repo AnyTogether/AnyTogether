@@ -1,5 +1,6 @@
 import { PageHead, day } from "@/components/site/PageHead";
 import { Reveal } from "@/components/site/Reveal";
+import { wide } from "@/components/site/fonts";
 import { language } from "@/lib/i18n";
 import { type RepoCard, projectsStrings } from "@/lib/i18n-projects";
 import { fill } from "@/lib/people";
@@ -29,7 +30,7 @@ export default async function Projects() {
   const [creditBefore, creditAfter] = p.upstream.credits.split("{link}");
 
   return (
-    <div className="site pg pj-page">
+    <div className={`site pg pj-page ${wide.variable}`}>
       <Reveal />
       <PageHead kicker={p.kicker} title={p.title} lead={p.lead} />
       {!stats && <p className="pg-notice">{p.down}</p>}
@@ -49,7 +50,6 @@ export default async function Projects() {
 
       <section className="pg-sec pj-upstream pg-panel" data-reveal aria-labelledby="upstream-title">
         <div>
-          <p className="kicker">{p.upstream.kicker}</p>
           <h2 className="h-card" id="upstream-title">
             {p.upstream.title}
           </h2>
@@ -77,7 +77,6 @@ export default async function Projects() {
       </section>
 
       <section className="pg-sec" data-reveal aria-labelledby="licences-title">
-        <p className="kicker">{p.licences.kicker}</p>
         <h2 className="h-card" id="licences-title">
           {p.licences.title}
         </h2>
@@ -92,7 +91,6 @@ export default async function Projects() {
       </section>
 
       <section className="pg-sec" id="contribute" data-reveal aria-labelledby="contribute-title">
-        <p className="kicker">{p.contribute.kicker}</p>
         <h2 className="h-card" id="contribute-title">
           {p.contribute.title}
         </h2>

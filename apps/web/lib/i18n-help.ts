@@ -36,14 +36,12 @@ const en = {
     more: "Still stuck",
   },
   install: {
-    kicker: "Install",
     title: "Pick your platform.",
     lead: "Every file, with sizes and checksums, is on the downloads page.",
     files: "Files and checksums",
     needs: "Needs",
   },
   start: {
-    kicker: "First steps",
     title: "From download to playing.",
     steps: [
       [
@@ -73,7 +71,6 @@ const en = {
     ] as [string, string][],
   },
   faq: {
-    kicker: "Questions",
     title: "Asked often.",
     items: [
       {
@@ -163,7 +160,6 @@ const en = {
     ] as Faq[],
   },
   trouble: {
-    kicker: "Troubleshooting",
     title: "When something goes wrong.",
     items: [
       [
@@ -231,14 +227,12 @@ const tr: HelpStrings = {
     more: "Hâlâ takıldıysan",
   },
   install: {
-    kicker: "Kurulum",
     title: "Platformunu seç.",
     lead: "Boyutları ve sağlama toplamlarıyla her dosya indirme sayfasında.",
     files: "Dosyalar ve sağlama toplamları",
     needs: "Gerekenler",
   },
   start: {
-    kicker: "İlk adımlar",
     title: "İndirmekten oynamaya.",
     steps: [
       [
@@ -268,7 +262,6 @@ const tr: HelpStrings = {
     ],
   },
   faq: {
-    kicker: "Sorular",
     title: "Sık sorulanlar.",
     items: [
       {
@@ -358,7 +351,6 @@ const tr: HelpStrings = {
     ],
   },
   trouble: {
-    kicker: "Sorun giderme",
     title: "Bir şeyler ters gittiğinde.",
     items: [
       [

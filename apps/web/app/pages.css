@@ -1,18 +1,22 @@
 /* The reference pages: downloads, changelog, roadmap, projects and help. They share the product
-   pages' type, lines and panels (site.css); this adds what only they need. */
+   pages' type, lines and panels (site.css) and the Cosmic night (night.css: --paper, --accent,
+   --font-head); this adds what only they need. */
 
 /* Shared */
 .pg-hero {
   padding-top: clamp(48px, 8vh, 96px);
-  max-width: 860px;
+  max-width: 980px;
 }
 .pg-title {
   margin-top: 22px;
-  font-size: clamp(40px, 6.2vw, 76px);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
-  font-weight: 700;
+  font-size: clamp(36px, 5.4vw, 76px);
+  line-height: 0.94;
+  letter-spacing: -0.045em;
   text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.pg-hero .p-lead {
+  color: var(--ink-2);
 }
 .pg-hero .cta-row {
   margin-top: 30px;
@@ -58,12 +62,13 @@
   margin-top: clamp(80px, 10vw, 128px);
   scroll-margin-top: 72px;
 }
+.pg-sec .h-card {
+  margin-top: 0;
+}
 .pg-panel {
-  border: 1px solid var(--line);
   border-radius: 22px;
-  background: rgba(10, 12, 18, 0.72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--paper-2);
+  box-shadow: 0 0 0 1px var(--rule) inset;
 }
 .pg-foot-note {
   margin-top: 48px;
@@ -86,19 +91,16 @@
 .dl-plat {
   margin-top: 28px;
   padding: clamp(22px, 3vw, 36px);
-  border: 1px solid var(--line);
   border-radius: 22px;
-  background: rgba(10, 12, 18, 0.72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--paper-2);
+  box-shadow: 0 0 0 1px var(--rule) inset;
   scroll-margin-top: 72px;
 }
 .toc + .dl-plat {
   margin-top: 36px;
 }
 .dl-plat.current {
-  border-color: rgba(143, 176, 255, 0.4);
-  box-shadow: 0 0 0 1px rgba(143, 176, 255, 0.12), 0 30px 70px -30px rgba(79, 124, 255, 0.35);
+  box-shadow: 0 0 0 1px oklch(76% 0.13 250 / 0.5) inset, 0 40px 90px -50px var(--accent-glow);
 }
 .dl-plat-head {
   display: flex;
@@ -111,17 +113,22 @@
   height: 44px;
   padding: 10px;
   border-radius: 13px;
-  border: 1px solid var(--line-2);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--rule);
+  background: var(--paper-3);
   stroke-width: 1.6;
+}
+.dl-plat.current .ico.plat {
+  color: var(--accent);
 }
 .dl-plat-head h2 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  font-size: clamp(22px, 2.6vw, 28px);
-  font-weight: 700;
+  font-family: var(--font-head);
+  font-stretch: 110%;
+  font-size: clamp(24px, 2.8vw, 32px);
+  font-weight: 760;
   letter-spacing: -0.03em;
 }
 .dl-plat-body {
@@ -165,7 +172,7 @@
   font: 500 10.5px / 1 var(--font-mono), monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--c);
+  color: var(--accent);
 }
 .dl-file-name code {
   font: 500 14px / 1.35 var(--font-mono), monospace;
@@ -206,9 +213,9 @@
   gap: 10px;
   min-width: 0;
   padding: 6px 6px 6px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--rule);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.25);
+  background: oklch(10% 0.02 264);
 }
 .dl-sum-label {
   flex: none;
@@ -268,6 +275,10 @@
 }
 .dl-commands .term-line code {
   font-size: 12px;
+}
+.pg .term-line {
+  border-color: var(--rule);
+  background: oklch(10% 0.02 264);
 }
 
 @media (max-width: 760px) {
@@ -343,12 +354,12 @@
   color: var(--ink);
 }
 .cl-chip[aria-current="page"] {
-  color: #07080c;
+  color: var(--paper);
   background: var(--ink);
   border-color: var(--ink);
 }
 .cl-chip[aria-current="page"] .meta {
-  color: rgba(7, 8, 12, 0.6);
+  color: oklch(13% 0.03 264 / 0.62);
 }
 .cl-count {
   margin-left: auto;
@@ -362,7 +373,7 @@
   margin-top: 36px;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--rule-2);
 }
 .cl-entry {
   display: grid;
@@ -398,12 +409,12 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--a);
-  box-shadow: 0 0 10px var(--a);
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 .cl-project.desktop::before {
-  background: var(--c);
-  box-shadow: 0 0 10px var(--c);
+  background: transparent;
+  box-shadow: 0 0 0 1.5px var(--ink-2) inset;
 }
 .cl-head {
   display: flex;
@@ -413,17 +424,20 @@
   gap: 10px 14px;
 }
 .cl-head h2 {
-  font-size: clamp(30px, 3.6vw, 44px);
+  font-family: var(--font-head);
+  font-stretch: 112%;
+  font-size: clamp(30px, 3.6vw, 48px);
   line-height: 1;
-  letter-spacing: -0.045em;
-  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-weight: 780;
   font-variant-numeric: tabular-nums;
 }
 .cl-version {
   text-decoration: none;
+  transition: color 0.18s ease;
 }
 .cl-version:hover {
-  color: #fff;
+  color: var(--accent);
 }
 .cl-entry.folded {
   padding: clamp(24px, 3vw, 32px) 0;
@@ -648,10 +662,16 @@
   border-left: 1px solid var(--line);
 }
 .rm-count b {
-  font-size: clamp(28px, 3.4vw, 40px);
-  font-weight: 700;
+  font-family: var(--font-head);
+  font-stretch: 112%;
+  font-size: clamp(30px, 3.6vw, 48px);
+  font-weight: 780;
+  line-height: 1;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
+}
+.rm-count.is-progress b {
+  color: var(--accent);
 }
 .rm-count span {
   font-size: 13px;
@@ -660,11 +680,12 @@
 .rm-count:hover span {
   color: var(--ink);
 }
+/* The four states as shades of the one blue: in progress the brightest, later the dimmest. */
 .rm-page {
-  --done: var(--c);
-  --progress: var(--a);
-  --next: var(--b);
-  --later: var(--mute);
+  --done: var(--accent-deep);
+  --progress: var(--accent);
+  --next: oklch(68% 0.07 256);
+  --later: oklch(50% 0.03 262);
 }
 .rm-board {
   margin-top: 40px;
@@ -694,9 +715,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-family: var(--font-head);
+  font-stretch: 110%;
+  font-size: 19px;
+  font-weight: 740;
+  letter-spacing: -0.02em;
 }
 .rm-dot {
   width: 8px;
@@ -730,12 +753,11 @@
 .rm-item {
   position: relative;
   padding: 16px 16px 14px;
-  border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(10, 12, 18, 0.72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--paper-2);
+  box-shadow: 0 0 0 1px var(--rule) inset;
   overflow: hidden;
+  scroll-margin-top: 72px;
 }
 .rm-item::before {
   content: "";
@@ -773,11 +795,11 @@
   font: 500 10.5px / 1 var(--font-mono), monospace;
   letter-spacing: 0.02em;
   color: var(--mute);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--paper-3);
 }
 .rm-shipped {
-  color: var(--done);
-  background: rgba(47, 224, 196, 0.08);
+  color: var(--accent);
+  background: oklch(76% 0.13 250 / 0.1);
 }
 
 @media (max-width: 1000px) {
@@ -836,24 +858,30 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 14px;
-  font-size: clamp(28px, 3.6vw, 44px);
+  font-family: var(--font-head);
+  font-stretch: 112%;
+  font-size: clamp(28px, 3.6vw, 46px);
   line-height: 1;
-  letter-spacing: -0.045em;
-  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-weight: 780;
+  overflow-wrap: anywhere;
 }
 .pj-repo-head h2 a {
+  min-width: 0;
   text-decoration: none;
+  transition: color 0.18s ease;
 }
 .pj-repo-head h2 a:hover {
-  color: #fff;
+  color: var(--accent);
 }
 .pj-lic {
   padding: 5px 9px;
-  border: 1px solid rgba(47, 224, 196, 0.35);
+  border: 1px solid var(--rule-2);
   border-radius: 999px;
   font: 500 11px / 1 var(--font-mono), monospace;
+  font-stretch: normal;
   letter-spacing: 0.04em;
-  color: var(--c);
+  color: var(--ink-2);
 }
 .pj-slug {
   margin-top: 10px;
@@ -866,8 +894,10 @@
   gap: 28px;
 }
 .pj-numbers dt {
+  font-family: var(--font-head);
+  font-stretch: 110%;
   font-size: clamp(22px, 2.6vw, 30px);
-  font-weight: 700;
+  font-weight: 760;
   letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
 }
@@ -931,13 +961,13 @@
 .pj-branches code {
   padding: 3px 7px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--paper-3);
   font: 500 12px / 1.4 var(--font-mono), monospace;
   color: var(--ink);
-  transition: background 0.18s ease;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 .pj-branches a:hover code {
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--accent);
 }
 .pj-branches span {
   color: var(--mute);
@@ -983,19 +1013,21 @@
   align-content: start;
   gap: 8px;
   padding: 20px 44px 20px 20px;
-  border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(10, 12, 18, 0.6);
+  background: var(--paper-2);
+  box-shadow: 0 0 0 1px var(--rule) inset;
   text-decoration: none;
-  transition: border-color 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
 .pj-help-card:hover {
-  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 0 1px var(--rule-2) inset;
 }
 .pj-help-card b {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--font-head);
+  font-stretch: 108%;
+  font-size: 17px;
+  font-weight: 720;
+  letter-spacing: -0.015em;
 }
 .pj-help-card span {
   font-size: 13.5px;
@@ -1009,6 +1041,7 @@
   color: var(--mute);
 }
 .pj-help-card:hover .ico.arrow {
+  color: var(--accent);
   transform: translateX(3px);
 }
 
@@ -1080,6 +1113,15 @@
 .hp-steps {
   margin-top: 36px;
 }
+.hp-steps li {
+  border-top-color: var(--rule-2);
+}
+.hp-steps h3 {
+  font-size: clamp(19px, 1.8vw, 23px);
+}
+.hp-steps p {
+  font-size: 15px;
+}
 .hp-faq {
   display: grid;
   grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
@@ -1114,7 +1156,7 @@
   transition: color 0.18s ease;
 }
 .hp-q summary:hover h3 {
-  color: #fff;
+  color: var(--accent);
 }
 .hp-q summary::before,
 .hp-q summary::after {
@@ -1133,6 +1175,10 @@
 }
 .hp-q[open] summary::after {
   transform: rotate(0deg);
+}
+.hp-q[open] summary::before,
+.hp-q[open] summary::after {
+  background: var(--accent);
 }
 .hp-a {
   display: grid;
@@ -1157,8 +1203,13 @@
 .hp-trouble {
   margin-top: 36px;
 }
+.hp-more {
+  border-top: 1px solid var(--rule-2);
+}
 .hp-more h2 {
-  font-size: clamp(40px, 6vw, 72px);
+  font-size: clamp(40px, 6vw, 80px);
+  line-height: 0.94;
+  letter-spacing: -0.045em;
 }
 
 @media (max-width: 860px) {

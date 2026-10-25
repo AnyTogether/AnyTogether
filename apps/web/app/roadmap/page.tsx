@@ -1,5 +1,6 @@
 import { PageHead, day } from "@/components/site/PageHead";
 import { Reveal } from "@/components/site/Reveal";
+import { wide } from "@/components/site/fonts";
 import { language } from "@/lib/i18n";
 import { roadmapStrings } from "@/lib/i18n-roadmap";
 import { fill } from "@/lib/people";
@@ -17,7 +18,7 @@ export default async function Roadmap() {
   const lang = await language();
   const r = roadmapStrings(lang);
   return (
-    <div className="site pg rm-page">
+    <div className={`site pg rm-page ${wide.variable}`}>
       <Reveal />
       <PageHead kicker={r.kicker} title={r.title} lead={r.lead}>
         <div className="pg-links">

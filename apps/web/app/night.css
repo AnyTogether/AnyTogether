@@ -1,0 +1,169 @@
+/* The public pages' system: the launcher's Cosmic night as the paper, its blue as the one accent,
+ * the DualSense seat colours only where they mean a player, Archivo wide for headings (the
+ * --font-wide variable each page sets on its outermost .site element), grain over the night.
+ * Loaded on every route, but all of it waits for a .site element, so the signed-in app keeps its
+ * own look. The front page's and product pages' live pieces are in live.css. */
+
+.site,
+body:has(.site) {
+  --paper: oklch(13% 0.03 264);
+  --paper-2: oklch(17% 0.034 264);
+  --paper-3: oklch(21.5% 0.036 264);
+  --ink: oklch(96.5% 0.008 260);
+  --ink-2: oklch(85% 0.02 260);
+  --mute: oklch(71% 0.028 262);
+  --rule: oklch(100% 0 0 / 0.08);
+  --rule-2: oklch(100% 0 0 / 0.14);
+  --accent: oklch(76% 0.13 250);
+  --accent-deep: oklch(58% 0.19 262);
+  --accent-glow: oklch(68% 0.17 258 / 0.35);
+  --launcher: oklch(14% 0.012 30);
+  --launcher-blue: oklch(62% 0.19 262);
+  --font-head: var(--font-wide, var(--font-display)), system-ui, sans-serif;
+  --font-ui: -apple-system, "SF Pro Display", system-ui, "Segoe UI", Roboto, sans-serif;
+}
+body:has(.site) {
+  background: var(--paper);
+}
+body:has(.site) > .glow,
+body:has(.site) > .grid {
+  display: none;
+}
+/* Grain over the whole night, so the dark never reads as flat. */
+body:has(.site)::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+body:has(.site) header .pill.accent {
+  background: var(--accent);
+  color: var(--paper);
+  border-color: transparent;
+}
+body:has(.site) header .pill.accent:hover {
+  background: var(--ink);
+}
+
+/* Type */
+.site .h-section,
+.site .h-card,
+.site .l-title,
+.site .p-title,
+.site .l-final h2,
+.site .rules-title,
+.site .pg-title,
+.site .hub-head h2,
+.site .compat-title h2,
+.site .theme-title h2 {
+  font-family: var(--font-head);
+  font-stretch: 112%;
+  font-weight: 780;
+  font-style: normal;
+}
+.site .h-section {
+  font-size: clamp(34px, 5vw, 68px);
+  line-height: 0.94;
+  letter-spacing: -0.038em;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.site .h-card {
+  font-size: clamp(26px, 2.8vw, 38px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.site .s-lead {
+  color: var(--mute);
+}
+
+/* Shared pieces in the night's colours */
+.site a:focus-visible,
+.site button:focus-visible,
+.site summary:focus-visible {
+  outline-color: var(--accent);
+}
+.site .release .dot {
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+.site .chip-tag.preview {
+  border-color: oklch(76% 0.13 250 / 0.4);
+  color: var(--accent);
+}
+.site .cta.primary {
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 12px 32px -12px var(--accent-glow);
+}
+.site .toc {
+  background: oklch(13% 0.03 264 / 0.84);
+  border-bottom-color: var(--rule);
+}
+.site .plat-card {
+  background: var(--paper-2);
+  border-color: transparent;
+  box-shadow: 0 0 0 1px var(--rule) inset;
+  backdrop-filter: none;
+}
+.site .plat-card:hover {
+  border-color: transparent;
+  box-shadow: 0 0 0 1px var(--rule-2) inset;
+}
+.site .plat-card.current {
+  box-shadow: 0 0 0 1px oklch(76% 0.13 250 / 0.5) inset, 0 30px 70px -40px var(--accent-glow);
+}
+.site .plat-card h3 {
+  font-family: var(--font-head);
+  font-stretch: 108%;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+}
+.site .install-steps li::before {
+  border-color: oklch(76% 0.13 250 / 0.35);
+  color: var(--accent);
+}
+/* Rules and lists without the 01, 02, 03 above them */
+.site .rules li::before {
+  content: none;
+}
+.site .rules h3,
+.site .items h3,
+.site .cards h3 {
+  font-family: var(--font-head);
+  font-stretch: 108%;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+/* The last call stands on the night itself, no glow behind it */
+.site .l-final::before {
+  content: none;
+}
+/* The hub pages' one filled button, in the accent instead of the old three-colour gradient */
+.site .pill.accent {
+  color: var(--paper);
+  background: var(--accent);
+  border-color: transparent;
+}
+.site .pill.accent:hover {
+  background: var(--ink);
+  filter: none;
+}
+/* The hub pages (themes, compatibility): their cards on the night's own panel */
+.site .card {
+  background: var(--paper-2);
+  border-color: var(--rule);
+  backdrop-filter: none;
+}
+.site.page {
+  padding-bottom: 8vh;
+}
+.site .primary:not(.cta) {
+  color: var(--paper);
+  background: var(--accent);
+}
+.site .primary:not(.cta):hover {
+  background: var(--ink);
+}

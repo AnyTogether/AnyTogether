@@ -2,6 +2,7 @@ import { PlatformIcon } from "@/components/site/Download";
 import { PageHead } from "@/components/site/PageHead";
 import { Reveal } from "@/components/site/Reveal";
 import { Rich } from "@/components/site/Rich";
+import { wide } from "@/components/site/fonts";
 import { platformOrder } from "@/lib/downloads";
 import { language } from "@/lib/i18n";
 import { downloadPageStrings } from "@/lib/i18n-download";
@@ -46,7 +47,7 @@ export default async function Help() {
   }).replace(/</g, "\\u003c");
 
   return (
-    <div className="site pg hp-page">
+    <div className={`site pg hp-page ${wide.variable}`}>
       <Reveal />
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: JSON of the page's own fixed texts, < escaped */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqData }} />
@@ -72,7 +73,6 @@ export default async function Help() {
 
       <section className="pg-sec" id="install" aria-labelledby="install-title">
         <div data-reveal>
-          <p className="kicker">{h.install.kicker}</p>
           <h2 className="h-card" id="install-title">
             {h.install.title}
           </h2>
@@ -116,15 +116,13 @@ export default async function Help() {
 
       <section className="pg-sec" id="start" aria-labelledby="start-title">
         <div data-reveal>
-          <p className="kicker">{h.start.kicker}</p>
           <h2 className="h-card" id="start-title">
             {h.start.title}
           </h2>
         </div>
-        <ol className="cards three numbered hp-steps" data-reveal>
-          {h.start.steps.map(([t, text], index) => (
+        <ol className="cards three hp-steps" data-reveal>
+          {h.start.steps.map(([t, text]) => (
             <li key={t}>
-              <span className="num">{String(index + 1).padStart(2, "0")}</span>
               <h3>{t}</h3>
               <p>{text}</p>
             </li>
@@ -134,7 +132,6 @@ export default async function Help() {
 
       <section className="pg-sec hp-faq" id="faq" aria-labelledby="faq-title">
         <div className="hp-faq-head" data-reveal>
-          <p className="kicker">{h.faq.kicker}</p>
           <h2 className="h-card" id="faq-title">
             {h.faq.title}
           </h2>
@@ -159,7 +156,6 @@ export default async function Help() {
 
       <section className="pg-sec" id="trouble" aria-labelledby="trouble-title">
         <div data-reveal>
-          <p className="kicker">{h.trouble.kicker}</p>
           <h2 className="h-card" id="trouble-title">
             {h.trouble.title}
           </h2>

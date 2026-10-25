@@ -125,7 +125,6 @@ const en = {
     },
   ] as [RepoCard, RepoCard, RepoCard],
   upstream: {
-    kicker: "Built on",
     title: "AnyPS5, upstream.",
     lead: "boykopovar/AnyPS5 is the open source PS5 compatibility layer everything here is built on: the relinker, the system libraries and the shader recompiler, for Linux and Windows. AnyPS5-ARM is its macOS port and merges its work back in.",
     credits:
@@ -134,7 +133,6 @@ const en = {
     discussions: "Game bring-up discussions",
   },
   licences: {
-    kicker: "Licences",
     title: "What you may do with it.",
     items: [
       [
@@ -152,7 +150,6 @@ const en = {
     ] as [string, string][],
   },
   contribute: {
-    kicker: "Contribute",
     title: "Make it better.",
     lead: "Bug reports from real games are the most useful thing anyone can send. So are pull requests, compatibility reports and themes.",
     items: [
@@ -286,7 +283,6 @@ const tr: ProjectsStrings = {
     },
   ],
   upstream: {
-    kicker: "Üzerine kurulu",
     title: "Upstream AnyPS5.",
     lead: "boykopovar/AnyPS5, buradaki her şeyin üzerine kurulduğu açık kaynak PS5 uyumluluk katmanı: Linux ve Windows için relinker, sistem kütüphaneleri ve gölgelendirici derleyicisi. AnyPS5-ARM onun macOS uyarlaması ve çalışmalarını düzenli olarak birleştirir.",
     credits:
@@ -295,7 +291,6 @@ const tr: ProjectsStrings = {
     discussions: "Oyun çalıştırma tartışmaları",
   },
   licences: {
-    kicker: "Lisanslar",
     title: "Onunla ne yapabilirsin.",
     items: [
       [
@@ -310,7 +305,6 @@ const tr: ProjectsStrings = {
     ],
   },
   contribute: {
-    kicker: "Katkıda bulun",
     title: "Daha iyi yap.",
     lead: "Gerçek oyunlardan gelen hata raporları birinin gönderebileceği en faydalı şey. Pull request'ler, uyumluluk raporları ve temalar da öyle.",
     items: [

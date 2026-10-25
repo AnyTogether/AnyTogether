@@ -1,5 +1,6 @@
 import { CompatForm } from "@/components/CompatForm";
 import { CompatVerdict } from "@/components/CompatVerdict";
+import { wide } from "@/components/site/fonts";
 import {
   type CompatGame,
   type CompatPlatform,
@@ -61,7 +62,7 @@ export default async function Compatibility({ searchParams }: Search) {
   const columns = platform ? [platform] : compatPlatforms;
 
   return (
-    <section className="page hub-page compat">
+    <section className={`page hub-page compat site ${wide.variable}`}>
       <div className="hub-head">
         <div>
           <h2 className="in d1">{texts.compatibility}</h2>

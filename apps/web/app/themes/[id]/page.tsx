@@ -1,6 +1,7 @@
 import { Avatar } from "@/components/Avatar";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { ThemeLike, ThemeOwner } from "@/components/ThemeActions";
+import { wide } from "@/components/site/fonts";
 import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
 import { currentUser, publicJson } from "@/lib/session";
@@ -55,7 +56,7 @@ export default async function Theme({ params }: Params) {
   ];
 
   return (
-    <section className="page theme-page" style={themeStyle(theme.colors)}>
+    <section className={`page theme-page site ${wide.variable}`} style={themeStyle(theme.colors)}>
       <nav className="crumbs in d1">
         <Link href="/themes">{texts.themes}</Link>
         {theme.mine && <Link href="/themes/mine">{texts.myThemes}</Link>}

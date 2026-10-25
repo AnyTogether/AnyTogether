@@ -2,6 +2,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { DownloadCta, DownloadIcon, PlatformIcon } from "@/components/site/Download";
 import { PageHead, day } from "@/components/site/PageHead";
 import { Reveal } from "@/components/site/Reveal";
+import { wide } from "@/components/site/fonts";
 import {
   type DownloadFile,
   type Platform,
@@ -46,7 +47,7 @@ export default async function Download() {
   ];
 
   return (
-    <div className="site pg dl-page">
+    <div className={`site pg dl-page ${wide.variable}`}>
       <Reveal />
       <PageHead kicker={d.kicker} title={d.title} lead={d.lead}>
         <div className="cta-row">
@@ -160,7 +161,6 @@ export default async function Download() {
 
       <section className="pg-sec dl-verify" id="verify" data-reveal>
         <div>
-          <p className="kicker">{d.verify.kicker}</p>
           <h2 className="h-card">{d.verify.title}</h2>
           <p className="s-lead">{d.verify.lead}</p>
         </div>

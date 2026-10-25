@@ -1,4 +1,5 @@
 import { ThemeTile } from "@/components/ThemeTile";
+import { wide } from "@/components/site/fonts";
 import { strings } from "@/lib/i18n";
 import { currentUser, publicJson } from "@/lib/session";
 import { type ThemePage, type ThemeSort, themeSorts } from "@/lib/themes";
@@ -52,7 +53,7 @@ export default async function Themes({ searchParams }: Search) {
   };
 
   return (
-    <section className="page hub-page">
+    <section className={`page hub-page site ${wide.variable}`}>
       <div className="hub-head">
         <div>
           <h2 className="in d1">{texts.themes}</h2>

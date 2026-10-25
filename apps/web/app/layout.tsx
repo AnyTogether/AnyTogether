@@ -29,6 +29,7 @@ import "./site.css";
 import "./pages.css";
 import "./storage.css";
 import "./account.css";
+import "./night.css";
 
 const display = Space_Grotesk({
   subsets: ["latin", "latin-ext"],

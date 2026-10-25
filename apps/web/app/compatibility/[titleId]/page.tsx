@@ -1,5 +1,6 @@
 import { CompatDelete, CompatForm } from "@/components/CompatForm";
 import { CompatVerdict } from "@/components/CompatVerdict";
+import { wide } from "@/components/site/fonts";
 import {
   type CompatGame,
   type CompatReportView,
@@ -42,7 +43,7 @@ export default async function CompatibilityGame({ params }: Params) {
   const name = localName(game.names, language) || game.titleId;
 
   return (
-    <section className="page compat">
+    <section className={`page compat site ${wide.variable}`}>
       <nav className="crumbs in d1">
         <Link href="/compatibility">{texts.compatibility}</Link>
       </nav>

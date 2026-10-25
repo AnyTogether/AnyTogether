@@ -2,6 +2,7 @@ import { DownloadIcon } from "@/components/site/Download";
 import { Notes } from "@/components/site/Notes";
 import { PageHead, day } from "@/components/site/PageHead";
 import { Reveal } from "@/components/site/Reveal";
+import { wide } from "@/components/site/fonts";
 import { changelogEntries, pickProject, projects } from "@/lib/changelog";
 import { repos } from "@/lib/downloads";
 import { language } from "@/lib/i18n";
@@ -36,7 +37,7 @@ export default async function Changelog({
   const [before, after] = c.current.split("{link}");
 
   return (
-    <div className="site pg cl-page">
+    <div className={`site pg cl-page ${wide.variable}`}>
       <Reveal />
       <PageHead kicker={c.kicker} title={c.title} lead={c.lead}>
         {c.englishOnly && <p className="fine-note">{c.englishOnly}</p>}
