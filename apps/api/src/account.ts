@@ -48,6 +48,8 @@ import { uuidv7 } from "uuidv7";
 import { z } from "zod";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
+import { publish } from "./events.js";
+import { familyAfterManager } from "./family.js";
 import { refreshRarityOf } from "./games.js";
 import { body } from "./http.js";
 import { MailError } from "./mailCheck.js";
@@ -334,7 +336,15 @@ export async function purgeDeletedAccounts(
     const titles = (
       await ctx.db.select({ titleId: library.titleId }).from(library).where(eq(library.accountId, id))
     ).map((l) => l.titleId);
-    await ctx.db.transaction(async (tx) => {
+    const family = await ctx.db.transaction(async (tx) => {
+      // A family they manage goes to the next one in it, or ends with no one left (unless they
+      // signed in just now, keeping the account).
+      const still = await tx
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(and(eq(accounts.id, id), eq(accounts.status, "deleting")))
+        .for("update");
+      const family = still.length ? await familyAfterManager(tx, id, "purged") : null;
       // Their messages go too: emptied, so the others' threads keep their order.
       await tx
         .update(messages)
@@ -344,7 +354,9 @@ export async function purgeDeletedAccounts(
       // The codes mailed to the address name it; they go with the account.
       if (email) await tx.delete(signInRequests).where(eq(signInRequests.email, email));
       await tx.insert(auditLog).values({ id: uuidv7(), action: "account.deleted", target: id });
+      return family;
     });
+    await tellFamily(ctx.valkey, family);
     const multi = ctx.valkey.multi();
     for (const pair of pairs) multi.srem(friendsKey(pair.userA === id ? pair.userB : pair.userA), id);
     await multi
@@ -365,6 +377,12 @@ export async function purgeDeletedAccounts(
     await refreshRarityOf(ctx.db, titles);
   }
   return due.length;
+}
+
+/** Tells the members of a family whose manager left to fetch their family status again. */
+async function tellFamily(valkey: Redis, family: Awaited<ReturnType<typeof familyAfterManager>>) {
+  for (const userId of family?.tell ?? [])
+    await publish(valkey, userId, { type: "family.updated", data: { familyId: family?.familyId ?? null } });
 }
 
 /** The account itself: download everything, and delete it (a code by mail, then 14 days). */
@@ -454,10 +472,15 @@ export function accountRoutes(deps: Deps) {
       throw new HttpError(400, ErrorCode.codeInvalid, "Type your handle to confirm");
     }
     const deleteAfter = new Date(Date.now() + deletionGraceDays * 86_400_000);
-    await deps.db.update(accounts).set({ status: "deleting", deleteAfter }).where(eq(accounts.id, me));
-    await deps.db
-      .insert(auditLog)
-      .values({ id: uuidv7(), actorId: me, action: "account.deletion_requested", target: me });
+    const family = await deps.db.transaction(async (tx) => {
+      await tx.update(accounts).set({ status: "deleting", deleteAfter }).where(eq(accounts.id, me));
+      await tx
+        .insert(auditLog)
+        .values({ id: uuidv7(), actorId: me, action: "account.deletion_requested", target: me });
+      // A family they manage goes to the next one in it at once.
+      return familyAfterManager(tx, me, "asked");
+    });
+    await tellFamily(deps.valkey, family);
     // Friends stop seeing the account at once; every device is signed out.
     await deps.valkey.del(presenceKey(me));
     await revokeAll(ctx, me);

@@ -1,6 +1,7 @@
 import {
   type Database,
   accounts,
+  auditLog,
   childRestrictions,
   families,
   familyInvites,
@@ -58,7 +59,7 @@ import {
   restrictionsOf,
   titleVerdict,
 } from "@anytogether/shared";
-import { and, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
@@ -94,16 +95,95 @@ export async function membershipOf(db: Querier, userId: string) {
   return row;
 }
 
-/** The limits of the children among these people; anyone who is not a child is left out. */
+/** The limits of the children among these people; anyone who is not a child is left out. A child
+ *  is one in a family, or one whose family ended with no one left to look after them: they keep
+ *  their limits, in no family, until a new family takes them in. */
 export async function childRulesOf(db: Querier, ids: string[]) {
   const unique = [...new Set(ids)];
   if (!unique.length) return new Map<string, FamilyRestrictions>();
   const rows = await db
-    .select({ id: familyMembers.accountId, settings: childRestrictions.settings })
-    .from(familyMembers)
-    .leftJoin(childRestrictions, eq(childRestrictions.accountId, familyMembers.accountId))
-    .where(and(inArray(familyMembers.accountId, unique), eq(familyMembers.role, "child")));
+    .select({ id: accounts.id, settings: childRestrictions.settings })
+    .from(accounts)
+    .leftJoin(familyMembers, eq(familyMembers.accountId, accounts.id))
+    .leftJoin(childRestrictions, eq(childRestrictions.accountId, accounts.id))
+    .where(
+      and(
+        inArray(accounts.id, unique),
+        or(
+          eq(familyMembers.role, "child"),
+          and(isNull(familyMembers.accountId), isNotNull(childRestrictions.accountId)),
+        ),
+      ),
+    );
   return new Map(rows.map((r) => [r.id, restrictionsOf(r.settings ?? {})]));
+}
+
+type Writer = Querier & Pick<Database, "insert" | "update" | "delete">;
+
+/** Who takes a family over from a manager leaving AnyTogether: a parent before an adult (a parent
+ *  already looks after the children), the one who joined first; never an account that is being
+ *  deleted or is banned. */
+async function successorIn(db: Querier, familyId: string, leaving: string) {
+  const [next] = await db
+    .select({ id: familyMembers.accountId })
+    .from(familyMembers)
+    .innerJoin(accounts, eq(accounts.id, familyMembers.accountId))
+    .where(
+      and(
+        eq(familyMembers.familyId, familyId),
+        ne(familyMembers.accountId, leaving),
+        inArray(familyMembers.role, ["parent", "adult"]),
+        eq(accounts.status, "active"),
+      ),
+    )
+    .orderBy(
+      sql`case when ${familyMembers.role} = 'parent' then 0 else 1 end`,
+      asc(familyMembers.joinedAt),
+      asc(familyMembers.accountId),
+    )
+    .limit(1);
+  return next?.id ?? null;
+}
+
+/** A family's manager deletes their account. When they ask, the family goes at once to the next
+ *  one (see successorIn), the manager staying a parent while the 14 days run; with no one to take
+ *  it, nothing changes yet, as they may still come back. When the account is purged, the family
+ *  goes to the next one, or, with no one left, ends: the children keep their limits (in force
+ *  without a family, until a new family takes them in), except a child account never confirmed,
+ *  which could have said it is not this family. Call it in the transaction that changes the
+ *  account; it answers whom to tell. */
+export async function familyAfterManager(db: Writer, accountId: string, when: "asked" | "purged") {
+  const row = await membershipOf(db, accountId);
+  if (!row || row.member.role !== "manager") return null;
+  const familyId = row.family.id;
+  const members = await db.select().from(familyMembers).where(eq(familyMembers.familyId, familyId));
+  const tell = members.map((m) => m.accountId).filter((id) => id !== accountId);
+  const next = await successorIn(db, familyId, accountId);
+  if (next) {
+    await db.update(familyMembers).set({ role: "parent" }).where(eq(familyMembers.accountId, accountId));
+    await db.update(familyMembers).set({ role: "manager" }).where(eq(familyMembers.accountId, next));
+    await db.insert(familyLog).values({
+      id: uuidv7(),
+      familyId,
+      actorId: accountId,
+      action: "family.handed_over",
+      subjectId: next,
+      data: { reason: "account_deleted" },
+    });
+    return { familyId: familyId as string | null, tell };
+  }
+  if (when === "asked") return null;
+  const unconfirmed = members.filter((m) => m.role === "child" && !m.confirmedAt).map((m) => m.accountId);
+  if (unconfirmed.length)
+    await db.delete(childRestrictions).where(inArray(childRestrictions.accountId, unconfirmed));
+  await db.delete(families).where(eq(families.id, familyId));
+  await db.insert(auditLog).values({
+    id: uuidv7(),
+    action: "family.ended",
+    target: familyId,
+    data: { reason: "manager_deleted", members: tell.length },
+  });
+  return { familyId: null, tell };
 }
 
 const rank: Record<Visibility, number> = { nobody: 0, friends: 1, everyone: 2 };
@@ -304,7 +384,12 @@ async function bonusOn(db: Querier, userId: string, date: string) {
 export async function familyStatus(db: Querier, userId: string, now = new Date()): Promise<FamilyStatus> {
   const membership = await membershipOf(db, userId);
   const issuedAt = now.toISOString();
-  if (!membership || membership.member.role !== "child")
+  // A child in a family, or one whose family ended with no one to take it over.
+  const rules =
+    !membership || membership.member.role === "child"
+      ? (await childRulesOf(db, [userId])).get(userId)
+      : undefined;
+  if (!rules)
     return {
       userId,
       restricted: false,
@@ -314,7 +399,6 @@ export async function familyStatus(db: Querier, userId: string, now = new Date()
       today: null,
       issuedAt,
     };
-  const rules = (await childRulesOf(db, [userId])).get(userId) ?? defaultRestrictions();
   const zone = rules.playTime.timeZone;
   const today: Allowance = allowance(rules.playTime, {
     now,
@@ -324,7 +408,7 @@ export async function familyStatus(db: Querier, userId: string, now = new Date()
   return {
     userId,
     restricted: true,
-    familyId: membership.family.id,
+    familyId: membership?.family.id ?? null,
     role: "child",
     restrictions: rules,
     today,
@@ -393,6 +477,11 @@ export function familyRoutes(deps: Deps, notes: Notifier) {
   };
   const notIn = async (userId: string, message: string) => {
     if (await membershipOf(db, userId)) throw new HttpError(409, ErrorCode.conflict, message);
+  };
+  /** A child whose family ended keeps the limits: they join a new family only as its child. */
+  const notLimited = async (userId: string) => {
+    if ((await childRulesOf(db, [userId])).has(userId))
+      throw restricted("family", "Your family limits stay until a new family takes you in as its child");
   };
   const roomIn = async (familyId: string) => {
     if ((await membersOf(familyId)).length >= maxFamilyMembers)
@@ -543,6 +632,7 @@ export function familyRoutes(deps: Deps, notes: Notifier) {
     const { name } = await body(c, FamilyCreate);
     await limit("family", me);
     await notIn(me, "You are in a family already");
+    await notLimited(me);
     const id = uuidv7();
     try {
       await db.transaction(async (tx) => {
@@ -670,6 +760,7 @@ export function familyRoutes(deps: Deps, notes: Notifier) {
     const me = c.get("userId");
     const invite = await myInvite(me, c.req.param("id"));
     await notIn(me, "You are in a family already");
+    await notLimited(me);
     await roomIn(invite.familyId);
     await db.transaction(async (tx) => {
       await tx.insert(familyMembers).values({

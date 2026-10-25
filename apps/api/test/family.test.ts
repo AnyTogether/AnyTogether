@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { families, familyMembers } from "@anytogether/db";
+import { eq } from "drizzle-orm";
 import { createLocalJWKSet, jwtVerify } from "jose";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { purgeDeletedAccounts } from "../src/account.js";
 import { harness } from "./harness.js";
 
 let h: Awaited<ReturnType<typeof harness>>;
@@ -484,5 +487,145 @@ describe("play time and the launchers' status", () => {
     expect(summary.data.children[0]).toMatchObject({ userId: kid.id, seconds: 0 });
     expect(h.mailer.sent.some((m) => m.kind === "family-summary" && m.to === "mom@example.com")).toBe(true);
     expect(await h.app.sendFamilySummaries(inAWeek)).toBe(0);
+  });
+});
+
+describe("when the manager deletes their account", () => {
+  const join = async (manager: User, member: User, role: "parent" | "adult") => {
+    const invited = await h.call(
+      "POST",
+      `${v1}/me/family/invites`,
+      { handle: member.handle, role },
+      manager.token,
+    );
+    expect(invited.status).toBe(201);
+    const accepted = await h.call("POST", `${v1}/family-invites/${invited.body.id}/accept`, {}, member.token);
+    expect(accepted.status).toBe(200);
+  };
+  const askToDelete = async (user: User, email: string) => {
+    expect((await h.call("POST", `${v1}/me/deletion`, {}, user.token)).status).toBe(202);
+    const asked = await h.call(
+      "DELETE",
+      `${v1}/me`,
+      { code: h.mailer.lastCode(email, "deletion") },
+      user.token,
+    );
+    expect(asked.status).toBe(202);
+  };
+  const rolesIn = async (familyId: string) =>
+    Object.fromEntries(
+      (await h.deps.db.select().from(familyMembers).where(eq(familyMembers.familyId, familyId))).map((m) => [
+        m.accountId,
+        m.role,
+      ]),
+    );
+  const afterGrace = () => new Date(Date.now() + 15 * 86_400_000);
+
+  it("hands the family at once to the parent who joined first, and the purge keeps it so", async () => {
+    const { mom, kid, familyId } = await familyWithChild();
+    const aunt = await h.user("aunt@example.com");
+    const dad = await h.user("dad@example.com");
+    const gran = await h.user("gran@example.com");
+    await join(mom, aunt, "adult");
+    await join(mom, dad, "parent");
+    await join(mom, gran, "parent");
+    await askToDelete(mom, "mom@example.com");
+    expect(await rolesIn(familyId)).toEqual({
+      [mom.id]: "parent",
+      [dad.id]: "manager",
+      [gran.id]: "parent",
+      [aunt.id]: "adult",
+      [kid.id]: "child",
+    });
+    // The new manager runs the family, and the child's limits stay as they were.
+    expect((await h.call("PATCH", `${v1}/me/family`, { name: "Home" }, dad.token)).status).toBe(200);
+    const log = await h.call("GET", `${v1}/me/family/log`, undefined, dad.token);
+    expect(log.body.entries.map((e: { action: string }) => e.action)).toContain("family.handed_over");
+    expect((await h.call("GET", `${v1}/me/family/restrictions`, undefined, kid.token)).body).toMatchObject({
+      restricted: true,
+      familyId,
+    });
+
+    expect(await purgeDeletedAccounts(h.deps, afterGrace())).toBe(1);
+    expect(await rolesIn(familyId)).toEqual({
+      [dad.id]: "manager",
+      [gran.id]: "parent",
+      [aunt.id]: "adult",
+      [kid.id]: "child",
+    });
+  });
+
+  it("hands it to an adult when there is no other parent", async () => {
+    const { mom, kid, familyId } = await familyWithChild();
+    const aunt = await h.user("aunt@example.com");
+    const uncle = await h.user("uncle@example.com");
+    await join(mom, aunt, "adult");
+    await join(mom, uncle, "adult");
+    await askToDelete(mom, "mom@example.com");
+    expect(await rolesIn(familyId)).toEqual({
+      [mom.id]: "parent",
+      [aunt.id]: "manager",
+      [uncle.id]: "adult",
+      [kid.id]: "child",
+    });
+  });
+
+  it("hands it over at the purge to someone who was leaving too when the manager asked", async () => {
+    const { mom, kid, familyId } = await familyWithChild();
+    const dad = await h.user("dad@example.com");
+    await join(mom, dad, "parent");
+    await askToDelete(dad, "dad@example.com");
+    await askToDelete(mom, "mom@example.com");
+    expect((await rolesIn(familyId))[mom.id]).toBe("manager");
+    // Dad changes his mind (signing in keeps the account) within the 14 days.
+    await h.user("dad@example.com");
+    expect(await purgeDeletedAccounts(h.deps, afterGrace())).toBe(1);
+    expect(await rolesIn(familyId)).toEqual({ [dad.id]: "manager", [kid.id]: "child" });
+  });
+
+  it("with no one to take over, the family ends at the purge and the child keeps the limits", async () => {
+    const { mom, kid, familyId } = await familyWithChild();
+    expect((await restrict(mom, kid, { messages: "nobody" })).status).toBe(200);
+    await askToDelete(mom, "mom@example.com");
+    // Within the 14 days nothing changes: the manager may still come back.
+    expect(await rolesIn(familyId)).toEqual({ [mom.id]: "manager", [kid.id]: "child" });
+
+    expect(await purgeDeletedAccounts(h.deps, afterGrace())).toBe(1);
+    expect(await h.deps.db.select().from(families).where(eq(families.id, familyId))).toEqual([]);
+    expect((await h.call("GET", `${v1}/me/family`, undefined, kid.token)).body.family).toBeNull();
+    const status = await h.call("GET", `${v1}/me/family/restrictions`, undefined, kid.token);
+    expect(status.body).toMatchObject({ restricted: true, familyId: null, role: "child" });
+    expect(status.body.restrictions.messages).toBe("nobody");
+    const stranger = await h.user("stranger@example.com");
+    const toKid = await h.call("POST", `${v1}/me/friends/requests`, { handle: kid.handle }, stranger.token);
+    expect(toKid.body).toMatchObject({ code: "restricted_by_family", side: "other" });
+
+    // The child cannot shed them alone: no family of their own, no joining one as an adult.
+    const own = await h.call("POST", `${v1}/families`, { name: "Mine" }, kid.token);
+    expect(own.body).toMatchObject({ code: "restricted_by_family", feature: "family" });
+    expect((await h.call("POST", `${v1}/families`, { name: "Others" }, stranger.token)).status).toBe(201);
+    const invited = await h.call(
+      "POST",
+      `${v1}/me/family/invites`,
+      { handle: kid.handle, role: "adult" },
+      stranger.token,
+    );
+    const accepted = await h.call("POST", `${v1}/family-invites/${invited.body.id}/accept`, {}, kid.token);
+    expect(accepted.body).toMatchObject({ code: "restricted_by_family", feature: "family" });
+
+    // A new family can take the child in, and its parents set the limits from then on.
+    const { body } = await h.call("POST", `${v1}/me/family/link-codes`, {}, stranger.token);
+    const linked = await h.call(
+      "POST",
+      `${v1}/me/family/join`,
+      { code: body.code, timeZone: "UTC" },
+      kid.token,
+    );
+    expect(linked.status).toBe(200);
+    expect((await h.call("GET", `${v1}/me/family/restrictions`, undefined, kid.token)).body).toMatchObject({
+      restricted: true,
+      familyId: linked.body.id,
+      role: "child",
+    });
   });
 });

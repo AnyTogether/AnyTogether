@@ -4,8 +4,10 @@ import type { MemberView } from "./messages.js";
 
 /** Families: a manager (an adult) makes one and brings people in; parents set what a child may do,
  *  answer the child's requests and see how they play. Families are opt-in: an account in none (or
- *  not a child in one) has no limits at all. The API enforces every social limit itself; the
- *  launchers enforce play time and age ratings from GET /me/family/restrictions. */
+ *  not a child in one) has no limits at all, but for a child whose family ended with no one left to
+ *  look after them (the manager deleted their account): they keep their limits until a new family
+ *  takes them in. The API enforces every social limit itself; the launchers enforce play time and
+ *  age ratings from GET /me/family/restrictions. */
 
 /** manager: everything, one per family; parent: limits, requests, activity; adult: a member;
  *  child: limited by the parents, cannot leave on their own. */
@@ -439,7 +441,8 @@ export interface MyFamilyView {
 /** What GET /me/family/restrictions answers and signs. */
 export interface FamilyStatus {
   userId: string;
-  /** Whether any limit applies (a child in a family). */
+  /** Whether any limit applies (a child in a family, or one whose family ended with no one to take
+   *  it over: familyId is then null). */
   restricted: boolean;
   familyId: string | null;
   role: FamilyRole | null;
