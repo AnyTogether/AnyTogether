@@ -3,6 +3,7 @@
 import { Avatar } from "@/components/Avatar";
 import { CallButton } from "@/components/Calls";
 import { useLive, useLiveEvents } from "@/components/Live";
+import { familyRefusal } from "@/lib/family";
 import type { UiStrings } from "@/lib/i18n";
 import {
   type Friend,
@@ -132,18 +133,24 @@ export function FriendsBoard({
       method: "POST",
       ...json({ handle: clean }),
     }).catch(() => undefined);
-    const result = (await response?.json().catch(() => ({}))) as { state?: string; title?: string };
+    const result = (await response?.json().catch(() => ({}))) as {
+      state?: string;
+      title?: string;
+      code?: string;
+      side?: string;
+    };
     if (response?.ok) {
       const template = result.state === "accepted" ? texts.nowFriends : texts.requestSent;
       setNotice({ kind: "success", text: fill(template, { handle: clean }) });
       await reload().catch(() => undefined);
     } else {
       const text =
-        response?.status === 404
+        familyRefusal(result, texts) ??
+        (response?.status === 404
           ? texts.noOne
           : response?.status === 400
             ? texts.thatIsYou
-            : (result.title ?? texts.failed);
+            : (result.title ?? texts.failed));
       setNotice({ kind: "error", text });
     }
     setBusy(null);

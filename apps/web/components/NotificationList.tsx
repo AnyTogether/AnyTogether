@@ -4,6 +4,7 @@ import { When } from "@/components/When";
 
 import { Avatar } from "@/components/Avatar";
 import { useLiveEvents } from "@/components/Live";
+import { duration } from "@/lib/family";
 import { since } from "@/lib/feed";
 import { localName } from "@/lib/games";
 import type { UiStrings } from "@/lib/i18n";
@@ -61,6 +62,10 @@ function Mark({ kind }: { kind: Notice["kind"] }) {
             ) : (
               <path d="M10.5 7.8v5.4M7.8 10.5h5.4" />
             )}
+          </>
+        ) : kind.startsWith("family_") ? (
+          <>
+            <path d="M4 11.5L12 5l8 6.5V20h-5.5v-5h-5v5H4z" />
           </>
         ) : kind === "missed_call" ? (
           <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 6 6L15 14l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2zM15 3l6 6M21 3l-6 6" />
@@ -133,6 +138,37 @@ function Item({
       if (notice.kind === "lfg_accepted")
         detail =
           notice.data.invite?.kind === "share_play" ? texts.n_lfg_accepted_share : texts.n_lfg_accepted_party;
+      break;
+    }
+    case "family_invite":
+      line = rich(texts.n_family_invite, { name });
+      detail = notice.data.familyName ?? null;
+      break;
+    case "family_request":
+    case "family_answer":
+    case "family_alert": {
+      const key = (
+        notice.kind === "family_request"
+          ? `n_family_request_${notice.data.kind}`
+          : notice.kind === "family_answer"
+            ? `n_family_answer_${notice.data.approved ? "yes" : "no"}`
+            : `n_family_alert_${notice.data.event}`
+      ) as keyof UiStrings;
+      const template = typeof texts[key] === "string" ? (texts[key] as string) : texts.n_family_invite;
+      line = rich(template, {
+        name,
+        minutes: notice.data.minutes ?? 0,
+        person: <b>{notice.data.person?.displayName ?? ""}</b>,
+        game: <b>{notice.data.gameName ?? notice.data.titleId ?? ""}</b>,
+      });
+      break;
+    }
+    case "family_summary": {
+      const seconds = (notice.data.children ?? []).reduce((sum, child) => sum + child.seconds, 0);
+      line = fill(texts.n_family_summary, { time: duration(seconds, language) });
+      detail = (notice.data.children ?? [])
+        .map((child) => `${child.displayName}: ${duration(child.seconds, language)}`)
+        .join(" · ");
       break;
     }
     case "warning":

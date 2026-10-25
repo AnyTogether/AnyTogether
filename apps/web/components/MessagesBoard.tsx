@@ -3,6 +3,7 @@
 import { Avatar } from "@/components/Avatar";
 import { CallButton } from "@/components/Calls";
 import { useLive, useLiveEvents } from "@/components/Live";
+import { familyRefusal } from "@/lib/family";
 import type { UiStrings } from "@/lib/i18n";
 import { type Person, fill } from "@/lib/people";
 import {
@@ -50,8 +51,9 @@ function typingLine(texts: UiStrings, people: Person[]) {
 }
 
 /** Why a message was refused, in the reader's words. */
-const refusal = (texts: UiStrings, status: number, code: string | undefined) =>
-  code === "link_blocked" ? texts.linkBlocked : status === 403 ? texts.cannotMessage : texts.failed;
+const refusal = (texts: UiStrings, status: number, code: string | undefined, side?: string) =>
+  familyRefusal({ code, side }, texts) ??
+  (code === "link_blocked" ? texts.linkBlocked : status === 403 ? texts.cannotMessage : texts.failed);
 /** A run: messages by the same person within five minutes stay together. */
 const sameRun = (a: Message | undefined, b: Message) =>
   !!a &&
@@ -315,7 +317,9 @@ export function MessagesBoard({
       ),
     }));
     if (result.status === 403 || result.body?.code === "link_blocked")
-      setNotice(refusal(texts, result.status, result.body?.code));
+      setNotice(
+        refusal(texts, result.status, result.body?.code, (result.body as { side?: string } | null)?.side),
+      );
   }
 
   async function edit(message: Message, text: string) {
@@ -324,7 +328,10 @@ export function MessagesBoard({
       { method: "PATCH", ...json({ text }) },
     );
     if (result.ok && result.body) take(result.body, false);
-    else setNotice(refusal(texts, result.status, result.body?.code));
+    else
+      setNotice(
+        refusal(texts, result.status, result.body?.code, (result.body as { side?: string } | null)?.side),
+      );
   }
 
   async function remove(message: Message) {
@@ -355,7 +362,7 @@ export function MessagesBoard({
       return setNotice(
         result.body?.code === "full"
           ? fill(texts.groupFull, { max: maxGroupMembers })
-          : refusal(texts, result.status, result.body?.code),
+          : refusal(texts, result.status, result.body?.code, (result.body as { side?: string } | null)?.side),
       );
     const made = result.body;
     setConversations((all) => [made, ...all.filter((c) => c.id !== made.id)].sort(byUpdated));

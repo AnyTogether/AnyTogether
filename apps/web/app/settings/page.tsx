@@ -50,6 +50,9 @@ export default async function Settings() {
             {label}
           </a>
         ))}
+        <a href="/family" className="pill">
+          {texts.family}
+        </a>
         {user.account.role === "admin" && (
           <a href="/admin" className="pill admin-link">
             {texts.admin}

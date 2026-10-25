@@ -1,5 +1,6 @@
 "use client";
 
+import { familyRefusal } from "@/lib/family";
 import type { UiStrings } from "@/lib/i18n";
 import { type Friendship, type Profile, fill } from "@/lib/people";
 import Link from "next/link";
@@ -21,7 +22,7 @@ export function FriendAction({ profile, texts }: { profile: Profile; texts: UiSt
     const body = (await response?.json().catch(() => ({}))) ?? {};
     setBusy(false);
     if (!response?.ok) {
-      setError(response?.status === 404 ? texts.noOne : texts.failed);
+      setError(familyRefusal(body, texts) ?? (response?.status === 404 ? texts.noOne : texts.failed));
       return;
     }
     setState(next(body));

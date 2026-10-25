@@ -86,17 +86,19 @@ export function FilterSelect({
 }
 
 const errorOf = (status: number, code: string | undefined, texts: UiStrings) =>
-  status === 429
-    ? texts.tooMany
-    : code === "link_blocked"
-      ? texts.linkBlocked
-      : code === "full"
-        ? texts.partyFull
-        : code === "not_party_leader"
-          ? texts.notPartyLeader
-          : status === 409 && code === "conflict"
-            ? texts.postClosed
-            : texts.failed;
+  code === "restricted_by_family"
+    ? texts.restrictedNotice
+    : status === 429
+      ? texts.tooMany
+      : code === "link_blocked"
+        ? texts.linkBlocked
+        : code === "full"
+          ? texts.partyFull
+          : code === "not_party_leader"
+            ? texts.notPartyLeader
+            : status === 409 && code === "conflict"
+              ? texts.postClosed
+              : texts.failed;
 
 /** The next time of day `hhmm` happens, from now: today, or tomorrow when it has passed. */
 function nextAt(hhmm: string) {

@@ -12,7 +12,12 @@ export interface Notice {
     | "missed_call"
     | "lfg_request"
     | "lfg_accepted"
-    | "warning";
+    | "warning"
+    | "family_invite"
+    | "family_request"
+    | "family_answer"
+    | "family_alert"
+    | "family_summary";
   actor: Person | null;
   subjectId: string;
   data: {
@@ -26,6 +31,15 @@ export interface Notice {
     postId?: string;
     purpose?: string;
     invite?: { kind: "party" | "share_play"; id: string } | null;
+    /** Family notifications. */
+    kind?: string;
+    minutes?: number | null;
+    gameName?: string | null;
+    person?: Person | null;
+    approved?: boolean;
+    event?: string;
+    familyName?: string;
+    children?: { userId: string; displayName: string; seconds: number }[];
   };
   read: boolean;
   createdAt: string;
@@ -48,9 +62,15 @@ export const noticeKinds = [
   "missed_call",
   "lfg_request",
   "lfg_accepted",
+  "family_invite",
+  "family_request",
+  "family_answer",
+  "family_alert",
+  "family_summary",
 ] as const;
 export type NoticeKind = (typeof noticeKinds)[number];
-export type NoticeSettings = Record<NoticeKind, boolean> & { digest: boolean };
+/** familyMail: the weekly family summary by mail (older servers leave it out). */
+export type NoticeSettings = Record<NoticeKind, boolean> & { digest: boolean; familyMail?: boolean };
 
 export interface NoticeSetup {
   settings: NoticeSettings;
@@ -75,6 +95,12 @@ export function noticeHref(notice: Notice) {
       return "/find#mine";
     case "lfg_accepted":
       return notice.data.invite?.kind === "share_play" ? `/watch/${notice.data.invite.id}` : "/party";
+    case "family_invite":
+    case "family_request":
+    case "family_answer":
+    case "family_alert":
+    case "family_summary":
+      return "/family";
     default:
       return null;
   }

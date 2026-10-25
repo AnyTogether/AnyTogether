@@ -41,17 +41,19 @@ export function NotificationSettings({
     setStatus("saved");
   }
 
-  const row = (key: NoticeKind) => (
-    <label key={key} className="toggle-row">
-      <span>{texts[`nk_${key}`]}</span>
-      <input
-        type="checkbox"
-        checked={settings[key]}
-        onChange={(event) => change(key, event.target.checked)}
-      />
-      <span className="toggle" />
-    </label>
-  );
+  // An older server leaves the family kinds out: no switch for what it does not send.
+  const row = (key: NoticeKind) =>
+    settings[key] === undefined ? null : (
+      <label key={key} className="toggle-row">
+        <span>{texts[`nk_${key}`]}</span>
+        <input
+          type="checkbox"
+          checked={settings[key]}
+          onChange={(event) => change(key, event.target.checked)}
+        />
+        <span className="toggle" />
+      </label>
+    );
 
   return (
     <div className="notify-settings">
@@ -71,6 +73,21 @@ export function NotificationSettings({
           />
           <span className="toggle" />
         </label>
+        {settings.familyMail !== undefined && (
+          <label className="toggle-row digest">
+            <span className="lines">
+              <span>{texts.familyMail}</span>
+              <span className="meta">{setup.canMail ? texts.familyMailHint : texts.digestNoEmail}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={settings.familyMail && setup.canMail}
+              disabled={!setup.canMail}
+              onChange={(event) => change("familyMail", event.target.checked)}
+            />
+            <span className="toggle" />
+          </label>
+        )}
       </div>
       <div className="save-row">
         {status === "error" ? (
