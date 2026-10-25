@@ -143,7 +143,7 @@ const privacyEn: LegalDoc = {
             ],
             [
               "Your IP address",
-              "Used to count requests against abuse limits, for example sign-in attempts. These counters are kept in memory under the address and run out with their limit, within a day. When a call or a share play goes through this server's relay, the relay sees your IP address and writes the connection, with your account's ID, to its own log. AnyTogether's own code does not write IP addresses, or anything you write, to its logs.",
+              "Used to count requests against abuse limits, for example sign-in attempts. These counters are kept in memory under the address and run out with their limit, within a day. When a call or a share play goes through this server's relay, the relay sees your IP address and writes the connection, with your account's ID, to its own log, which is deleted after 7 days. The mail server's log of who a mail went to is deleted after 30 days. There is no web access log, and AnyTogether's own code does not write IP addresses, or anything you write, to its logs.",
             ],
           ],
         },
@@ -528,7 +528,7 @@ const privacyTr: LegalDoc = {
             ],
             [
               "IP adresin",
-              "Kötüye kullanım sınırlarına karşı istekleri saymak için kullanılır, örneğin giriş denemeleri. Bu sayaçlar adresle birlikte bellekte tutulur ve sınırlarıyla birlikte, en geç bir gün içinde silinir. Bir arama ya da birlikte oynama bu sunucunun aktarıcısından geçtiğinde aktarıcı IP adresini görür ve bağlantıyı hesabının kimliğiyle birlikte kendi kaydına yazar. AnyTogether'ın kendi kodu IP adreslerini ya da yazdıklarını kayıtlarına yazmaz.",
+              "Kötüye kullanım sınırlarına karşı istekleri saymak için kullanılır, örneğin giriş denemeleri. Bu sayaçlar adresle birlikte bellekte tutulur ve sınırlarıyla birlikte, en geç bir gün içinde silinir. Bir arama ya da birlikte oynama bu sunucunun aktarıcısından geçtiğinde aktarıcı IP adresini görür ve bağlantıyı hesabının kimliğiyle birlikte kendi kaydına yazar; bu kayıt 7 gün sonra silinir. Posta sunucusunun bir e-postanın kime gittiğini gösteren kaydı 30 gün sonra silinir. Web erişim kaydı tutulmaz ve AnyTogether'ın kendi kodu IP adreslerini ya da yazdıklarını kayıtlarına yazmaz.",
             ],
           ],
         },
