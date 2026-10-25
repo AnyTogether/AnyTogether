@@ -54,6 +54,10 @@ describe("the privacy notice and the terms", () => {
       "14 days",
       "Google Fonts",
       "relay",
+      "read receipts",
+      "reactions",
+      "unsend",
+      "delivered",
     ])
       expect(privacy).toContain(feature);
     const gizlilik = JSON.stringify(legalStrings("tr").privacy);
@@ -63,6 +67,10 @@ describe("the privacy notice and the terms", () => {
       "katılma kod",
       "Çevrimdışı görün",
       "her gece yedeklenir",
+      "okundu bilgisi",
+      "tepki",
+      "mesaj kaldırıldı",
+      "iletildi",
     ])
       expect(gizlilik).toContain(feature);
   });

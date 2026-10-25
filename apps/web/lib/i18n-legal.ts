@@ -5,7 +5,7 @@ import type { Language } from "./i18n";
  *  together; the page shows the date at its top and the repository keeps the history. */
 
 /** The day these texts last changed (YYYY-MM-DD). */
-export const legalUpdated = "2026-10-25";
+export const legalUpdated = "2026-10-26";
 
 /** The AnyTogether server these texts speak for; any other address is someone else's server. */
 export const officialOrigin = "https://anytogether.kodla.agency";
@@ -103,7 +103,7 @@ const privacyEn: LegalDoc = {
             ],
             [
               "Messages",
-              "Direct and group messages with their edits and replies, how far you have read, and the photos, clips and voice notes you send. A message you delete is emptied at once; only its place in the thread stays.",
+              'Direct and group messages with their edits (at most 20 per message) and replies, the reactions you add and who added them, how far you have read, how far your devices have received (delivered), whether you send read receipts, the conversations you pin or mute, and the photos, clips and voice notes you send. Reactions and these marks stay as long as the message and your place in the conversation do. A message you unsend (your own, at any time) is emptied at once: its text, media and reactions go, and only its place in the thread stays as "message removed".',
             ],
             [
               "Parties, calls and share play",
@@ -157,7 +157,7 @@ const privacyEn: LegalDoc = {
           list: [
             "Anyone, signed in or not: your profile card (handle, display name, avatar, bio, country, cover and accent colour, and the Steam or Discord badges you have not hidden), the themes you share and your looking-for-group posts. Compatibility reports are shown without your name. Profile pages ask search engines not to list them. Whoever has a join code you made sees your profile card, the game and how many are in the party.",
             "Your friends, everyone, or nobody, as you choose in [Settings → Privacy](/settings#privacy): your games and play time, trophies (with your trophy level, and comparing trophies with you), friends list, online status and the game you are playing, and your gallery. Out of the box these are for friends only, and others can find you by search. Your showcase, leaderboards and player suggestions follow the same settings.",
-            "The members of a conversation see its messages; the people in a party or a call see who else is there, and only a party's members see its Discord link. Only you see your Recently played with list; the people on it see you on theirs.",
+            "The members of a conversation see its messages and their reactions, with who reacted; in a direct conversation the other person sees when a message reached one of your devices. With read receipts on (the default, in [Settings → Privacy](/settings#privacy)) the members also see how far you have read; turn them off and they do not, and you do not see theirs. The people in a party or a call see who else is there, and only a party's members see its Discord link. Only you see your Recently played with list; the people on it see you on theirs.",
             "Anyone signed in sees a public community, its members (with their role and when they joined) and who is going to its events; an invite-only community is seen only by its members.",
             "In a call, a share play or an online game the others' devices connect to yours, so they can learn your IP address, as in any peer-to-peer connection.",
             "Moderators see what is reported to them and the restrictions and appeals they handle; a community's moderators see its members and can remove or ban them from it. Whoever runs the server can technically reach everything on it, messages included: they are not end-to-end encrypted.",
@@ -488,7 +488,7 @@ const privacyTr: LegalDoc = {
             ],
             [
               "Mesajlar",
-              "Birebir ve grup mesajları, düzenlemeleri ve yanıtlarıyla; nereye kadar okuduğun; gönderdiğin fotoğraflar, klipler ve sesli notlar. Sildiğin mesaj anında boşaltılır; konuşmada yalnızca yeri kalır.",
+              'Birebir ve grup mesajları, düzenlemeleri (bir mesaj en fazla 20 kez) ve yanıtlarıyla; eklediğin tepkiler ve onları kimin eklediği; nereye kadar okuduğun; cihazlarının nereye kadar aldığı (iletildi); okundu bilgisi gönderip göndermediğin; sabitlediğin ya da sessize aldığın konuşmalar; gönderdiğin fotoğraflar, klipler ve sesli notlar. Tepkiler ve bu işaretler, mesaj ve konuşmadaki yerin durdukça kalır. Geri aldığın mesaj (kendi mesajın, istediğin zaman) anında boşaltılır: metni, medyası ve tepkileri gider; konuşmada yalnızca yeri "mesaj kaldırıldı" olarak kalır.',
             ],
             [
               "Partiler, aramalar ve birlikte oynama",
@@ -542,7 +542,7 @@ const privacyTr: LegalDoc = {
           list: [
             "Giriş yapmış olsun olmasın herkes: profil kartın (kullanıcı adı, görünen ad, avatar, biyografi, ülke, kapak ve vurgu rengi, gizlemediğin Steam ya da Discord rozetleri), paylaştığın temalar ve oyuncu arama ilanların. Uyumluluk raporları adın olmadan gösterilir. Profil sayfaları arama motorlarından kendilerini listelememelerini ister. Açtığın bir katılma kodu kimdeyse profil kartını, oyunu ve partide kaç kişi olduğunu görür.",
             "[Ayarlar → Gizlilik](/settings#privacy)'te seçtiğine göre arkadaşların, herkes ya da hiç kimse: oyunların ve oyun süren, kupaların (kupa seviyen ve seninle kupa karşılaştırma dahil), arkadaş listen, çevrimiçi durumun ve oynadığın oyun, galerin. Başta bunlar yalnızca arkadaşlarına açıktır ve başkaları seni aramada bulabilir. Vitrinin, liderlik tabloları ve oyuncu önerileri de aynı ayarlara uyar.",
-            "Bir konuşmanın üyeleri onun mesajlarını görür; bir partideki ya da aramadaki kişiler orada başka kimlerin olduğunu görür ve partinin Discord bağlantısını yalnızca üyeleri görür. Son oynadıkların listeni yalnızca sen görürsün; listendeki kişiler de seni kendi listelerinde görür.",
+            "Bir konuşmanın üyeleri onun mesajlarını ve tepkilerini, kimin tepki verdiğiyle birlikte görür; birebir konuşmada karşındaki kişi bir mesajın cihazlarından birine ulaştığını görür. Okundu bilgisi açıkken (varsayılan; [Ayarlar → Gizlilik](/settings#privacy)) üyeler nereye kadar okuduğunu da görür; kapatırsan görmezler, sen de onlarınkini görmezsin. Bir partideki ya da aramadaki kişiler orada başka kimlerin olduğunu görür ve partinin Discord bağlantısını yalnızca üyeleri görür. Son oynadıkların listeni yalnızca sen görürsün; listendeki kişiler de seni kendi listelerinde görür.",
             "Herkese açık bir topluluğu, üyelerini (rolleri ve ne zaman katıldıklarıyla) ve etkinliklerine kimlerin geleceğini giriş yapmış herkes görür; yalnızca davetle girilen bir topluluğu yalnızca üyeleri görür.",
             "Bir aramada, birlikte oynamada ya da online bir oyunda diğerlerinin cihazları seninkine bağlanır; bu yüzden her eşler arası bağlantıda olduğu gibi IP adresini öğrenebilirler.",
             "Moderatörler kendilerine raporlananları ve ele aldıkları kısıtlama ve itirazları görür; bir topluluğun moderatörleri onun üyelerini görür ve onları topluluktan çıkarabilir ya da yasaklayabilir. Sunucuyu çalıştıran kişi teknik olarak oradaki her şeye, mesajlar dahil, erişebilir: mesajlar uçtan uca şifreli değildir.",
