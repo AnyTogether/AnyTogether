@@ -9,6 +9,7 @@ import {
   ErrorCode,
   type GatewayEvent,
   type IceServer,
+  callDeafenedKey,
   callDeparturesKey,
   callInKey,
   callMembersKey,
@@ -69,15 +70,17 @@ export function callRoutes(deps: Deps, parties: PartyService) {
   };
 
   const peers = async (callId: string): Promise<CallPeer[]> => {
-    const [[, inCall], [, muted]] = (await valkey
+    const [[, inCall], [, muted], [, deafened]] = (await valkey
       .multi()
       .hgetall(callInKey(callId))
       .smembers(callMutedKey(callId))
-      .exec()) as [[null, Record<string, string>], [null, string[]]];
+      .smembers(callDeafenedKey(callId))
+      .exec()) as [[null, Record<string, string>], [null, string[]], [null, string[]]];
     return Object.entries(inCall).map(([userId, device]) => ({
       userId,
       device,
-      muted: muted.includes(userId),
+      muted: muted.includes(userId) || deafened.includes(userId),
+      deafened: deafened.includes(userId),
     }));
   };
 
@@ -139,7 +142,9 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     if (!ended) return;
     const members = await valkey.smembers(callMembersKey(call.id));
     const devices = Object.values(await valkey.hgetall(callInKey(call.id)));
-    const cleanup = valkey.multi().del(callMembersKey(call.id), callInKey(call.id), callMutedKey(call.id));
+    const cleanup = valkey
+      .multi()
+      .del(callMembersKey(call.id), callInKey(call.id), callMutedKey(call.id), callDeafenedKey(call.id));
     for (const device of devices) cleanup.srem(deviceCallsKey(device), call.id);
     await cleanup.exec();
     await tell(members, { type: "call.ended", data: { callId: call.id, partyId: call.partyId, reason } });
@@ -157,6 +162,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     const device = await valkey.hget(callInKey(call.id), me);
     const removed = await valkey.hdel(callInKey(call.id), me);
     await valkey.srem(callMutedKey(call.id), me);
+    await valkey.srem(callDeafenedKey(call.id), me);
     if (device) await valkey.srem(deviceCallsKey(device), call.id);
     if (!stillMember) await valkey.srem(callMembersKey(call.id), me);
     if (!call.partyId) return end(call, "ended", me);
@@ -185,6 +191,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
       id: call.id,
       in: now.map((p) => p.userId),
       muted: now.filter((p) => p.muted).map((p) => p.userId),
+      deafened: now.filter((p) => p.deafened).map((p) => p.userId),
     };
   };
   parties.leaveHooks.push(async (partyId, userId, ended) => {
@@ -285,21 +292,28 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     return c.body(null, 204);
   });
 
-  /** Muted or not: every member hears it, and the party view shows it. */
+  /** Muted or not, deafened or not: every member hears it, and the party view shows it. Deafened
+   *  is always muted too: deafening mutes, unmuting undeafens, and muting alone leaves it be. */
   app.post("/calls/:id/mute", async (c) => {
     const me = c.get("userId");
     const call = await asMember(c.req.param("id"), me);
-    const { muted } = await body(c, CallMute);
+    const input = await body(c, CallMute);
     if (!(await valkey.hexists(callInKey(call.id), me)))
       throw new HttpError(409, ErrorCode.conflict, "Join the call first");
-    const changed = muted
-      ? await valkey.sadd(callMutedKey(call.id), me)
-      : await valkey.srem(callMutedKey(call.id), me);
-    await valkey.expire(callMutedKey(call.id), keep);
-    if (changed) {
+    const wasDeaf = Boolean(await valkey.sismember(callDeafenedKey(call.id), me));
+    const deafened = input.deafened ?? (input.muted ? wasDeaf : false);
+    const muted = input.muted || deafened;
+    const [[, mutedChange], [, deafChange]] = (await valkey
+      .multi()
+      [muted ? "sadd" : "srem"](callMutedKey(call.id), me)
+      [deafened ? "sadd" : "srem"](callDeafenedKey(call.id), me)
+      .expire(callMutedKey(call.id), keep)
+      .expire(callDeafenedKey(call.id), keep)
+      .exec()) as [[null, number], [null, number]];
+    if (mutedChange || deafChange) {
       await tell(await valkey.smembers(callMembersKey(call.id)), {
         type: "call.updated",
-        data: { callId: call.id, partyId: call.partyId, userId: me, muted },
+        data: { callId: call.id, partyId: call.partyId, userId: me, muted, deafened },
       });
       if (call.partyId) {
         const party = await parties.live(call.partyId);

@@ -20,6 +20,7 @@ import type { FileService } from "./files.js";
 import { friendRoutes } from "./friends.js";
 import { gameSessionRoutes } from "./gameSessions.js";
 import { gameRoutes } from "./games.js";
+import { joinCodeRoutes } from "./joinCodes.js";
 import { leaderboardRoutes } from "./leaderboards.js";
 import { lfgRoutes } from "./lfg.js";
 import type { Mailer } from "./mail.js";
@@ -135,6 +136,10 @@ export function createApp(deps: Deps) {
   // Restrictions and appeals: a banned account comes with an appeal token, not a session.
   v1.route("/", appealRoutes(deps));
   const notes = notifier(deps);
+  const partyPieces = partyService(deps, notes);
+  const shares = sharePlayRoutes(deps);
+  // What a join code opens is read signed out too (a link opened from Discord).
+  v1.route("/", joinCodeRoutes(deps, partyPieces.codes, partyPieces, shares));
   // Before the profile routes, whose PATCH /me/* counts against the profile limit.
   const family = familyRoutes(deps, notes);
   v1.route("/", family);
@@ -148,12 +153,10 @@ export function createApp(deps: Deps) {
   v1.route("/", leaderboardRoutes(deps));
   v1.route("/", reportRoutes(deps));
   v1.route("/", messageRoutes(deps, notes));
-  const partyPieces = partyService(deps, notes);
   v1.route("/", partyRoutes(deps, partyPieces));
   const calls = callRoutes(deps, partyPieces);
   v1.route("/", calls);
   v1.route("/", gameSessionRoutes(deps, notes));
-  const shares = sharePlayRoutes(deps);
   v1.route("/", shares);
   const lfg = lfgRoutes(deps, notes, partyPieces, shares);
   v1.route("/", lfg);

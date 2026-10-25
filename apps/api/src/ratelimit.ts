@@ -62,6 +62,10 @@ export const defaultLimits = {
    *  walking into open ones, by one account and by a new one. */
   joinRequest: { max: 60, seconds: 3600 },
   joinRequestNew: { max: 10, seconds: 3600 },
+  /** Join codes handed out by one party leader or share play host. */
+  joinCode: { max: 30, seconds: 3600 },
+  /** Join codes looked up or tried, per account (per address signed out): codes are not guessed. */
+  joinCodeLookup: { max: 60, seconds: 60 },
   /** Save uploads begun or completed, restores and deletes by one account. */
   saveUpload: { max: 240, seconds: 3600 },
   /** Photos, clips and voice notes uploaded by one account. */

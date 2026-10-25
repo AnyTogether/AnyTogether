@@ -164,10 +164,11 @@ export type DiscoverEvent =
       type: "lfg.changed";
       data: { postId: string; titleId: string; change: "opened" | "updated" | "closed" };
     }
-  | { type: "party.request"; data: { partyId: string; from: MemberView } }
+  /** Someone asked to join, from the public list or with the join code (`via`). */
+  | { type: "party.request"; data: { partyId: string; from: MemberView; via: "list" | "code" } }
   | { type: "party.request_cancelled"; data: { partyId: string; userId: string } }
   | { type: "party.request_answered"; data: { partyId: string; answer: "accepted" | "declined" } }
-  | { type: "share_play.request"; data: { sharePlayId: string; from: MemberView } }
+  | { type: "share_play.request"; data: { sharePlayId: string; from: MemberView; via: "list" | "code" } }
   | { type: "share_play.request_cancelled"; data: { sharePlayId: string; userId: string } }
   | {
       type: "share_play.request_answered";

@@ -2,6 +2,8 @@ import { accounts, games, parties, partyInvites, partyMembers, partyRequests } f
 import {
   ErrorCode,
   type GatewayEvent,
+  JoinCodeIssue,
+  type JoinCodeState,
   LanguageCode,
   PartyCreate,
   PartyInvite,
@@ -23,11 +25,13 @@ import { HttpError } from "./errors.js";
 import { broadcast, publish, topicsFor } from "./events.js";
 import { familyGuard } from "./family.js";
 import { body } from "./http.js";
+import { joinCodeStore } from "./joinCodes.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { assertNotMuted } from "./moderation.js";
 import type { Notifier } from "./notifications.js";
 import { noBlockBetween, people } from "./people.js";
 import { setPresenceExtra } from "./presence.js";
-import { strangerLimiter } from "./ratelimit.js";
+import { rateLimiter, strangerLimiter } from "./ratelimit.js";
 
 type Party = typeof parties.$inferSelect;
 type Listing = z.infer<typeof PartyListing>;
@@ -43,10 +47,15 @@ const listingColumns = (listing: Listing | null | undefined, before?: Party) =>
       }
     : { publicJoin: null, titleId: null, language: null, listedAt: null };
 
+const noPublic = "Your family settings keep public parties, Find players and share plays off";
+
 /** The party pieces the call routes need too. */
-export function partyService(deps: Pick<Deps, "db" | "valkey">, notes: Notifier) {
+export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "limits">, notes: Notifier) {
   const { db } = deps;
   const who = people(db);
+  const codes = joinCodeStore(deps);
+  const family = familyGuard(db);
+  const strangerLimit = strangerLimiter(deps);
 
   const memberRows = (partyId: string) =>
     db
@@ -95,7 +104,8 @@ export function partyService(deps: Pick<Deps, "db" | "valkey">, notes: Notifier)
       .where(eq(partyRequests.partyId, partyId))
       .orderBy(asc(partyRequests.createdAt));
 
-  /** Drops every request to join (the party left the list or ended); the askers hear no. */
+  /** Drops every request to join (the party ended, or left the list with no join code working);
+   *  the askers hear no. */
   const dropRequests = async (partyId: string) => {
     const dropped = await db.delete(partyRequests).where(eq(partyRequests.partyId, partyId)).returning();
     for (const request of dropped)
@@ -129,7 +139,7 @@ export function partyService(deps: Pick<Deps, "db" | "valkey">, notes: Notifier)
     const invites = forMember
       ? await db.select().from(partyInvites).where(eq(partyInvites.partyId, party.id))
       : [];
-    const requests = forMember && party.publicJoin ? await requestRows(party.id) : [];
+    const requests = forMember ? await requestRows(party.id) : [];
     const cards = await who.cards([
       ...members.map((m) => m.accountId),
       ...invites.map((i) => i.accountId),
@@ -152,7 +162,13 @@ export function partyService(deps: Pick<Deps, "db" | "valkey">, notes: Notifier)
             language: party.language,
           }
         : null,
-      ...(forMember ? { requests: requests.flatMap((r) => cards.get(r.accountId) ?? []) } : {}),
+      ...(forMember
+        ? {
+            requests: requests.flatMap((r) => cards.get(r.accountId) ?? []),
+            joinCode: await codes.current("party", party.id),
+            discord: party.discordUrl ?? null,
+          }
+        : {}),
       createdAt: party.createdAt.toISOString(),
     };
   }
@@ -256,10 +272,9 @@ export function partyService(deps: Pick<Deps, "db" | "valkey">, notes: Notifier)
     for (const hook of leaveHooks) await hook(partyId, userId, result.ended);
     if (result.ended) {
       await tell([userId], { type: "party.ended", data: { partyId } });
-      if (result.party.publicJoin) {
-        await dropRequests(partyId);
-        await relist(result.party, "unlisted");
-      }
+      await dropRequests(partyId);
+      await codes.revoke("party", partyId);
+      if (result.party.publicJoin) await relist(result.party, "unlisted");
       // An invite to a party that is over is no longer news.
       for (const invitee of result.invited) await notes.withdraw(invitee, "party_invite", partyId);
       return true;
@@ -332,7 +347,90 @@ export function partyService(deps: Pick<Deps, "db" | "valkey">, notes: Notifier)
     );
   }
 
+  const invitedTo = async (partyId: string, userId: string) =>
+    (
+      await db
+        .select({ partyId: partyInvites.partyId })
+        .from(partyInvites)
+        .where(and(eq(partyInvites.partyId, partyId), eq(partyInvites.accountId, userId)))
+    ).length > 0;
+  const askedTo = async (partyId: string, userId: string) =>
+    (
+      await db
+        .select({ partyId: partyRequests.partyId })
+        .from(partyRequests)
+        .where(and(eq(partyRequests.partyId, partyId), eq(partyRequests.accountId, userId)))
+    ).length > 0;
+
+  /** `me` asks to join (from the public list or with the join code): the leader hears it.
+   *  Whether they may is the caller's to check. True when the request is new. */
+  async function ask(party: Party, me: string, via: "list" | "code") {
+    const [made] = await db
+      .insert(partyRequests)
+      .values({ partyId: party.id, accountId: me })
+      .onConflictDoNothing()
+      .returning();
+    if (!made) return false;
+    const from = await who.card(me);
+    if (from && party.leaderId)
+      await tell([party.leaderId], { type: "party.request", data: { partyId: party.id, from, via } });
+    await announce(party);
+    return true;
+  }
+
+  /** What a join code opens, as `me` (or anyone, signed out) sees it; nothing for someone with a
+   *  block either way with a member. */
+  async function codeTarget(partyId: string, me?: string) {
+    const party = await live(partyId);
+    if (!party) return undefined;
+    const members = await memberIds(party.id);
+    if (me && (await who.blockedAmong(me, members)).size) return undefined;
+    const [game] = party.titleId ? await db.select().from(games).where(eq(games.titleId, party.titleId)) : [];
+    const state: JoinCodeState | undefined = !me
+      ? undefined
+      : members.includes(me)
+        ? "member"
+        : (await invitedTo(party.id, me))
+          ? "invited"
+          : (await askedTo(party.id, me))
+            ? "requested"
+            : "none";
+    return {
+      host: party.leaderId ? await who.card(party.leaderId) : null,
+      game: party.titleId
+        ? { titleId: party.titleId, title: null, names: game?.names ?? {}, iconUrl: game?.iconUrl ?? null }
+        : null,
+      size: members.length,
+      max: maxPartySize,
+      state,
+    };
+  }
+
+  /** Asks to join with a join code: members and the invited need not; a child follows their
+   *  family's rules (public matchmaking for a stranger's party, and who may talk to them). */
+  async function askWithCode(partyId: string, me: string) {
+    const party = await live(partyId);
+    if (!party) throw new HttpError(404, ErrorCode.notFound, "No such party");
+    const members = await memberIds(party.id);
+    if (members.includes(me)) throw new HttpError(409, ErrorCode.conflict, "You are in this party");
+    if ((await who.blockedAmong(me, members)).size)
+      throw new HttpError(404, ErrorCode.notFound, "No such party");
+    const friend = !!party.leaderId && (await who.friends(me, party.leaderId));
+    if (!friend) await family.need(me, "public_matchmaking", noPublic);
+    await family.mayMessage(me, members);
+    if (await invitedTo(party.id, me)) return { state: "invited" as const, made: false };
+    if (await askedTo(party.id, me)) return { state: "requested" as const, made: false };
+    if (members.length >= maxPartySize)
+      throw new HttpError(409, ErrorCode.full, `A party has at most ${maxPartySize} people`);
+    if (!friend) await strangerLimit("joinRequest", me);
+    return { state: "requested" as const, made: await ask(party, me, "code") };
+  }
+
   return {
+    codes,
+    ask,
+    codeTarget,
+    askWithCode,
     live,
     partyOf,
     memberIds,
@@ -363,8 +461,11 @@ export function partyRoutes(deps: Deps, service: PartyService) {
   const { db } = deps;
   const who = people(db);
   const strangerLimit = strangerLimiter(deps);
+  const limit = rateLimiter(deps.valkey, deps.limits);
   const family = familyGuard(db);
   const {
+    codes,
+    ask,
     live,
     partyOf,
     memberIds,
@@ -427,12 +528,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
   app.post("/parties", async (c) => {
     const me = c.get("userId");
     const input = await body(c, PartyCreate);
-    if (input.public)
-      await family.need(
-        me,
-        "public_matchmaking",
-        "Your family settings keep public parties, Find players and share plays off",
-      );
+    if (input.public) await family.need(me, "public_matchmaking", noPublic);
     await knowGame(input.public?.titleId);
     const party = await create(me, input.privacy, input.public);
     return c.json(await view(party), 201);
@@ -495,24 +591,21 @@ export function partyRoutes(deps: Deps, service: PartyService) {
     const me = c.get("userId");
     const { party, members } = await asLeader(c.req.param("id"), me);
     const input = await body(c, PartyUpdate);
-    if (input.public)
-      await family.need(
-        me,
-        "public_matchmaking",
-        "Your family settings keep public parties, Find players and share plays off",
-      );
+    if (input.public) await family.need(me, "public_matchmaking", noPublic);
     await knowGame(input.public?.titleId);
     const [updated] = (await db
       .update(parties)
       .set({
         ...(input.privacy ? { privacy: input.privacy } : {}),
         ...(input.public !== undefined ? listingColumns(input.public, party) : {}),
+        ...(input.discord !== undefined ? { discordUrl: input.discord } : {}),
       })
       .where(eq(parties.id, party.id))
       .returning()) as [Party];
     await showInPresence(updated, members);
     if (party.publicJoin && !updated.publicJoin) {
-      await dropRequests(party.id);
+      // Requests that came with the join code stay while it works.
+      if (!(await codes.current("party", party.id))) await dropRequests(party.id);
       await relist(party, "unlisted");
     } else if (!party.publicJoin && updated.publicJoin) await relist(updated, "listed");
     else if (updated.publicJoin) {
@@ -520,6 +613,30 @@ export function partyRoutes(deps: Deps, service: PartyService) {
       await relist(updated, party.titleId !== updated.titleId ? "listed" : "updated");
     }
     return c.json(await announce(updated));
+  });
+
+  /** The leader hands out a join code (in place of the one before): anyone holding it may ask to
+   *  join. */
+  app.post("/parties/:id/code", async (c) => {
+    const me = c.get("userId");
+    const { party } = await asLeader(c.req.param("id"), me);
+    const { hours } = await body(c, JoinCodeIssue);
+    await assertNotMuted(db, me);
+    await family.need(me, "public_matchmaking", noPublic);
+    await limit("joinCode", me);
+    const code = await codes.issue("party", party.id, me, hours);
+    await announce(party);
+    return c.json(code, 201);
+  });
+
+  /** The leader stops the join code working; requests made with it wait for an answer still. */
+  app.delete("/parties/:id/code", async (c) => {
+    const me = c.get("userId");
+    const { party } = await asLeader(c.req.param("id"), me);
+    if (!(await codes.revoke("party", party.id)))
+      throw new HttpError(404, ErrorCode.notFound, "No code to stop");
+    await announce(party);
+    return c.body(null, 204);
   });
 
   app.post("/parties/:id/invites", async (c) => {
@@ -546,11 +663,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
         throw new HttpError(403, ErrorCode.forbidden, "Ask the leader to let you in", {
           join: party.publicJoin,
         });
-      await family.need(
-        me,
-        "public_matchmaking",
-        "Your family settings keep public parties, Find players and share plays off",
-      );
+      await family.need(me, "public_matchmaking", noPublic);
       // Walking into a stranger's party counts like asking to.
       await strangerLimit("joinRequest", me);
     }
@@ -592,25 +705,11 @@ export function partyRoutes(deps: Deps, service: PartyService) {
     const { party, members } = await visible(c.req.param("id"), me);
     if (members.includes(me)) throw new HttpError(409, ErrorCode.conflict, "You are in this party");
     if (!party.publicJoin) throw new HttpError(403, ErrorCode.forbidden, "This party takes no requests");
-    await family.need(
-      me,
-      "public_matchmaking",
-      "Your family settings keep public parties, Find players and share plays off",
-    );
+    await family.need(me, "public_matchmaking", noPublic);
     if (members.length >= maxPartySize)
       throw new HttpError(409, ErrorCode.full, `A party has at most ${maxPartySize} people`);
     await strangerLimit("joinRequest", me);
-    const [made] = await db
-      .insert(partyRequests)
-      .values({ partyId: party.id, accountId: me })
-      .onConflictDoNothing()
-      .returning();
-    if (made) {
-      const from = await who.card(me);
-      if (from && party.leaderId)
-        await tell([party.leaderId], { type: "party.request", data: { partyId: party.id, from } });
-      await announce(party);
-    }
+    const made = await ask(party, me, "list");
     return c.json({ requested: true }, made ? 201 : 200);
   });
 

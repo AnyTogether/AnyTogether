@@ -18,3 +18,4 @@ export * from "./discover.js";
 export * from "./family.js";
 export * from "./storage.js";
 export * from "./connections.js";
+export * from "./joinCodes.js";

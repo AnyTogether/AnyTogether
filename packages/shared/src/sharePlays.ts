@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { IceServer } from "./calls.js";
 import { type GameSignalKind, gameSignalKinds } from "./gameSessions.js";
 import { LanguageCode, TitleId } from "./games.js";
+import type { JoinCode } from "./joinCodes.js";
 import type { MemberView } from "./messages.js";
 import { type PublicJoin, publicJoins } from "./parties.js";
 
@@ -82,8 +83,10 @@ export interface SharePlayView {
   public: { join: PublicJoin; language: string | null; live: boolean } | null;
   /** People invited who have not come yet; only the host sees them. */
   invited?: MemberView[];
-  /** People who asked to join; only the host sees them. */
+  /** People who asked to join, from the public list or with the join code; only the host sees them. */
   requests?: MemberView[];
+  /** The join code the host handed out, while it works; only the host sees it. */
+  joinCode?: JoinCode | null;
   startedAt: string;
 }
 

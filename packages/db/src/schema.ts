@@ -621,6 +621,9 @@ export const parties = pgTable(
     titleId: text().references(() => games.titleId),
     language: text(),
     listedAt: timestamp({ withTimezone: true }),
+    /** The party's Discord server or channel (a discord.gg or discord.com link), as the leader
+     *  set it. */
+    discordUrl: text(),
     createdAt: now(),
     endedAt: timestamp({ withTimezone: true }),
   },
@@ -664,7 +667,8 @@ export const partyInvites = pgTable(
   (table) => [primaryKey({ columns: [table.partyId, table.accountId] }), index().on(table.accountId)],
 );
 
-/** People asking to join a party listed in public; the leader lets them in with an invite. */
+/** People asking to join a party listed in public, or with its join code; the leader lets them
+ *  in with an invite. */
 export const partyRequests = pgTable(
   "party_requests",
   {
@@ -677,6 +681,29 @@ export const partyRequests = pgTable(
     createdAt: now(),
   },
   (table) => [primaryKey({ columns: [table.partyId, table.accountId] }), index().on(table.accountId)],
+);
+
+/** Short codes a party leader or share play host hands out so people who are not friends can ask
+ *  to join (a share play lives in Valkey, so the target is no foreign key). A code works until it
+ *  runs out, is revoked or replaced, or what it opens ends. */
+export const joinCodes = pgTable(
+  "join_codes",
+  {
+    code: text().primaryKey(),
+    /** party | share_play */
+    kind: text().notNull(),
+    targetId: uuid().notNull(),
+    createdBy: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    createdAt: now(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    revokedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    check("join_code_kind", sql`${table.kind} in ('party', 'share_play')`),
+    index("join_codes_target").on(table.kind, table.targetId).where(sql`${table.revokedAt} is null`),
+  ],
 );
 
 /** Set up by the API; the media itself goes peer to peer and is never seen by the server. Who may

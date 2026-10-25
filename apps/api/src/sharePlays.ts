@@ -2,6 +2,8 @@ import { games } from "@anytogether/db";
 import {
   ErrorCode,
   type GatewayEvent,
+  JoinCodeIssue,
+  type JoinCodeState,
   LanguageCode,
   type MemberView,
   type PublicJoin,
@@ -41,7 +43,9 @@ import { HttpError } from "./errors.js";
 import { broadcast, publish, topicsFor } from "./events.js";
 import { familyGuard } from "./family.js";
 import { body } from "./http.js";
+import { joinCodeStore } from "./joinCodes.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { assertNotMuted } from "./moderation.js";
 import { people } from "./people.js";
 import { setPresenceExtra } from "./presence.js";
 import { rateLimiter, strangerLimiter } from "./ratelimit.js";
@@ -86,7 +90,9 @@ export function sharePlayRoutes(deps: Deps) {
   const strangerLimit = strangerLimiter(deps);
   const family = familyGuard(deps.db);
   const noShare = "Your family settings keep share play off";
+  const noPublic = "Your family settings keep public parties, Find players and share plays off";
   const keep = sharePlayKeepSeconds;
+  const codes = joinCodeStore(deps);
 
   /** The public lists hear that a listed share play came, changed or went. */
   const relist = (share: Share, change: "listed" | "updated" | "unlisted") =>
@@ -153,8 +159,7 @@ export function sharePlayRoutes(deps: Deps) {
   async function view(share: Share, forHost = false): Promise<SharePlayView> {
     const sat = [...(await seats(share.id))].sort((a, b) => a[1].joinedAt.localeCompare(b[1].joinedAt));
     const invited = forHost ? Object.keys(await valkey.hgetall(sharePlayInvitesKey(share.id))) : [];
-    const asked =
-      forHost && share.public ? Object.keys(await valkey.hgetall(sharePlayRequestsKey(share.id))) : [];
+    const asked = forHost ? Object.keys(await valkey.hgetall(sharePlayRequestsKey(share.id))) : [];
     const cards = await who.cards([share.hostId, ...sat.map(([id]) => id), ...invited, ...asked]);
     return {
       id: share.id,
@@ -173,6 +178,7 @@ export function sharePlayRoutes(deps: Deps) {
         ? {
             invited: invited.flatMap((id) => cards.get(id) ?? []),
             requests: asked.flatMap((id) => cards.get(id) ?? []),
+            joinCode: await codes.current("share_play", share.id),
           }
         : {}),
       startedAt: share.startedAt,
@@ -221,8 +227,9 @@ export function sharePlayRoutes(deps: Deps) {
     for (const seat of now.values()) cleanup.srem(deviceSharePlaysKey(seat.device), share.id);
     for (const userId of invited) cleanup.hdel(userShareInvitesKey(userId), share.id);
     await cleanup.exec();
+    await dropRequests(share);
+    await codes.revoke("share_play", share.id);
     if (share.public) {
-      await dropRequests(share);
       await valkey.zrem(publicSharePlaysKey, share.id);
       await relist(share, "unlisted");
     }
@@ -409,6 +416,98 @@ export function sharePlayRoutes(deps: Deps) {
     return views;
   }
 
+  /** `me` asks to watch (from the public list or with the join code): the host hears it. Whether
+   *  they may is the caller's to check. True when the request is new. */
+  async function ask(share: Share, me: string, via: "list" | "code") {
+    const made = await valkey.hsetnx(sharePlayRequestsKey(share.id), me, new Date().toISOString());
+    await touch(share);
+    if (!made) return false;
+    const from = await who.card(me);
+    if (from)
+      await tell([share.hostId], { type: "share_play.request", data: { sharePlayId: share.id, from, via } });
+    await tell([share.hostId], { type: "share_play.updated", data: await view(share, true) });
+    return true;
+  }
+
+  /** What a join code opens, as `me` (or anyone, signed out) sees it; nothing for someone with a
+   *  block either way with the host, or whom the host took out. */
+  async function codeTarget(id: string, me?: string) {
+    const share = await load(id);
+    if (!share) return undefined;
+    let state: JoinCodeState | undefined;
+    if (me) {
+      if (me === share.hostId) state = "member";
+      else {
+        const { seated, invited, removed } = await standing(share, me);
+        if (removed || (await who.blocked(me, share.hostId))) return undefined;
+        const asked = Boolean(await valkey.hexists(sharePlayRequestsKey(share.id), me));
+        state = seated ? "member" : invited ? "invited" : asked ? "requested" : "none";
+      }
+    }
+    const [game] = await deps.db
+      .select()
+      .from(games)
+      .where(inArray(games.titleId, [share.titleId]));
+    return {
+      host: await who.card(share.hostId),
+      game: {
+        titleId: share.titleId,
+        title: share.title,
+        names: game?.names ?? {},
+        iconUrl: game?.iconUrl ?? null,
+      },
+      size: await valkey.hlen(sharePlayViewersKey(share.id)),
+      max: share.maxViewers,
+      state,
+    };
+  }
+
+  /** Asks to watch with a join code: a child needs share play on and follows their family's rules
+   *  (public matchmaking for a stranger's share play, and who may talk to them). */
+  async function askWithCode(id: string, me: string) {
+    const share = await load(id);
+    if (!share) throw new HttpError(404, ErrorCode.notFound, "No such share play");
+    if (share.hostId === me) throw new HttpError(409, ErrorCode.conflict, "That is your own share play");
+    const { seated, invited, removed } = await standing(share, me);
+    if (removed || (await who.blocked(me, share.hostId)))
+      throw new HttpError(404, ErrorCode.notFound, "No such share play");
+    if (seated) throw new HttpError(409, ErrorCode.conflict, "You are watching");
+    await family.need(me, "share_play", noShare);
+    const friend = await who.friends(me, share.hostId);
+    if (!friend) await family.need(me, "public_matchmaking", noPublic);
+    await family.mayMessage(me, [share.hostId]);
+    if (invited) return { state: "invited" as const, made: false };
+    if (await valkey.hexists(sharePlayRequestsKey(share.id), me))
+      return { state: "requested" as const, made: false };
+    if (!friend) await strangerLimit("joinRequest", me);
+    return { state: "requested" as const, made: await ask(share, me, "code") };
+  }
+
+  /** The host hands out a join code (in place of the one before): anyone holding it may ask to
+   *  watch. */
+  app.post("/share-plays/:id/code", async (c) => {
+    const me = c.get("userId");
+    const share = await asHost(c.req.param("id"), me);
+    const { hours } = await body(c, JoinCodeIssue);
+    await assertNotMuted(deps.db, me);
+    await family.need(me, "public_matchmaking", noPublic);
+    await limit("joinCode", me);
+    const code = await codes.issue("share_play", share.id, me, hours);
+    await touch(share);
+    await tell([me], { type: "share_play.updated", data: await view(share, true) });
+    return c.json(code, 201);
+  });
+
+  /** The host stops the join code working; requests made with it wait for an answer still. */
+  app.delete("/share-plays/:id/code", async (c) => {
+    const me = c.get("userId");
+    const share = await asHost(c.req.param("id"), me);
+    if (!(await codes.revoke("share_play", share.id)))
+      throw new HttpError(404, ErrorCode.notFound, "No code to stop");
+    await tell([me], { type: "share_play.updated", data: await view(share, true) });
+    return c.body(null, 204);
+  });
+
   /** Share plays listed in public, newest first; by game and language, and live=1 for the ones
    *  under Live now. */
   app.get("/share-plays/public", async (c) => {
@@ -536,7 +635,8 @@ export function sharePlayRoutes(deps: Deps) {
     await touch(updated);
     await index(updated);
     if (share.public && !updated.public) {
-      await dropRequests(updated);
+      // Requests that came with the join code stay while it works.
+      if (!(await codes.current("share_play", share.id))) await dropRequests(updated);
       await relist(share, "unlisted");
     } else if (!share.public && updated.public) await relist(updated, "listed");
     else if (share.public && share.titleId !== updated.titleId) {
@@ -643,14 +743,7 @@ export function sharePlayRoutes(deps: Deps) {
     );
     if ((await standing(share, me)).seated) throw new HttpError(409, ErrorCode.conflict, "You are watching");
     await strangerLimit("joinRequest", me);
-    const made = await valkey.hsetnx(sharePlayRequestsKey(share.id), me, new Date().toISOString());
-    await touch(share);
-    if (made) {
-      const from = await who.card(me);
-      if (from)
-        await tell([share.hostId], { type: "share_play.request", data: { sharePlayId: share.id, from } });
-      await tell([share.hostId], { type: "share_play.updated", data: await view(share, true) });
-    }
+    const made = await ask(share, me, "list");
     return c.json({ requested: true }, made ? 201 : 200);
   });
 
@@ -747,7 +840,7 @@ export function sharePlayRoutes(deps: Deps) {
     return gone;
   }
 
-  return Object.assign(app, { sweepDepartures, hostedBy, inviteTo, publicShares });
+  return Object.assign(app, { sweepDepartures, hostedBy, inviteTo, publicShares, codeTarget, askWithCode });
 }
 
 export type SharePlayService = ReturnType<typeof sharePlayRoutes>;

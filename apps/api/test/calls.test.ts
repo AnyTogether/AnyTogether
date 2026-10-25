@@ -69,7 +69,7 @@ describe("direct calls", () => {
     expect(started.status).toBe(201);
     expect(started.body.call).toMatchObject({ kind: "direct", calleeId: callee.id, answeredAt: null });
     expect(started.body.call.in).toEqual([
-      { userId: caller.id, device: deviceOf(caller.token), muted: false },
+      { userId: caller.id, device: deviceOf(caller.token), muted: false, deafened: false },
     ]);
     expect(started.body.iceServers[1].username).toMatch(new RegExp(`^\\d+:${caller.id}$`));
     const callId = started.body.call.id as string;
@@ -271,6 +271,7 @@ describe("muting", () => {
       partyId,
       userId: a.id,
       muted: true,
+      deafened: false,
     });
     expect((await h.call("GET", `/api/v1/parties/${partyId}`, undefined, b.token)).body.call.muted).toEqual([
       a.id,
@@ -290,6 +291,74 @@ describe("muting", () => {
     await h.call("POST", `/api/v1/calls/${callId}/mute`, { muted: true }, a.token);
     await h.call("POST", `/api/v1/calls/${callId}/leave`, {}, a.token);
     expect(await h.valkey.sismember(`call:${callId}:muted`, a.id)).toBe(0);
+    bHears.stop();
+  });
+});
+
+describe("deafening", () => {
+  it("mutes too, tells the others, shows in the call and the party, and unmuting undeafens", async () => {
+    h = await harness();
+    const a = await h.user("da@example.com");
+    const b = await h.user("db@example.com");
+    await befriend(a, b);
+    const party = await h.call("POST", "/api/v1/parties", { privacy: "friends" }, a.token);
+    const partyId = party.body.id as string;
+    await h.call("POST", `/api/v1/parties/${partyId}/join`, {}, b.token);
+    const callId = (await h.call("POST", "/api/v1/calls", { partyId }, a.token)).body.call.id as string;
+    await h.call("POST", "/api/v1/calls", { partyId }, b.token);
+    const bHears = await listen(b.id);
+
+    // Deafened, even with muted: false, is muted.
+    const deaf = await h.call(
+      "POST",
+      `/api/v1/calls/${callId}/mute`,
+      { muted: false, deafened: true },
+      a.token,
+    );
+    expect(deaf.status).toBe(200);
+    expect(deaf.body.in.find((p: { userId: string }) => p.userId === a.id)).toMatchObject({
+      muted: true,
+      deafened: true,
+    });
+    await settle();
+    expect(bHears.heard.filter((e) => e.type === "call.updated").at(-1)?.data).toEqual({
+      callId,
+      partyId,
+      userId: a.id,
+      muted: true,
+      deafened: true,
+    });
+    const seen = (await h.call("GET", `/api/v1/parties/${partyId}`, undefined, b.token)).body.call;
+    expect(seen).toMatchObject({ muted: [a.id], deafened: [a.id] });
+
+    // Undeafened but still muted, then unmuting (which would undeafen too).
+    const hearing = await h.call(
+      "POST",
+      `/api/v1/calls/${callId}/mute`,
+      { muted: true, deafened: false },
+      a.token,
+    );
+    expect(hearing.body.in.find((p: { userId: string }) => p.userId === a.id)).toMatchObject({
+      muted: true,
+      deafened: false,
+    });
+    await h.call("POST", `/api/v1/calls/${callId}/mute`, { muted: true, deafened: true }, a.token);
+    const open = await h.call("POST", `/api/v1/calls/${callId}/mute`, { muted: false }, a.token);
+    expect(open.body.in.find((p: { userId: string }) => p.userId === a.id)).toMatchObject({
+      muted: false,
+      deafened: false,
+    });
+    // Muting alone keeps one hearing.
+    const muted = await h.call("POST", `/api/v1/calls/${callId}/mute`, { muted: true }, a.token);
+    expect(muted.body.in.find((p: { userId: string }) => p.userId === a.id)).toMatchObject({
+      muted: true,
+      deafened: false,
+    });
+
+    // Leaving forgets it.
+    await h.call("POST", `/api/v1/calls/${callId}/mute`, { muted: true, deafened: true }, a.token);
+    await h.call("POST", `/api/v1/calls/${callId}/leave`, {}, a.token);
+    expect(await h.valkey.sismember(`call:${callId}:deafened`, a.id)).toBe(0);
     bHears.stop();
   });
 });
