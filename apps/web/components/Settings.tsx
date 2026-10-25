@@ -1,5 +1,6 @@
 "use client";
 
+import { useLiveEvents } from "@/components/Live";
 import { ago } from "@/lib/games";
 import type { UiStrings } from "@/lib/i18n";
 import {
@@ -11,6 +12,7 @@ import {
   fill,
   privacySections,
 } from "@/lib/people";
+import { appearOfflineAfter } from "@/lib/presenceMode";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
@@ -222,6 +224,64 @@ export function HandleForm({ own, texts }: { own: Own; texts: UiStrings }) {
       )}
       {until && status.kind === "saved" && <StatusLine status={status} texts={texts} />}
     </form>
+  );
+}
+
+/** Online or appear offline: a two-way switch, saved as soon as it moves, that follows a change
+ *  made on another device. */
+export function PresenceModeForm({
+  appearOffline: initial,
+  texts,
+}: { appearOffline: boolean; texts: UiStrings }) {
+  const router = useRouter();
+  const [appearOffline, setAppearOffline] = useState(initial);
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  useSaved(status, setStatus);
+  useLiveEvents((event) => setAppearOffline((current) => appearOfflineAfter(current, event)));
+
+  async function change(value: boolean) {
+    if (value === appearOffline) return;
+    setAppearOffline(value);
+    setStatus({ kind: "busy" });
+    const saved = await send("/me/presence", json("PATCH", { appearOffline: value }));
+    if (!saved.ok) {
+      setAppearOffline(!value);
+      return setStatus({ kind: "error", text: errorText(saved.body.code, texts) });
+    }
+    setAppearOffline(saved.body.appearOffline === true);
+    setStatus({ kind: "saved" });
+    // The mark on the avatar in the header follows.
+    router.refresh();
+  }
+
+  return (
+    <div className="privacy presence-mode">
+      <fieldset className="privacy-row">
+        <legend>{texts.presenceMode}</legend>
+        <div className="segmented two" style={{ "--i": appearOffline ? 1 : 0 } as CSSProperties}>
+          <span className="thumb" aria-hidden="true" />
+          {([false, true] as const).map((choice) => (
+            <label key={String(choice)}>
+              <input
+                type="radio"
+                name="presence-mode"
+                value={choice ? "offline" : "online"}
+                checked={appearOffline === choice}
+                onChange={() => change(choice)}
+              />
+              <span>
+                <span className={choice ? "status-dot off" : "status-dot on"} aria-hidden="true" />
+                {choice ? texts.presenceAppearOffline : texts.presenceOnline}
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="meta hint-line">{texts.presenceModeHint}</p>
+      </fieldset>
+      <div className="save-row">
+        <StatusLine status={status} texts={texts} />
+      </div>
+    </div>
   );
 }
 

@@ -1,3 +1,4 @@
+import { AppearingOfflineMark } from "@/components/AppearingOffline";
 import { Avatar } from "@/components/Avatar";
 import { CallProvider } from "@/components/Calls";
 import { AppWorker, installCatcher } from "@/components/InstallApp";
@@ -144,7 +145,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 unreadLabel={texts.unreadNotifications}
               />
               <Link href={`/u/${user.profile.handle}`} className="tag nav me" aria-label={texts.myProfile}>
-                <Avatar person={{ ...user.profile, avatar: user.profile.avatar ?? null }} size={20} />
+                <span className="me-avatar">
+                  <Avatar person={{ ...user.profile, avatar: user.profile.avatar ?? null }} size={20} />
+                  <AppearingOfflineMark
+                    initial={user.profile.appearOffline === true}
+                    label={texts.appearingOffline}
+                  />
+                </span>
                 <span className="wide">@{user.profile.handle}</span>
               </Link>
               <Link href="/settings" className="pill nav" aria-label={texts.settings}>

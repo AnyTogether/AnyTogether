@@ -7,7 +7,14 @@ import { LookSettings } from "@/components/LookSettings";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
 import { PushSwitch } from "@/components/PushSwitch";
-import { DeleteAccount, HandleForm, PrivacyForm, ProfileForm, SessionList } from "@/components/Settings";
+import {
+  DeleteAccount,
+  HandleForm,
+  PresenceModeForm,
+  PrivacyForm,
+  ProfileForm,
+  SessionList,
+} from "@/components/Settings";
 import { StorageSettings } from "@/components/StorageSettings";
 import { type ConnectionProvider, type ConnectionSetup, providerName } from "@/lib/connections";
 import { countryOptions } from "@/lib/countries";
@@ -119,6 +126,8 @@ export default async function Settings({
 
         <article className="card" id="privacy">
           <h3 className="sub">{texts.sectionPrivacy}</h3>
+          <PresenceModeForm appearOffline={me.profile.appearOffline === true} texts={t} />
+          <hr />
           <p className="hint section-lead">{texts.privacyLead}</p>
           <PrivacyForm
             privacy={me.profile.privacy}

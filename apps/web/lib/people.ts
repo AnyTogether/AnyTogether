@@ -109,6 +109,7 @@ export interface Own {
     accent?: AccentName | null;
     trophyLevel?: TrophyLevel;
     rememberMet?: boolean;
+    appearOffline?: boolean;
   };
 }
 
