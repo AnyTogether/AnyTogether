@@ -1,4 +1,4 @@
-import { ErrorCode, type PrivacySection, TitleId, privacyOf } from "@anytogether/shared";
+import { ErrorCode, type PrivacySection, TitleId, privacyOf, trophyLevelOf } from "@anytogether/shared";
 import type { Context, Next } from "hono";
 import { Hono } from "hono";
 import type { Deps } from "./app.js";
@@ -8,6 +8,7 @@ import { page, paging, readActivities } from "./feed.js";
 import { libraryOf, trophiesOf, trophyCountsOf } from "./games.js";
 import { findProfile } from "./people.js";
 import { clientIp, rateLimiter } from "./ratelimit.js";
+import { lookOf, showcaseOf } from "./showcase.js";
 
 /** Stands in for the reader of a signed-out request: no account has it, so no friendship or block
  *  matches and nothing is "mine". */
@@ -72,7 +73,15 @@ export function publicProfileRoutes(deps: Deps) {
       visible,
       connections: await connectionBadges(deps.db, profile.accountId),
       ...(visible.trophies ? { trophyCounts: await trophyCountsOf(deps.db, profile.accountId) } : {}),
+      trophyLevel: visible.trophies ? trophyLevelOf(profile.trophyPoints) : null,
+      ...(await lookOf(deps.db, deps.publicUrl, profile)),
     });
+  });
+
+  app.get("/users/:handle/showcase", async (c: Context, next: Next) => {
+    const profile = await owner(c);
+    if (!profile) return next();
+    return c.json(await showcaseOf(deps.db, nobody, profile, "other"));
   });
 
   app.get("/users/:handle/library", async (c: Context, next: Next) => {

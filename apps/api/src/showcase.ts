@@ -63,6 +63,107 @@ export async function lookOf(
   return { cover, accent };
 }
 
+/** The showcase as `viewer` may see it. */
+export async function showcaseOf(
+  db: Database,
+  viewer: string,
+  owner: ProfileRow,
+  relation: "me" | "friend" | "other",
+) {
+  const stored = (owner.showcase ?? {}) as ShowcaseStored;
+  const privacy = privacyOf(owner.privacy);
+  const trophiesShown = canSee(privacy.trophies, relation);
+  const libraryShown = canSee(privacy.library, relation);
+  const view: ShowcaseView = { trophies: null, games: null };
+
+  if (trophiesShown) {
+    const pinned = (stored.trophies ?? []).slice(0, 6);
+    const rows = pinned.length
+      ? await db
+          .select({ earned: earnedTrophies, trophy: trophies, names: games.names })
+          .from(earnedTrophies)
+          .innerJoin(
+            trophies,
+            and(
+              eq(trophies.titleId, earnedTrophies.titleId),
+              eq(trophies.setHash, earnedTrophies.setHash),
+              eq(trophies.trophyId, earnedTrophies.trophyId),
+            ),
+          )
+          .innerJoin(games, eq(games.titleId, earnedTrophies.titleId))
+          .where(
+            and(
+              eq(earnedTrophies.accountId, owner.accountId),
+              sql`(${earnedTrophies.titleId}, ${earnedTrophies.trophyId}) in (${sql.join(
+                pinned.map((t) => sql`(${t.titleId}, ${t.trophyId}::int)`),
+                sql`, `,
+              )})`,
+            ),
+          )
+      : [];
+    // A hidden trophy's texts only for its owner and whoever earned it too.
+    const hiddenTitles = [...new Set(rows.filter((r) => r.trophy.hidden).map((r) => r.earned.titleId))];
+    const viewerHas = new Set(
+      viewer === owner.accountId || !hiddenTitles.length
+        ? []
+        : (
+            await db
+              .select({ titleId: earnedTrophies.titleId, trophyId: earnedTrophies.trophyId })
+              .from(earnedTrophies)
+              .where(and(eq(earnedTrophies.accountId, viewer), inArray(earnedTrophies.titleId, hiddenTitles)))
+          ).map((e) => `${e.titleId}/${e.trophyId}`),
+    );
+    const byKey = new Map(rows.map((r) => [`${r.earned.titleId}/${r.earned.trophyId}`, r]));
+    view.trophies = pinned.flatMap((pin): ShowcaseTrophy[] => {
+      const row = byKey.get(`${pin.titleId}/${pin.trophyId}`);
+      if (!row) return [];
+      const open =
+        !row.trophy.hidden || viewer === owner.accountId || viewerHas.has(`${pin.titleId}/${pin.trophyId}`);
+      return [
+        {
+          titleId: pin.titleId,
+          gameNames: row.names,
+          trophyId: pin.trophyId,
+          grade: row.trophy.grade as Grade,
+          hidden: row.trophy.hidden,
+          texts: open ? (row.trophy.texts as Texts) : null,
+          earnedAt: row.earned.earnedAt.toISOString(),
+          rarity: roundRarity(row.trophy.rarity),
+          rarityLabel: rarityLabel(row.trophy.rarity),
+        },
+      ];
+    });
+  }
+
+  if (libraryShown) {
+    const pinned = (stored.games ?? []).slice(0, 4);
+    const rows = pinned.length
+      ? await db
+          .select({ entry: library, game: games })
+          .from(library)
+          .innerJoin(games, eq(games.titleId, library.titleId))
+          .where(and(eq(library.accountId, owner.accountId), inArray(library.titleId, pinned)))
+      : [];
+    const byTitle = new Map(rows.map((r) => [r.entry.titleId, r]));
+    view.games = pinned.flatMap((titleId): ShowcaseGame[] => {
+      const row = byTitle.get(titleId);
+      if (!row) return [];
+      return [
+        {
+          titleId,
+          names: row.game.names,
+          iconUrl: row.game.iconUrl,
+          secondsPlayed: row.entry.secondsPlayed,
+          trophiesEarned: trophiesShown ? row.entry.trophiesEarned : null,
+          trophiesTotal: row.entry.trophiesTotal,
+          progress: trophiesShown ? progressOf(row.entry.trophiesEarned, row.entry.trophiesTotal) : null,
+        },
+      ];
+    });
+  }
+  return view;
+}
+
 /** A profile's look (cover, accent), its pinned trophies and games, and comparing trophies with
  *  someone, game by game. */
 export function showcaseRoutes(deps: Deps) {
@@ -107,104 +208,6 @@ export function showcaseRoutes(deps: Deps) {
     return c.json(await lookOf(db, deps.publicUrl, await own(me)));
   });
 
-  /** The showcase as `viewer` may see it. */
-  async function showcaseOf(viewer: string, owner: ProfileRow, relation: "me" | "friend" | "other") {
-    const stored = (owner.showcase ?? {}) as ShowcaseStored;
-    const privacy = privacyOf(owner.privacy);
-    const trophiesShown = canSee(privacy.trophies, relation);
-    const libraryShown = canSee(privacy.library, relation);
-    const view: ShowcaseView = { trophies: null, games: null };
-
-    if (trophiesShown) {
-      const pinned = (stored.trophies ?? []).slice(0, 6);
-      const rows = pinned.length
-        ? await db
-            .select({ earned: earnedTrophies, trophy: trophies, names: games.names })
-            .from(earnedTrophies)
-            .innerJoin(
-              trophies,
-              and(
-                eq(trophies.titleId, earnedTrophies.titleId),
-                eq(trophies.setHash, earnedTrophies.setHash),
-                eq(trophies.trophyId, earnedTrophies.trophyId),
-              ),
-            )
-            .innerJoin(games, eq(games.titleId, earnedTrophies.titleId))
-            .where(
-              and(
-                eq(earnedTrophies.accountId, owner.accountId),
-                sql`(${earnedTrophies.titleId}, ${earnedTrophies.trophyId}) in (${sql.join(
-                  pinned.map((t) => sql`(${t.titleId}, ${t.trophyId}::int)`),
-                  sql`, `,
-                )})`,
-              ),
-            )
-        : [];
-      // A hidden trophy's texts only for its owner and whoever earned it too.
-      const hiddenTitles = [...new Set(rows.filter((r) => r.trophy.hidden).map((r) => r.earned.titleId))];
-      const viewerHas = new Set(
-        viewer === owner.accountId || !hiddenTitles.length
-          ? []
-          : (
-              await db
-                .select({ titleId: earnedTrophies.titleId, trophyId: earnedTrophies.trophyId })
-                .from(earnedTrophies)
-                .where(
-                  and(eq(earnedTrophies.accountId, viewer), inArray(earnedTrophies.titleId, hiddenTitles)),
-                )
-            ).map((e) => `${e.titleId}/${e.trophyId}`),
-      );
-      const byKey = new Map(rows.map((r) => [`${r.earned.titleId}/${r.earned.trophyId}`, r]));
-      view.trophies = pinned.flatMap((pin): ShowcaseTrophy[] => {
-        const row = byKey.get(`${pin.titleId}/${pin.trophyId}`);
-        if (!row) return [];
-        const open =
-          !row.trophy.hidden || viewer === owner.accountId || viewerHas.has(`${pin.titleId}/${pin.trophyId}`);
-        return [
-          {
-            titleId: pin.titleId,
-            gameNames: row.names,
-            trophyId: pin.trophyId,
-            grade: row.trophy.grade as Grade,
-            hidden: row.trophy.hidden,
-            texts: open ? (row.trophy.texts as Texts) : null,
-            earnedAt: row.earned.earnedAt.toISOString(),
-            rarity: roundRarity(row.trophy.rarity),
-            rarityLabel: rarityLabel(row.trophy.rarity),
-          },
-        ];
-      });
-    }
-
-    if (libraryShown) {
-      const pinned = (stored.games ?? []).slice(0, 4);
-      const rows = pinned.length
-        ? await db
-            .select({ entry: library, game: games })
-            .from(library)
-            .innerJoin(games, eq(games.titleId, library.titleId))
-            .where(and(eq(library.accountId, owner.accountId), inArray(library.titleId, pinned)))
-        : [];
-      const byTitle = new Map(rows.map((r) => [r.entry.titleId, r]));
-      view.games = pinned.flatMap((titleId): ShowcaseGame[] => {
-        const row = byTitle.get(titleId);
-        if (!row) return [];
-        return [
-          {
-            titleId,
-            names: row.game.names,
-            iconUrl: row.game.iconUrl,
-            secondsPlayed: row.entry.secondsPlayed,
-            trophiesEarned: trophiesShown ? row.entry.trophiesEarned : null,
-            trophiesTotal: row.entry.trophiesTotal,
-            progress: trophiesShown ? progressOf(row.entry.trophiesEarned, row.entry.trophiesTotal) : null,
-          },
-        ];
-      });
-    }
-    return view;
-  }
-
   app.put("/me/showcase", async (c) => {
     const me = c.get("userId");
     await limit("profile", me);
@@ -243,13 +246,13 @@ export function showcaseRoutes(deps: Deps) {
       stored.games = input.games;
     }
     await db.update(profiles).set({ showcase: stored }).where(eq(profiles.accountId, me));
-    return c.json(await showcaseOf(me, { ...profile, showcase: stored }, "me"));
+    return c.json(await showcaseOf(db, me, { ...profile, showcase: stored }, "me"));
   });
 
   app.get("/users/:handle/showcase", async (c) => {
     const me = c.get("userId");
     const { profile, relation } = await person(me, c.req.param("handle"));
-    return c.json(await showcaseOf(me, profile, relation));
+    return c.json(await showcaseOf(db, me, profile, relation));
   });
 
   /** Someone whose trophies the asker may see, for comparing; never oneself. */

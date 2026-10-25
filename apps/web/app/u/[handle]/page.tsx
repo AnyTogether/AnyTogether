@@ -1,10 +1,10 @@
 import { Avatar } from "@/components/Avatar";
 import { FeedList } from "@/components/FeedList";
 import { FriendAction } from "@/components/FriendAction";
-import { LevelBadge, LevelCard } from "@/components/LevelBadge";
-import { ProfileShowcase } from "@/components/ProfileShowcase";
 import { Gallery } from "@/components/Gallery";
+import { LevelBadge, LevelCard } from "@/components/LevelBadge";
 import { ProfileMenu } from "@/components/ProfileMenu";
+import { ProfileShowcase } from "@/components/ProfileShowcase";
 import { providerName } from "@/lib/connections";
 import { flag } from "@/lib/countries";
 import type { FeedPage } from "@/lib/feed";

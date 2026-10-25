@@ -1,5 +1,5 @@
-import type { ConnectionBadge } from "./connections";
 import type { AccentName, CoverView, LevelBadgeData, TrophyLevel } from "@/lib/psn";
+import type { ConnectionBadge } from "./connections";
 
 /** People as the API shows them (no tokens or emails ever reach these). */
 export interface Person {

@@ -238,3 +238,35 @@ describe("comparing trophies", () => {
     ).toBe(404);
   });
 });
+
+describe("signed out", () => {
+  it("shows the level, look and showcase only where the person opened their trophies and library", async () => {
+    const ana = await h.user("ana@example.com");
+    await teachSet(ana);
+    await earn(ana, [3]);
+    await h.call(
+      "PATCH",
+      `${v1}/me/look`,
+      { cover: { kind: "preset", id: "aurora-glow" }, accent: "mint" },
+      ana.token,
+    );
+    await h.call(
+      "PUT",
+      `${v1}/me/showcase`,
+      { trophies: [{ titleId: game, trophyId: 3 }], games: [game] },
+      ana.token,
+    );
+    const closed = await h.call("GET", `${v1}/users/${ana.handle}`);
+    expect(closed.body).toMatchObject({ trophyLevel: null, cover: { id: "aurora-glow" }, accent: "mint" });
+    expect((await h.call("GET", `${v1}/users/${ana.handle}/showcase`)).body).toEqual({
+      trophies: null,
+      games: null,
+    });
+    await h.call("PATCH", `${v1}/me/privacy`, { trophies: "everyone", library: "everyone" }, ana.token);
+    const open = await h.call("GET", `${v1}/users/${ana.handle}`);
+    expect(open.body.trophyLevel).toMatchObject({ level: 6 });
+    const showcase = await h.call("GET", `${v1}/users/${ana.handle}/showcase`);
+    expect(showcase.body.trophies[0]).toMatchObject({ trophyId: 3, grade: "platinum" });
+    expect(showcase.body.games[0]).toMatchObject({ titleId: game });
+  });
+});

@@ -131,7 +131,7 @@ describe("trophy level", () => {
 
   it("is filled in for everyone by the migration with the same curve", async () => {
     const migration = readFileSync(
-      new URL("../../../packages/db/drizzle/0012_psn.sql", import.meta.url),
+      new URL("../../../packages/db/drizzle/0016_levels_communities_events.sql", import.meta.url),
       "utf8",
     );
     const expression = migration.split("-- level:begin")[1]?.split("-- level:end")[0]?.trim();

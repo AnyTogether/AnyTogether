@@ -19,7 +19,6 @@ import {
   typingEveryMs,
   typingShownMs,
 } from "@/lib/social";
-import Link from "next/link";
 import {
   type MediaItem,
   type MediaKind,
@@ -29,6 +28,7 @@ import {
   posterOf,
   uploadMedia,
 } from "@/lib/storage";
+import Link from "next/link";
 import {
   type CSSProperties,
   type KeyboardEvent,
