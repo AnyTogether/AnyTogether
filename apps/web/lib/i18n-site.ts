@@ -37,6 +37,8 @@ const en = {
     signIn: "Sign in",
     createAccount: "Create account",
     settings: "Settings",
+    privacy: "Privacy",
+    terms: "Terms",
     rules:
       "AnyPS5 and AnyTogether have nothing to do with Sony Interactive Entertainment. PlayStation, PS5 and DualSense are Sony's trademarks. Game pictures belong to their owners.",
   },
@@ -331,6 +333,8 @@ const tr: SiteStrings = {
     signIn: "Giriş yap",
     createAccount: "Hesap oluştur",
     settings: "Ayarlar",
+    privacy: "Gizlilik",
+    terms: "Koşullar",
     rules:
       "AnyPS5 ve AnyTogether'ın Sony Interactive Entertainment ile bir ilgisi yoktur. PlayStation, PS5 ve DualSense Sony'nin markalarıdır. Oyun görselleri sahiplerine aittir.",
   },

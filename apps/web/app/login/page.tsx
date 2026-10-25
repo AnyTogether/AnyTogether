@@ -1,3 +1,4 @@
+import { AgreeLine } from "@/components/LegalLinks";
 import { LoginForm } from "@/components/LoginForm";
 import { PasskeySignIn } from "@/components/Passkeys";
 import { strings } from "@/lib/i18n";
@@ -40,6 +41,7 @@ export default async function Login({
           </p>
         )}
       </div>
+      <AgreeLine texts={texts} />
     </section>
   );
 }

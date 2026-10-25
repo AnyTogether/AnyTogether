@@ -6,7 +6,8 @@ import Link from "next/link";
 const gh = (repo: string) => `https://github.com/utkuhalis/${repo}`;
 
 /** The footer of every page: the products, the project's pages (help, changelog, roadmap, open
- *  source), the community's repositories, the account, and the language. */
+ *  source), the community's repositories, the account, the privacy notice and terms, and the
+ *  language. */
 export function SiteFooter({
   s,
   signedIn,
@@ -132,6 +133,10 @@ export function SiteFooter({
           <a href="https://kodla.agency">kodla.agency</a>
           {after}
         </span>
+        <nav className="foot-policies" aria-label={`${s.footer.privacy}, ${s.footer.terms}`}>
+          <Link href="/privacy">{s.footer.privacy}</Link>
+          <Link href="/terms">{s.footer.terms}</Link>
+        </nav>
         <LanguageSwitch current={language} label={languageLabel} />
       </div>
       <p className="foot-legal">{s.footer.rules}</p>

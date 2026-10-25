@@ -1,10 +1,11 @@
 /** Texts with links written as [text](href), split into plain parts and links, so pages show them
- *  as React elements and never as HTML. Only site paths and https links count as links. */
+ *  as React elements and never as HTML. Only site paths, https links and #anchors on the same page
+ *  count as links. */
 export type InlinePart = string | { text: string; href: string };
 
 export function inlineParts(text: string): InlinePart[] {
   const parts: InlinePart[] = [];
-  const pattern = /\[([^\]]+)\]\((\/[^)\s]*|https:\/\/[^)\s]+)\)/g;
+  const pattern = /\[([^\]]+)\]\((\/[^)\s]*|https:\/\/[^)\s]+|#[\w-]+)\)/g;
   let last = 0;
   for (const match of text.matchAll(pattern)) {
     const index = match.index ?? 0;

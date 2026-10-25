@@ -4,6 +4,7 @@ import { compatEn, compatTr } from "./i18n-compat";
 import { discoverEn, discoverTr } from "./i18n-discover";
 import { familyEn, familyTr } from "./i18n-family";
 import { feedEn, feedTr } from "./i18n-feed";
+import { legalUiEn, legalUiTr } from "./i18n-legal";
 import { notifyEn, notifyTr } from "./i18n-notify";
 import { shareEn, shareTr } from "./i18n-share";
 import { socialEn, socialTr } from "./i18n-social";
@@ -439,7 +440,8 @@ export type Strings = typeof en &
   typeof discoverEn &
   typeof familyEn &
   typeof storageEn &
-  typeof accountEn;
+  typeof accountEn &
+  typeof legalUiEn;
 /** What client components get: the same texts (kept as its own name for them). */
 export type UiStrings = Strings;
 export const ui = (texts: Strings): UiStrings => texts;
@@ -464,6 +466,7 @@ export async function strings(): Promise<Strings> {
         ...familyTr,
         ...storageTr,
         ...accountTr,
+        ...legalUiTr,
       }
     : {
         ...en,
@@ -477,5 +480,6 @@ export async function strings(): Promise<Strings> {
         ...familyEn,
         ...storageEn,
         ...accountEn,
+        ...legalUiEn,
       };
 }

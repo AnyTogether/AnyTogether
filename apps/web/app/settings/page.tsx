@@ -1,6 +1,7 @@
 import { AvatarEditor } from "@/components/AvatarEditor";
 import { ConnectionList } from "@/components/Connections";
 import { DiscoverySettings } from "@/components/Discover";
+import { LegalLinks } from "@/components/LegalLinks";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
 import { PushSwitch } from "@/components/PushSwitch";
@@ -167,6 +168,7 @@ export default async function Settings({
               {texts.download}
             </a>
           </div>
+          <LegalLinks texts={texts} />
         </article>
 
         <article className="card danger-zone" id="delete">

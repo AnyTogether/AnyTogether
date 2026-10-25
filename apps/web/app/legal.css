@@ -1,0 +1,455 @@
+/* The privacy notice and the terms (components/site/LegalPage.tsx): long reading on the Cosmic
+ * night. A contents list that follows along beside the text on wide screens and becomes the
+ * reference pages' sticky bar on narrow ones, numbered sections, a measure of about 68 characters. */
+
+.lg-updated {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  font: 500 12px / 1.4 var(--font-mono), monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.lg-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px oklch(76% 0.13 250 / 0.14), 0 0 14px var(--accent-glow);
+}
+.lg-sep {
+  color: var(--mute);
+  opacity: 0.6;
+}
+.lg-page .lg-updated a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.lg-page .lg-updated a:hover {
+  color: var(--ink);
+}
+.lg-elsewhere {
+  max-width: 72ch;
+}
+
+/* Layout */
+.lg-body {
+  margin-top: clamp(40px, 6vw, 72px);
+}
+.lg-doc {
+  max-width: 70ch;
+  min-width: 0;
+  margin-top: 32px;
+}
+
+/* Contents: the shared sticky bar on narrow screens */
+.lg-page .lg-toc {
+  margin-top: 0;
+}
+.lg-toc .lg-n {
+  margin-right: 8px;
+  font: 500 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+  transition: color 0.18s ease;
+}
+.lg-toc a[aria-current] {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+}
+.lg-toc a[aria-current] .lg-n {
+  color: var(--accent);
+}
+
+@media (min-width: 1000px) {
+  .lg-body {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 56px;
+    align-items: start;
+  }
+  .lg-doc {
+    margin-top: 0;
+  }
+  /* Beside the text: a quiet list that follows along */
+  .lg-page .lg-toc {
+    position: sticky;
+    top: 28px;
+    display: block;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .lg-toc .meta {
+    display: block;
+    margin-bottom: 14px;
+  }
+  .lg-toc ul {
+    display: grid;
+    gap: 0;
+    overflow: visible;
+    mask-image: none;
+    border-left: 1px solid var(--rule);
+  }
+  .lg-toc a {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    margin-left: -1px;
+    padding: 7px 12px 7px 14px;
+    border-radius: 0 10px 10px 0;
+    border-left: 1px solid transparent;
+    font-size: 13.5px;
+    line-height: 1.3;
+    white-space: normal;
+    color: var(--mute);
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  }
+  .lg-toc a:hover {
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.035);
+  }
+  .lg-toc a[aria-current] {
+    color: var(--ink);
+    border-left-color: var(--accent);
+    background: linear-gradient(90deg, oklch(76% 0.13 250 / 0.1), transparent 85%);
+  }
+}
+
+/* The short version */
+.lg-summary {
+  position: relative;
+  margin-bottom: clamp(48px, 6vw, 72px);
+  padding: clamp(22px, 3vw, 32px);
+  border-radius: 22px;
+  background: radial-gradient(120% 140% at 100% 0%, oklch(58% 0.19 262 / 0.16), transparent 60%),
+    var(--paper-2);
+  box-shadow: 0 0 0 1px var(--rule) inset, 0 40px 80px -60px var(--accent-glow);
+}
+.lg-summary h2 {
+  font: 500 12px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.lg-summary ul {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 0;
+  list-style: none;
+}
+.lg-summary li {
+  position: relative;
+  padding-left: 30px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.lg-summary li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2307080c' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E")
+    center / 12px no-repeat, var(--accent);
+}
+
+/* Sections */
+.lg-sec {
+  padding-top: 36px;
+  margin-top: 36px;
+  border-top: 1px solid var(--rule);
+  scroll-margin-top: 72px;
+}
+.lg-sec:first-of-type {
+  margin-top: 0;
+}
+.lg-summary + .lg-sec {
+  border-top: 0;
+  padding-top: 0;
+}
+.lg-sec h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  font-family: var(--font-head);
+  font-stretch: 108%;
+  font-weight: 720;
+  font-size: clamp(22px, 2.2vw, 28px);
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+.lg-sec h2 .lg-n {
+  flex: none;
+  font: 500 12px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  transform: translateY(-3px);
+}
+.lg-text {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+.lg-text p,
+.lg-list li,
+.lg-items dd,
+.lg-table td {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.lg-page .lg-text a,
+.lg-summary a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: oklch(76% 0.13 250 / 0.5);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.18s ease, color 0.18s ease;
+}
+.lg-page .lg-text a:hover,
+.lg-summary a:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+.lg-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+.lg-list li {
+  position: relative;
+  padding-left: 22px;
+}
+.lg-list li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.78em;
+  width: 8px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+/* Labelled items: what is kept */
+.lg-items {
+  display: grid;
+  border-top: 1px solid var(--rule);
+}
+.lg-items > div {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+  gap: 6px 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.lg-items dt {
+  padding-top: 2px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+/* The cookie table */
+.lg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.lg-table thead th {
+  padding: 0 16px 10px 0;
+  text-align: left;
+  font: 500 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+  border-bottom: 1px solid var(--rule-2);
+}
+.lg-table tbody th,
+.lg-table td {
+  padding: 13px 16px 13px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--rule);
+}
+.lg-table td {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.lg-table td:last-child {
+  color: var(--mute);
+  white-space: nowrap;
+}
+.lg-table code {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 6px;
+  font: 500 12.5px / 1.3 var(--font-mono), monospace;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 1px var(--rule) inset;
+}
+
+/* The end: the date again and the way to the other document */
+.lg-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule-2);
+}
+.lg-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px 11px 18px;
+  border-radius: 999px;
+  font: 500 15px / 1.2 var(--font-display), system-ui, sans-serif;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--paper-2);
+  box-shadow: 0 0 0 1px var(--rule-2) inset;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+.lg-next svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.lg-next:hover {
+  background: var(--paper-3);
+  box-shadow: 0 0 0 1px oklch(76% 0.13 250 / 0.5) inset;
+}
+.lg-next:hover svg {
+  transform: translateX(3px);
+}
+.lg-next:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 640px) {
+  .lg-items > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* The table as one card per cookie */
+  .lg-table thead {
+    display: none;
+  }
+  .lg-table,
+  .lg-table tbody,
+  .lg-table tr,
+  .lg-table th,
+  .lg-table td {
+    display: block;
+  }
+  .lg-table tr {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .lg-table tbody th,
+  .lg-table td {
+    padding: 0;
+    border: 0;
+  }
+  .lg-table td {
+    margin-top: 6px;
+  }
+  .lg-table td:last-child {
+    white-space: normal;
+  }
+  .lg-table td[data-label]::before {
+    content: attr(data-label) " · ";
+    color: var(--mute);
+  }
+  .lg-text p,
+  .lg-list li,
+  .lg-items dd,
+  .lg-summary li {
+    font-size: 15.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-next svg,
+  .lg-toc a {
+    transition: none;
+  }
+}
+
+/* The sign-in page's agreement line and the legal links in Settings */
+.agree-line {
+  margin-top: 22px;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--mute);
+  text-wrap: balance;
+}
+.agree-line a,
+.legal-links a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.25);
+  text-underline-offset: 3px;
+}
+.agree-line a:hover,
+.legal-links a:hover {
+  text-decoration-color: currentColor;
+}
+.legal-links {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--mute);
+}
+
+/* The footer's privacy and terms links, beside the copyright */
+.foot-policies {
+  display: flex;
+  gap: 14px;
+  margin-right: auto;
+}
+.foot-policies a {
+  transition: color 0.18s ease, border-color 0.18s ease;
+}
+.foot-policies a:hover {
+  color: var(--ink);
+  border-bottom-color: currentColor;
+}
+
+/* Settings → The app: the Share icon inside the iPhone steps */
+.install-box .inline-share {
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  margin: 0 3px;
+  vertical-align: -0.2em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
