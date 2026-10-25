@@ -1,5 +1,12 @@
 import { type Database, accounts, blocks, friendships, handleHistory, profiles } from "@anytogether/db";
-import { type MemberView, type Visibility, handleHoldDays, isReservedHandle } from "@anytogether/shared";
+import {
+  type MemberView,
+  type Visibility,
+  handleHoldDays,
+  handleSkeleton,
+  isReservedHandle,
+  looksReserved,
+} from "@anytogether/shared";
 import { and, eq, gt, inArray, ne, or, sql } from "drizzle-orm";
 
 type Querier = Pick<Database, "select">;
@@ -27,12 +34,19 @@ export async function findProfile(db: Querier, raw: string): Promise<ProfileRow 
   return (await active(eq(profiles.accountId, held.accountId)))[0]?.profile;
 }
 
-/** Whether a handle may be taken by `accountId` (or by a new account): not reserved, not someone
- *  else's, and not held for its last owner. */
-export async function handleFree(db: Querier, handle: string, accountId?: string) {
-  if (isReservedHandle(handle)) return false;
+/** Why a handle may not be taken by `accountId` (or by a new account), or null when it may:
+ *  reserved; someone else's, or held for its last owner; or it looks like someone else's handle,
+ *  a held one or a reserved name (see handleSkeleton). */
+export async function handleProblem(
+  db: Querier,
+  handle: string,
+  accountId?: string,
+): Promise<"reserved" | "taken" | "too_similar" | null> {
+  if (isReservedHandle(handle)) return "reserved";
   const owner = await db.select({ id: profiles.accountId }).from(profiles).where(eq(profiles.handle, handle));
-  if (owner[0] && owner[0].id !== accountId) return false;
+  if (owner[0] && owner[0].id !== accountId) return "taken";
+  const notMine = (column: typeof profiles.accountId | typeof handleHistory.accountId) =>
+    accountId ? [ne(column, accountId)] : [];
   const held = await db
     .select({ id: handleHistory.accountId })
     .from(handleHistory)
@@ -40,11 +54,41 @@ export async function handleFree(db: Querier, handle: string, accountId?: string
       and(
         eq(handleHistory.handle, handle),
         gt(handleHistory.releasedAt, heldSince()),
-        ...(accountId ? [ne(handleHistory.accountId, accountId)] : []),
+        ...notMine(handleHistory.accountId),
       ),
     );
-  return held.length === 0;
+  if (held.length) return "taken";
+  if (looksReserved(handle)) return "too_similar";
+  const skeleton = handleSkeleton(handle);
+  const alike = await db
+    .select({ id: profiles.accountId })
+    .from(profiles)
+    .where(and(eq(profiles.handleSkeleton, skeleton), ...notMine(profiles.accountId)))
+    .limit(1);
+  if (alike.length) return "too_similar";
+  const heldAlike = await db
+    .select({ id: handleHistory.accountId })
+    .from(handleHistory)
+    .where(
+      and(
+        eq(handleHistory.skeleton, skeleton),
+        gt(handleHistory.releasedAt, heldSince()),
+        ...notMine(handleHistory.accountId),
+      ),
+    )
+    .limit(1);
+  return heldAlike.length ? "too_similar" : null;
 }
+
+/** Whether a handle may be taken by `accountId` (or by a new account). */
+export async function handleFree(db: Querier, handle: string, accountId?: string) {
+  return (await handleProblem(db, handle, accountId)) === null;
+}
+
+/** A unique-index refusal on the handle's skeleton: someone took a look-alike a moment ago. */
+export const skeletonClash = (error: unknown) =>
+  (error as { code?: string; constraint_name?: string }).code === "23505" &&
+  (error as { constraint_name?: string }).constraint_name === "profiles_handle_skeleton";
 
 /** Either of the two blocked the other. */
 export async function blockedBetween(db: Querier, a: string, b: string) {

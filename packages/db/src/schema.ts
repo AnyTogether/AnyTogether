@@ -133,8 +133,14 @@ export const profiles = pgTable(
     discoverable: boolean(),
     /** Languages the person plays in (ISO 639-1), at most five. */
     languages: jsonb().$type<string[]>().notNull().default([]),
+    /** What the handle looks like (handleSkeleton): no two people have look-alike handles. Null
+     *  for the later of two handles that already looked alike before this was checked. */
+    handleSkeleton: text(),
   },
-  (table) => [check("bio_length", sql`length(${table.bio}) <= 160`)],
+  (table) => [
+    check("bio_length", sql`length(${table.bio}) <= 160`),
+    uniqueIndex("profiles_handle_skeleton").on(table.handleSkeleton),
+  ],
 );
 
 /** Handles given up, held for their last owner for 30 days: nobody else takes them, and the old
@@ -147,8 +153,10 @@ export const handleHistory = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     releasedAt: now(),
+    /** handleSkeleton of the handle: a look-alike of a held handle is not given out either. */
+    skeleton: text(),
   },
-  (table) => [index().on(table.accountId)],
+  (table) => [index().on(table.accountId), index().on(table.skeleton)],
 );
 
 /** Uploaded avatars, re-encoded to a 256 px JPEG without metadata, served by the hash of their

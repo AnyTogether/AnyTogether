@@ -60,7 +60,9 @@ const errorText = (code: string | undefined, texts: UiStrings) =>
         ? texts.handleTaken
         : code === "handle_reserved"
           ? texts.handleReserved
-          : texts.failed;
+          : code === "handle_too_similar"
+            ? texts.handleTooSimilar
+            : texts.failed;
 
 /** Name, bio and country, saved together. The country names come from the server, so the list is
  *  the same in the page and in the browser. */

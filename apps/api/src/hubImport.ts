@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { basename, join, relative, resolve, sep } from "node:path";
 import { type Database, accounts, auditLog, profiles, themes } from "@anytogether/db";
-import { ThemeDescription, themeExtension } from "@anytogether/shared";
+import { ThemeDescription, handleSkeleton, themeExtension } from "@anytogether/shared";
 import { and, eq } from "drizzle-orm";
 import sharp from "sharp";
 import { uuidv7 } from "uuidv7";
@@ -39,6 +39,7 @@ export async function curatorAccount(db: Database) {
       await tx.insert(profiles).values({
         accountId: id,
         handle: curatorHandle,
+        handleSkeleton: handleSkeleton(curatorHandle),
         displayName: curatorName,
         bio: curatorBio,
         discoverable: false,

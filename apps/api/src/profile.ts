@@ -7,6 +7,7 @@ import {
   ProfileUpdate,
   friendsKey,
   handleCooldownDays,
+  handleSkeleton,
   hasLink,
   isReservedHandle,
   presenceHiddenKey,
@@ -21,7 +22,7 @@ import { publish } from "./events.js";
 import { mayShow } from "./family.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
-import { type ProfileRow, handleFree } from "./people.js";
+import { type ProfileRow, handleProblem, skeletonClash } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
 
 const cooldown = handleCooldownDays * 86_400_000;
@@ -103,28 +104,31 @@ export function profileRoutes(deps: Deps) {
     if (isReservedHandle(handle))
       throw new HttpError(400, ErrorCode.handleReserved, "That handle is reserved");
     const taken = () => new HttpError(409, ErrorCode.handleTaken, "That handle is taken");
+    const similar = () =>
+      new HttpError(409, ErrorCode.handleTooSimilar, "That handle looks too much like another one");
     try {
       await db.transaction(async (tx) => {
-        if (!(await handleFree(tx, handle, userId))) throw taken();
+        const problem = await handleProblem(tx, handle, userId);
+        if (problem === "too_similar") throw similar();
+        if (problem) throw taken();
         await tx
           .update(profiles)
-          .set({ handle, handleChangedAt: new Date() })
+          .set({ handle, handleSkeleton: handleSkeleton(handle), handleChangedAt: new Date() })
           .where(eq(profiles.accountId, userId));
         // The old handle is held for its owner; taking back one's own old handle frees it.
+        const old = { accountId: userId, releasedAt: new Date(), skeleton: handleSkeleton(profile.handle) };
         await tx
           .insert(handleHistory)
-          .values({ handle: profile.handle, accountId: userId })
-          .onConflictDoUpdate({
-            target: handleHistory.handle,
-            set: { accountId: userId, releasedAt: new Date() },
-          });
+          .values({ handle: profile.handle, ...old })
+          .onConflictDoUpdate({ target: handleHistory.handle, set: old });
         await tx
           .delete(handleHistory)
           .where(and(eq(handleHistory.handle, handle), eq(handleHistory.accountId, userId)));
       });
     } catch (error) {
       if (error instanceof HttpError) throw error;
-      // Two people asking for the same handle at once: the unique index decides.
+      // Two people asking for the same (or look-alike) handle at once: the unique indexes decide.
+      if (skeletonClash(error)) throw similar();
       if ((error as { code?: string }).code === "23505") throw taken();
       throw error;
     }

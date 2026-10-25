@@ -11,6 +11,8 @@ export const accountEn = {
   profileMetaPlain: "Play PS5 games on Mac and PC with friends on AnyTogether.",
   ogAlt: "{name} on AnyTogether",
   ogTrophies: "trophies",
+  handleTooSimilar:
+    "That handle looks too much like someone else's (0 for o, 1 for l, rn for m, dots and underscores do not count). Try another.",
 };
 
 export const accountTr: typeof accountEn = {
@@ -24,4 +26,6 @@ export const accountTr: typeof accountEn = {
   profileMetaPlain: "PS5 oyunlarını Mac ve PC'de arkadaşlarınla AnyTogether'da oyna.",
   ogAlt: "AnyTogether'da {name}",
   ogTrophies: "kupa",
+  handleTooSimilar:
+    "Bu kullanıcı adı başka birininkine fazla benziyor (o yerine 0, l yerine 1, m yerine rn; nokta ve alt çizgi sayılmaz). Başka bir tane dene.",
 };

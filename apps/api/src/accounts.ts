@@ -1,5 +1,5 @@
 import { type Database, accounts, identities, profiles } from "@anytogether/db";
-import { isReservedHandle } from "@anytogether/shared";
+import { handleSkeleton, isReservedHandle } from "@anytogether/shared";
 import { and, eq } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 import { bannedError, isBanned } from "./moderation.js";
@@ -27,7 +27,8 @@ export async function findOrCreateAccount(db: Database, identity: Identity) {
 
     const email = identity.emailVerified ? identity.email?.toLowerCase() : undefined;
     // A banned address makes no new account and joins no other.
-    if (email && (await isBanned(db, { email }))) throw bannedError();
+    // Asked inside the transaction: a second connection per sign-in could run the pool dry.
+    if (email && (await isBanned(tx, { email }))) throw bannedError();
     if (email) {
       const byEmail = await tx.select({ id: accounts.id }).from(accounts).where(eq(accounts.email, email));
       if (byEmail[0]) {
@@ -52,6 +53,7 @@ export async function findOrCreateAccount(db: Database, identity: Identity) {
     await tx.insert(profiles).values({
       accountId,
       handle,
+      handleSkeleton: handleSkeleton(handle),
       displayName: (identity.name ?? handle).slice(0, 60),
       avatarUrl: identity.avatarUrl ?? null,
     });

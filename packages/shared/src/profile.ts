@@ -65,6 +65,138 @@ export function isReservedHandle(handle: string) {
   );
 }
 
+/** Letters from other scripts that look like Latin ones, mapped before and after lower-casing
+ *  (Cyrillic and Greek capitals look like Latin capitals, their small letters like small ones). */
+const lookalikeCapitals: Record<string, string> = {
+  // Cyrillic
+  А: "a",
+  В: "b",
+  Е: "e",
+  К: "k",
+  М: "m",
+  Н: "h",
+  О: "o",
+  Р: "p",
+  С: "c",
+  Т: "t",
+  Х: "x",
+  У: "y",
+  І: "l",
+  Ј: "j",
+  Ѕ: "s",
+  Ү: "y",
+  Ԛ: "q",
+  Ԝ: "w",
+  // Greek
+  Α: "a",
+  Β: "b",
+  Ε: "e",
+  Ζ: "z",
+  Η: "h",
+  Ι: "l",
+  Κ: "k",
+  Μ: "m",
+  Ν: "n",
+  Ο: "o",
+  Ρ: "p",
+  Τ: "t",
+  Υ: "y",
+  Χ: "x",
+};
+const lookalikeSmall: Record<string, string> = {
+  // Cyrillic
+  а: "a",
+  в: "b",
+  е: "e",
+  ё: "e",
+  к: "k",
+  м: "m",
+  н: "h",
+  о: "o",
+  р: "p",
+  с: "c",
+  т: "t",
+  у: "y",
+  х: "x",
+  ь: "b",
+  і: "l",
+  ї: "l",
+  ј: "j",
+  ѕ: "s",
+  ԁ: "d",
+  һ: "h",
+  ӏ: "l",
+  ԛ: "q",
+  ԝ: "w",
+  ү: "y",
+  // Greek
+  α: "a",
+  β: "b",
+  γ: "y",
+  ε: "e",
+  ι: "l",
+  κ: "k",
+  ν: "v",
+  ο: "o",
+  ρ: "p",
+  τ: "t",
+  υ: "u",
+  χ: "x",
+  ω: "w",
+  // Latin that is not plain a-z
+  ı: "l",
+  ł: "l",
+  ø: "o",
+  đ: "d",
+  ð: "d",
+  ß: "ss",
+  æ: "ae",
+  œ: "oe",
+  ſ: "s",
+  // Digits and signs that pass for letters
+  "0": "o",
+  "1": "l",
+  i: "l",
+  "|": "l",
+  "!": "l",
+  "5": "s",
+  $: "s",
+};
+
+/** What a handle looks like, for telling look-alikes apart (after Unicode TR39's skeletons): Turkish
+ *  İ and ı, accents and full-width forms folded, capitals, then Cyrillic and Greek letters taken
+ *  as the Latin ones they look like, 0 as o, 1, i and l as one letter, 5 as s, separators dropped,
+ *  and rn read as m, vv as w, cl as d. "Utku", "utku_", "ut.ku" and "υtkυ" share one skeleton;
+ *  "adm1n" and "admin" share another.
+ *
+ *  For a handle (a-z 0-9 _ .) it is the same as the SQL the migration filled existing handles with:
+ *  replace(replace(replace(translate(lower(h), '01i5._', 'olls'), 'rn', 'm'), 'vv', 'w'), 'cl', 'd') */
+export function handleSkeleton(input: string) {
+  let text = input.replace(/İ/g, "i").replace(/I/g, "i");
+  text = Array.from(text.normalize("NFKD").replace(/\p{M}/gu, ""))
+    .map((char) => lookalikeCapitals[char] ?? char)
+    .join("")
+    .toLowerCase();
+  return Array.from(text)
+    .map((char) => lookalikeSmall[char] ?? char)
+    .join("")
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/rn/g, "m")
+    .replace(/vv/g, "w")
+    .replace(/cl/g, "d");
+}
+
+const reservedSkeletons = new Set([...reservedExact].map(handleSkeleton));
+const reservedPrefixSkeletons = reservedPrefixes.map(handleSkeleton);
+
+/** Not reserved itself, but looks like a reserved name ("adm1n", "rnod", "supp0rt", "anyps5_tearn"). */
+export function looksReserved(handle: string) {
+  const skeleton = handleSkeleton(handle);
+  return (
+    reservedSkeletons.has(skeleton) || reservedPrefixSkeletons.some((prefix) => skeleton.startsWith(prefix))
+  );
+}
+
 export const Handle = z
   .string()
   .trim()

@@ -29,6 +29,9 @@ export const ErrorCode = {
   handleTaken: "handle_taken",
   handleReserved: "handle_reserved",
   handleCooldown: "handle_cooldown",
+  /** The handle looks like someone else's, a held one or a reserved name (0 for o, rn for m,
+   *  Cyrillic or Greek letters, separators): see handleSkeleton. */
+  handleTooSimilar: "handle_too_similar",
   linksNotAllowed: "links_not_allowed",
   /** A message links to a domain on the server's deny-list. */
   linkBlocked: "link_blocked",

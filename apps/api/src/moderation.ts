@@ -32,7 +32,10 @@ export const liveBan = () =>
   and(isNull(bans.liftedAt), or(isNull(bans.expiresAt), gt(bans.expiresAt, new Date())));
 
 /** Whether a ban in force covers this account or this address. */
-export async function isBanned(db: Database, who: { accountId?: string; email?: string | null }) {
+export async function isBanned(
+  db: Pick<Database, "select">,
+  who: { accountId?: string; email?: string | null },
+) {
   const matches = [
     ...(who.accountId ? [eq(bans.accountId, who.accountId)] : []),
     ...(who.email ? [eq(bans.emailHash, emailHash(who.email))] : []),
