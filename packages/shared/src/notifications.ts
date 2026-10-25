@@ -13,6 +13,11 @@ export const notificationKinds = [
   "lfg_request",
   "lfg_accepted",
   "warning",
+  "family_invite",
+  "family_request",
+  "family_answer",
+  "family_alert",
+  "family_summary",
 ] as const;
 export type NotificationKind = (typeof notificationKinds)[number];
 export const optionalNotificationKinds = notificationKinds.filter(
@@ -33,7 +38,11 @@ export interface NotificationView {
   /** message: {conversationId, title, group, count, text}; party_invite: {partyId, size};
    *  game_invite: {sessionId, titleId}; missed_call: {callId}; warning: {reason};
    *  lfg_request: {postId, titleId, gameNames, purpose, count}; lfg_accepted: {postId, titleId,
-   *  gameNames, purpose, invite: {kind, id} | null}. */
+   *  gameNames, purpose, invite: {kind, id} | null}; family_invite: {inviteId, familyId, familyName,
+   *  role}; family_request: {requestId, kind, minutes, titleId, gameName, person}; family_answer:
+   *  {requestId, kind, approved, minutes}; family_alert: {event: "limit_reached", childId, date,
+   *  titleId}; family_summary: {familyId, from, until, children: [{userId, displayName, seconds,
+   *  games: [{titleId, name, seconds}], friendsAdded}]}. */
   data: Record<string, unknown>;
   read: boolean;
   createdAt: string;
@@ -47,8 +56,12 @@ export type NotificationEvent =
   /** Read on some device: these IDs, or all of them (ids null). */
   | { type: "notification.read"; data: { ids: string[] | null; unread: number } };
 
-/** Each kind on or off (all on unless turned off), and the mail digest (off unless turned on). */
-export type NotificationSettings = Record<OptionalNotificationKind, boolean> & { digest: boolean };
+/** Each kind on or off (all on unless turned off), the mail digest and the weekly family summary by
+ *  mail (both off unless turned on). */
+export type NotificationSettings = Record<OptionalNotificationKind, boolean> & {
+  digest: boolean;
+  familyMail: boolean;
+};
 export const defaultNotificationSettings: NotificationSettings = {
   friend_request: true,
   friend_accepted: true,
@@ -58,7 +71,13 @@ export const defaultNotificationSettings: NotificationSettings = {
   missed_call: true,
   lfg_request: true,
   lfg_accepted: true,
+  family_invite: true,
+  family_request: true,
+  family_answer: true,
+  family_alert: true,
+  family_summary: true,
   digest: false,
+  familyMail: false,
 };
 
 export function notificationSettingsOf(stored: unknown): NotificationSettings {
@@ -73,7 +92,7 @@ export function notificationSettingsOf(stored: unknown): NotificationSettings {
 export const NotificationSettingsUpdate = z
   .object(
     Object.fromEntries(
-      [...optionalNotificationKinds, "digest"].map((key) => [key, z.boolean().optional()]),
+      [...optionalNotificationKinds, "digest", "familyMail"].map((key) => [key, z.boolean().optional()]),
     ) as Record<keyof NotificationSettings, z.ZodOptional<z.ZodBoolean>>,
   )
   .strict();

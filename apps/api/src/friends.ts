@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
+import { familyGuard } from "./family.js";
 import { forgetFriendship, recordFriendship } from "./feed.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
@@ -21,6 +22,7 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const limit = rateLimiter(deps.valkey, deps.limits);
+  const family = familyGuard(deps.db);
 
   const profileOf = async (userId: string) =>
     (await deps.db.select().from(profiles).where(eq(profiles.accountId, userId)))[0];
@@ -126,6 +128,7 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
     if (target.accountId === me) throw new HttpError(400, ErrorCode.badRequest, "That is you");
     const existing = await row(me, target.accountId);
     if (existing?.state === "accepted") return c.json({ state: "accepted" });
+    await family.mayFriend(me, target.accountId);
     if (existing && existing.askedBy !== me) {
       await befriend(me, target.accountId);
       return c.json({ state: "accepted" });
@@ -174,8 +177,10 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
     const existing = await row(me, other);
     if (!existing || existing.state !== "pending" || existing.askedBy === me)
       throw new HttpError(404, ErrorCode.notFound, "No such request");
-    if (c.req.param("answer") === "accept") await befriend(me, other);
-    else await unfriend(me, other);
+    if (c.req.param("answer") === "accept") {
+      await family.mayFriend(me, other);
+      await befriend(me, other);
+    } else await unfriend(me, other);
     return c.body(null, 204);
   });
 

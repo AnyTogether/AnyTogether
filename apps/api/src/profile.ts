@@ -2,6 +2,7 @@ import { accounts, handleHistory, profiles } from "@anytogether/db";
 import {
   ErrorCode,
   HandleChange,
+  type Privacy,
   PrivacyUpdate,
   ProfileUpdate,
   friendsKey,
@@ -17,6 +18,7 @@ import { Hono } from "hono";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
+import { mayShow } from "./family.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { type ProfileRow, handleFree } from "./people.js";
@@ -134,18 +136,30 @@ export function profileRoutes(deps: Deps) {
     const input = await body(c, PrivacyUpdate);
     const before = privacyOf((await load(userId)).privacy);
     const privacy = privacyOf({ ...before, ...input });
+    await mayShow(deps, userId, privacy);
     await db.update(profiles).set({ privacy }).where(eq(profiles.accountId, userId));
-    if (privacy.presence === "nobody" && before.presence !== "nobody") {
-      // Friends see the account go offline now; the gateway keeps quiet from here on.
-      await deps.valkey.multi().set(presenceHiddenKey(userId), "1").del(presenceKey(userId)).exec();
-      for (const friend of await deps.valkey.smembers(friendsKey(userId)))
-        await publish(deps.valkey, friend, { type: "presence.updated", data: { userId, state: "offline" } });
-    } else if (privacy.presence !== "nobody" && before.presence === "nobody") {
-      // The next heartbeat finds no presence kept and tells the friends again.
-      await deps.valkey.multi().del(presenceHiddenKey(userId)).del(presenceKey(userId)).exec();
-    }
+    await presenceShownChanged(deps, userId, before, privacy);
     return c.json(privacy);
   });
 
   return app;
+}
+
+/** After a privacy change: hiding presence takes the account offline for its friends now, showing
+ *  it again lets the next heartbeat tell them. */
+export async function presenceShownChanged(
+  deps: Pick<Deps, "valkey">,
+  userId: string,
+  before: Privacy,
+  privacy: Privacy,
+) {
+  if (privacy.presence === "nobody" && before.presence !== "nobody") {
+    // Friends see the account go offline now; the gateway keeps quiet from here on.
+    await deps.valkey.multi().set(presenceHiddenKey(userId), "1").del(presenceKey(userId)).exec();
+    for (const friend of await deps.valkey.smembers(friendsKey(userId)))
+      await publish(deps.valkey, friend, { type: "presence.updated", data: { userId, state: "offline" } });
+  } else if (privacy.presence !== "nobody" && before.presence === "nobody") {
+    // The next heartbeat finds no presence kept and tells the friends again.
+    await deps.valkey.multi().del(presenceHiddenKey(userId)).del(presenceKey(userId)).exec();
+  }
 }

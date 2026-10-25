@@ -287,6 +287,9 @@ export const games = pgTable(
     taughtBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     /** A moderator fixed it; launchers cannot change it. */
     locked: boolean().notNull().default(false),
+    /** Age ratings from the game's param.json (`ageLevel`), by region with "default"; null until a
+     *  launcher reports them. */
+    ageLevels: jsonb().$type<Record<string, number>>(),
     createdAt: now(),
   },
   (table) => [check("title_id", sql`${table.titleId} ~ '^[A-Z]{4}[0-9]{5}$'`)],
@@ -687,7 +690,8 @@ export const notifications = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     /** friend_request | friend_accepted | message | party_invite | game_invite | missed_call |
-     *  lfg_request | lfg_accepted | warning */
+     *  lfg_request | lfg_accepted | warning | family_invite | family_request | family_answer |
+     *  family_alert | family_summary */
     kind: text().notNull(),
     actorId: uuid().references(() => accounts.id, { onDelete: "cascade" }),
     /** What it is about: the conversation, party, game session or call; for a friend request or
@@ -709,7 +713,7 @@ export const notifications = pgTable(
       .where(sql`${table.readAt} is null`),
     check(
       "notification_kind",
-      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning')`,
+      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning', 'family_invite', 'family_request', 'family_answer', 'family_alert', 'family_summary')`,
     ),
   ],
 );
@@ -919,4 +923,135 @@ export const lfgRequests = pgTable(
     index().on(table.accountId, table.createdAt.desc()),
     check("lfg_request_status", sql`${table.status} in ('pending', 'accepted', 'declined')`),
   ],
+);
+
+/** A family: a manager brings in parents, adults and children; parents set the children's limits.
+ *  Opt-in: an account in no family has no limits. */
+export const families = pgTable(
+  "families",
+  {
+    id: uuid().primaryKey(),
+    name: text().notNull(),
+    createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    /** When the parents last got the weekly summary. */
+    summaryAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+  },
+  (table) => [check("family_name", sql`length(${table.name}) <= 40`)],
+);
+
+/** Someone is in at most one family; one manager per family. */
+export const familyMembers = pgTable(
+  "family_members",
+  {
+    familyId: uuid()
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" })
+      .unique(),
+    /** manager | parent | adult | child */
+    role: text().notNull(),
+    addedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    /** A child account the manager made waits for the child's own yes (a link code is one);
+     *  until then the limits apply, and saying no takes the account out of the family. */
+    confirmedAt: timestamp({ withTimezone: true }),
+    joinedAt: now(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.familyId, table.accountId] }),
+    uniqueIndex("one_family_manager").on(table.familyId).where(sql`${table.role} = 'manager'`),
+    check("family_role", sql`${table.role} in ('manager', 'parent', 'adult', 'child')`),
+  ],
+);
+
+/** Waiting to join: a member invite to an account (accepted in a notification), or a child link
+ *  code (kept only as its hash) the child confirms with. */
+export const familyInvites = pgTable(
+  "family_invites",
+  {
+    id: uuid().primaryKey(),
+    familyId: uuid()
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** member | child_link */
+    kind: text().notNull(),
+    accountId: uuid().references(() => accounts.id, { onDelete: "cascade" }),
+    role: text().notNull(),
+    codeHash: bytea().unique(),
+    invitedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: now(),
+  },
+  (table) => [
+    index().on(table.accountId),
+    index().on(table.familyId),
+    check("family_invite_kind", sql`${table.kind} in ('member', 'child_link')`),
+    check("family_invite_role", sql`${table.role} in ('parent', 'adult', 'child')`),
+  ],
+);
+
+/** A child's limits as a parent set them (FamilyRestrictions, over the defaults); a child with no
+ *  row has the defaults. */
+export const childRestrictions = pgTable("child_restrictions", {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  settings: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+  updatedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+  updatedAt: now(),
+});
+
+/** What a child asked the parents: more time today, to add a friend, to play a blocked game. An
+ *  approved more_time row (or one a parent gave unasked) is extra time on `day`. */
+export const familyRequests = pgTable(
+  "family_requests",
+  {
+    /** UUIDv7, so the newest has the largest ID. */
+    id: uuid().primaryKey(),
+    familyId: uuid()
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    childId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** more_time | add_friend | play_game */
+    kind: text().notNull(),
+    /** more_time: {minutes, titleId?}; add_friend: {userId}; play_game: {titleId, name?}; and the
+     *  child's note. */
+    data: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    /** The child's date (YYYY-MM-DD) extra time counts on. */
+    day: text(),
+    /** pending | approved | declined */
+    status: text().notNull().default("pending"),
+    grantedMinutes: integer(),
+    answeredBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    answeredAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+  },
+  (table) => [
+    index().on(table.familyId, table.status),
+    index().on(table.childId, table.day),
+    check("family_request_kind", sql`${table.kind} in ('more_time', 'add_friend', 'play_game')`),
+    check("family_request_status", sql`${table.status} in ('pending', 'approved', 'declined')`),
+  ],
+);
+
+/** What happened in a family, for its manager and parents: who joined, left, changed a limit. */
+export const familyLog = pgTable(
+  "family_log",
+  {
+    /** UUIDv7, so the newest has the largest ID. */
+    id: uuid().primaryKey(),
+    familyId: uuid()
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    actorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    action: text().notNull(),
+    subjectId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    data: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: now(),
+  },
+  (table) => [index("family_log_by_family").on(table.familyId, table.id.desc())],
 );

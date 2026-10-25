@@ -22,6 +22,7 @@ import { z } from "zod";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
+import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { blockedLink } from "./links.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
@@ -55,6 +56,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
   const { db } = deps;
   const who = people(db);
   const limit = rateLimiter(deps.valkey, deps.limits);
+  const family = familyGuard(db);
 
   const memberIds = async (conversationId: string) =>
     (
@@ -195,6 +197,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const others = input.members.filter((id) => id !== me);
     if (!others.length) throw new HttpError(400, ErrorCode.badRequest, "members: someone besides you");
     await mustBeFriends(me, others);
+    await family.mayMessage(me, others);
 
     if (others.length === 1 && !input.group && !input.title) {
       const other = others[0] as string;
@@ -256,6 +259,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const current = await memberIds(conversation.id);
     const added = [...new Set(userIds)].filter((id) => !current.includes(id));
     await mustBeFriends(me, added);
+    if (added.length) await family.mayMessage(me, [...current, ...added]);
     if (current.length + added.length > maxGroupMembers)
       throw new HttpError(409, ErrorCode.full, `A group has at most ${maxGroupMembers} people`);
     if (added.length) {
@@ -360,6 +364,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       if (!other || !(await who.friends(me, other)))
         throw new HttpError(403, ErrorCode.forbidden, "You can only message your friends");
     }
+    await family.mayMessage(me, members);
     const resent = async () => {
       const [existing] = await db.select().from(messages).where(eq(messages.id, input.clientId));
       if (!existing || existing.authorId !== me || existing.conversationId !== conversation.id)

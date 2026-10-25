@@ -22,6 +22,7 @@ import type { Deps } from "./app.js";
 import { iceServers } from "./calls.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
+import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import type { Notifier } from "./notifications.js";
@@ -40,6 +41,7 @@ export function gameSessionRoutes(deps: Deps, notes: Notifier) {
   const { db } = deps;
   const who = people(db);
   const limit = rateLimiter(deps.valkey, deps.limits);
+  const family = familyGuard(db);
 
   const tell = async (userIds: string[], event: GatewayEvent) => {
     for (const userId of new Set(userIds)) await publish(deps.valkey, userId, event);
@@ -209,6 +211,7 @@ export function gameSessionRoutes(deps: Deps, notes: Notifier) {
   app.post("/game-sessions", async (c) => {
     const me = c.get("userId");
     const input = await body(c, GameSessionOpen);
+    await family.mayPlay(me, input.titleId);
     await limit("gameSession", me);
     await leaveCurrent(me);
     await db.insert(games).values({ titleId: input.titleId }).onConflictDoNothing();
@@ -373,6 +376,7 @@ export function gameSessionRoutes(deps: Deps, notes: Notifier) {
       );
     if ((await who.blockedAmong(me, players)).size)
       throw new HttpError(403, ErrorCode.forbidden, "You cannot join this game");
+    await family.mayPlay(me, session.titleId);
     await leaveCurrent(me);
     const joined = await db.transaction(async (tx) => {
       const [locked] = await tx

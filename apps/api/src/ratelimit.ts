@@ -64,6 +64,9 @@ export const defaultLimits = {
   joinRequestNew: { max: 10, seconds: 3600 },
   /** Discovery lists (players of a game, suggestions, game hubs) per account. */
   discover: { max: 60, seconds: 60 },
+  /** A child's requests to the parents, and family changes (invites, codes, new child accounts). */
+  familyRequest: { max: 30, seconds: 86_400 },
+  family: { max: 60, seconds: 3600 },
 };
 export type Limits = { [name in keyof typeof defaultLimits]: { max: number; seconds: number } };
 

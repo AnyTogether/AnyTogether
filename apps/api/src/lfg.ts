@@ -24,6 +24,7 @@ import { z } from "zod";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { broadcast, publish, topicsFor } from "./events.js";
+import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { blockedLink } from "./links.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
@@ -116,6 +117,13 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
   const { db } = deps;
   const who = people(db);
   const strangerLimit = strangerLimiter(deps);
+  const family = familyGuard(db);
+  const board = (me: string) =>
+    family.need(
+      me,
+      "public_matchmaking",
+      "Your family settings keep public parties, Find players and share plays off",
+    );
   const service = lfgService(deps, notes);
   const { changed, close } = service;
 
@@ -286,6 +294,7 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
       throw bad("language: a language like en or tr");
     if (q.before !== undefined && !Id.safeParse(q.before).success) throw bad("before: a post ID");
     const limit = Math.min(50, Math.max(1, Number(q.limit ?? lfgPageSize) || lfgPageSize));
+    await board(c.get("userId"));
     return c.json(
       await openPosts(c.get("userId"), {
         titleId: q.titleId,
@@ -301,6 +310,7 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
   /** Games with open posts, the busiest first, for the board's game filter. */
   app.get("/lfg/games", async (c) => {
     const me = c.get("userId");
+    await board(me);
     const rows = await db
       .select({ titleId: lfgPosts.titleId, posts: count(), names: games.names, iconUrl: games.iconUrl })
       .from(lfgPosts)
@@ -353,6 +363,7 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
   app.post("/lfg", async (c) => {
     const me = c.get("userId");
     const input = await body(c, LfgCreate);
+    await board(me);
     const now = Date.now();
     const bad = (what: string) => new HttpError(400, ErrorCode.badRequest, what);
     const startsAt = input.startsAt ? Date.parse(input.startsAt) : null;
@@ -413,6 +424,7 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
     const me = c.get("userId");
     const post = await visible(c.req.param("id"), me);
     if (post.authorId === me) throw new HttpError(400, ErrorCode.badRequest, "That is your own post");
+    await board(me);
     const [existing] = await db
       .select()
       .from(lfgRequests)

@@ -32,6 +32,19 @@ export async function createTokenSigner(privateKeyPem: string | undefined, issue
         .setIssuedAt()
         .setExpirationTime(`${accessLifetime}s`)
         .sign(privateKey),
+    /** A document the launchers keep offline and check with the same key (the JWKS): the claims
+     *  under `claim`, for `subject`, valid `days` days. */
+    signDocument: (audienceName: string, subject: string, claims: Record<string, unknown>, days: number) =>
+      new SignJWT(claims)
+        .setProtectedHeader({ alg: "EdDSA", kid: "1" })
+        .setSubject(subject)
+        .setIssuer(issuer)
+        .setAudience(audienceName)
+        .setIssuedAt()
+        .setExpirationTime(`${days}d`)
+        .sign(privateKey),
+    verifyDocument: async (token: string, audienceName: string) =>
+      (await jwtVerify(token, publicKey, { issuer, audience: audienceName, algorithms: ["EdDSA"] })).payload,
     verify: async (token: string): Promise<AccessClaims> => {
       const { payload } = await jwtVerify(token, publicKey, { issuer, audience, algorithms: ["EdDSA"] });
       if (!payload.sub || typeof payload.sid !== "string") throw new Error("incomplete token");

@@ -12,6 +12,7 @@ import { callRoutes } from "./calls.js";
 import { compatRoutes } from "./compat.js";
 import { discoverRoutes } from "./discover.js";
 import { HttpError } from "./errors.js";
+import { familyRoutes, sendFamilySummaries } from "./family.js";
 import { feedRoutes } from "./feed.js";
 import { friendRoutes } from "./friends.js";
 import { gameSessionRoutes } from "./gameSessions.js";
@@ -110,9 +111,12 @@ export function createApp(deps: Deps) {
   v1.route("/", compatRoutes(deps));
   v1.route("/", releaseRoutes(deps));
   v1.route("/", statsRoutes(deps));
+  const notes = notifier(deps);
+  // Before the profile routes, whose PATCH /me/* counts against the profile limit.
+  const family = familyRoutes(deps, notes);
+  v1.route("/", family);
   v1.route("/", profileRoutes(deps));
   v1.route("/", accountRoutes(deps));
-  const notes = notifier(deps);
   v1.route("/", notificationRoutes(deps, notes));
   v1.route("/", friendRoutes(deps, notes));
   v1.route("/", gameRoutes(deps));
@@ -143,5 +147,7 @@ export function createApp(deps: Deps) {
     sweepShares: shares.sweepDepartures,
     /** Looking-for-group posts whose time ran out leave the board. */
     sweepLfg: lfg.sweep,
+    /** The weekly summaries for parents. */
+    sendFamilySummaries: (now?: Date) => sendFamilySummaries(deps, notes, family.activityOf, now),
   });
 }

@@ -44,6 +44,9 @@ export const ErrorCode = {
   challengeExpired: "challenge_expired",
   /** The passkey is unknown here (removed, or made for another site) or its signature is wrong. */
   passkeyInvalid: "passkey_invalid",
+  /** A parent's family settings do not allow this for the child (or for reaching the child);
+   *  `feature` says which. */
+  restrictedByFamily: "restricted_by_family",
   internal: "internal",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

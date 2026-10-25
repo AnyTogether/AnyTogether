@@ -159,6 +159,7 @@ export function gameRoutes(deps: Deps) {
     names: row.names,
     iconUrl: row.iconUrl,
     locked: row.locked,
+    ageLevels: row.ageLevels,
   });
 
   /** An icon only from a host the operator trusts: every launcher showing the game loads it, so
@@ -177,7 +178,13 @@ export function gameRoutes(deps: Deps) {
     const input = { ...raw, iconUrl: trustedIcon(raw.iconUrl) };
     const created = await db
       .insert(games)
-      .values({ titleId, names: input.names, iconUrl: input.iconUrl ?? null, taughtBy: me })
+      .values({
+        titleId,
+        names: input.names,
+        iconUrl: input.iconUrl ?? null,
+        ageLevels: input.ageLevels ?? null,
+        taughtBy: me,
+      })
       .onConflictDoNothing()
       .returning();
     if (created[0]) return c.json({ ...gameCard(created[0]), stored: true }, 201);
@@ -187,15 +194,20 @@ export function gameRoutes(deps: Deps) {
     // Names already known are never replaced; only languages it lacks are added.
     const names = { ...input.names, ...existing.names };
     const iconUrl = existing.iconUrl ?? input.iconUrl ?? null;
+    // Ratings, like names, are taught once; a moderator fixes a wrong one.
+    const ageLevels = existing.ageLevels ?? input.ageLevels ?? null;
     const changed =
       !existing.locked &&
-      (Object.keys(names).length !== Object.keys(existing.names).length || iconUrl !== existing.iconUrl);
+      (Object.keys(names).length !== Object.keys(existing.names).length ||
+        iconUrl !== existing.iconUrl ||
+        ageLevels !== existing.ageLevels);
     if (!changed) return c.json({ ...gameCard(existing), stored: false });
     const [updated] = await db
       .update(games)
       .set({
         names,
         iconUrl,
+        ageLevels,
         taughtBy: Object.keys(existing.names).length ? existing.taughtBy : me,
       })
       .where(and(eq(games.titleId, titleId), eq(games.locked, false)))

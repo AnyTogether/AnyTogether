@@ -66,6 +66,16 @@ setInterval(
   600_000,
 );
 
+// The parents' weekly family summaries, looked at every hour.
+setInterval(
+  () =>
+    app
+      .sendFamilySummaries()
+      .then((count) => count && console.log(`sent ${count} family summary(ies)`))
+      .catch((error) => console.error("family summaries failed", error)),
+  3_600_000,
+);
+
 // Devices whose realtime socket went away are taken out of their calls and share plays.
 setInterval(
   () => app.sweepDepartures().catch((error) => console.error("departure sweep failed", error)),

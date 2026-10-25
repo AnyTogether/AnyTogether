@@ -21,6 +21,7 @@ import { z } from "zod";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { broadcast, publish, topicsFor } from "./events.js";
+import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import type { Notifier } from "./notifications.js";
@@ -362,6 +363,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
   const { db } = deps;
   const who = people(db);
   const strangerLimit = strangerLimiter(deps);
+  const family = familyGuard(db);
   const {
     live,
     partyOf,
@@ -425,6 +427,12 @@ export function partyRoutes(deps: Deps, service: PartyService) {
   app.post("/parties", async (c) => {
     const me = c.get("userId");
     const input = await body(c, PartyCreate);
+    if (input.public)
+      await family.need(
+        me,
+        "public_matchmaking",
+        "Your family settings keep public parties, Find players and share plays off",
+      );
     await knowGame(input.public?.titleId);
     const party = await create(me, input.privacy, input.public);
     return c.json(await view(party), 201);
@@ -469,6 +477,11 @@ export function partyRoutes(deps: Deps, service: PartyService) {
       throw new HttpError(400, ErrorCode.badRequest, "titleId: a title ID like PPSA01234");
     if (language !== undefined && !LanguageCode.safeParse(language).success)
       throw new HttpError(400, ErrorCode.badRequest, "language: a language like en or tr");
+    await family.need(
+      c.get("userId"),
+      "public_matchmaking",
+      "Your family settings keep public parties, Find players and share plays off",
+    );
     return c.json({ parties: await publicParties(c.get("userId"), { titleId, language }) });
   });
 
@@ -482,6 +495,12 @@ export function partyRoutes(deps: Deps, service: PartyService) {
     const me = c.get("userId");
     const { party, members } = await asLeader(c.req.param("id"), me);
     const input = await body(c, PartyUpdate);
+    if (input.public)
+      await family.need(
+        me,
+        "public_matchmaking",
+        "Your family settings keep public parties, Find players and share plays off",
+      );
     await knowGame(input.public?.titleId);
     const [updated] = (await db
       .update(parties)
@@ -527,6 +546,11 @@ export function partyRoutes(deps: Deps, service: PartyService) {
         throw new HttpError(403, ErrorCode.forbidden, "Ask the leader to let you in", {
           join: party.publicJoin,
         });
+      await family.need(
+        me,
+        "public_matchmaking",
+        "Your family settings keep public parties, Find players and share plays off",
+      );
       // Walking into a stranger's party counts like asking to.
       await strangerLimit("joinRequest", me);
     }
@@ -568,6 +592,11 @@ export function partyRoutes(deps: Deps, service: PartyService) {
     const { party, members } = await visible(c.req.param("id"), me);
     if (members.includes(me)) throw new HttpError(409, ErrorCode.conflict, "You are in this party");
     if (!party.publicJoin) throw new HttpError(403, ErrorCode.forbidden, "This party takes no requests");
+    await family.need(
+      me,
+      "public_matchmaking",
+      "Your family settings keep public parties, Find players and share plays off",
+    );
     if (members.length >= maxPartySize)
       throw new HttpError(409, ErrorCode.full, `A party has at most ${maxPartySize} people`);
     await strangerLimit("joinRequest", me);

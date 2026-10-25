@@ -39,6 +39,7 @@ import type { Deps } from "./app.js";
 import { iceServers } from "./calls.js";
 import { HttpError } from "./errors.js";
 import { broadcast, publish, topicsFor } from "./events.js";
+import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { people } from "./people.js";
@@ -83,6 +84,8 @@ export function sharePlayRoutes(deps: Deps) {
   const who = people(deps.db);
   const limit = rateLimiter(valkey, deps.limits);
   const strangerLimit = strangerLimiter(deps);
+  const family = familyGuard(deps.db);
+  const noShare = "Your family settings keep share play off";
   const keep = sharePlayKeepSeconds;
 
   /** The public lists hear that a listed share play came, changed or went. */
@@ -415,6 +418,12 @@ export function sharePlayRoutes(deps: Deps) {
       throw new HttpError(400, ErrorCode.badRequest, "titleId: a title ID like PPSA01234");
     if (language !== undefined && !LanguageCode.safeParse(language).success)
       throw new HttpError(400, ErrorCode.badRequest, "language: a language like en or tr");
+    await family.need(c.get("userId"), "share_play", noShare);
+    await family.need(
+      c.get("userId"),
+      "public_matchmaking",
+      "Your family settings keep public parties, Find players and share plays off",
+    );
     return c.json({
       sharePlays: await publicShares(c.get("userId"), {
         titleId,
@@ -429,6 +438,14 @@ export function sharePlayRoutes(deps: Deps) {
     const me = c.get("userId");
     const device = c.get("sessionId");
     const input = await body(c, SharePlayStart);
+    await family.need(me, "share_play", noShare);
+    if (input.public)
+      await family.need(
+        me,
+        "public_matchmaking",
+        "Your family settings keep public parties, Find players and share plays off",
+      );
+    await family.mayPlay(me, input.titleId);
     await limit("sharePlay", me);
     await leaveAll(me);
     const share: Share = {
@@ -545,6 +562,10 @@ export function sharePlayRoutes(deps: Deps) {
     const friends = await who.friendsAmong(me, asked);
     if (asked.some((id) => !friends.has(id)))
       throw new HttpError(403, ErrorCode.forbidden, "You can only invite your friends");
+    if ((await family.without(asked, "share_play")).size)
+      throw new HttpError(403, ErrorCode.restrictedByFamily, "Someone you invited cannot watch share plays", {
+        feature: "share_play",
+      });
     return c.json({ invited: await inviteTo(share, asked) });
   });
 
@@ -565,6 +586,7 @@ export function sharePlayRoutes(deps: Deps) {
     const device = c.get("sessionId");
     const share = await visible(c.req.param("id"), me);
     if (share.hostId === me) throw new HttpError(400, ErrorCode.badRequest, "That is your own share play");
+    await family.need(me, "share_play", noShare);
     if (!(await mayWalkIn(share, me)))
       throw new HttpError(403, ErrorCode.forbidden, "Ask the host to let you in", {
         join: share.public?.join ?? null,
@@ -612,6 +634,12 @@ export function sharePlayRoutes(deps: Deps) {
     const share = await visible(c.req.param("id"), me);
     if (share.hostId === me) throw new HttpError(400, ErrorCode.badRequest, "That is your own share play");
     if (!share.public) throw new HttpError(403, ErrorCode.forbidden, "This share play takes no requests");
+    await family.need(me, "share_play", noShare);
+    await family.need(
+      me,
+      "public_matchmaking",
+      "Your family settings keep public parties, Find players and share plays off",
+    );
     if ((await standing(share, me)).seated) throw new HttpError(409, ErrorCode.conflict, "You are watching");
     await strangerLimit("joinRequest", me);
     const made = await valkey.hsetnx(sharePlayRequestsKey(share.id), me, new Date().toISOString());

@@ -15,3 +15,4 @@ export * from "./notifications.js";
 export * from "./themes.js";
 export * from "./compat.js";
 export * from "./discover.js";
+export * from "./family.js";

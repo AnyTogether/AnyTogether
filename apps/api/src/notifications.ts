@@ -80,6 +80,17 @@ const pushTexts = {
     lfg_requests: ["{name}", "and {others} more want in on your {game} post."],
     lfg_accepted: ["{name}", "let you in for {game}. Your invite is waiting."],
     warning: ["AnyTogether", "A moderator warned you: {reason}"],
+    family_invite: ["{name}", "invited you to the family {family}."],
+    family_request_more_time: ["{name}", "asks for {minutes} more minutes of play today."],
+    family_request_add_friend: ["{name}", "asks to add {person} as a friend."],
+    family_request_play_game: ["{name}", "asks to play {game}."],
+    family_answer_yes: ["{name}", "said yes to your request."],
+    family_answer_no: ["{name}", "said no to your request."],
+    family_alert_limit_reached: ["{name}", "reached today's play time."],
+    family_alert_child_joined: ["{name}", "joined your family."],
+    family_alert_member_joined: ["{name}", "joined your family."],
+    family_alert_child_declined: ["{name}", "said the new account is not theirs and left the family."],
+    family_summary: ["AnyTogether", "Your family's week of play is ready."],
   },
   tr: {
     friend_request: ["{name}", "arkadaşın olmak istiyor."],
@@ -93,6 +104,20 @@ const pushTexts = {
     lfg_requests: ["{name}", "ve {others} kişi daha {game} ilanına katılmak istiyor."],
     lfg_accepted: ["{name}", "seni {game} için kabul etti. Davetin seni bekliyor."],
     warning: ["AnyTogether", "Bir moderatör seni uyardı: {reason}"],
+    family_invite: ["{name}", "seni {family} ailesine çağırdı."],
+    family_request_more_time: ["{name}", "bugün {minutes} dakika daha oynamak istiyor."],
+    family_request_add_friend: ["{name}", "{person} ile arkadaş olmak istiyor."],
+    family_request_play_game: ["{name}", "{game} oynamak istiyor."],
+    family_answer_yes: ["{name}", "isteğine evet dedi."],
+    family_answer_no: ["{name}", "isteğine hayır dedi."],
+    family_alert_limit_reached: ["{name}", "bugünkü oyun süresini doldurdu."],
+    family_alert_child_joined: ["{name}", "ailene katıldı."],
+    family_alert_member_joined: ["{name}", "ailene katıldı."],
+    family_alert_child_declined: [
+      "{name}",
+      "yeni hesabın kendisine ait olmadığını söyledi ve aileden çıktı.",
+    ],
+    family_summary: ["AnyTogether", "Ailenin oyun haftası hazır."],
   },
 } as const;
 
@@ -113,6 +138,12 @@ export function notificationPath(n: Pick<NotificationView, "kind" | "subjectId" 
       return n.actor ? `/u/${n.actor.handle}` : "/notifications";
     case "lfg_request":
       return "/find#mine";
+    case "family_invite":
+    case "family_request":
+    case "family_answer":
+    case "family_alert":
+    case "family_summary":
+      return "/family";
     case "lfg_accepted": {
       const invite = (n.data as { invite?: { kind?: string; id?: string } | null }).invite;
       return invite?.kind === "share_play" && invite.id ? `/watch/${invite.id}` : "/party";
@@ -127,12 +158,25 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
   const texts = lang === "tr" ? pushTexts.tr : pushTexts.en;
   const data = n.data as Record<string, unknown>;
   const count = Number(data.count ?? 1);
-  const key =
-    n.kind === "message" && count > 1
-      ? "messages"
-      : n.kind === "lfg_request" && count > 1
-        ? "lfg_requests"
-        : n.kind;
+  const familyKey =
+    n.kind === "family_request"
+      ? `family_request_${String(data.kind)}`
+      : n.kind === "family_answer"
+        ? `family_answer_${data.approved ? "yes" : "no"}`
+        : n.kind === "family_alert"
+          ? `family_alert_${String(data.event)}`
+          : null;
+  const key = (
+    familyKey && familyKey in texts
+      ? familyKey
+      : n.kind === "message" && count > 1
+        ? "messages"
+        : n.kind === "lfg_request" && count > 1
+          ? "lfg_requests"
+          : n.kind === "family_request" || n.kind === "family_answer" || n.kind === "family_alert"
+            ? "family_summary"
+            : n.kind
+  ) as keyof typeof texts;
   const name =
     n.kind === "message" && data.group
       ? `${String(data.title ?? "")}${data.title ? " · " : ""}${n.actor?.displayName ?? ""}`
@@ -143,8 +187,11 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
     n: count,
     others: count - 1,
     text: String(data.text ?? ""),
-    game: games[lang] ?? games.en ?? String(data.titleId ?? ""),
+    game: games[lang] ?? games.en ?? String(data.gameName ?? data.titleId ?? ""),
     reason: String(data.reason ?? ""),
+    family: String(data.familyName ?? ""),
+    minutes: Number(data.minutes ?? 0),
+    person: String((data.person as { displayName?: string } | null)?.displayName ?? ""),
   };
   const [title, text] = texts[key];
   return {

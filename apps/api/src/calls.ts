@@ -24,6 +24,7 @@ import { z } from "zod";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
+import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import type { PartyService } from "./parties.js";
@@ -61,6 +62,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
   const who = people(db);
   const keep = turnCredentialSeconds;
   const limit = rateLimiter(valkey, deps.limits);
+  const family = familyGuard(db);
 
   const tell = async (userIds: string[], event: GatewayEvent) => {
     for (const userId of new Set(userIds)) await publish(valkey, userId, event);
@@ -204,6 +206,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
       if (userId === me) throw new HttpError(400, ErrorCode.badRequest, "That is you");
       if (!(await who.friends(me, userId)))
         throw new HttpError(403, ErrorCode.forbidden, "You can only call your friends");
+      await family.mayCall(me, userId);
       const [call] = await db
         .insert(calls)
         .values({ id: uuidv7(), startedBy: me, calleeId: userId })
@@ -218,6 +221,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     const party = await parties.live(partyId as string);
     const members = party ? await parties.memberIds(party.id) : [];
     if (!party || !members.includes(me)) throw new HttpError(404, ErrorCode.notFound, "No such party");
+    await family.mayCall(me);
     await db.insert(calls).values({ id: uuidv7(), partyId: party.id, startedBy: me }).onConflictDoNothing();
     const call = await partyCall(party.id);
     if (!call) throw new HttpError(409, ErrorCode.conflict, "Try again");
@@ -241,6 +245,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     const device = c.get("sessionId");
     const call = await asMember(c.req.param("id"), me);
     if (call.calleeId !== me) throw new HttpError(400, ErrorCode.badRequest, "Not a call to you");
+    await family.mayCall(me);
     const [answered] = await db
       .update(calls)
       .set({ answeredAt: new Date() })

@@ -22,12 +22,21 @@ export const sessionExits = ["normal", "crashed", "killed"] as const;
 /** Points per grade, summed into the library and leaderboards. */
 export const trophyPoints: Record<Grade, number> = { bronze: 15, silver: 30, gold: 90, platinum: 300 };
 
-/** Teaching the catalogue: names per language, and the icon if the launcher has one. */
+/** Age ratings from a game's sce_sys/param.json (`ageLevel`), per region with a "default", as the
+ *  launchers report them with the catalogue; family age limits are checked against them. */
+export const AgeLevels = z
+  .record(z.string().regex(/^([A-Z]{2}|default)$/), z.number().int().min(0).max(99))
+  .refine((levels) => Object.keys(levels).length <= 120, "at most 120 regions");
+export type AgeLevels = z.infer<typeof AgeLevels>;
+
+/** Teaching the catalogue: names per language, the icon if the launcher has one, and the age
+ *  ratings. */
 export const GameTeach = z.object({
   names: z
     .record(Language, z.string().trim().min(1).max(200))
     .refine((names) => Object.keys(names).length > 0, "at least one name"),
   iconUrl: z.string().url().startsWith("https://").max(500).optional(),
+  ageLevels: AgeLevels.optional(),
 });
 
 /** This computer, by the launcher's own random ID. */

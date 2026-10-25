@@ -15,6 +15,7 @@ import { count, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
+import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import type { LfgRoutes } from "./lfg.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
@@ -69,6 +70,8 @@ export function discoverRoutes(
   app.use("*", requireUser(deps));
   const { db, valkey } = deps;
   const limit = rateLimiter(valkey, deps.limits);
+  const family = familyGuard(db);
+  const noDiscovery = "Your family settings keep discovery off";
 
   const own = async (me: string) => {
     const [profile] = await db.select().from(profiles).where(eq(profiles.accountId, me));
@@ -87,6 +90,7 @@ export function discoverRoutes(
     const me = c.get("userId");
     await limit("profile", me);
     const input = await body(c, DiscoveryUpdate);
+    if (input.discoverable) await family.need(me, "discovery", noDiscovery);
     await db
       .update(profiles)
       .set({
@@ -183,6 +187,7 @@ export function discoverRoutes(
   app.get("/discover/players", async (c) => {
     const me = c.get("userId");
     const titleId = titleParam(c.req.query("titleId"));
+    await family.need(me, "discovery", noDiscovery);
     await limit("discover", me);
     return c.json({ players: await playersOf(me, titleId) });
   });
@@ -192,6 +197,7 @@ export function discoverRoutes(
    *  Friends, pending requests and blocks are left out. */
   app.get("/discover/suggestions", async (c) => {
     const me = c.get("userId");
+    await family.need(me, "discovery", noDiscovery);
     await limit("discover", me);
     const mine = await own(me);
     const notConnected = (column: ReturnType<typeof sql>) => sql`${column} <> ${me}::uuid
@@ -327,12 +333,16 @@ export function discoverRoutes(
     const [game] = await db.select().from(games).where(eq(games.titleId, titleId));
     if (!game) throw new HttpError(404, ErrorCode.notFound, "No such game");
     const [players] = await db.select({ n: count() }).from(library).where(eq(library.titleId, titleId));
+    // A child sees only what the family settings allow of the hub.
+    const rules = await family.rulesOf(me);
+    const people = !rules || rules.discovery;
+    const listings = !rules || rules.publicMatchmaking;
     const [playing, posts, partyList, shareList, recent] = await Promise.all([
-      playingNow(me, titleId),
-      pieces.lfg.openPosts(me, { titleId, limit: 10 }),
-      pieces.parties.publicParties(me, { titleId, limit: 10 }),
-      pieces.shares.publicShares(me, { titleId, limit: 10 }),
-      playersOf(me, titleId, 8),
+      people ? playingNow(me, titleId) : [],
+      listings ? pieces.lfg.openPosts(me, { titleId, limit: 10 }) : { posts: [] },
+      listings ? pieces.parties.publicParties(me, { titleId, limit: 10 }) : [],
+      listings && (!rules || rules.sharePlay) ? pieces.shares.publicShares(me, { titleId, limit: 10 }) : [],
+      people ? playersOf(me, titleId, 8) : [],
     ]);
     return c.json({
       game: { titleId: game.titleId, names: game.names, iconUrl: game.iconUrl },

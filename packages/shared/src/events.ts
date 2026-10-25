@@ -46,7 +46,10 @@ export type GatewayEvent =
   | SharePlayEvent
   | FeedEvent
   | NotificationEvent
-  | DiscoverEvent;
+  | DiscoverEvent
+  /** The family changed for this person (limits, a role, joined or left): fetch
+   *  /me/family/restrictions again. */
+  | { type: "family.updated"; data: { familyId: string | null } };
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 
