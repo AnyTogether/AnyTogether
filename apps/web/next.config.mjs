@@ -28,14 +28,13 @@ export default {
       // The film and its pictures: kept for a day, so the CDN in front holds them and answers the
       // range requests a video player makes (Safari plays nothing without them).
       { source: "/media/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=86400" }] },
-      // The videos have a version in their names, so they are kept for good. Marked as not encoded,
-      // so no proxy on the way gzips them: a gzipped video loses its byte ranges, and with them
-      // Safari's playback and every player's seeking.
+      // The videos have a version in their names, so they are kept for good. The proxy must not
+      // gzip them (a gzipped video loses its byte ranges, and with them Safari's playback and
+      // seeking); production's proxy leaves video and audio types alone.
       {
         source: "/media/:file([^/]+\\.(?:webm|mp4))",
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-          { key: "Content-Encoding", value: "identity" },
         ],
       },
     ];

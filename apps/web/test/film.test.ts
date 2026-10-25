@@ -53,7 +53,7 @@ describe("the videos", () => {
     expect(pattern.test("/media/anyps5-promo-v1.webm")).toBe(true);
     expect(pattern.test("/media/anyps5-promo-v1.mp4")).toBe(true);
     expect(pattern.test("/media/anyps5-promo-960.webp")).toBe(false);
-    expect(video?.headers).toContainEqual({ key: "Content-Encoding", value: "identity" });
+    expect(video?.headers.some((h) => h.key === "Content-Encoding")).toBe(false);
     expect(video?.headers).toContainEqual({
       key: "Cache-Control",
       value: "public, max-age=31536000, immutable",
