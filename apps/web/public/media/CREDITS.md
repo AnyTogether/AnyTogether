@@ -1,6 +1,6 @@
 # Credits for the files in this folder
 
-## anyps5-promo.webm, anyps5-promo.mp4, anyps5-promo-960.webp, anyps5-promo-1920.webp
+## anyps5-promo-v1.webm, anyps5-promo-v1.mp4, anyps5-promo-960.webp, anyps5-promo-1920.webp
 
 The AnyPS5 promo film and its poster frames: made by the AnyPS5 project. Game pictures shown in
 the film belong to their owners.

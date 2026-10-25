@@ -12,6 +12,8 @@ export type FilmStrings = {
 };
 
 const base = "/media/anyps5-promo";
+// The video files carry a version: they are cached for good, so a new cut gets a new name.
+const film = "/media/anyps5-promo-v1";
 
 /** The AnyPS5 film. Nothing of it is fetched until it comes near the screen (the picture under it
  *  is a lazy image, the video gets its sources only then); it plays silently while it is on screen
@@ -162,8 +164,8 @@ export function PromoFilm({ t }: { t: FilmStrings }) {
         onPause={() => setPlaying(false)}
         onVolumeChange={(e) => setMuted(e.currentTarget.muted)}
       >
-        {near && <source src={`${base}.webm`} type='video/webm; codecs="vp9, opus"' />}
-        {near && <source src={`${base}.mp4`} type='video/mp4; codecs="avc1.64002A, mp4a.40.2"' />}
+        {near && <source src={`${film}.webm`} type='video/webm; codecs="vp9, opus"' />}
+        {near && <source src={`${film}.mp4`} type='video/mp4; codecs="avc1.64002A, mp4a.40.2"' />}
       </video>
 
       {waiting && (
