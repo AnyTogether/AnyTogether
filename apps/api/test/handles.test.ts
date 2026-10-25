@@ -17,7 +17,7 @@ const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISO
 /** This branch's migration, as production runs it. */
 const migration = () => {
   const folder = new URL("../../../packages/db/drizzle/", import.meta.url);
-  const name = readdirSync(folder).find((file) => file.startsWith("0012_"));
+  const name = readdirSync(folder).find((file) => file.endsWith("_profiles_restrictions_connections.sql"));
   return readFileSync(new URL(name ?? "missing", folder), "utf8");
 };
 

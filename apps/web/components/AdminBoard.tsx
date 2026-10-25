@@ -85,7 +85,6 @@ type Action =
   | "publish_theme"
   | "hide_media"
   | "delete_media"
-
   | "mute";
 const durations: { days: number | null; key: "days1" | "days7" | "days30" | "forGood" }[] = [
   { days: 1, key: "days1" },

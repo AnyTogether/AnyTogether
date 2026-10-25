@@ -46,9 +46,7 @@ async function load(handle: string) {
   const shown = <T,>(part: { status: number; body: T | null }, fallback: T) =>
     part.status === 403 || part.status === 401 ? null : (part.body ?? fallback);
   // The gallery only where the server keeps files; private (or signed out) comes back as null.
-  const gallery = storage.body?.enabled
-    ? await publicJson<{ items: MediaItem[] }>(`${path}/gallery`)
-    : null;
+  const gallery = storage.body?.enabled ? await publicJson<{ items: MediaItem[] }>(`${path}/gallery`) : null;
   return {
     profile: profile.body,
     games: shown(library, { games: [] })?.games ?? null,

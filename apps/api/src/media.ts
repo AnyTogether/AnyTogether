@@ -21,6 +21,7 @@ import { type FileService, type StagedFile, type Tx, needFiles, quotaError, rece
 import { body } from "./http.js";
 import { BadMedia, readClip, readVoice, sniff } from "./mediaCheck.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { assertNotMuted } from "./moderation.js";
 import { canSee, findProfile, people, relationOf } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
 import { slotViews } from "./saves.js";
@@ -306,6 +307,8 @@ export function mediaRoutes(deps: Deps, service: MediaService) {
   app.post("/me/media", async (c) => {
     const f = files();
     const me = c.get("userId");
+    // Muted: nothing new for others to see (messages and the gallery).
+    await assertNotMuted(deps.db, me);
     const kind = c.req.query("kind") as MediaKind;
     if (!mediaKinds.includes(kind))
       throw new HttpError(400, ErrorCode.badRequest, "kind: image, clip or voice");
@@ -532,6 +535,8 @@ export function mediaRoutes(deps: Deps, service: MediaService) {
   app.put("/me/gallery", async (c) => {
     const f = files();
     const me = c.get("userId");
+    // Muted: nothing new for others to see (messages and the gallery).
+    await assertNotMuted(deps.db, me);
     const { items } = await body(c, GalleryUpdate);
     await f.within(me, async (tx) => {
       const rows = items.length
