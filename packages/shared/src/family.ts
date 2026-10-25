@@ -291,11 +291,21 @@ export function localClock(now: Date, timeZone: string) {
       .map((part) => [part.type, part.value]),
   ) as Record<string, string>;
   const weekday = (parts.weekday ?? "Mon").slice(0, 3).toLowerCase() as Weekday;
+  const wall = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
   return {
     date: `${parts.year}-${parts.month}-${parts.day}`,
     weekday,
     minutes: Number(parts.hour) * 60 + Number(parts.minute),
     seconds: Number(parts.hour) * 3600 + Number(parts.minute) * 60 + Number(parts.second),
+    /** The clock's offset from UTC at that moment, in minutes (Istanbul: 180). */
+    offsetMinutes: Math.round((wall - Math.floor(now.getTime() / 1000) * 1000) / 60_000),
   };
 }
 
@@ -334,6 +344,9 @@ export interface Allowance {
   /** Whether the child may play now; `reason` says why not. */
   allowed: boolean;
   reason: "limit" | "window" | null;
+  /** The child's clock's offset from UTC when this was worked out, for a launcher whose computer
+   *  is set to another zone. */
+  utcOffsetMinutes: number;
 }
 
 /** How much the child may still play today. */
@@ -346,6 +359,7 @@ export function allowance(
   const base = {
     date: clock.date,
     weekday: clock.weekday,
+    utcOffsetMinutes: clock.offsetMinutes,
     bonusMinutes: input.bonusMinutes,
     playedSeconds: input.playedSeconds,
   };
@@ -436,7 +450,7 @@ export interface FamilyStatus {
 }
 
 /** The answer: the status, and the same status signed by the server (a compact JWS, EdDSA, with the
- *  key from /.well-known/jwks.json; audience "anytogether-family", the status in the `family`
+ *  key from /api/v1/.well-known/jwks.json, issuer the server's public address; audience "anytogether-family", the status in the `family`
  *  claim) for the launchers to keep offline without anyone changing it. */
 export interface FamilyStatusResponse extends FamilyStatus {
   signed: string;

@@ -102,6 +102,8 @@ export interface Allowance {
   remainingSeconds: number | null;
   allowed: boolean;
   reason: "limit" | "window" | null;
+  /** Older servers leave it out. */
+  utcOffsetMinutes?: number;
 }
 
 export interface ChildSettings {

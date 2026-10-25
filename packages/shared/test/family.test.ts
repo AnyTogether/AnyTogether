@@ -25,6 +25,8 @@ describe("the family policy", () => {
     // 2026-10-25 21:30 UTC is Monday 00:30 in Istanbul (UTC+3).
     const clock = localClock(new Date("2026-10-25T21:30:00Z"), "Europe/Istanbul");
     expect(clock).toMatchObject({ date: "2026-10-26", weekday: "mon", minutes: 30 });
+    expect(clock.offsetMinutes).toBe(180);
+    expect(localClock(new Date("2026-10-25T21:30:00Z"), "America/New_York").offsetMinutes).toBe(-240);
     expect(localClock(new Date("2026-10-25T21:30:00Z"), "UTC")).toMatchObject({
       date: "2026-10-25",
       weekday: "sun",
