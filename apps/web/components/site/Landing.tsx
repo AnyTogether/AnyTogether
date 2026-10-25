@@ -5,12 +5,17 @@ import {
   platformOrder,
   statsWorthShowing,
 } from "@/lib/downloads";
+import { motionStrings } from "@/lib/i18n-motion";
 import type { SiteStrings } from "@/lib/i18n-site";
 import { fill } from "@/lib/people";
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import "@/app/motion.css";
+import { Backdrop, GlyphShape } from "./Backdrop";
 import { DownloadCta, PlatformCard, PlatformIcon } from "./Download";
+import { LookSwitch } from "./LookSwitch";
 import { Reveal } from "./Reveal";
+import { ShareToasts } from "./ShareToasts";
 import { BrowserFrame, MacFrame, PhoneFrame, Shot } from "./Shot";
 
 const productHref: Record<string, string> = {
@@ -45,62 +50,80 @@ export function Landing({
   const number = new Intl.NumberFormat(language, { notation: "compact", maximumFractionDigits: 1 });
   const others = platformOrder.filter((p) => p !== platform);
   const version = releases?.macos?.version;
+  const m = motionStrings(language);
   return (
     <div className="site landing">
       <Reveal />
-      <section className="l-hero">
-        {version && releases?.macos ? (
-          <a href={releases.macos.url} className="release in d1">
-            <i className="dot" />
-            {fill(l.released, { version })}
-            <span className="release-more">
-              {l.whatsNew}
-              <Arrow />
-            </span>
-          </a>
-        ) : (
-          <p className="kicker in d1">{l.eyebrow}</p>
-        )}
-        <h1 className="l-title in d2">
-          <span>{l.heroA}</span>
-          <span>{l.heroB}</span>
-          <span className="gradient">{l.heroC}</span>
-        </h1>
-        <p className="l-lead in d3">{l.lead}</p>
-        <div className="cta-row in d3">
-          <DownloadCta platform={platform} releases={releases} s={s} language={language} />
-          <Link href="/login" className="cta ghost">
-            {s.nav.createAccount}
-          </Link>
-        </div>
-        <p className="hero-note in d4">
-          <span>{l.heroNote[platform ?? "none"]}</span>
-          {platform && (
-            <span className="also">
-              {l.alsoOn}{" "}
-              {others.map((p, i) => (
-                <span key={p}>
-                  <a href="#platforms">{s.platform[p]}</a>
-                  {i < others.length - 1 ? ", " : ""}
-                </span>
-              ))}
-            </span>
+      <div className="l-top" data-parallax>
+        <Backdrop look="cosmic" glyphs="hero" gain={0.95} className="hero-backdrop" />
+        <section className="l-hero">
+          {version && releases?.macos ? (
+            <a href={releases.macos.url} className="release in d1">
+              <i className="dot" />
+              {fill(l.released, { version })}
+              <span className="release-more">
+                {l.whatsNew}
+                <Arrow />
+              </span>
+            </a>
+          ) : (
+            <p className="kicker in d1">{l.eyebrow}</p>
           )}
-        </p>
-      </section>
+          <h1 className="l-title">
+            <span className="line">{l.heroA}</span>
+            <span className="line">{l.heroB}</span>
+            <span className="line gradient">{l.heroC}</span>
+          </h1>
+          <p className="l-lead in d3">{l.lead}</p>
+          <div className="cta-row in d3">
+            <DownloadCta platform={platform} releases={releases} s={s} language={language} />
+            <Link href="/login" className="cta ghost">
+              {s.nav.createAccount}
+            </Link>
+          </div>
+          <p className="hero-note in d4">
+            <span>{l.heroNote[platform ?? "none"]}</span>
+            {platform && (
+              <span className="also">
+                {l.alsoOn}{" "}
+                {others.map((p, i) => (
+                  <span key={p}>
+                    <a href="#platforms">{s.platform[p]}</a>
+                    {i < others.length - 1 ? ", " : ""}
+                  </span>
+                ))}
+              </span>
+            )}
+          </p>
+          <LookSwitch t={m.looks} className="in d4" />
+        </section>
 
-      <div className="hero-stage in d4">
-        <MacFrame className="hero-stage-mac">
-          <Shot name="mac-home-trophies" alt={l.heroAlt} sizes="(max-width: 1180px) 92vw, 1080px" priority />
-        </MacFrame>
-        <PhoneFrame className="hero-stage-phone">
-          <Shot name="phone-launcher" alt={l.heroPhoneAlt} sizes="(max-width: 760px) 46vw, 360px" />
-        </PhoneFrame>
+        <div className="hero-stage in d4">
+          <div className="stage-tilt">
+            <MacFrame className="hero-stage-mac">
+              <Shot
+                name="mac-home-trophies"
+                alt={l.heroAlt}
+                sizes="(max-width: 1180px) 92vw, 1080px"
+                priority
+              />
+            </MacFrame>
+            <PhoneFrame className="hero-stage-phone">
+              <Shot name="phone-launcher" alt={l.heroPhoneAlt} sizes="(max-width: 760px) 46vw, 360px" />
+            </PhoneFrame>
+          </div>
+        </div>
       </div>
 
-      <nav className="family-strip" aria-label={l.family} data-reveal>
+      <nav className="family-strip" aria-label={l.family} data-reveal data-loop>
+        <span className="wire" aria-hidden="true" />
         {l.products.map((product) => (
-          <Link key={product.key} href={productHref[product.key] ?? "/"} className="fam">
+          <Link
+            key={product.key}
+            href={productHref[product.key] ?? "/"}
+            className={`fam ${product.key}`}
+            data-spot
+          >
             <span className="fam-where" lang="en">
               {product.where}
             </span>
@@ -120,7 +143,9 @@ export function Landing({
           <dl>
             {shownStats.map((key) => (
               <div key={key}>
-                <dt>{number.format(stats[key])}</dt>
+                <dt data-count={stats[key]} data-compact>
+                  {number.format(stats[key])}
+                </dt>
                 <dd>{l.stats[key]}</dd>
               </div>
             ))}
@@ -170,6 +195,7 @@ export function Landing({
         </div>
         <div className="share-art" data-reveal>
           <div className="share-frames">
+            <ShareToasts toasts={m.toasts} />
             <BrowserFrame className="share-viewer">
               <Shot name="share-world" alt={l.share.worldAlt} sizes="(max-width: 760px) 92vw, 600px" />
             </BrowserFrame>
@@ -187,9 +213,17 @@ export function Landing({
       </section>
 
       <section className="l-sec l-phone">
-        <div className="phone-art" data-reveal>
+        <div className="phone-art" data-reveal data-loop>
           <PhoneFrame className="pad-phone">
             <Shot name="phone-pad" alt={l.phone.padAlt} sizes="(max-width: 760px) 92vw, 560px" />
+            <span className="presses" aria-hidden="true">
+              <i className="touchpad" />
+              <i className="stick" />
+              <i className="btn triangle" />
+              <i className="btn circle" />
+              <i className="btn cross" />
+              <i className="btn square" />
+            </span>
           </PhoneFrame>
           <figure className="device plain live-shot">
             <div className="screen">
@@ -250,7 +284,7 @@ export function Landing({
         </div>
         <ul className="cards three numbered" data-reveal>
           {l.find.cards.map(([title, detail], index) => (
-            <li key={title}>
+            <li key={title} data-spot>
               <span className="num">{String(index + 1).padStart(2, "0")}</span>
               <h3>{title}</h3>
               <p>{detail}</p>
@@ -290,7 +324,7 @@ export function Landing({
       </section>
 
       <section className="l-sec l-duo">
-        <article className="duo-card themes" data-reveal>
+        <article className="duo-card themes" data-reveal data-spot>
           <div className="duo-text">
             <p className="kicker">{l.themes.kicker}</p>
             <h2 className="h-card">{l.themes.title}</h2>
@@ -304,7 +338,7 @@ export function Landing({
             <Shot name="mac-hub" alt={l.themes.alt} sizes="(max-width: 760px) 92vw, 520px" />
           </div>
         </article>
-        <article className="duo-card framegen" data-reveal>
+        <article className="duo-card framegen" data-reveal data-spot>
           <div className="duo-text">
             <p className="kicker">
               {l.framegen.kicker}
@@ -417,12 +451,26 @@ export function Landing({
           </div>
           <pre>
             <code>
-              <span className="c"># {l.open.guide}</span>
+              <span className="ln" style={{ "--i": 0 } as CSSProperties}>
+                <span className="c"># {l.open.guide}</span>
+              </span>
               {"\n"}
-              <span className="p">$</span> git clone https://github.com/utkuhalis/AnyTogether.git{"\n"}
-              <span className="p">$</span> cd AnyTogether/deploy && cp .env.example .env{"\n"}
-              <span className="p">$</span> docker compose up -d --build{"\n"}
-              <span className="ok">✓</span> caddy · web · api · realtime · postgres · valkey
+              <span className="ln" style={{ "--i": 1 } as CSSProperties}>
+                <span className="p">$</span> git clone https://github.com/utkuhalis/AnyTogether.git
+              </span>
+              {"\n"}
+              <span className="ln" style={{ "--i": 2 } as CSSProperties}>
+                <span className="p">$</span> cd AnyTogether/deploy && cp .env.example .env
+              </span>
+              {"\n"}
+              <span className="ln" style={{ "--i": 3 } as CSSProperties}>
+                <span className="p">$</span> docker compose up -d --build
+              </span>
+              {"\n"}
+              <span className="ln" style={{ "--i": 4 } as CSSProperties}>
+                <span className="ok">✓</span> caddy · web · api · realtime · postgres · valkey
+                <i className="caret" />
+              </span>
             </code>
           </pre>
           <a
@@ -448,7 +496,15 @@ export function Landing({
         </ol>
       </section>
 
-      <section className="l-final" data-reveal>
+      <section className="l-final" data-reveal data-loop>
+        <Backdrop look="cosmic" className="final-backdrop" gain={0.85} />
+        <div className="face" aria-hidden="true">
+          {(["triangle", "circle", "cross", "square"] as const).map((shape) => (
+            <span key={shape} className={`face-btn ${shape}`}>
+              <GlyphShape shape={shape} />
+            </span>
+          ))}
+        </div>
         <h2>{l.final.title}</h2>
         <p>{l.final.lead}</p>
         <div className="cta-row center">

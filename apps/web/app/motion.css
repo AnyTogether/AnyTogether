@@ -1,0 +1,897 @@
+/* The public pages' moving parts: the launcher's ribbons behind the heroes, the PlayStation shapes,
+   the pointer's tilt and light, the share play notices, the pad being pressed. Every animation here
+   is transform, opacity or a shadow, and all of it holds still with reduced motion (bottom). */
+
+:root {
+  --tri: var(--p3);
+  --cir: var(--p2);
+  --crs: var(--p1);
+  --sqr: var(--p4);
+}
+
+/* The ribbons */
+.backdrop {
+  position: absolute;
+  z-index: -1;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  pointer-events: none;
+  overflow: hidden;
+  /* Until the WebGL picture arrives (and wherever it never does): the same light, in CSS. */
+  background: radial-gradient(60% 50% at 82% 6%, rgba(107, 163, 255, 0.2), transparent 70%),
+    radial-gradient(90% 26% at 55% 64%, rgba(80, 130, 255, 0.16), transparent 70%),
+    linear-gradient(180deg, #0a1a44 0%, #060b1f 55%, rgba(7, 8, 12, 0) 100%);
+}
+.backdrop[data-look="aurora"] {
+  background: radial-gradient(70% 30% at 50% 32%, rgba(120, 255, 200, 0.14), transparent 70%),
+    linear-gradient(180deg, #03141a 0%, #031015 55%, rgba(7, 8, 12, 0) 100%);
+}
+.backdrop[data-look="sunset"] {
+  background: radial-gradient(70% 40% at 50% 74%, rgba(255, 140, 90, 0.2), transparent 70%),
+    linear-gradient(180deg, #12030c 0%, #3a0a1a 60%, rgba(7, 8, 12, 0) 100%);
+}
+.backdrop[data-look="party"] {
+  background: radial-gradient(60% 50% at 82% 6%, rgba(190, 130, 255, 0.2), transparent 70%),
+    radial-gradient(90% 26% at 55% 64%, rgba(160, 100, 255, 0.14), transparent 70%),
+    linear-gradient(180deg, #170a33 0%, #0b0618 55%, rgba(7, 8, 12, 0) 100%);
+}
+.backdrop canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+.backdrop[data-lit] canvas {
+  opacity: 1;
+}
+
+.l-top {
+  position: relative;
+}
+.hero-backdrop {
+  top: -120px;
+  /* Ends a little way into the launcher picture, so the ribbons cross just above its top edge. */
+  bottom: calc(var(--wide) * 0.2);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, #000 40%, #000 72%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, #000 40%, #000 72%, transparent 100%);
+}
+.p-top {
+  position: relative;
+}
+.p-backdrop {
+  top: -120px;
+  height: calc(100% + 120px + 80px);
+  mask-image: linear-gradient(180deg, #000 0%, #000 50%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 50%, transparent 100%);
+}
+
+/* The PlayStation shapes, drifting, a little nearer or farther as the pointer moves */
+.glyphs {
+  position: absolute;
+  inset: 0;
+  animation: in 1.6s 0.7s var(--ease-out) both;
+}
+.glyph {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  color: var(--glyph);
+  opacity: calc(0.22 + 0.5 * var(--z));
+  translate: calc(var(--px, 0) * var(--z) * -34px) calc(var(--py, 0) * var(--z) * -22px);
+  transition: translate 1.4s var(--ease-out);
+  filter: blur(calc((1 - var(--z)) * 2.2px)) drop-shadow(0 0 14px var(--glyph));
+}
+.glyph.triangle {
+  --glyph: var(--tri);
+}
+.glyph.circle {
+  --glyph: var(--cir);
+}
+.glyph.cross {
+  --glyph: var(--crs);
+}
+.glyph.square {
+  --glyph: var(--sqr);
+}
+.glyph i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: glyph-drift calc(11s + var(--i) * 2.3s) ease-in-out calc(var(--i) * -3.1s) infinite alternate;
+}
+.glyph svg,
+.face-btn svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.glyph svg * {
+  vector-effect: non-scaling-stroke;
+}
+@keyframes glyph-drift {
+  from {
+    transform: translate3d(0, -10px, 0) rotate(-7deg);
+  }
+  to {
+    transform: translate3d(6px, 14px, 0) rotate(9deg);
+  }
+}
+
+/* Hero title: the lines rise one after another */
+.l-title .line {
+  opacity: 0;
+  transform: translate3d(0, 0.32em, 0);
+  animation: line-in 1s var(--ease-out) forwards;
+}
+.l-title .line:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.l-title .line:nth-child(2) {
+  animation-delay: 0.19s;
+}
+.l-title .line.gradient {
+  background-size: 220% 100%;
+  animation: line-in 1s 0.28s var(--ease-out) forwards, ink-flow 9s 1.3s ease-in-out infinite alternate;
+}
+@keyframes line-in {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ink-flow {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+/* The launcher-background switch */
+.l-hero {
+  position: relative;
+}
+/* A little night kept behind the hero's words, whatever the light behind them does. */
+.l-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 4% 0 -6% -18%;
+  pointer-events: none;
+  background: radial-gradient(56% 52% at 34% 52%, rgba(7, 8, 12, 0.5), transparent 72%);
+}
+.look-switch {
+  position: absolute;
+  right: 0;
+  bottom: -4px;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+.look-label {
+  font: 500 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.look-options {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: rgba(7, 8, 12, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.look {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 13px 8px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mute);
+  font: 500 13px / 1 var(--font-display), system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.16s var(--ease-out);
+}
+.look:hover {
+  color: var(--ink);
+}
+.look:active {
+  transform: scale(0.97);
+}
+.look[aria-pressed="true"] {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.09);
+}
+.look i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sw);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+  transition: box-shadow 0.3s ease;
+}
+.look[aria-pressed="true"] i {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 0 12px var(--sw);
+}
+.look.cosmic {
+  --sw: linear-gradient(135deg, #2c5fe0, #9cc0ff);
+}
+.look.aurora {
+  --sw: linear-gradient(135deg, #0f6b5f, #8fffc7);
+}
+.look.sunset {
+  --sw: linear-gradient(135deg, #a3213f, #ffad5c);
+}
+.look.cosmic i,
+.look.aurora i,
+.look.sunset i {
+  background: var(--sw);
+}
+.look.cosmic[aria-pressed="true"] i {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 0 12px #6a9bff;
+}
+.look.aurora[aria-pressed="true"] i {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 0 12px #6effb9;
+}
+.look.sunset[aria-pressed="true"] i {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 0 12px #ff8c5a;
+}
+.look:focus-visible {
+  border-radius: 999px;
+}
+
+/* The hero's launcher: tilts toward the pointer, the phone floats a little nearer */
+.hero-stage::before {
+  translate: calc(var(--px, 0) * 24px) calc(var(--py, 0) * 16px);
+  transition: translate 1.4s var(--ease-out);
+}
+.stage-tilt {
+  transform: perspective(2200px) rotateX(calc(var(--py, 0) * -1.6deg)) rotateY(calc(var(--px, 0) * 2.2deg));
+  transition: transform 1.2s var(--ease-out);
+}
+.hero-stage-phone {
+  translate: calc(var(--px, 0) * -14px) calc(var(--py, 0) * -9px);
+  transition: translate 1.2s var(--ease-out);
+}
+.device .screen {
+  position: relative;
+}
+/* Glass: one light sweep after the page arrives, then a soft reflection that follows the pointer. */
+.hero-stage-mac .screen::before,
+.hero-stage-mac .screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hero-stage-mac .screen::before {
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.09) 50%, transparent 62%);
+  transform: translate3d(-110%, 0, 0);
+  animation: sheen 1.8s 1.2s var(--ease-in-out) forwards;
+}
+.hero-stage-mac .screen::after {
+  background: radial-gradient(
+    55% 70% at calc(50% + var(--px, 0) * 38%) calc(30% + var(--py, 0) * 30%),
+    rgba(255, 255, 255, 0.05),
+    transparent 70%
+  );
+}
+@keyframes sheen {
+  to {
+    transform: translate3d(110%, 0, 0);
+  }
+}
+
+/* The family, wired together: a pulse runs along the line, each product lights its own colour */
+.family-strip {
+  position: relative;
+}
+.wire {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.wire::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 28%;
+  background: linear-gradient(90deg, transparent, var(--p1), var(--p3), var(--p2), var(--p4), transparent);
+  transform: translate3d(-100%, 0, 0);
+  animation: wire 7s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+@keyframes wire {
+  70%,
+  100% {
+    transform: translate3d(360%, 0, 0);
+  }
+}
+.fam {
+  --tone: var(--p1);
+}
+.fam.pc {
+  --tone: var(--p3);
+}
+.fam.phone {
+  --tone: var(--p2);
+}
+.fam.together {
+  --tone: var(--p4);
+}
+.fam::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 0%),
+    color-mix(in srgb, var(--tone) 14%, transparent),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.fam::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--tone);
+  box-shadow: 0 0 12px var(--tone);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s var(--ease-out);
+}
+.fam:hover::before,
+.fam:focus-visible::before {
+  opacity: 1;
+}
+.fam:hover::after,
+.fam:focus-visible::after {
+  transform: none;
+}
+.fam:hover .fam-where {
+  color: var(--tone);
+}
+.fam .fam-where {
+  transition: color 0.25s ease;
+}
+.fam {
+  isolation: isolate;
+}
+
+/* A soft light under the pointer, on cards */
+.cards.numbered li,
+.duo-card,
+.install,
+.family-card {
+  position: relative;
+  isolation: isolate;
+}
+.cards.numbered li[data-spot]::before,
+.duo-card[data-spot]::before,
+.install[data-spot]::before,
+.family-card[data-spot]::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(143, 176, 255, 0.075),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.cards.numbered li[data-spot]::after,
+.duo-card[data-spot]::after,
+.install[data-spot]::after,
+.family-card[data-spot]::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: radial-gradient(
+    280px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(190, 210, 255, 0.5),
+    transparent 70%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+[data-spot]:hover::before,
+[data-spot]:hover::after {
+  opacity: 1;
+}
+.family-card {
+  transition: border-color 0.2s ease, transform 0.35s var(--ease-out);
+}
+.family-card:hover {
+  transform: translate3d(0, -2px, 0);
+}
+.plat-card {
+  transition: border-color 0.25s ease, transform 0.35s var(--ease-out);
+}
+.plat-card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Share play: the seats light up in turn, notices arrive over the picture */
+.reveal-ready .sec-text .slot .led {
+  transition: opacity 0.5s ease, box-shadow 0.5s ease;
+}
+.reveal-ready .sec-text:not([data-reveal="shown"]) .slot:not(.empty) .led {
+  opacity: 0.15;
+  box-shadow: none;
+}
+.reveal-ready .sec-text .slot:nth-child(2) .led {
+  transition-delay: 0.35s;
+}
+.reveal-ready .sec-text .slot:nth-child(3) .led {
+  transition-delay: 0.7s;
+}
+.slot.empty .led {
+  animation: seat-wait 2.8s ease-in-out infinite;
+}
+@keyframes seat-wait {
+  50% {
+    outline-color: rgba(255, 111, 216, 0.15);
+  }
+}
+.share-frames .toasts {
+  position: absolute;
+  z-index: 3;
+  top: calc(30px + 5%);
+  right: 4%;
+  width: min(280px, 56%);
+}
+.toast {
+  --seat: var(--p1);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: rgba(14, 16, 24, 0.84);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--ink-2);
+  transform-origin: 50% 0;
+  transition: transform 0.5s var(--ease-out), opacity 0.5s ease;
+  animation: toast-in 0.5s var(--ease-out);
+}
+.toast.seat-2 {
+  --seat: var(--p2);
+}
+.toast.seat-3 {
+  --seat: var(--p3);
+}
+.toast.seat-4 {
+  --seat: var(--p4);
+}
+.toast b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.toast-seat {
+  flex: none;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font: 500 11px / 1 var(--font-mono), monospace;
+  color: var(--seat);
+  background: color-mix(in srgb, var(--seat) 14%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--seat) 30%, transparent) inset;
+}
+.toast-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toast[data-depth="1"] {
+  transform: translate3d(0, 11px, 0) scale(0.94);
+  opacity: 0.7;
+}
+.toast[data-depth="2"] {
+  transform: translate3d(0, 21px, 0) scale(0.88);
+  opacity: 0.38;
+}
+.toast[data-depth="3"] {
+  transform: translate3d(0, 28px, 0) scale(0.82);
+  opacity: 0;
+}
+.toast[data-depth="0"] {
+  z-index: 3;
+}
+.toast[data-depth="1"] {
+  z-index: 2;
+}
+.toast[data-depth="2"] {
+  z-index: 1;
+}
+@keyframes toast-in {
+  from {
+    transform: translate3d(0, -18px, 0) scale(0.98);
+    opacity: 0;
+  }
+}
+
+/* The phone as a pad: face buttons pressed in turn, the light bar taking each one's colour */
+.presses {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.presses i {
+  position: absolute;
+  display: block;
+}
+.presses .btn {
+  width: 9%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% -50%;
+  opacity: 0;
+  border: 2px solid var(--key);
+  background: color-mix(in srgb, var(--key) 22%, transparent);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--key) 60%, transparent);
+  animation: press 4.8s var(--ease-out) infinite;
+}
+.presses .triangle {
+  --key: var(--tri);
+  left: 85.9%;
+  top: 30%;
+}
+.presses .circle {
+  --key: var(--cir);
+  left: 91.9%;
+  top: 42%;
+  animation-delay: 1.2s;
+}
+.presses .cross {
+  --key: var(--crs);
+  left: 85.9%;
+  top: 53.9%;
+  animation-delay: 2.4s;
+}
+.presses .square {
+  --key: var(--sqr);
+  left: 79.9%;
+  top: 42%;
+  animation-delay: 3.6s;
+}
+@keyframes press {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  4% {
+    opacity: 1;
+    transform: scale(0.96);
+  }
+  18% {
+    opacity: 0;
+    transform: scale(1.22);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.22);
+  }
+}
+.presses .touchpad {
+  left: 35%;
+  top: 2.9%;
+  width: 30%;
+  height: 14.1%;
+  border-radius: 6.6% / 20%;
+  border: 1px solid transparent;
+  animation: lightbar 4.8s linear infinite;
+}
+@keyframes lightbar {
+  0%,
+  22% {
+    border-color: color-mix(in srgb, var(--tri) 55%, transparent);
+    box-shadow: 0 0 26px -4px var(--tri);
+  }
+  25%,
+  47% {
+    border-color: color-mix(in srgb, var(--cir) 55%, transparent);
+    box-shadow: 0 0 26px -4px var(--cir);
+  }
+  50%,
+  72% {
+    border-color: color-mix(in srgb, var(--crs) 55%, transparent);
+    box-shadow: 0 0 26px -4px var(--crs);
+  }
+  75%,
+  97% {
+    border-color: color-mix(in srgb, var(--sqr) 55%, transparent);
+    box-shadow: 0 0 26px -4px var(--sqr);
+  }
+  100% {
+    border-color: color-mix(in srgb, var(--tri) 55%, transparent);
+    box-shadow: 0 0 26px -4px var(--tri);
+  }
+}
+.presses .stick {
+  left: 67.9%;
+  top: 72%;
+  width: 8.6%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% -50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.05);
+  animation: stick 4.8s ease-in-out infinite;
+}
+@keyframes stick {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: translate3d(32%, -26%, 0);
+  }
+  45% {
+    transform: translate3d(-30%, -8%, 0);
+  }
+  70% {
+    transform: translate3d(8%, 30%, 0);
+  }
+}
+[data-loop][data-inview="0"] .presses i,
+[data-loop][data-inview="0"] .wire::before,
+[data-loop][data-inview="0"] .face-btn {
+  animation-play-state: paused;
+}
+
+/* Self-hosting: the commands type themselves out */
+.terminal .ln {
+  display: inline-block;
+}
+.reveal-ready .terminal:not([data-reveal="shown"]) .ln {
+  clip-path: inset(0 100% 0 0);
+}
+.reveal-ready .terminal[data-reveal="shown"] .ln {
+  clip-path: inset(0 100% 0 0);
+  animation: type 0.7s steps(26, end) calc(0.25s + var(--i) * 0.55s) forwards;
+}
+@keyframes type {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.terminal .caret {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  margin-left: 8px;
+  vertical-align: -2px;
+  background: var(--c);
+  animation: caret 1.1s steps(2, jump-none) infinite;
+}
+@keyframes caret {
+  to {
+    opacity: 0;
+  }
+}
+
+/* The last call: the ribbons again, and the four face buttons lighting in turn */
+.l-final {
+  isolation: isolate;
+}
+.final-backdrop {
+  top: -45%;
+  bottom: -25%;
+  z-index: -2;
+  mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 68%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 68%, transparent 100%);
+}
+.face {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  margin: 0 auto 34px;
+}
+.face-btn {
+  --key: var(--tri);
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  padding: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: rgba(10, 12, 18, 0.6);
+  color: var(--mute);
+  animation: face 4.8s ease-in-out infinite;
+}
+.face-btn.triangle {
+  left: 34px;
+  top: 0;
+}
+.face-btn.circle {
+  --key: var(--cir);
+  right: 0;
+  top: 34px;
+  animation-delay: 1.2s;
+}
+.face-btn.cross {
+  --key: var(--crs);
+  left: 34px;
+  bottom: 0;
+  animation-delay: 2.4s;
+}
+.face-btn.square {
+  --key: var(--sqr);
+  left: 0;
+  top: 34px;
+  animation-delay: 3.6s;
+}
+@keyframes face {
+  0%,
+  30%,
+  100% {
+    color: var(--mute);
+    border-color: var(--line-2);
+    box-shadow: none;
+  }
+  6% {
+    color: var(--key);
+    border-color: color-mix(in srgb, var(--key) 60%, transparent);
+    box-shadow: 0 0 28px -6px var(--key), 0 0 0 4px color-mix(in srgb, var(--key) 10%, transparent);
+  }
+}
+
+/* Product pages */
+.p-hero-art .hero-main,
+.p-hero-art .hero-side {
+  transition: transform 1.2s var(--ease-out), translate 1.2s var(--ease-out);
+}
+.p-hero-art .hero-main {
+  transform: perspective(2000px) rotateX(calc(var(--py, 0) * -1.8deg)) rotateY(calc(var(--px, 0) * 2.6deg));
+}
+.p-hero-art .hero-side {
+  translate: calc(var(--px, 0) * -12px) calc(var(--py, 0) * -8px);
+}
+.toc a[aria-current] {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px var(--line-2) inset;
+}
+.reveal-ready .chapter-art[data-reveal]:not([data-reveal="shown"]) {
+  transform: translate3d(0, 28px, 0) scale(0.985);
+}
+
+/* Depth while scrolling: the smaller pictures drift past the larger ones a little faster. Scroll-driven
+   CSS where the browser has it (nothing at all where it does not); no script runs for it. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .share-host,
+    .share-coop,
+    .live-shot,
+    .bento .b-side,
+    .pr-side > :last-child,
+    .chapter-art.pair .device:nth-child(2) {
+      animation: drift-y linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+    .share-host {
+      --drift: 22px;
+    }
+    .share-coop {
+      --drift: 46px;
+    }
+    .live-shot {
+      --drift: 40px;
+    }
+  }
+}
+@keyframes drift-y {
+  from {
+    translate: 0 var(--drift, 32px);
+  }
+  to {
+    translate: 0 calc(var(--drift, 32px) * -1);
+  }
+}
+
+/* Narrow screens and touch */
+@media (max-width: 760px) {
+  .look-switch {
+    position: static;
+    justify-items: start;
+    margin-top: 26px;
+  }
+  .glyphs {
+    display: none;
+  }
+  .share-frames .toasts {
+    width: 64%;
+    top: calc(26px + 3%);
+  }
+  .toast {
+    padding: 7px 9px;
+    gap: 8px;
+    font-size: 11.5px;
+  }
+  .toast-seat {
+    font-size: 10px;
+  }
+}
+
+/* With reduced motion everything is simply there, in place */
+@media (prefers-reduced-motion: reduce) {
+  .glyphs,
+  .glyph i,
+  .l-title .line,
+  .l-title .line.gradient,
+  .hero-stage-mac .screen::before,
+  .wire::before,
+  .slot.empty .led,
+  .toast,
+  .terminal .caret,
+  .face-btn {
+    animation: none;
+  }
+  .l-title .line {
+    opacity: 1;
+    transform: none;
+  }
+  .hero-stage-mac .screen::before,
+  .wire,
+  .presses {
+    display: none;
+  }
+  .backdrop canvas,
+  .glyph,
+  .stage-tilt,
+  .hero-stage-phone,
+  .toast,
+  .fam::after,
+  .family-card,
+  .p-hero-art .hero-main,
+  .p-hero-art .hero-side {
+    transition: none;
+  }
+}

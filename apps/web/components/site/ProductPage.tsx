@@ -4,10 +4,15 @@ import type { Chapter, Frame, ProductPage as Page, ProductStrings, ShotRef, Tag 
 import type { SiteStrings } from "@/lib/i18n-site";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import "@/app/motion.css";
+import { Backdrop } from "./Backdrop";
 import { Reveal } from "./Reveal";
 import { BrowserFrame, MacFrame, PcFrame, PhoneFrame, Shot } from "./Shot";
 
 type Key = "mac" | "pc" | "phone" | "together";
+
+/** Each product wears one of the launcher's backgrounds; AnyTogether gets Cosmic in party colours. */
+const looks = { mac: "cosmic", pc: "aurora", phone: "sunset", together: "party" } as const;
 
 /** A picture in the frame its device calls for. */
 export function Framed({
@@ -67,32 +72,35 @@ export function ProductPage({
   return (
     <div className={`site product-page is-${which}`}>
       <Reveal />
-      <section className="p-hero">
-        <div className="p-hero-text">
-          <p className="kicker in d1" lang="en">
-            {page.kicker}
-            {page.tag && <TagChip tag={page.tag} s={s} />}
-          </p>
-          <h1 className="p-title in d2">
-            {page.title[0]}
-            <br />
-            <span className="ink-soft">{page.title[1]}</span>
-          </h1>
-          <p className="p-lead in d3">{page.lead}</p>
-          <div className="cta-row in d3">{cta}</div>
-        </div>
-        <div className={`p-hero-art in d4${page.heroSide ? " with-side" : ""}`}>
-          <Framed shot={page.hero} sizes="(max-width: 760px) 100vw, 640px" priority className="hero-main" />
-          {page.heroSide && (
-            <Framed shot={page.heroSide} sizes="(max-width: 760px) 50vw, 300px" className="hero-side" />
-          )}
-        </div>
-      </section>
+      <div className="p-top" data-parallax>
+        <Backdrop look={looks[which]} glyphs="side" gain={0.78} className="p-backdrop" />
+        <section className="p-hero">
+          <div className="p-hero-text">
+            <p className="kicker in d1" lang="en">
+              {page.kicker}
+              {page.tag && <TagChip tag={page.tag} s={s} />}
+            </p>
+            <h1 className="p-title in d2">
+              {page.title[0]}
+              <br />
+              <span className="ink-soft">{page.title[1]}</span>
+            </h1>
+            <p className="p-lead in d3">{page.lead}</p>
+            <div className="cta-row in d3">{cta}</div>
+          </div>
+          <div className={`p-hero-art in d4${page.heroSide ? " with-side" : ""}`}>
+            <Framed shot={page.hero} sizes="(max-width: 760px) 100vw, 640px" priority className="hero-main" />
+            {page.heroSide && (
+              <Framed shot={page.heroSide} sizes="(max-width: 760px) 50vw, 300px" className="hero-side" />
+            )}
+          </div>
+        </section>
+      </div>
 
       <dl className="p-facts" data-reveal>
         {page.facts.map(([value, label]) => (
           <div key={label}>
-            <dt>{value}</dt>
+            <dt data-count="">{value}</dt>
             <dd>{label}</dd>
           </div>
         ))}
@@ -116,7 +124,7 @@ export function ProductPage({
         <ChapterBlock key={chapter.id} chapter={chapter} index={index} s={s} />
       ))}
 
-      <section className="install" id="install" data-reveal>
+      <section className="install" id="install" data-reveal data-spot>
         <div>
           <p className="kicker">{p.installTitle}</p>
           <h2 className="h-section">{page.install.title}</h2>
@@ -150,7 +158,7 @@ export function ProductPage({
         <p className="kicker">{p.family}</p>
         <div className="family-row">
           {others.map((key) => (
-            <Link key={key} href={href[key]} className="family-card">
+            <Link key={key} href={href[key]} className="family-card" data-spot>
               <b>{names[key][0]}</b>
               <span>{names[key][1]}</span>
               <svg viewBox="0 0 24 24" aria-hidden="true" className="ico arrow">

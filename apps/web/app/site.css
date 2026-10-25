@@ -1549,11 +1549,11 @@ summary:focus-visible {
   .family-strip {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-  .fam:nth-child(3) {
+  .fam:nth-of-type(3) {
     padding-left: 0;
     border-left: 0;
   }
-  .fam:nth-child(n + 3) {
+  .fam:nth-of-type(n + 3) {
     border-top: 1px solid var(--line);
   }
   .l-share,
@@ -1694,7 +1694,7 @@ summary:focus-visible {
   }
   .fam,
   .fam + .fam,
-  .fam:nth-child(3) {
+  .fam:nth-of-type(3) {
     padding: 18px 36px 18px 0;
     border-left: 0;
   }
