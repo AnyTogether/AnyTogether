@@ -240,6 +240,28 @@ describe("the gateway", () => {
     friend.socket.close();
   });
 
+  it("tells friends at once when a user stops appearing offline, and nothing while it is on", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    await valkey.set("presence-hidden:u1", "1");
+    const friend = await signedIn("u2", "s2");
+    const me = await signedIn("u1", "s1");
+    me.send({ op: "heartbeat", presence: { state: "in_game", titleId: "PPSA01234" } });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Turned on again from another device: still nothing for friends.
+    await publish("u1", { type: "presence.mode", data: { appearOffline: true } });
+    await me.waitFor((frame) => frame.type === "presence.mode");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(friend.frames.filter((frame) => frame.type === "presence.updated")).toEqual([]);
+    // The API clears the flag and says so: friends hear the game now, not at the next heartbeat.
+    await valkey.del("presence-hidden:u1");
+    await publish("u1", { type: "presence.mode", data: { appearOffline: false } });
+    const heard = await friend.waitFor((frame) => frame.type === "presence.updated");
+    expect(heard.data).toMatchObject({ userId: "u1", state: "in_game", titleId: "PPSA01234" });
+    expect(await me.waitFor((frame) => frame.type === "presence.mode")).toBeTruthy();
+    me.socket.close();
+    friend.socket.close();
+  });
+
   it("merges a user's devices: playing on one wins over online on another", async () => {
     await valkey.sadd("friends:u1", "u2");
     const friend = await signedIn("u2", "s2");

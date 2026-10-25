@@ -29,6 +29,9 @@ export type GatewayEvent =
         share?: SharePresence;
       };
     }
+  /** The user turned appear offline on or off (on any device): their other devices follow, and the
+   *  gateway works their presence out again for friends. */
+  | { type: "presence.mode"; data: { appearOffline: boolean } }
   | { type: "auth.handoff"; data: { handoffId: string; deviceName: string; client: string } }
   | { type: "friend.request"; data: { userId: string; handle: string; displayName: string } }
   | { type: "friend.accepted"; data: { userId: string; handle: string; displayName: string } }
@@ -140,6 +143,6 @@ export const devicePresenceKey = (userId: string, sessionId: string) => `presenc
 export const presenceDevicesKey = (userId: string) => `presence-devices:${userId}`;
 /** A user's presence merged over their devices, kept by the gateway. */
 export const presenceKey = (userId: string) => `presence:${userId}`;
-/** Set (by the API) while a user hides their presence from everyone: the gateway then keeps it to
- *  itself and tells no one. */
+/** Set (by the API) while a user hides their presence from everyone (privacy's presence "nobody",
+ *  or appear offline): the gateway then keeps it to itself and tells no one. */
 export const presenceHiddenKey = (userId: string) => `presence-hidden:${userId}`;

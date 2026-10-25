@@ -6,9 +6,11 @@ import {
   type MetPlayersView,
   MetSettingsUpdate,
   TitleId,
+  devicePresenceKey,
   maxMetList,
   metKeepDays,
   metListDays,
+  presenceDevicesKey,
   presenceKey,
 } from "@anytogether/shared";
 import { and, desc, eq, gt, inArray, or, sql } from "drizzle-orm";
@@ -23,14 +25,23 @@ import { noBlockBetween, people } from "./people.js";
 
 type Ctx = { db: Database; valkey: Redis };
 
-/** The game someone's presence says they are in now, when it is a real title ID. */
+/** The game someone's presence says they are in now, when it is a real title ID. For someone whose
+ *  presence is hidden (appearing offline), no merged presence is kept: their devices' own say. */
 export async function playingNow(valkey: Redis, userId: string) {
-  const kept = await valkey.get(presenceKey(userId));
-  if (!kept) return null;
-  const presence = JSON.parse(kept) as { state?: string; titleId?: string };
-  return presence.state === "in_game" && TitleId.safeParse(presence.titleId).success
-    ? (presence.titleId as string)
-    : null;
+  const merged = await valkey.get(presenceKey(userId));
+  const devices = merged ? [] : await valkey.smembers(presenceDevicesKey(userId));
+  const kept = merged
+    ? [merged]
+    : devices.length
+      ? await valkey.mget(...devices.map((id) => devicePresenceKey(userId, id)))
+      : [];
+  for (const raw of kept) {
+    if (!raw) continue;
+    const presence = JSON.parse(raw) as { state?: string; titleId?: string };
+    if (presence.state === "in_game" && TitleId.safeParse(presence.titleId).success)
+      return presence.titleId as string;
+  }
+  return null;
 }
 
 /** `me` played with `others` (joined their party, share play or game, or was let in on a post):

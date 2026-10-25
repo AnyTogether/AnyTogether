@@ -54,6 +54,7 @@ import {
   localClock,
   maxFamilyMembers,
   notificationSettingsOf,
+  presenceHidden,
   privacyOf,
   privacySections,
   restrictionsOf,
@@ -217,7 +218,12 @@ async function enforceStored(deps: Pick<Deps, "db" | "valkey">, userId: string, 
   };
   if (Object.keys(changes).length)
     await deps.db.update(profiles).set(changes).where(eq(profiles.accountId, userId));
-  await presenceShownChanged(deps, userId, before, privacy);
+  await presenceShownChanged(
+    deps,
+    userId,
+    presenceHidden(before, profile.appearOffline),
+    presenceHidden(privacy, profile.appearOffline),
+  );
 }
 
 /** The checks other routes make for children: each throws `restricted_by_family` when a parent's

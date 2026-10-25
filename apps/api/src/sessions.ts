@@ -2,6 +2,7 @@ import { type Database, accounts, auditLog, profiles, sessions } from "@anytoget
 import type { ClientKind, Tokens } from "@anytogether/shared";
 import {
   ErrorCode,
+  presenceHidden,
   presenceHiddenKey,
   privacyOf,
   revocationsLoadedKey,
@@ -156,7 +157,7 @@ async function tokensFor(
   if (!profile) throw new HttpError(500, ErrorCode.internal, "Account without a profile");
   // Valkey keeps nothing across a restart: every sign-in and refresh tells the gateway again
   // whether this user hides their presence.
-  if (privacyOf(profile.privacy).presence === "nobody")
+  if (presenceHidden(privacyOf(profile.privacy), profile.appearOffline))
     await ctx.valkey.set(presenceHiddenKey(accountId), "1");
   else await ctx.valkey.del(presenceHiddenKey(accountId));
   return {

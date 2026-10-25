@@ -2,7 +2,7 @@ import { accounts, handleHistory, profiles } from "@anytogether/db";
 import {
   ErrorCode,
   HandleChange,
-  type Privacy,
+  PresenceModeUpdate,
   PrivacyUpdate,
   ProfileUpdate,
   friendsKey,
@@ -10,6 +10,7 @@ import {
   handleSkeleton,
   hasLink,
   isReservedHandle,
+  presenceHidden,
   presenceHiddenKey,
   presenceKey,
   privacyOf,
@@ -76,6 +77,7 @@ export function profileRoutes(deps: Deps) {
         ...(await lookOf(db, deps.publicUrl, profile)),
         showcase: profile.showcase,
         rememberMet: profile.rememberMet,
+        appearOffline: profile.appearOffline,
       },
       // What the account may not do now (a mute; a banned account has no session), and its
       // newest appeal.
@@ -152,31 +154,57 @@ export function profileRoutes(deps: Deps) {
   app.patch("/me/privacy", async (c) => {
     const userId = c.get("userId");
     const input = await body(c, PrivacyUpdate);
-    const before = privacyOf((await load(userId)).privacy);
+    const profile = await load(userId);
+    const before = privacyOf(profile.privacy);
     const privacy = privacyOf({ ...before, ...input });
     await mayShow(deps, userId, privacy);
     await db.update(profiles).set({ privacy }).where(eq(profiles.accountId, userId));
-    await presenceShownChanged(deps, userId, before, privacy);
+    await presenceShownChanged(
+      deps,
+      userId,
+      presenceHidden(before, profile.appearOffline),
+      presenceHidden(privacy, profile.appearOffline),
+    );
     return c.json(privacy);
+  });
+
+  /** Appear offline: the account stays signed in and keeps working, but everyone else sees it
+   *  offline. Its other devices hear the change, and so does the gateway. */
+  app.patch("/me/presence", async (c) => {
+    const userId = c.get("userId");
+    const { appearOffline } = await body(c, PresenceModeUpdate);
+    const profile = await load(userId);
+    const privacy = privacyOf(profile.privacy);
+    if (appearOffline !== profile.appearOffline)
+      await db.update(profiles).set({ appearOffline }).where(eq(profiles.accountId, userId));
+    await presenceShownChanged(
+      deps,
+      userId,
+      presenceHidden(privacy, profile.appearOffline),
+      presenceHidden(privacy, appearOffline),
+    );
+    await publish(deps.valkey, userId, { type: "presence.mode", data: { appearOffline } });
+    return c.json({ appearOffline });
   });
 
   return app;
 }
 
-/** After a privacy change: hiding presence takes the account offline for its friends now, showing
- *  it again lets the next heartbeat tell them. */
+/** After a privacy or appear-offline change: hiding presence takes the account offline for its
+ *  friends now; showing it again lets the gateway tell them (at once on `presence.mode`, else at the
+ *  next heartbeat). */
 export async function presenceShownChanged(
   deps: Pick<Deps, "valkey">,
   userId: string,
-  before: Privacy,
-  privacy: Privacy,
+  wasHidden: boolean,
+  hidden: boolean,
 ) {
-  if (privacy.presence === "nobody" && before.presence !== "nobody") {
+  if (hidden && !wasHidden) {
     // Friends see the account go offline now; the gateway keeps quiet from here on.
     await deps.valkey.multi().set(presenceHiddenKey(userId), "1").del(presenceKey(userId)).exec();
     for (const friend of await deps.valkey.smembers(friendsKey(userId)))
       await publish(deps.valkey, friend, { type: "presence.updated", data: { userId, state: "offline" } });
-  } else if (privacy.presence !== "nobody" && before.presence === "nobody") {
+  } else if (!hidden && wasHidden) {
     // The next heartbeat finds no presence kept and tells the friends again.
     await deps.valkey.multi().del(presenceHiddenKey(userId)).del(presenceKey(userId)).exec();
   }

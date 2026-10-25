@@ -9,6 +9,7 @@ import {
   TitleId,
   playingFreshMs,
   playingKey,
+  presenceHiddenKey,
   presenceKey,
   privacyOf,
 } from "@anytogether/shared";
@@ -126,14 +127,18 @@ export function discoverRoutes(
     return result;
   }
 
-  /** Presence of people who show it to everyone. */
+  /** Presence of people who show it to everyone and do not appear offline. */
   async function publicPresence(rows: { account_id: string; privacy: unknown }[]) {
     const shown = rows.filter((r) => privacyOf(r.privacy).presence === "everyone");
-    const kept = shown.length ? await valkey.mget(...shown.map((r) => presenceKey(r.account_id))) : [];
+    const kept = shown.length
+      ? await valkey.mget(
+          ...shown.flatMap((r) => [presenceKey(r.account_id), presenceHiddenKey(r.account_id)]),
+        )
+      : [];
     const result = new Map<string, { state: string; titleId?: string }>();
     shown.forEach((r, index) => {
-      const raw = kept[index];
-      if (!raw) return;
+      const raw = kept[index * 2];
+      if (!raw || kept[index * 2 + 1]) return;
       const { state, titleId } = JSON.parse(raw) as { state: string; titleId?: string };
       result.set(r.account_id, { state, ...(titleId ? { titleId } : {}) });
     });
@@ -323,6 +328,7 @@ export function discoverRoutes(
       join accounts a on a.id = p.account_id and a.status = 'active'
       where p.account_id in ${[...playing.keys()]}
         and coalesce(p.privacy->>'presence', 'friends') = 'everyone'
+        and not p.appear_offline
         and ${noBlockBetween(me, sql`p.account_id`)}`);
     const people = [...rows]
       .map((r) => ({ user: cardOf(r), since: playing.get(r.account_id) ?? null }))

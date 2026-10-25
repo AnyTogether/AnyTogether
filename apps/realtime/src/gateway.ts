@@ -96,6 +96,9 @@ export async function createGateway(options: GatewayOptions) {
     }
     const userId = channel.slice("user:".length);
     for (const connection of byUser.get(userId) ?? []) deliver(connection, message);
+    // Appear offline turned on or off: work the presence out again now (friends hear a return at
+    // once, not at the next heartbeat; while hidden, announce keeps quiet).
+    if (message.includes('"type":"presence.mode"') && byUser.has(userId)) announce(userId).catch(() => {});
   });
 
   /** Replaces the topics a socket watches: only valid ones, at most eight; Valkey is subscribed to a

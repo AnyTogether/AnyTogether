@@ -152,6 +152,9 @@ export const profiles = pgTable(
     accent: text(),
     /** Players met in parties, share plays, game sessions and posts are remembered. */
     rememberMet: boolean().notNull().default(true),
+    /** Appear offline: signed in and working, but friends and everyone else see the account as
+     *  offline (with privacy's presence "nobody", the gateway keeps its presence to itself). */
+    appearOffline: boolean().notNull().default(false),
   },
   (table) => [
     check("bio_length", sql`length(${table.bio}) <= 160`),

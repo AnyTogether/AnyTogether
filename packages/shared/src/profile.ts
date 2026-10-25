@@ -299,3 +299,11 @@ export const PrivacyUpdate = z.object(
     z.ZodOptional<typeof VisibilityValue>
   >,
 );
+
+/** PATCH /me/presence: appear offline (signed in, but shown to everyone as offline) or not. */
+export const PresenceModeUpdate = z.object({ appearOffline: z.boolean() });
+
+/** Whether the gateway keeps a user's presence to itself: their privacy hides it from everyone, or
+ *  they appear offline. */
+export const presenceHidden = (privacy: Privacy, appearOffline: boolean | null | undefined) =>
+  privacy.presence === "nobody" || appearOffline === true;

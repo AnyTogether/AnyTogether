@@ -65,13 +65,14 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
           ),
         )
     ).map((r) => (r.userA === userId ? r.userB : r.userA));
-  /** What the gateway keeps, unless the person hides it from friends. */
+  /** What the gateway keeps, unless the person hides it from friends or appears offline (then they
+   *  look offline, like anyone else who is). */
   const presenceOf = async (people: ProfileRow[], relation: "me" | "friend" | "other") => {
     const kept = people.length ? await deps.valkey.mget(...people.map((p) => presenceKey(p.accountId))) : [];
     return new Map(
       people.map((p, index) => [
         p.accountId,
-        kept[index] && canSee(privacyOf(p.privacy).presence, relation)
+        kept[index] && !p.appearOffline && canSee(privacyOf(p.privacy).presence, relation)
           ? JSON.parse(kept[index] as string)
           : offline,
       ]),
