@@ -33,3 +33,12 @@ describe("the AnyPS5 film", () => {
     expect(matcher.test("/mac")).toBe(true);
   });
 });
+
+describe("the film's files", () => {
+  it("are cached for a day, so a CDN can answer range requests", async () => {
+    const { default: config } = await import("../next.config.mjs");
+    const rules = await config.headers();
+    const media = rules.find((rule: { source: string }) => rule.source === "/media/:path*");
+    expect(media?.headers).toContainEqual({ key: "Cache-Control", value: "public, max-age=86400" });
+  });
+});

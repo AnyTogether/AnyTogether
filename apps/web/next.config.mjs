@@ -23,7 +23,12 @@ export default {
   outputFileTracingRoot: fileURLToPath(new URL("../..", import.meta.url)),
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The film and its pictures: kept for a day, so the CDN in front holds them and answers the
+      // range requests a video player makes (Safari plays nothing without them).
+      { source: "/media/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=86400" }] },
+    ];
   },
   // In development the API runs beside the website; in production the proxy routes /api to it.
   async rewrites() {
