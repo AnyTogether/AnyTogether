@@ -57,4 +57,4 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next({ request, headers: response.headers });
 }
 
-export const config = { matcher: ["/((?!_next/|api/|favicon|sw\\.js).*)"] };
+export const config = { matcher: ["/((?!_next/|api/|media/|favicon|sw\\.js).*)"] };

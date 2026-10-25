@@ -18,6 +18,7 @@ import { LiveBoard, LiveCall, LiveChat, LiveFriends, LivePad, LiveParty, TrophyT
 import { LiveLauncher } from "./LiveLauncher";
 import { LiveShare } from "./LiveShare";
 import { LookSwitch } from "./LookSwitch";
+import { PromoFilm } from "./PromoFilm";
 import { Reveal } from "./Reveal";
 import { Shot } from "./Shot";
 import { wide } from "./fonts";
@@ -150,6 +151,19 @@ export function Landing({
           </dl>
         </section>
       )}
+
+      <section className="l-sec l-film" id="film" aria-labelledby="film-title">
+        <div className="film-head" data-reveal>
+          <h2 className="h-section" id="film-title">
+            {l.film.title}
+          </h2>
+          <p className="s-lead">{l.film.lead}</p>
+        </div>
+        <div className="film-stage" data-reveal>
+          <PromoFilm t={l.film} />
+          <p className="fine-note film-credit">{l.film.credit}</p>
+        </div>
+      </section>
 
       <section className="l-sec l-share" id="share-play">
         <div className="share-head" data-reveal>
