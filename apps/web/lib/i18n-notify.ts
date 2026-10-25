@@ -45,7 +45,8 @@ export const notifyEn = {
     "A mail about unread messages and friend requests while you are away, at most every 6 hours. Message text is never mailed.",
   digestNoEmail: "Your account has no email address to mail.",
   admin: "Admin",
-  adminLead: "Reports, themes, people, bans and the audit log. Every action here is logged with your name.",
+  adminLead:
+    "Reports, appeals, themes, people, bans and the audit log. Every action here is logged with your name.",
   tabReports: "Reports",
   tabPeople: "People",
   tabBans: "Bans",
@@ -210,7 +211,7 @@ export const notifyTr: typeof notifyEn = {
   digestNoEmail: "Hesabında e-posta adresi yok.",
   admin: "Yönetim",
   adminLead:
-    "Şikâyetler, temalar, kişiler, uzaklaştırmalar ve kayıt defteri. Buradaki her işlem senin adınla kaydedilir.",
+    "Şikâyetler, itirazlar, temalar, kişiler, uzaklaştırmalar ve kayıt defteri. Buradaki her işlem senin adınla kaydedilir.",
   tabReports: "Şikâyetler",
   tabPeople: "Kişiler",
   tabBans: "Yasaklar",

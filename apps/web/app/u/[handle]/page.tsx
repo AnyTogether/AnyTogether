@@ -3,6 +3,7 @@ import { FeedList } from "@/components/FeedList";
 import { FriendAction } from "@/components/FriendAction";
 import { Gallery } from "@/components/Gallery";
 import { ProfileMenu } from "@/components/ProfileMenu";
+import { providerName } from "@/lib/connections";
 import { flag } from "@/lib/countries";
 import type { FeedPage } from "@/lib/feed";
 import {
@@ -177,6 +178,23 @@ export default async function UserProfile({ params }: Params) {
             {fill(texts.shareWatchFriend, name)}
             <span className="watch-game">· {presence.share.title ?? presence.share.titleId}</span>
           </Link>
+        )}
+        {profile.connections && profile.connections.length > 0 && (
+          <ul className="badges in d2" aria-label={texts.sectionConnections}>
+            {profile.connections.map((c) => (
+              <li key={c.provider}>
+                <a
+                  href={c.url}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className={`badge-link is-${c.provider}`}
+                >
+                  <span className="provider-mark">{providerName[c.provider]}</span>
+                  {c.name ?? c.username ?? providerName[c.provider]}
+                </a>
+              </li>
+            ))}
+          </ul>
         )}
         <p className={`bio in d3${profile.bio ? "" : " none"}`}>{profile.bio || texts.noBio}</p>
         {games && (

@@ -4,6 +4,7 @@ import { and, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { Deps } from "./app.js";
+import { connectionBadges } from "./connections.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { familyGuard } from "./family.js";
@@ -278,6 +279,7 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
       country: profile.country,
       friendship,
       visible,
+      connections: await connectionBadges(deps.db, profile.accountId),
       ...(visible.presence
         ? { presence: (await presenceOf([profile], relation)).get(profile.accountId) }
         : {}),

@@ -76,6 +76,8 @@ export const defaultLimits = {
   /** Appeals sent by one account, and from one address (an appeal token needs no session). */
   appeal: { max: 3, seconds: 86_400 },
   appealIp: { max: 10, seconds: 86_400 },
+  /** Steam and Discord links started or finished by one account. */
+  connection: { max: 30, seconds: 3600 },
 };
 export type Limits = { [name in keyof typeof defaultLimits]: { max: number; seconds: number } };
 

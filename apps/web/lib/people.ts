@@ -1,3 +1,4 @@
+import type { ConnectionBadge } from "./connections";
 /** People as the API shows them (no tokens or emails ever reach these). */
 export interface Person {
   userId: string;
@@ -73,6 +74,8 @@ export interface Profile extends Person {
   visible?: Record<Section, boolean>;
   /** Only when the viewer may see it. */
   presence?: Presence;
+  /** Linked Steam and Discord accounts the person shows (older API answers have none). */
+  connections?: ConnectionBadge[];
 }
 
 export type Visibility = "everyone" | "friends" | "nobody";

@@ -23,6 +23,9 @@ const mailer = mailerFor(settings.mail);
 console.log(`sign-in mail: ${mailer.kind}`);
 const push = webPushSender(settings.vapid);
 console.log(
+  `linking accounts: Steam${settings.steamApiKey ? " (Web API names)" : ""}${settings.providers.discord.clientId && settings.providers.discord.clientSecret ? ", Discord" : " (Discord off: DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET)"}`,
+);
+console.log(
   `push notifications: ${push ? "on" : "off (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT)"}`,
 );
 // Cloud saves and media only when the server has somewhere to keep them, and it works.
@@ -69,6 +72,7 @@ const app = createApp({
   push,
   githubToken: settings.githubToken,
   ...(files ? { files } : {}),
+  steam: { apiKey: settings.steamApiKey },
 });
 serve({ fetch: app.fetch, port: settings.port }, (info) => console.log(`api listening on ${info.port}`));
 

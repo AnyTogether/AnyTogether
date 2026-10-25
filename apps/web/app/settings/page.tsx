@@ -1,15 +1,17 @@
 import { AvatarEditor } from "@/components/AvatarEditor";
+import { ConnectionList } from "@/components/Connections";
 import { DiscoverySettings } from "@/components/Discover";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
 import { PushSwitch } from "@/components/PushSwitch";
 import { DeleteAccount, HandleForm, PrivacyForm, ProfileForm, SessionList } from "@/components/Settings";
 import { StorageSettings } from "@/components/StorageSettings";
+import { type ConnectionProvider, type ConnectionSetup, providerName } from "@/lib/connections";
 import { countryOptions } from "@/lib/countries";
 import type { Discovery } from "@/lib/discover";
 import { strings, ui } from "@/lib/i18n";
 import type { NoticeSetup } from "@/lib/notify";
-import { type Own, type SignedIn, privacySectionsWithGallery } from "@/lib/people";
+import { type Own, type SignedIn, fill, privacySectionsWithGallery } from "@/lib/people";
 import { apiJson, currentUser } from "@/lib/session";
 import type { StorageOverview } from "@/lib/storage";
 import type { Metadata } from "next";
@@ -19,25 +21,42 @@ export const metadata: Metadata = { title: "Settings · AnyTogether" };
 
 /** The signed-in user's settings: profile, privacy, notifications, passkeys, signed-in devices, their data,
  *  deletion. */
-export default async function Settings() {
-  const [texts, user] = await Promise.all([strings(), currentUser()]);
+export default async function Settings({
+  searchParams,
+}: { searchParams: Promise<{ linked?: string; link_error?: string; provider?: string }> }) {
+  const [texts, user, query] = await Promise.all([strings(), currentUser(), searchParams]);
   if (!user) redirect("/login?next=/settings");
-  const [own, signedIn, keys, notify, discovery, storage] = await Promise.all([
+  const [own, signedIn, keys, notify, discovery, storage, linked] = await Promise.all([
     apiJson<Own>("/me"),
     apiJson<{ sessions: SignedIn[] }>("/auth/sessions"),
     apiJson<{ passkeys: PasskeyRow[]; max: number }>("/auth/passkeys"),
     apiJson<NoticeSetup>("/me/notifications/settings"),
     apiJson<Discovery>("/me/discovery"),
     apiJson<StorageOverview | { enabled: false }>("/me/storage"),
+    apiJson<ConnectionSetup>("/me/connections"),
   ]);
   // Cloud saves and media: shown only when the server keeps files.
   const files = storage.body?.enabled ? storage.body : null;
   if (!own.body) redirect("/login?next=/settings");
   const me = own.body;
   const t = ui(texts);
+  // Back from Steam or Discord: how linking went.
+  const provider = providerName[(query.linked ?? query.provider) as ConnectionProvider] ?? "";
+  const linkNotice = query.linked
+    ? { ok: true, text: fill(texts.linkedNotice, { provider }) }
+    : query.link_error
+      ? {
+          ok: false,
+          text:
+            query.link_error === "cancelled"
+              ? texts.linkCancelled
+              : fill(query.link_error === "taken" ? texts.linkTaken : texts.linkFailed, { provider }),
+        }
+      : null;
   const sections = [
     ["profile", texts.sectionProfile],
     ["privacy", texts.sectionPrivacy],
+    ["connections", texts.sectionConnections],
     ["discovery", texts.sectionDiscovery],
     ["notifications", texts.sectionNotifications],
     ...(files ? ([["storage", texts.sectionStorage]] as const) : []),
@@ -85,6 +104,14 @@ export default async function Settings() {
             {...(files ? { sections: privacySectionsWithGallery } : {})}
           />
         </article>
+
+        {linked.body && (
+          <article className="card" id="connections">
+            <h3 className="sub">{texts.sectionConnections}</h3>
+            <p className="hint section-lead">{texts.connectionsLead}</p>
+            <ConnectionList setup={linked.body} texts={t} notice={linkNotice} />
+          </article>
+        )}
 
         {discovery.body && (
           <article className="card" id="discovery">

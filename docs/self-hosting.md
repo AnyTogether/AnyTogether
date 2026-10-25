@@ -184,7 +184,8 @@ rest.
 | `MAIL_FROM` | api | `.env` | the sender of sign-in and deletion codes |
 | `GOOGLE_CLIENT_IDS` | api | `.env` | Google OAuth client IDs (comma separated) whose ID tokens are accepted; empty turns Google off |
 | `APPLE_CLIENT_IDS` | api | `.env` | Apple Services/App IDs, the same way |
-| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | api | `.env` | a Discord application for "Continue with Discord"; empty turns it off |
+| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | api | `.env` | a Discord application for "Continue with Discord" and for linking Discord to profiles; register `https://<domain>/auth/discord/callback` and `https://<domain>/connections/discord/callback` as its redirects; empty turns both off |
+| `STEAM_WEB_API_KEY` | api | `.env` | optional: the Steam persona name of a linked Steam account from the Web API (linking needs no key; without it the public profile is read) |
 | `WEBAUTHN_RP_NAME` | api | `.env`, `AnyTogether` | the site's name in passkey prompts |
 | `TURN_SECRET` | api (and coturn) | `.env` | the TURN REST secret; empty: no relay credentials |
 | `TURN_URLS` | api | `.env` | STUN/TURN URLs handed to callers, comma separated |

@@ -49,6 +49,10 @@ export const ErrorCode = {
   accountMuted: "account_muted",
   /** An appeal is open already: one at a time. */
   appealOpen: "appeal_open",
+  /** That Steam or Discord account is linked to another AnyTogether account. */
+  connectionTaken: "connection_taken",
+  /** Steam or Discord did not confirm the account (a stale or forged answer, or they are down). */
+  connectionFailed: "connection_failed",
   /** Mail could not be sent now (the mail server refused or could not be reached). */
   mailUnavailable: "mail_unavailable",
   /** A passkey's challenge was used already or is too old: ask for a new one. */

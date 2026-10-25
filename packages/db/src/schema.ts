@@ -159,6 +159,34 @@ export const handleHistory = pgTable(
   (table) => [index().on(table.accountId), index().on(table.skeleton)],
 );
 
+/** Accounts elsewhere linked to the profile (Steam, Discord), shown as badges with their name
+ *  unless hidden. Only who they are is kept: never a token. One AnyTogether account per outside
+ *  account. */
+export const connections = pgTable(
+  "connections",
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** steam | discord */
+    provider: text().notNull(),
+    /** The SteamID64, or the Discord user ID. */
+    externalId: text().notNull(),
+    /** The persona name (Steam) or display name (Discord) when linked; null when unknown. */
+    name: text(),
+    /** Discord's unique username. */
+    username: text(),
+    hidden: boolean().notNull().default(false),
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.provider] }),
+    uniqueIndex("one_account_per_connection").on(table.provider, table.externalId),
+    check("connection_provider", sql`${table.provider} in ('steam', 'discord')`),
+  ],
+);
+
 /** Uploaded avatars, re-encoded to a 256 px JPEG without metadata, served by the hash of their
  *  bytes; only the account's current one is kept. */
 export const avatars = pgTable(

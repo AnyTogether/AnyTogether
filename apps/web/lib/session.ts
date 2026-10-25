@@ -151,3 +151,17 @@ export async function refusedSignIn(body: Record<string, unknown>, status: numbe
   const { appealToken: _token, ...rest } = body;
   return Response.json(rest, { status });
 }
+
+/** Kept for a Discord sign-in's trip to Discord and back: the state and the PKCE verifier. */
+export const discordCookie = "at_discord";
+
+/** A redirect to a path on this site (a relative Location: request.url is the address the server
+ *  listens on, not the site's). */
+export const goTo = (path: string) => new Response(null, { status: 303, headers: { location: path } });
+
+/** The site's public address, for redirect URIs given to Discord: PUBLIC_URL, or as reached. */
+export async function publicOrigin() {
+  if (process.env.PUBLIC_URL) return new URL(process.env.PUBLIC_URL).origin;
+  const { siteOrigin } = await import("./site");
+  return siteOrigin();
+}

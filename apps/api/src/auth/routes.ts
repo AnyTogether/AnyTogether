@@ -43,6 +43,17 @@ export function authRoutes(deps: Deps) {
     app.post(path, signIn);
   app.post("/token", perIp(deps, "token"));
 
+  /** Which provider sign-ins a website or app can offer here, with what they need to start one
+   *  (Discord's client ID, public anyway). Discord needs its client secret set to be offered. */
+  app.get("/providers", (c) => {
+    const discord = deps.providers.discord;
+    return c.json({
+      discord: discord.clientId && discord.clientSecret ? { clientId: discord.clientId } : null,
+      google: deps.providers.google.clientIds.length > 0,
+      apple: deps.providers.apple.clientIds.length > 0,
+    });
+  });
+
   app.post("/email/start", async (c) => {
     const { email } = await body(c, EmailStart);
     const address = email.toLowerCase();

@@ -2,6 +2,7 @@ import { ErrorCode, type PrivacySection, TitleId, privacyOf } from "@anytogether
 import type { Context, Next } from "hono";
 import { Hono } from "hono";
 import type { Deps } from "./app.js";
+import { connectionBadges } from "./connections.js";
 import { HttpError } from "./errors.js";
 import { page, paging, readActivities } from "./feed.js";
 import { libraryOf, trophiesOf, trophyCountsOf } from "./games.js";
@@ -69,6 +70,7 @@ export function publicProfileRoutes(deps: Deps) {
       friendship: "none",
       signedIn: false,
       visible,
+      connections: await connectionBadges(deps.db, profile.accountId),
       ...(visible.trophies ? { trophyCounts: await trophyCountsOf(deps.db, profile.accountId) } : {}),
     });
   });

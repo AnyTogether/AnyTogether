@@ -11,6 +11,7 @@ import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
 import { callRoutes } from "./calls.js";
 import { compatRoutes } from "./compat.js";
+import { connectionRoutes } from "./connections.js";
 import { discoverRoutes } from "./discover.js";
 import { HttpError } from "./errors.js";
 import { familyRoutes, sendFamilySummaries } from "./family.js";
@@ -69,6 +70,9 @@ export interface Deps {
   blobs?: BlobStore;
   /** Cloud saves and media (a folder or an S3 bucket, and the quota); off when left out. */
   files?: FileService;
+  /** Linking Steam accounts: a Web API key for persona names (optional), and how Steam is asked
+   *  (the tests answer themselves). */
+  steam?: { apiKey?: string | undefined; fetch?: typeof fetch };
   /** How GitHub is asked for releases (the tests answer themselves), and a token for more calls. */
   githubFetch?: typeof fetch;
   githubToken?: string;
@@ -138,6 +142,7 @@ export function createApp(deps: Deps) {
   v1.route("/", accountRoutes(deps));
   v1.route("/", notificationRoutes(deps, notes));
   v1.route("/", friendRoutes(deps, notes));
+  v1.route("/", connectionRoutes(deps));
   v1.route("/", gameRoutes(deps));
   v1.route("/", feedRoutes(deps));
   v1.route("/", leaderboardRoutes(deps));

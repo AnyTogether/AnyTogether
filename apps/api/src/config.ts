@@ -53,6 +53,9 @@ export function config(env = process.env) {
     /** Hosts game icons may come from (GAME_ICON_HOSTS); launchers load them for everyone who
      *  sees the game, so none are kept unless set. */
     gameIconHosts: list(env.GAME_ICON_HOSTS).map((host) => host.toLowerCase()),
+    /** Optional: a Steam Web API key, for the persona name of a linked Steam account (without it the
+     *  public profile is read). Linking Discord needs DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET. */
+    steamApiKey: env.STEAM_WEB_API_KEY || undefined,
     /** Optional: a GitHub token, so release checks get more than 60 calls an hour. */
     githubToken: env.GITHUB_TOKEN || undefined,
     /** Domains messages may not link to: the built-in IP loggers unless BLOCKED_LINK_DOMAINS is set

@@ -196,3 +196,121 @@ main.has-banner {
     margin-left: 32px;
   }
 }
+
+/* Linked accounts: Steam and Discord, in the settings and as badges on a profile. */
+.provider-mark {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font: 500 10.5px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+}
+.provider-mark.is-steam,
+.is-steam .provider-mark {
+  background: rgba(102, 192, 244, 0.12);
+  border-color: rgba(102, 192, 244, 0.3);
+  color: #9fd6f7;
+}
+.provider-mark.is-discord,
+.is-discord .provider-mark {
+  background: rgba(88, 101, 242, 0.16);
+  border-color: rgba(88, 101, 242, 0.4);
+  color: #b4bbff;
+}
+.connections .connection {
+  align-items: center;
+}
+.connections .provider-mark {
+  width: 76px;
+}
+.connections .lines {
+  flex: 1;
+  min-width: 0;
+}
+.connections a.name {
+  color: var(--ink);
+  text-decoration: none;
+}
+.connections a.name:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.connections .acts {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.connections .check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  font: 400 13px / 1 inherit;
+  font-family: inherit;
+}
+.connections .check input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  accent-color: var(--a);
+}
+@media (max-width: 560px) {
+  .connections .connection {
+    flex-wrap: wrap;
+  }
+  .connections .acts {
+    width: 100%;
+    justify-content: flex-start;
+    padding-left: 88px;
+  }
+}
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  list-style: none;
+  padding: 0;
+}
+.badge-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.badge-link:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+}
+.badge-link .provider-mark {
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+}
+.provider-sign-in {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+  width: 100%;
+  text-decoration: none;
+}

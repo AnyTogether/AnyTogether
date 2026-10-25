@@ -613,7 +613,7 @@ function AppealItem({
       )}
       {r?.note && <p className="meta">{fill(texts.appealNote, { note: r.note })}</p>}
       <figure className="said">
-        <figcaption className="meta">{texts.appealYour}</figcaption>
+        <figcaption className="meta">{texts.appealTitle}</figcaption>
         <blockquote>{appeal.text}</blockquote>
       </figure>
       {appeal.status === "open" ? (

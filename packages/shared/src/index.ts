@@ -17,3 +17,4 @@ export * from "./compat.js";
 export * from "./discover.js";
 export * from "./family.js";
 export * from "./storage.js";
+export * from "./connections.js";
