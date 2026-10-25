@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import manifest from "../app/manifest";
 import { type LegalBlock, type LegalDoc, legalStrings, legalUiEn, legalUiTr } from "../lib/i18n-legal";
 import { inlineParts } from "../lib/inline";
 import { publicPages } from "../lib/seo";
@@ -66,5 +67,18 @@ describe("texts with links", () => {
   it("take #anchors on the same page as links", () => {
     expect(inlineParts("See [below](#contact).")).toEqual(["See ", { text: "below", href: "#contact" }, "."]);
     expect(inlineParts("[x](#a b)")).toEqual(["[x](#a b)"]);
+  });
+});
+
+describe("the web app manifest", () => {
+  it("installs as a standalone app with any and maskable icons at 192 and 512", () => {
+    const m = manifest();
+    expect(m.display).toBe("standalone");
+    expect(m.start_url).toBe("/");
+    expect(m.scope).toBe("/");
+    expect(m.short_name).toBeTruthy();
+    for (const purpose of ["any", "maskable"])
+      for (const size of ["192x192", "512x512"])
+        expect(m.icons?.some((icon) => icon.purpose === purpose && icon.sizes === size)).toBe(true);
   });
 });

@@ -1,8 +1,53 @@
-/* AnyTogether's service worker: browser notifications only. It caches nothing and never touches
- * the site's requests. */
+/* AnyTogether's service worker: browser notifications, and a page that says "you are offline" when
+ * opening the site (or the installed app) finds no connection. The only thing it caches is that one
+ * static page: never a page of the site, an API answer or anything else of anyone's account. Every
+ * other request goes to the network as if it were not here. */
 
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+const OFFLINE_PAGE = "/offline.html";
+const CACHE = "anytogether-offline-v1";
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => cache.add(new Request(OFFLINE_PAGE, { cache: "reload" })))
+      // Notifications work without the offline page.
+      .catch(() => {})
+      .then(() => self.skipWaiting()),
+  );
+});
+
+self.addEventListener("activate", (event) =>
+  event.waitUntil(
+    (async () => {
+      const names = await caches.keys();
+      await Promise.all(
+        names
+          .filter((name) => name.startsWith("anytogether-") && name !== CACHE)
+          .map((name) => caches.delete(name)),
+      );
+      // The page request starts while the worker wakes up, so having it costs no time.
+      await self.registration.navigationPreload?.enable().catch(() => {});
+      await self.clients.claim();
+    })(),
+  ),
+);
+
+/** Opening a page: the network's answer, always; the offline page only when there is none. */
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  if (request.mode !== "navigate" || request.method !== "GET") return;
+  event.respondWith(
+    (async () => {
+      try {
+        const preloaded = await event.preloadResponse;
+        return preloaded || (await fetch(request));
+      } catch {
+        return (await caches.match(OFFLINE_PAGE)) || Response.error();
+      }
+    })(),
+  );
+});
 
 /** A push from the API: {title, body, url, tag, unread}, already in this device's language. */
 self.addEventListener("push", (event) => {

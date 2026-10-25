@@ -1,6 +1,7 @@
 import { AvatarEditor } from "@/components/AvatarEditor";
 import { ConnectionList } from "@/components/Connections";
 import { DiscoverySettings } from "@/components/Discover";
+import { InstallApp } from "@/components/InstallApp";
 import { LegalLinks } from "@/components/LegalLinks";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
@@ -131,6 +132,8 @@ export default async function Settings({
             </NotificationSettings>
           </article>
         )}
+
+        <InstallApp texts={t} />
 
         {files && (
           <article className="card" id="storage">

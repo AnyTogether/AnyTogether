@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/Avatar";
 import { CallProvider } from "@/components/Calls";
+import { AppWorker, installCatcher } from "@/components/InstallApp";
 import { LiveProvider } from "@/components/Live";
 import { Mark } from "@/components/Mark";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -56,6 +57,10 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(`${proto}://${host}`),
     title: "AnyTogether",
     description,
+    applicationName: "AnyTogether",
+    // Added to an iPhone's or iPad's Home Screen: its own window, its own name, a dark status bar.
+    appleWebApp: { capable: true, title: "AnyTogether", statusBarStyle: "black" },
+    formatDetection: { telephone: false },
     openGraph: { siteName: "AnyTogether", type: "website", title: "AnyTogether", description },
     twitter: { card: "summary_large_image", title: "AnyTogether", description },
   };
@@ -221,6 +226,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <div className="glow" />
         <div className="grid" />
+        {user && (
+          <>
+            {/* biome-ignore lint/security/noDangerouslySetInnerHtml: our own fixed script, before React runs */}
+            <script dangerouslySetInnerHTML={{ __html: installCatcher }} />
+            <AppWorker language={texts.language} />
+          </>
+        )}
         {user ? (
           <LiveProvider me={user.account.id}>
             <CallProvider texts={callStrings(texts)}>{page}</CallProvider>
