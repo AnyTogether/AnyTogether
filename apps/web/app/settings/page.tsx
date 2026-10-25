@@ -4,12 +4,14 @@ import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
 import { PushSwitch } from "@/components/PushSwitch";
 import { DeleteAccount, HandleForm, PrivacyForm, ProfileForm, SessionList } from "@/components/Settings";
+import { StorageSettings } from "@/components/StorageSettings";
 import { countryOptions } from "@/lib/countries";
 import type { Discovery } from "@/lib/discover";
 import { strings, ui } from "@/lib/i18n";
 import type { NoticeSetup } from "@/lib/notify";
-import type { Own, SignedIn } from "@/lib/people";
+import { type Own, type SignedIn, privacySectionsWithGallery } from "@/lib/people";
 import { apiJson, currentUser } from "@/lib/session";
+import type { StorageOverview } from "@/lib/storage";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
@@ -20,13 +22,16 @@ export const metadata: Metadata = { title: "Settings · AnyTogether" };
 export default async function Settings() {
   const [texts, user] = await Promise.all([strings(), currentUser()]);
   if (!user) redirect("/login?next=/settings");
-  const [own, signedIn, keys, notify, discovery] = await Promise.all([
+  const [own, signedIn, keys, notify, discovery, storage] = await Promise.all([
     apiJson<Own>("/me"),
     apiJson<{ sessions: SignedIn[] }>("/auth/sessions"),
     apiJson<{ passkeys: PasskeyRow[]; max: number }>("/auth/passkeys"),
     apiJson<NoticeSetup>("/me/notifications/settings"),
     apiJson<Discovery>("/me/discovery"),
+    apiJson<StorageOverview | { enabled: false }>("/me/storage"),
   ]);
+  // Cloud saves and media: shown only when the server keeps files.
+  const files = storage.body?.enabled ? storage.body : null;
   if (!own.body) redirect("/login?next=/settings");
   const me = own.body;
   const t = ui(texts);
@@ -35,6 +40,7 @@ export default async function Settings() {
     ["privacy", texts.sectionPrivacy],
     ["discovery", texts.sectionDiscovery],
     ["notifications", texts.sectionNotifications],
+    ...(files ? ([["storage", texts.sectionStorage]] as const) : []),
     ["passkeys", texts.sectionPasskeys],
     ["devices", texts.sectionDevices],
     ["data", texts.sectionData],
@@ -73,7 +79,11 @@ export default async function Settings() {
         <article className="card" id="privacy">
           <h3 className="sub">{texts.sectionPrivacy}</h3>
           <p className="hint section-lead">{texts.privacyLead}</p>
-          <PrivacyForm privacy={me.profile.privacy} texts={t} />
+          <PrivacyForm
+            privacy={me.profile.privacy}
+            texts={t}
+            {...(files ? { sections: privacySectionsWithGallery } : {})}
+          />
         </article>
 
         {discovery.body && (
@@ -91,6 +101,14 @@ export default async function Settings() {
             <NotificationSettings setup={notify.body} texts={t}>
               <PushSwitch publicKey={notify.body.push?.publicKey ?? null} texts={t} />
             </NotificationSettings>
+          </article>
+        )}
+
+        {files && (
+          <article className="card" id="storage">
+            <h3 className="sub">{texts.sectionStorage}</h3>
+            <p className="hint section-lead">{texts.storageLead}</p>
+            <StorageSettings initial={files} texts={t} />
           </article>
         )}
 

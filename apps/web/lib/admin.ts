@@ -1,3 +1,4 @@
+import type { MediaItem, MediaKind } from "./storage";
 import type { ThemeColors, ThemeStatus } from "./themes";
 
 /** The admin page's shapes, as the API's /admin routes give them. */
@@ -16,7 +17,7 @@ export interface AdminReport {
   status: "open" | "actioned" | "dismissed";
   reason: string;
   note: string | null;
-  targetKind: "user" | "message" | "theme" | "lfg";
+  targetKind: "user" | "message" | "theme" | "lfg" | "media";
   targetId: string;
   message: { text: string | null; sentAt: string | null; removed: boolean } | null;
   /** A reported looking-for-group post, as it was when reported. */
@@ -34,6 +35,13 @@ export interface AdminReport {
     version: number | null;
     status: AdminThemeStatus | null;
     colors: ThemeColors | null;
+  } | null;
+  /** Reported media: what it is and its state now ("deleted" once gone), with a short link to it. */
+  media?: {
+    id: string;
+    kind: MediaKind | null;
+    status: "active" | "hidden" | "deleted";
+    view: MediaItem | null;
   } | null;
   reporter: AdminPerson | null;
   target: AdminPerson | null;

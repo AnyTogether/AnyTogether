@@ -6,6 +6,7 @@ import { feedEn, feedTr } from "./i18n-feed";
 import { notifyEn, notifyTr } from "./i18n-notify";
 import { shareEn, shareTr } from "./i18n-share";
 import { socialEn, socialTr } from "./i18n-social";
+import { storageEn, storageTr } from "./i18n-storage";
 import { themesEn, themesTr } from "./i18n-themes";
 
 export const languages = ["en", "tr"] as const;
@@ -435,7 +436,8 @@ export type Strings = typeof en &
   typeof themesEn &
   typeof compatEn &
   typeof discoverEn &
-  typeof familyEn;
+  typeof familyEn &
+  typeof storageEn;
 /** What client components get: the same texts (kept as its own name for them). */
 export type UiStrings = Strings;
 export const ui = (texts: Strings): UiStrings => texts;
@@ -458,6 +460,7 @@ export async function strings(): Promise<Strings> {
         ...compatTr,
         ...discoverTr,
         ...familyTr,
+        ...storageTr,
       }
     : {
         ...en,
@@ -469,5 +472,6 @@ export async function strings(): Promise<Strings> {
         ...compatEn,
         ...discoverEn,
         ...familyEn,
+        ...storageEn,
       };
 }

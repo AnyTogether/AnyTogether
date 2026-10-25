@@ -26,6 +26,7 @@ import "./hub.css";
 import "./discover.css";
 import "./site.css";
 import "./pages.css";
+import "./storage.css";
 
 const display = Space_Grotesk({
   subsets: ["latin", "latin-ext"],

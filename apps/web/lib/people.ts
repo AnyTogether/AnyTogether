@@ -60,9 +60,11 @@ export interface Profile extends Person {
 }
 
 export type Visibility = "everyone" | "friends" | "nobody";
-export type PrivacySection = Section | "search";
+export type PrivacySection = Section | "search" | "gallery";
 export type Privacy = Record<PrivacySection, Visibility>;
 export const privacySections: PrivacySection[] = ["library", "trophies", "friends", "presence", "search"];
+/** With cloud storage on, the gallery's setting too. */
+export const privacySectionsWithGallery: PrivacySection[] = [...privacySections, "gallery"];
 
 /** The signed-in user's own account and profile, as GET /me gives them. */
 export interface Own {

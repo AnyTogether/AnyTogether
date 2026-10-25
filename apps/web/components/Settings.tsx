@@ -226,7 +226,15 @@ export function HandleForm({ own, texts }: { own: Own; texts: UiStrings }) {
 const choices: Visibility[] = ["everyone", "friends", "nobody"];
 
 /** One row per part of the profile, each a three-way switch, saved as soon as it moves. */
-export function PrivacyForm({ privacy: initial, texts }: { privacy: Privacy; texts: UiStrings }) {
+export function PrivacyForm({
+  privacy: initial,
+  texts,
+  sections = privacySections,
+}: {
+  privacy: Privacy;
+  texts: UiStrings;
+  sections?: PrivacySection[];
+}) {
   const [privacy, setPrivacy] = useState(initial);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   useSaved(status, setStatus);
@@ -246,9 +254,10 @@ export function PrivacyForm({ privacy: initial, texts }: { privacy: Privacy; tex
 
   return (
     <div className="privacy">
-      {privacySections.map((section) => {
+      {sections.map((section) => {
         const label = texts[`privacy_${section}`];
-        const index = choices.indexOf(privacy[section]);
+        // Older API answers have no gallery setting: friends, as the API defaults it.
+        const index = choices.indexOf(privacy[section] ?? "friends");
         return (
           <fieldset key={section} className="privacy-row">
             <legend>{label}</legend>

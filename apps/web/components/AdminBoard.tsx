@@ -80,7 +80,9 @@ type Action =
   | "reset_bio"
   | "remove_post"
   | "hide_theme"
-  | "publish_theme";
+  | "publish_theme"
+  | "hide_media"
+  | "delete_media";
 const durations: { days: number | null; key: "days1" | "days7" | "days30" | "forGood" }[] = [
   { days: 1, key: "days1" },
   { days: 7, key: "days7" },
@@ -195,6 +197,29 @@ function ReportedTheme({ theme, texts }: { theme: NonNullable<AdminReport["theme
   );
 }
 
+/** Reported media as moderators see it: the picture, clip or voice note itself, and its state. */
+function ReportedMedia({ media, texts }: { media: NonNullable<AdminReport["media"]>; texts: Texts }) {
+  const view = media.view;
+  return (
+    <figure className="said reported-media">
+      {view && view.kind === "image" && <img src={view.thumb ?? view.url} alt="" loading="lazy" />}
+      {view && view.kind === "clip" && (
+        // biome-ignore lint/a11y/useMediaCaption: players' own clips have no captions
+        <video src={view.url} poster={view.poster ?? undefined} controls preload="metadata" />
+      )}
+      {view && view.kind === "voice" && (
+        // biome-ignore lint/a11y/useMediaCaption: a voice note has no captions
+        <audio src={view.url} controls preload="none" />
+      )}
+      <figcaption className="meta">
+        {media.kind ? texts[`kind_${media.kind}`] : texts.kindMedia}
+        {media.status === "hidden" && <span className="flair banned-flag">{texts.mediaNowHidden}</span>}
+        {media.status === "deleted" && <span className="flair banned-flag">{texts.mediaGone}</span>}
+      </figcaption>
+    </figure>
+  );
+}
+
 function ReportItem({
   report,
   texts,
@@ -258,6 +283,18 @@ function ReportItem({
         Boolean(report.theme?.status) &&
         report.theme?.status !== "published",
     },
+    {
+      key: "hide_media",
+      label: texts.acHideMedia,
+      show: report.targetKind === "media" && report.media?.status === "active",
+      danger: true,
+    },
+    {
+      key: "delete_media",
+      label: texts.acDeleteMedia,
+      show: report.targetKind === "media" && report.media?.status !== "deleted",
+      danger: true,
+    },
     { key: "reset_avatar", label: texts.acResetAvatar, show: Boolean(report.target?.avatar) },
     { key: "reset_bio", label: texts.acResetBio, show: Boolean(report.target?.bio) },
   ];
@@ -268,7 +305,9 @@ function ReportItem({
         ? texts.kindTheme
         : report.targetKind === "lfg"
           ? texts.kindPost
-          : texts.kindUser;
+          : report.targetKind === "media"
+            ? texts.kindMedia
+            : texts.kindUser;
   // Putting a theme back is not a punishment: it is confirmed like a warning.
   const gentle = action === "warn" || action === "publish_theme";
   const statusLabel =
@@ -314,6 +353,7 @@ function ReportItem({
         </figure>
       )}
       {report.theme && <ReportedTheme theme={report.theme} texts={texts} />}
+      {report.media && <ReportedMedia media={report.media} texts={texts} />}
       {report.target?.bio && report.targetKind === "user" && <p className="said-bio">{report.target.bio}</p>}
       {report.note && <p className="report-note">“{report.note}”</p>}
       <p className="meta">

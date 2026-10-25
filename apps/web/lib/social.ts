@@ -1,4 +1,5 @@
 import type { Person } from "@/lib/people";
+import type { Attachment, MediaKind } from "@/lib/storage";
 
 /** Messages, parties and calls as the API shows them (the website keeps its own copy of the shapes). */
 export interface Message {
@@ -6,6 +7,11 @@ export interface Message {
   conversationId: string;
   seq: number;
   authorId: string | null;
+  /** text, or one piece of media (older API answers lack it: text). */
+  kind?: "text" | MediaKind;
+  /** The caption alone; `text` is the caption or a stand-in such as "[photo]". */
+  caption?: string | null;
+  attachments?: Attachment[];
   text: string | null;
   replyTo: number | null;
   editedAt: string | null;

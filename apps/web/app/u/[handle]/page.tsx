@@ -1,6 +1,7 @@
 import { Avatar } from "@/components/Avatar";
 import { FeedList } from "@/components/FeedList";
 import { FriendAction } from "@/components/FriendAction";
+import { Gallery } from "@/components/Gallery";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { flag } from "@/lib/countries";
 import type { FeedPage } from "@/lib/feed";
@@ -17,7 +18,8 @@ import {
 import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
 import type { Person, Profile } from "@/lib/people";
-import { apiJson, currentUser } from "@/lib/session";
+import { apiJson, currentUser, publicJson } from "@/lib/session";
+import type { MediaItem, StorageInfo } from "@/lib/storage";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -30,14 +32,17 @@ const clean = (handle: string) => decodeURIComponent(handle).replace(/^@/, "").t
 async function load(handle: string) {
   if (!/^[a-z0-9_.]{1,40}$/.test(handle)) return null;
   const path = `/users/${encodeURIComponent(handle)}`;
-  const [profile, library, trophies, friends, activity] = await Promise.all([
+  const [profile, library, trophies, friends, activity, storage] = await Promise.all([
     apiJson<Profile>(path),
     apiJson<{ games: LibraryGame[] }>(`${path}/library`),
     apiJson<{ trophies: EarnedTrophy[] }>(`${path}/trophies`),
     apiJson<{ friends: Person[] }>(`${path}/friends`),
     apiJson<FeedPage>(`${path}/activity?limit=8`),
+    publicJson<StorageInfo>("/storage"),
   ]);
   if (!profile.body) return null;
+  // The gallery only where the server keeps files; private comes back as 403.
+  const gallery = storage.body?.enabled ? await apiJson<{ items: MediaItem[] }>(`${path}/gallery`) : null;
   return {
     profile: profile.body,
     games: library.status === 403 ? null : (library.body?.games ?? []),
@@ -45,6 +50,12 @@ async function load(handle: string) {
     friends: friends.status === 403 ? null : (friends.body?.friends ?? []),
     // Items the viewer may not see are left out by the API; older API answers have none.
     activity: activity.body?.items ?? [],
+    gallery: gallery
+      ? {
+          items: gallery.status === 403 ? null : (gallery.body?.items ?? []),
+          max: storage.body?.galleryMax ?? 12,
+        }
+      : null,
   };
 }
 
@@ -74,7 +85,7 @@ export default async function UserProfile({ params }: Params) {
   if (!user) redirect(`/login?next=${encodeURIComponent(`/u/${handle}`)}`);
   const loaded = await load(handle);
   if (!loaded) notFound();
-  const { profile, games, trophies, friends, activity } = loaded;
+  const { profile, games, trophies, friends, activity, gallery } = loaded;
   // An old handle still finds the person for 30 days; the address shows the new one.
   if (profile.handle.toLowerCase() !== handle) redirect(`/u/${profile.handle}`);
   const { language } = texts;
@@ -155,6 +166,26 @@ export default async function UserProfile({ params }: Params) {
           <FriendAction profile={profile} texts={ui(texts)} />
         </div>
       </article>
+
+      {gallery && (gallery.items === null || gallery.items.length > 0 || self) && (
+        <article className="card gallery-card in d3">
+          <h3 className="sub">
+            {texts.gallery}{" "}
+            {gallery.items ? <span className="n">{gallery.items.length}</span> : <PrivateTag texts={texts} />}
+          </h3>
+          {gallery.items === null ? (
+            <Private text={fill(texts.privateGallery, name)} />
+          ) : (
+            <Gallery
+              items={gallery.items}
+              mine={self}
+              max={gallery.max}
+              name={profile.displayName}
+              texts={ui(texts)}
+            />
+          )}
+        </article>
+      )}
 
       <article className="card in d3">
         <h3 className="sub">{texts.recentActivity}</h3>

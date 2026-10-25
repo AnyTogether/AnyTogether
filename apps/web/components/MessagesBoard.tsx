@@ -3,6 +3,7 @@
 import { Avatar } from "@/components/Avatar";
 import { CallButton } from "@/components/Calls";
 import { useLive, useLiveEvents } from "@/components/Live";
+import { AttachmentView, MediaViewer, VoiceRecorder } from "@/components/Media";
 import { familyRefusal } from "@/lib/family";
 import type { UiStrings } from "@/lib/i18n";
 import { type Person, fill } from "@/lib/people";
@@ -19,6 +20,16 @@ import {
   typingShownMs,
 } from "@/lib/social";
 import {
+  type MediaItem,
+  type MediaKind,
+  type StorageLimits,
+  formatBytes,
+  kindOfFile,
+  posterOf,
+  uploadMedia,
+} from "@/lib/storage";
+import {
+  type CSSProperties,
   type KeyboardEvent,
   useCallback,
   useEffect,
@@ -36,7 +47,29 @@ interface Pending {
   clientId: string;
   text: string;
   failed: boolean;
+  /** A photo, clip or voice note on its way: uploaded first, then sent. */
+  media?: { kind: MediaKind; file: Blob; preview: string | null; progress: number; durationMs?: number };
 }
+
+/** What the page may send besides text: off when the server keeps no files. */
+export interface MediaSetup {
+  enabled: boolean;
+  limits: StorageLimits["media"] | null;
+}
+
+/** A file picked, dropped or pasted, waiting in the composer for its caption. */
+interface Staged {
+  file: Blob;
+  kind: "image" | "clip";
+  preview: string;
+  name: string;
+}
+
+/** The list's line for a message: its text, or what kind of media it is and its caption. */
+const previewOf = (texts: UiStrings, m: Message) =>
+  m.kind && m.kind !== "text"
+    ? `${texts[`kind_${m.kind}`]}${m.caption ? ` · ${m.caption}` : ""}`
+    : (m.text ?? "");
 
 const byUpdated = (a: Conversation, b: Conversation) => b.updatedAt.localeCompare(a.updatedAt);
 const firstName = (person: Person) => person.displayName.split(" ")[0] || person.handle;
@@ -48,6 +81,25 @@ function typingLine(texts: UiStrings, people: Person[]) {
   if (!b) return fill(texts.typingOne, { name: firstName(a) });
   if (people.length === 2) return fill(texts.typingTwo, { a: firstName(a), b: firstName(b) });
   return texts.typingMany;
+}
+
+/** Why an upload was refused, in the reader's words. */
+function uploadRefusal(
+  texts: UiStrings,
+  status: number,
+  code: string | undefined,
+  limits: MediaSetup["limits"],
+) {
+  const sizes = {
+    image: formatBytes(limits?.image ?? 10 * 1048576, texts.language),
+    clip: formatBytes(limits?.clip ?? 25 * 1048576, texts.language),
+  };
+  if (code === "quota_exceeded") return texts.quotaFull;
+  if (code === "payload_too_large" || status === 413) return fill(texts.tooBigFile, sizes);
+  if (code === "unsupported_media_type" || status === 415) return texts.notMedia;
+  if (code === "bad_media" || code === "bad_image") return texts.badMediaFile;
+  if (code === "storage_disabled") return texts.notMedia;
+  return texts.failed;
 }
 
 /** Why a message was refused, in the reader's words. */
@@ -69,12 +121,14 @@ export function MessagesBoard({
   initialConversations,
   initialSelected,
   friends,
+  media = { enabled: false, limits: null },
 }: {
   texts: UiStrings;
   locale: string;
   initialConversations: Conversation[];
   initialSelected: string | null;
   friends: Person[];
+  media?: MediaSetup;
 }) {
   const { me, status, send: sendFrame } = useLive();
   const [conversations, setConversations] = useState(initialConversations);
@@ -322,6 +376,64 @@ export function MessagesBoard({
       );
   }
 
+  const setPendingMedia = (conversationId: string, clientId: string, change: Partial<Pending>) =>
+    setPending((all) => ({
+      ...all,
+      [conversationId]: (all[conversationId] ?? []).map((p) =>
+        p.clientId === clientId ? { ...p, ...change } : p,
+      ),
+    }));
+
+  /** A photo, clip or voice note: uploaded (its progress shown in the thread), a clip's poster made
+   *  from it, then sent with the caption. */
+  async function sendMedia(
+    conversationId: string,
+    item: { file: Blob; kind: MediaKind; preview: string | null; durationMs?: number },
+    caption: string,
+    clientId = crypto.randomUUID(),
+  ) {
+    setPending((all) => ({
+      ...all,
+      [conversationId]: [
+        ...(all[conversationId] ?? []).filter((p) => p.clientId !== clientId),
+        { clientId, text: caption, failed: false, media: { ...item, progress: 0 } },
+      ],
+    }));
+    const fail = (message: string) => {
+      setPendingMedia(conversationId, clientId, { failed: true });
+      setNotice(message);
+    };
+    const uploaded = await uploadMedia(item.file, item.kind, (progress) =>
+      setPending((all) => ({
+        ...all,
+        [conversationId]: (all[conversationId] ?? []).map((p) =>
+          p.clientId === clientId && p.media ? { ...p, media: { ...p.media, progress } } : p,
+        ),
+      })),
+    );
+    const made = uploaded.body.media;
+    if (!uploaded.ok || !made)
+      return fail(uploadRefusal(texts, uploaded.status, uploaded.body.code, media.limits));
+    if (item.kind === "clip") {
+      const poster = await posterOf(item.file);
+      if (poster)
+        await fetch(`/me/upload/${made.id}/poster`, {
+          method: "PUT",
+          body: poster,
+          headers: { "content-type": "image/jpeg" },
+        }).catch(() => undefined);
+    }
+    const result = await social<Message & { code?: string }>(`conversations/${conversationId}/messages`, {
+      method: "POST",
+      ...json({ clientId, ...(caption ? { text: caption } : {}), attachments: [{ mediaId: made.id }] }),
+    });
+    if (result.ok && result.body) {
+      if (item.preview) URL.revokeObjectURL(item.preview);
+      return take(result.body, true);
+    }
+    fail(refusal(texts, result.status, result.body?.code));
+  }
+
   async function edit(message: Message, text: string) {
     const result = await social<Message & { code?: string }>(
       `conversations/${message.conversationId}/messages/${message.seq}`,
@@ -420,7 +532,9 @@ export function MessagesBoard({
                           ? typingLine(texts, typistsOf(c))
                           : c.lastMessage
                             ? `${c.lastMessage.authorId === me ? `${texts.you}: ` : ""}${
-                                c.lastMessage.deletedAt ? texts.deletedMessage : c.lastMessage.text
+                                c.lastMessage.deletedAt
+                                  ? texts.deletedMessage
+                                  : previewOf(texts, c.lastMessage)
                               }`
                             : fill(texts.membersCount, { n: c.members.length })}
                       </span>
@@ -461,6 +575,10 @@ export function MessagesBoard({
               onBack={() => setSelected(null)}
               onOlder={(before) => loadThread(current.id, before)}
               onSend={(text, clientId) => send(current.id, text, clientId)}
+              media={media}
+              onSendMedia={(item, caption, clientId) => sendMedia(current.id, item, caption, clientId)}
+              onNotice={setNotice}
+              onExpired={() => loadThread(current.id)}
               onEdit={edit}
               onDelete={remove}
               onLeave={() => leave(current)}
@@ -517,7 +635,19 @@ function ThreadView({
   onEdit,
   onDelete,
   onLeave,
+  media,
+  onSendMedia,
+  onNotice,
+  onExpired,
 }: {
+  media: MediaSetup;
+  onSendMedia: (
+    item: { file: Blob; kind: MediaKind; preview: string | null; durationMs?: number },
+    caption: string,
+    clientId?: string,
+  ) => void;
+  onNotice: (notice: string | null) => void;
+  onExpired: () => void;
   texts: UiStrings;
   locale: string;
   me: string;
@@ -536,6 +666,10 @@ function ThreadView({
   onLeave: () => void;
 }) {
   const [editing, setEditing] = useState<Message | null>(null);
+  const [staged, setStaged] = useState<Staged | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [viewing, setViewing] = useState<{ item: MediaItem; mine: boolean } | null>(null);
+  const expiredOnce = useRef(false);
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
   const olderFrom = useRef<number | null>(null);
@@ -547,6 +681,30 @@ function ThreadView({
   const messages = thread?.messages ?? [];
   const group = conversation.kind === "group";
   const others = conversation.members.filter((m) => m.userId !== me);
+  const sizes = {
+    image: formatBytes(media.limits?.image ?? 10 * 1048576, texts.language),
+    clip: formatBytes(media.limits?.clip ?? 25 * 1048576, texts.language),
+  };
+
+  /** A picked, dropped or pasted file into the composer, if it is a photo or clip we can send. */
+  const stage = (file: File | undefined | null) => {
+    if (!file || !media.enabled) return;
+    const kind = kindOfFile(file);
+    if (!kind) return onNotice(texts.notMedia);
+    const cap = media.limits?.[kind] ?? (kind === "image" ? 10 : 25) * 1048576;
+    if (file.size > cap) return onNotice(fill(texts.tooBigFile, sizes));
+    onNotice(null);
+    setStaged((old) => {
+      if (old) URL.revokeObjectURL(old.preview);
+      return { file, kind, preview: URL.createObjectURL(file), name: file.name };
+    });
+  };
+  /** A link that ran out (the page stayed open past its window): the thread is fetched again, once. */
+  const expired = () => {
+    if (expiredOnce.current) return;
+    expiredOnce.current = true;
+    onExpired();
+  };
 
   // Stay at the bottom as messages arrive, unless the reader scrolled up; keep the place when
   // older messages come in above.
@@ -600,13 +758,37 @@ function ThreadView({
       </div>
 
       <div
-        className="messages"
+        className={`messages${dragging ? " dragging" : ""}`}
         ref={scroller}
+        onDragEnter={(event) => {
+          if (media.enabled && event.dataTransfer.types.includes("Files")) setDragging(true);
+        }}
+        onDragOver={(event) => {
+          if (media.enabled && event.dataTransfer.types.includes("Files")) event.preventDefault();
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false);
+        }}
+        onDrop={(event) => {
+          if (!media.enabled) return;
+          event.preventDefault();
+          setDragging(false);
+          stage(event.dataTransfer.files[0]);
+        }}
         onScroll={(event) => {
           const box = event.currentTarget;
           stick.current = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
         }}
       >
+        {dragging && (
+          <div className="drop-hint" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="stroke" aria-hidden="true">
+              <path d="M12 16V4M7 9l5-5 5 5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15" />
+            </svg>
+            <strong>{texts.dropToAdd}</strong>
+            <span>{fill(texts.dropHint, sizes)}</span>
+          </div>
+        )}
         {thread?.more && (
           <button
             type="button"
@@ -643,9 +825,27 @@ function ThreadView({
                   {group && !mine && runStart && (
                     <span className="msg-author">{author?.displayName ?? "?"}</span>
                   )}
-                  <div className={`bubble${message.deletedAt ? " gone" : ""}`}>
-                    {message.deletedAt ? texts.deletedMessage : message.text}
-                  </div>
+                  {!message.deletedAt &&
+                  message.kind &&
+                  message.kind !== "text" &&
+                  message.attachments?.[0] ? (
+                    <div
+                      className={`bubble media-bubble ${message.kind}${message.caption ? " captioned" : ""}`}
+                    >
+                      <AttachmentView
+                        attachment={message.attachments[0]}
+                        texts={texts}
+                        mine={mine}
+                        onOpen={(item) => setViewing({ item, mine })}
+                        onExpired={expired}
+                      />
+                      {message.caption && <p className="caption">{message.caption}</p>}
+                    </div>
+                  ) : (
+                    <div className={`bubble${message.deletedAt ? " gone" : ""}`}>
+                      {message.deletedAt ? texts.deletedMessage : message.text}
+                    </div>
+                  )}
                   {runEnd || message.editedAt ? (
                     <span className="msg-meta">
                       <time dateTime={message.createdAt}>
@@ -663,7 +863,10 @@ function ThreadView({
                     {(close) => (
                       <MessageActions
                         texts={texts}
-                        canEdit={now - Date.parse(message.createdAt) < editWindowMs}
+                        canEdit={
+                          now - Date.parse(message.createdAt) < editWindowMs &&
+                          (!message.kind || message.kind === "text" || Boolean(message.caption))
+                        }
                         onEdit={() => {
                           close();
                           setEditing(message);
@@ -683,11 +886,24 @@ function ThreadView({
         {pending.map((p) => (
           <div key={p.clientId} className="msg mine first">
             <div className="msg-body">
-              <div className={`bubble pending${p.failed ? " failed" : ""}`}>{p.text}</div>
+              {p.media ? (
+                <div className={`bubble media-bubble pending ${p.media.kind}${p.failed ? " failed" : ""}`}>
+                  <PendingMedia media={p.media} texts={texts} failed={p.failed} />
+                  {p.text && <p className="caption">{p.text}</p>}
+                </div>
+              ) : (
+                <div className={`bubble pending${p.failed ? " failed" : ""}`}>{p.text}</div>
+              )}
               {p.failed && (
                 <span className="msg-meta failed">
                   {texts.notSent} ·{" "}
-                  <button type="button" className="link" onClick={() => onSend(p.text, p.clientId)}>
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() =>
+                      p.media ? onSendMedia(p.media, p.text, p.clientId) : onSend(p.text, p.clientId)
+                    }
+                  >
                     {texts.retry}
                   </button>
                 </span>
@@ -715,8 +931,25 @@ function ThreadView({
       <Composer
         key={editing?.seq ?? "new"}
         texts={texts}
-        placeholder={fill(texts.composerPlaceholder, { name })}
+        placeholder={staged ? texts.captionPlaceholder : fill(texts.composerPlaceholder, { name })}
         editing={editing}
+        media={media}
+        staged={staged}
+        onStage={stage}
+        onUnstage={() =>
+          setStaged((old) => {
+            if (old) URL.revokeObjectURL(old.preview);
+            return null;
+          })
+        }
+        onVoice={(recording) => {
+          stick.current = true;
+          onSendMedia(
+            { file: recording.blob, kind: "voice", preview: null, durationMs: recording.durationMs },
+            "",
+          );
+        }}
+        onNotice={onNotice}
         onTyping={onTyping}
         onCancel={() => setEditing(null)}
         onSubmit={async (text) => {
@@ -724,10 +957,53 @@ function ThreadView({
           if (editing) {
             await onEdit(editing, text);
             setEditing(null);
+          } else if (staged) {
+            onSendMedia({ file: staged.file, kind: staged.kind, preview: staged.preview }, text);
+            setStaged(null);
           } else onSend(text);
         }}
       />
+      <MediaViewer
+        item={viewing?.item ?? null}
+        texts={texts}
+        locale={locale}
+        canReport={Boolean(viewing && !viewing.mine)}
+        onClose={() => setViewing(null)}
+      />
     </>
+  );
+}
+
+/** A media message on its way: its picture (or kind) and how far the upload got. */
+function PendingMedia({
+  media,
+  texts,
+  failed,
+}: {
+  media: NonNullable<Pending["media"]>;
+  texts: UiStrings;
+  failed: boolean;
+}) {
+  const percent = Math.round(media.progress * 100);
+  return (
+    <div className={`pending-media ${media.kind}`}>
+      {media.preview && media.kind === "image" ? (
+        <img src={media.preview} alt="" />
+      ) : media.preview && media.kind === "clip" ? (
+        <video src={media.preview} muted playsInline preload="metadata" />
+      ) : (
+        <span className="pending-kind">{texts[`kind_${media.kind}`]}</span>
+      )}
+      {!failed && (
+        <span
+          className="progress-ring"
+          style={{ "--p": percent } as CSSProperties}
+          title={fill(texts.uploading, { p: percent })}
+        >
+          <span>{percent}%</span>
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -735,6 +1011,12 @@ function Composer({
   texts,
   placeholder,
   editing,
+  media,
+  staged,
+  onStage,
+  onUnstage,
+  onVoice,
+  onNotice,
   onTyping,
   onCancel,
   onSubmit,
@@ -742,11 +1024,22 @@ function Composer({
   texts: UiStrings;
   placeholder: string;
   editing: Message | null;
+  media: MediaSetup;
+  staged: Staged | null;
+  onStage: (file: File | null | undefined) => void;
+  onUnstage: () => void;
+  onVoice: (recording: { blob: Blob; durationMs: number }) => void;
+  onNotice: (notice: string | null) => void;
   onTyping: () => void;
   onCancel: () => void;
   onSubmit: (text: string) => Promise<void> | void;
 }) {
-  const [text, setText] = useState(editing?.text ?? "");
+  // A media message's text is its caption (its `text` may be a stand-in like "[photo]").
+  const [text, setText] = useState(
+    editing ? (editing.kind && editing.kind !== "text" ? (editing.caption ?? "") : (editing.text ?? "")) : "",
+  );
+  const [recording, setRecording] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
 
   // Grows with what is typed, up to a few lines.
@@ -764,10 +1057,11 @@ function Composer({
 
   const submit = () => {
     const clean = text.trim();
-    if (!clean || clean.length > 4000) return;
+    if ((!clean && !staged) || clean.length > 4000) return;
     setText("");
     onSubmit(clean);
   };
+  const canAttach = media.enabled && !editing;
   const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
@@ -775,6 +1069,25 @@ function Composer({
     }
     if (event.key === "Escape" && editing) onCancel();
   };
+
+  if (recording)
+    return (
+      <div className="composer">
+        <VoiceRecorder
+          texts={texts}
+          maxMs={media.limits?.voiceMs ?? 60_000}
+          onSend={(made) => {
+            setRecording(false);
+            onVoice(made);
+          }}
+          onCancel={() => setRecording(false)}
+          onError={(message) => {
+            setRecording(false);
+            onNotice(message);
+          }}
+        />
+      </div>
+    );
 
   return (
     <form
@@ -784,6 +1097,26 @@ function Composer({
         submit();
       }}
     >
+      {staged && (
+        <div className="staged">
+          {staged.kind === "image" ? (
+            <img src={staged.preview} alt="" />
+          ) : (
+            <video src={staged.preview} muted playsInline preload="metadata" />
+          )}
+          <span className="lines">
+            <span className="name">{staged.name || texts[`kind_${staged.kind}`]}</span>
+            <span className="meta">
+              {texts[`kind_${staged.kind}`]} · {formatBytes(staged.file.size, texts.language)}
+            </span>
+          </span>
+          <button type="button" className="pill icon" aria-label={texts.removeAttachment} onClick={onUnstage}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+      )}
       {editing && (
         <div className="editing-bar">
           <span>{texts.editing}</span>
@@ -793,6 +1126,31 @@ function Composer({
         </div>
       )}
       <div className="composer-row">
+        {canAttach && (
+          <>
+            <button
+              type="button"
+              className="pill icon attach"
+              aria-label={texts.attach}
+              title={texts.attach}
+              onClick={() => picker.current?.click()}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
+                <path d="M20 11.5l-7.6 7.6a5 5 0 0 1-7.1-7.1l8.3-8.3a3.4 3.4 0 0 1 4.8 4.8l-8.2 8.2a1.7 1.7 0 0 1-2.4-2.4l7.4-7.4" />
+              </svg>
+            </button>
+            <input
+              ref={picker}
+              type="file"
+              hidden
+              accept="image/png,image/jpeg,image/webp,video/mp4"
+              onChange={(event) => {
+                onStage(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+          </>
+        )}
         <textarea
           ref={box}
           rows={1}
@@ -805,11 +1163,36 @@ function Composer({
             if (!editing && event.target.value.trim()) onTyping();
           }}
           onKeyDown={onKey}
+          onPaste={(event) => {
+            if (!canAttach) return;
+            const file = [...event.clipboardData.files].find((f) => kindOfFile(f));
+            if (file) {
+              event.preventDefault();
+              onStage(file);
+            }
+          }}
         />
+        {canAttach && !text.trim() && !staged ? (
+          <button
+            type="button"
+            className="pill icon mic"
+            aria-label={texts.recordVoice}
+            title={texts.recordVoice}
+            onClick={() => {
+              onNotice(null);
+              setRecording(true);
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
+              <rect x="9" y="3.5" width="6" height="11" rx="3" />
+              <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5" />
+            </svg>
+          </button>
+        ) : null}
         <button
           type="submit"
           className="primary send"
-          disabled={!text.trim()}
+          disabled={!text.trim() && !staged}
           aria-label={editing ? texts.save : texts.send}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
