@@ -81,6 +81,8 @@ export interface Deps {
   /** How GitHub is asked for releases (the tests answer themselves), and a token for more calls. */
   githubFetch?: typeof fetch;
   githubToken?: string;
+  /** The backup service's status file, shown on the admin page; none when left out. */
+  backupStatusFile?: string;
 }
 
 export function createApp(deps: Deps) {

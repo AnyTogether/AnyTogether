@@ -5,6 +5,7 @@ import { serve } from "@hono/node-server";
 import { Redis } from "ioredis";
 import { purgeDeletedAccounts } from "./account.js";
 import { createApp } from "./app.js";
+import { lateBackupWarning } from "./backups.js";
 import { config } from "./config.js";
 import { storeFromSettings } from "./fileStore.js";
 import { type FileService, fileService } from "./files.js";
@@ -73,6 +74,7 @@ const app = createApp({
   clientIpHeader: settings.clientIpHeader,
   push,
   githubToken: settings.githubToken,
+  backupStatusFile: settings.backupStatusFile,
   ...(files ? { files } : {}),
   steam: { apiKey: settings.steamApiKey },
 });
@@ -114,6 +116,16 @@ setInterval(
     pruneMeetings(db)
       .then((count) => count && console.log(`forgot ${count} old meeting(s)`))
       .catch((error) => console.error("meeting prune failed", error)),
+  3_600_000,
+);
+
+// Backups that stopped working (no success for two schedule periods) are said in this log too,
+// hourly, in case nobody reads the backup service's own.
+setInterval(
+  () =>
+    lateBackupWarning(settings.backupStatusFile)
+      .then((warning) => warning && console.warn(warning))
+      .catch(() => {}),
   3_600_000,
 );
 

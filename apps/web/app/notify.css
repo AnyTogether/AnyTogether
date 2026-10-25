@@ -306,6 +306,49 @@ span.toggle {
   color: #07080c;
   background: linear-gradient(100deg, #8fb0ff, #d4a6ff);
 }
+/* What the backup service last reported, above the tabs. */
+.admin-backup {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--mute);
+}
+.admin-backup .dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+  transform: translateY(-1px);
+}
+.admin-backup.pending .dot {
+  background: var(--mute);
+}
+.admin-backup.failing {
+  color: var(--ink);
+  border-color: rgba(245, 184, 75, 0.35);
+}
+.admin-backup.failing .dot {
+  background: var(--away);
+}
+.admin-backup.stale {
+  color: var(--ink);
+  border-color: rgba(255, 107, 122, 0.4);
+  background: rgba(255, 107, 122, 0.06);
+}
+.admin-backup.stale .dot {
+  background: var(--danger);
+  box-shadow: 0 0 0 4px rgba(255, 107, 122, 0.18);
+}
+.admin-backup.none {
+  border-style: dashed;
+}
 .admin-bar {
   display: flex;
   justify-content: flex-end;

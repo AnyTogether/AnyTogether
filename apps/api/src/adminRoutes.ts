@@ -29,6 +29,7 @@ import { Hono, type MiddlewareHandler } from "hono";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
 import type { Deps } from "./app.js";
+import { backupReport } from "./backups.js";
 import { cancelEvent, deleteCommunity } from "./communities.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
@@ -855,6 +856,10 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
     const [view] = await appealViews([answered]);
     return c.json({ appeal: view });
   });
+
+  /** What the backup service last reported: when the last backup worked, its size and where it
+   *  went, and whether backups are late (no success for two schedule periods). */
+  app.get("/admin/backups", async (c) => c.json(await backupReport(deps.backupStatusFile)));
 
   /** The audit log, newest first, 50 a page (before = the last ID). */
   app.get("/admin/audit", async (c) => {

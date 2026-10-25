@@ -47,6 +47,18 @@ export const notifyEn = {
   admin: "Admin",
   adminLead:
     "Reports, appeals, themes, people, bans and the audit log. Every action here is logged with your name.",
+  backupOk: "Last backup {when}: {size} to {where}.",
+  backupFailing: "The latest backup failed: {error}. The last good one was {when}.",
+  backupStale:
+    "Backups are late: the last good one was {when}, and one is due every {every}. See the backup service's log.",
+  backupStaleNever: "Backups are late: none has worked since the backup service started. See its log.",
+  backupPending: "The backup service is running; the first backup to {where} comes at its scheduled time.",
+  backupNone: "No backup service reports to this server. docs/self-hosting.md, Backups, sets one up.",
+  agoMinutes: "{n} min ago",
+  agoHours: "{n} h ago",
+  agoDays: "{n} days ago",
+  spanHours: "{n} h",
+  spanDays: "{n} days",
   tabReports: "Reports",
   tabPeople: "People",
   tabBans: "Bans",
@@ -212,6 +224,20 @@ export const notifyTr: typeof notifyEn = {
   admin: "Yönetim",
   adminLead:
     "Şikâyetler, itirazlar, temalar, kişiler, uzaklaştırmalar ve kayıt defteri. Buradaki her işlem senin adınla kaydedilir.",
+  backupOk: "Son yedek {when}: {size}, {where} konumuna.",
+  backupFailing: "Son yedekleme başarısız oldu: {error}. Son başarılı yedek {when}.",
+  backupStale:
+    "Yedekler gecikti: son başarılı yedek {when}, oysa her {every} bir yedek bekleniyor. Yedekleme servisinin kaydına bak.",
+  backupStaleNever:
+    "Yedekler gecikti: yedekleme servisi başladığından beri hiçbir yedek başarılı olmadı. Kaydına bak.",
+  backupPending: "Yedekleme servisi çalışıyor; {where} konumuna ilk yedek planlanan saatte alınacak.",
+  backupNone:
+    "Bu sunucuya rapor veren bir yedekleme servisi yok. docs/self-hosting.md, Backups bölümü kurulumu anlatır.",
+  agoMinutes: "{n} dk önce",
+  agoHours: "{n} sa önce",
+  agoDays: "{n} gün önce",
+  spanHours: "{n} saatte",
+  spanDays: "{n} günde",
   tabReports: "Şikâyetler",
   tabPeople: "Kişiler",
   tabBans: "Yasaklar",

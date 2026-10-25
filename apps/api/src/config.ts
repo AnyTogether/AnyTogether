@@ -83,6 +83,9 @@ export function config(env = process.env) {
       saveMaxBytes: megabytes(env.SAVE_MAX_MB, 50),
       urlSecret: env.FILE_LINK_SECRET || undefined,
     },
+    /** What the backup service last did (deploy/compose.yaml's backup-state volume), for the admin
+     *  page and a log line when backups are late; empty: not looked at. */
+    backupStatusFile: env.BACKUP_STATUS_FILE ?? "",
     blockedLinkDomains:
       env.BLOCKED_LINK_DOMAINS === undefined
         ? defaultBlockedLinkDomains
