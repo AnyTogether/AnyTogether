@@ -995,3 +995,143 @@ svg.hang-up {
     animation: none;
   }
 }
+
+/* Pinned and muted marks beside a conversation's time */
+.when .marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.when .marks svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2;
+  color: var(--mute);
+}
+
+/* Reactions under a bubble: a chip per reaction, mine lit */
+.reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: -2px;
+}
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1;
+  transition: transform 0.12s cubic-bezier(0.2, 0.7, 0.2, 1), background 0.15s ease, border-color 0.15s ease;
+}
+.reaction:active {
+  transform: scale(0.94);
+}
+.reaction b {
+  font: 500 11px / 1 var(--font-mono), monospace;
+  color: var(--mute);
+}
+.reaction.on {
+  background: rgba(79, 124, 255, 0.18);
+  border-color: rgba(143, 176, 255, 0.45);
+}
+.reaction.on b {
+  color: var(--ink);
+}
+.reaction .gg,
+.react-choice.gg {
+  font: 700 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.04em;
+}
+
+/* The row of reactions at the top of a message's menu */
+.react-row {
+  display: flex;
+  gap: 2px;
+  margin: 0 0 4px;
+  padding: 0 0 6px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+}
+.react-choice {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--ink);
+  transition: transform 0.12s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.react-choice:hover,
+.react-choice:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px) scale(1.08);
+  outline: none;
+}
+.react-choice.on {
+  background: rgba(79, 124, 255, 0.2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reaction,
+  .react-choice {
+    transition: none;
+  }
+  .react-choice:hover {
+    transform: none;
+  }
+}
+
+/* The message a reply answers */
+.reply-quote {
+  display: grid;
+  gap: 2px;
+  max-width: 100%;
+  padding: 4px 10px;
+  border-left: 2px solid rgba(143, 176, 255, 0.5);
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--mute);
+}
+.reply-quote b {
+  font: 500 11px / 1.2 var(--font-mono), monospace;
+  color: var(--ink);
+}
+.reply-quote span {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.reply-quote .gone {
+  font-style: italic;
+}
+.replying-bar {
+  color: #8fb0ff;
+}
+.replying-bar .lines {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.replying-bar .quote-text {
+  font: 400 13px / 1.3 var(--font-display), system-ui, sans-serif;
+  color: var(--mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Sent, delivered, read */
+.receipt.read,
+.receipt.seen {
+  color: #8fb0ff;
+}

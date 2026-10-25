@@ -13,6 +13,7 @@ import {
   PresenceModeForm,
   PrivacyForm,
   ProfileForm,
+  ReadReceiptsForm,
   SessionList,
 } from "@/components/Settings";
 import { StorageSettings } from "@/components/StorageSettings";
@@ -127,6 +128,7 @@ export default async function Settings({
         <article className="card" id="privacy">
           <h3 className="sub">{texts.sectionPrivacy}</h3>
           <PresenceModeForm appearOffline={me.profile.appearOffline === true} texts={t} />
+          <ReadReceiptsForm readReceipts={me.profile.readReceipts !== false} texts={t} />
           <hr />
           <p className="hint section-lead">{texts.privacyLead}</p>
           <PrivacyForm

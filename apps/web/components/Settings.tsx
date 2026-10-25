@@ -285,6 +285,60 @@ export function PresenceModeForm({
   );
 }
 
+/** Read receipts on or off: saved as soon as it moves, following a change made on another device. */
+export function ReadReceiptsForm({
+  readReceipts: initial,
+  texts,
+}: { readReceipts: boolean; texts: UiStrings }) {
+  const [on, setOn] = useState(initial);
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  useSaved(status, setStatus);
+  useLiveEvents((event) => {
+    const value = (event.data as { readReceipts?: unknown } | null)?.readReceipts;
+    if (event.type === "messages.settings" && typeof value === "boolean") setOn(value);
+  });
+
+  async function change(value: boolean) {
+    if (value === on) return;
+    setOn(value);
+    setStatus({ kind: "busy" });
+    const saved = await send("/me/read-receipts", json("PATCH", { readReceipts: value }));
+    if (!saved.ok) {
+      setOn(!value);
+      return setStatus({ kind: "error", text: errorText(saved.body.code, texts) });
+    }
+    setOn(saved.body.readReceipts !== false);
+    setStatus({ kind: "saved" });
+  }
+
+  return (
+    <div className="privacy presence-mode">
+      <fieldset className="privacy-row">
+        <legend>{texts.readReceipts}</legend>
+        <div className="segmented two" style={{ "--i": on ? 0 : 1 } as CSSProperties}>
+          <span className="thumb" aria-hidden="true" />
+          {([true, false] as const).map((choice) => (
+            <label key={String(choice)}>
+              <input
+                type="radio"
+                name="read-receipts"
+                value={choice ? "on" : "off"}
+                checked={on === choice}
+                onChange={() => change(choice)}
+              />
+              <span>{choice ? texts.readReceiptsOn : texts.readReceiptsOff}</span>
+            </label>
+          ))}
+        </div>
+        <p className="meta hint-line">{texts.readReceiptsHint}</p>
+      </fieldset>
+      <div className="save-row">
+        <StatusLine status={status} texts={texts} />
+      </div>
+    </div>
+  );
+}
+
 const choices: Visibility[] = ["everyone", "friends", "nobody"];
 
 /** One row per part of the profile, each a three-way switch, saved as soon as it moves. */

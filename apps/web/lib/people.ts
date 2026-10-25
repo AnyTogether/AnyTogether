@@ -110,6 +110,7 @@ export interface Own {
     trophyLevel?: TrophyLevel;
     rememberMet?: boolean;
     appearOffline?: boolean;
+    readReceipts?: boolean;
   };
 }
 

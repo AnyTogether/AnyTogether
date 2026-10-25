@@ -15,8 +15,26 @@ export interface Message {
   text: string | null;
   replyTo: number | null;
   editedAt: string | null;
+  /** How often it was edited, and who reacted with what (older API answers lack them). */
+  editCount?: number;
+  reactions?: Reaction[];
   deletedAt: string | null;
   createdAt: string;
+}
+
+export type MessageReaction = "like" | "love" | "laugh" | "wow" | "sad" | "fire" | "gg";
+export interface Reaction {
+  reaction: MessageReaction;
+  count: number;
+  userIds: string[];
+}
+
+/** How far another member has got: readSeq null unless both share read receipts; deliveredSeq only
+ *  in a direct conversation. */
+export interface ReceiptMark {
+  userId: string;
+  readSeq: number | null;
+  deliveredSeq: number | null;
 }
 
 export interface Conversation {
@@ -33,6 +51,9 @@ export interface Conversation {
   /** A community's chat: its members come and go with the community (older API answers lack it). */
   communityId?: string | null;
   muted?: boolean;
+  /** Older API answers lack these. */
+  pinned?: boolean;
+  receipts?: ReceiptMark[];
 }
 
 export interface PartyMember extends Person {
@@ -125,6 +146,9 @@ export const maxGroupMembers = 32;
 export const typingEveryMs = 2500;
 export const typingShownMs = 5000;
 export const editWindowMs = 15 * 60_000;
+/** How often a message may be edited, and how many conversations one keeps pinned. */
+export const maxMessageEdits = 20;
+export const maxPinnedConversations = 5;
 
 /** The name of a conversation: its title, the other person, or the others' first names. */
 export function conversationName(conversation: Conversation, me: string) {

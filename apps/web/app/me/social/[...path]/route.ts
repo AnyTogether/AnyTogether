@@ -5,6 +5,7 @@ const id = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const seq = "[0-9]{1,15}";
 const title = "[A-Z]{4}[0-9]{5}";
 const joinCode = "[A-HJ-NP-Z2-9]{8}";
+const reaction = "(like|love|laugh|wow|sad|fire|gg)";
 
 /** The API paths the messages, party, join, watch, notification and Find players pages may reach
  *  through here, by method; nothing else passes, and only these query parameters. */
@@ -37,7 +38,7 @@ const allowed: Record<string, RegExp[]> = {
   ],
   POST: [
     /^conversations$/,
-    new RegExp(`^conversations/${id}/(messages|read|members)$`),
+    new RegExp(`^conversations/${id}/(messages|read|delivered|members)$`),
     /^parties$/,
     new RegExp(`^parties/${id}/(invites|join|decline|leave|kick|leader|code)$`),
     // Asking to join with a join code (the page that shows it reads it on the server).
@@ -67,12 +68,14 @@ const allowed: Record<string, RegExp[]> = {
   ],
   PUT: [
     /^me\/showcase$/,
-    new RegExp(`^conversations/${id}/mute$`),
+    new RegExp(`^conversations/${id}/(mute|pin)$`),
+    new RegExp(`^conversations/${id}/messages/${seq}/reactions/${reaction}$`),
     new RegExp(`^communities/${id}/members/${id}/role$`),
     new RegExp(`^events/${id}/rsvp$`),
   ],
   DELETE: [
     new RegExp(`^conversations/${id}/messages/${seq}$`),
+    new RegExp(`^conversations/${id}/messages/${seq}/reactions/${reaction}$`),
     new RegExp(`^conversations/${id}/members/${id}$`),
     new RegExp(`^lfg/${id}$`),
     new RegExp(`^(lfg|parties|share-plays)/${id}/requests/me$`),

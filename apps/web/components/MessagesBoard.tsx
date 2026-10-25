@@ -4,16 +4,29 @@ import { Avatar } from "@/components/Avatar";
 import { CallButton } from "@/components/Calls";
 import { useLive, useLiveEvents } from "@/components/Live";
 import { AttachmentView, MediaViewer, VoiceRecorder } from "@/components/Media";
+import {
+  byPinnedThenUpdated,
+  canEditMessage,
+  glyphOf,
+  hasReacted,
+  reactions as reactionChoices,
+  reactionLabel,
+  receiptOf,
+  replyTarget,
+  withEvent,
+  withReactions,
+} from "@/lib/chat";
 import { familyRefusal } from "@/lib/family";
 import type { UiStrings } from "@/lib/i18n";
 import { type Person, fill } from "@/lib/people";
 import {
   type Conversation,
   type Message,
+  type MessageReaction,
   conversationName,
-  editWindowMs,
   json,
   maxGroupMembers,
+  maxPinnedConversations,
   shortTime,
   social,
   typingEveryMs,
@@ -48,6 +61,7 @@ interface Pending {
   clientId: string;
   text: string;
   failed: boolean;
+  replyTo?: number;
   /** A photo, clip or voice note on its way: uploaded first, then sent. */
   media?: { kind: MediaKind; file: Blob; preview: string | null; progress: number; durationMs?: number };
 }
@@ -72,7 +86,7 @@ const previewOf = (texts: UiStrings, m: Message) =>
     ? `${texts[`kind_${m.kind}`]}${m.caption ? ` · ${m.caption}` : ""}`
     : (m.text ?? "");
 
-const byUpdated = (a: Conversation, b: Conversation) => b.updatedAt.localeCompare(a.updatedAt);
+const byUpdated = byPinnedThenUpdated;
 const firstName = (person: Person) => person.displayName.split(" ")[0] || person.handle;
 
 /** "Ayşe is typing…", "Ayşe and Mert are typing…", "Several people are typing…". */
@@ -144,6 +158,10 @@ export function MessagesBoard({
   const [now, setNow] = useState(() => Date.now());
   const threadsRef = useRef(threads);
   threadsRef.current = threads;
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
 
   const current = conversations.find((c) => c.id === selected) ?? null;
 
@@ -292,11 +310,18 @@ export function MessagesBoard({
           const lastSeq = Math.max(c.lastSeq, message.seq);
           const readSeq = message.authorId === me ? Math.max(c.readSeq, message.seq) : c.readSeq;
           const newest = !c.lastMessage || message.seq >= c.lastMessage.seq;
+          // Writing reads everything; someone else's new message adds one.
+          const unread =
+            message.authorId === me
+              ? 0
+              : created && message.seq > c.lastSeq && message.seq > readSeq
+                ? c.unread + 1
+                : c.unread;
           return {
             ...c,
             lastSeq,
             readSeq,
-            unread: Math.max(0, lastSeq - readSeq),
+            unread,
             lastMessage: newest ? message : c.lastMessage,
             updatedAt: created ? message.createdAt : c.updatedAt,
           };
@@ -310,9 +335,49 @@ export function MessagesBoard({
 
   useLiveEvents((event) => {
     switch (event.type) {
-      case "message.created":
+      case "message.created": {
         if (event.data.authorId) stopTyping(event.data.conversationId, event.data.authorId);
-        return take(event.data as Message, true);
+        take(event.data as Message, true);
+        // It reached this device: the sender of a direct message sees it delivered (an open thread
+        // in view reads it instead, which says as much).
+        const from = conversationsRef.current.find((c) => c.id === event.data.conversationId);
+        const looking = selectedRef.current === event.data.conversationId && !document.hidden;
+        if (event.data.authorId !== me && from?.kind === "direct" && !looking)
+          social(`conversations/${event.data.conversationId}/delivered`, {
+            method: "POST",
+            ...json({ upToSeq: event.data.seq }),
+          });
+        return;
+      }
+      case "message.reactions": {
+        const data = event.data as {
+          conversationId: string;
+          seq: number;
+          reactions: Message["reactions"] & {};
+        };
+        setThreads((all) => {
+          const thread = all[data.conversationId];
+          if (!thread) return all;
+          return {
+            ...all,
+            [data.conversationId]: {
+              ...thread,
+              messages: thread.messages.map((m) => withReactions(m, data)),
+            },
+          };
+        });
+        setConversations((all) =>
+          all.map((c) =>
+            c.id === data.conversationId && c.lastMessage
+              ? { ...c, lastMessage: withReactions(c.lastMessage, data) }
+              : c,
+          ),
+        );
+        return;
+      }
+      case "conversation.delivered":
+        setConversations((all) => all.map((c) => withEvent(c, event, me)));
+        return;
       case "typing":
         if (event.data.userId === me) return;
         setTyping((all) => ({
@@ -324,17 +389,16 @@ export function MessagesBoard({
         }));
         return;
       case "message.updated":
-      case "message.deleted":
         return take(event.data as Message, false);
+      case "message.deleted": {
+        take(event.data as Message, false);
+        // An unread message taken back: the server counts again.
+        const from = conversationsRef.current.find((c) => c.id === event.data.conversationId);
+        if (from && event.data.authorId !== me && event.data.seq > from.readSeq) reloadList();
+        return;
+      }
       case "conversation.read":
-        if (event.data.userId === me)
-          setConversations((all) =>
-            all.map((c) =>
-              c.id === event.data.conversationId
-                ? { ...c, readSeq: event.data.upToSeq, unread: Math.max(0, c.lastSeq - event.data.upToSeq) }
-                : c,
-            ),
-          );
+        setConversations((all) => all.map((c) => withEvent(c, event, me)));
         return;
       case "conversation.updated":
         if (event.data.removed && event.data.conversationId === selected) setSelected(null);
@@ -351,18 +415,23 @@ export function MessagesBoard({
     if (current && current.unread > 0) markRead();
   }, [current, markRead]);
 
-  async function send(conversationId: string, text: string, clientId = crypto.randomUUID()) {
+  async function send(
+    conversationId: string,
+    text: string,
+    clientId = crypto.randomUUID(),
+    replyTo?: number,
+  ) {
     setPending((all) => ({
       ...all,
       [conversationId]: [
         ...(all[conversationId] ?? []).filter((p) => p.clientId !== clientId),
-        { clientId, text, failed: false },
+        { clientId, text, failed: false, ...(replyTo ? { replyTo } : {}) },
       ],
     }));
     lastTyped.current[conversationId] = 0;
     const result = await social<Message & { code?: string }>(`conversations/${conversationId}/messages`, {
       method: "POST",
-      ...json({ clientId, text }),
+      ...json({ clientId, text, ...(replyTo ? { replyTo } : {}) }),
     });
     if (result.ok && result.body) return take(result.body, true);
     setPending((all) => ({
@@ -441,9 +510,57 @@ export function MessagesBoard({
       { method: "PATCH", ...json({ text }) },
     );
     if (result.ok && result.body) take(result.body, false);
+    else if (result.body?.code === "edit_limit") setNotice(texts.editLimit);
     else
       setNotice(
         refusal(texts, result.status, result.body?.code, (result.body as { side?: string } | null)?.side),
+      );
+  }
+
+  /** A reaction on or off, as the reader has it now. */
+  async function react(message: Message, name: MessageReaction) {
+    const on = !hasReacted(message, name, me);
+    const result = await social<
+      { conversationId: string; seq: number; reactions: Message["reactions"] & {} } & {
+        code?: string;
+      }
+    >(`conversations/${message.conversationId}/messages/${message.seq}/reactions/${name}`, {
+      method: on ? "PUT" : "DELETE",
+    });
+    if (result.ok && result.body) {
+      const data = result.body;
+      setThreads((all) => {
+        const thread = all[message.conversationId];
+        if (!thread) return all;
+        return {
+          ...all,
+          [message.conversationId]: {
+            ...thread,
+            messages: thread.messages.map((m) => withReactions(m, data)),
+          },
+        };
+      });
+    } else
+      setNotice(
+        refusal(texts, result.status, result.body?.code, (result.body as { side?: string } | null)?.side),
+      );
+  }
+
+  /** Pin or mute: the conversation as the API answers, the list in order again. */
+  async function setting(conversation: Conversation, change: "pin" | "mute", value: boolean) {
+    const result = await social<Conversation & { code?: string }>(
+      `conversations/${conversation.id}/${change}`,
+      {
+        method: "PUT",
+        ...json(change === "pin" ? { pinned: value } : { muted: value }),
+      },
+    );
+    if (result.ok && result.body) {
+      const changed = result.body;
+      setConversations((all) => all.map((c) => (c.id === changed.id ? changed : c)).sort(byUpdated));
+    } else
+      setNotice(
+        result.body?.code === "full" ? fill(texts.pinFull, { max: maxPinnedConversations }) : texts.failed,
       );
   }
 
@@ -451,7 +568,11 @@ export function MessagesBoard({
     const result = await social(`conversations/${message.conversationId}/messages/${message.seq}`, {
       method: "DELETE",
     });
-    if (result.ok) take({ ...message, text: null, deletedAt: new Date().toISOString() }, false);
+    if (result.ok)
+      take(
+        { ...message, text: null, attachments: [], reactions: [], deletedAt: new Date().toISOString() },
+        false,
+      );
     else setNotice(texts.failed);
   }
 
@@ -534,14 +655,36 @@ export function MessagesBoard({
                           : c.lastMessage
                             ? `${c.lastMessage.authorId === me ? `${texts.you}: ` : ""}${
                                 c.lastMessage.deletedAt
-                                  ? texts.deletedMessage
+                                  ? texts.removedMessage
                                   : previewOf(texts, c.lastMessage)
                               }`
                             : fill(texts.membersCount, { n: c.members.length })}
                       </span>
                     </span>
                     <span className="when">
-                      {c.lastMessage && <time>{shortTime(c.lastMessage.createdAt, now, locale)}</time>}
+                      <span className="marks">
+                        {c.muted && (
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="stroke"
+                            role="img"
+                            aria-label={texts.mutedLabel}
+                          >
+                            <path d="M11 5 6 9H3v6h3l5 4zM16 9l5 6M21 9l-5 6" />
+                          </svg>
+                        )}
+                        {c.pinned && (
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="stroke"
+                            role="img"
+                            aria-label={texts.pinnedLabel}
+                          >
+                            <path d="M9 4h6l-1 6 3 3H7l3-3zM12 13v7" />
+                          </svg>
+                        )}
+                        {c.lastMessage && <time>{shortTime(c.lastMessage.createdAt, now, locale)}</time>}
+                      </span>
                       {c.unread > 0 && <b className="badge">{c.unread > 99 ? "99+" : c.unread}</b>}
                     </span>
                   </button>
@@ -575,7 +718,9 @@ export function MessagesBoard({
               onTyping={() => typed(current.id)}
               onBack={() => setSelected(null)}
               onOlder={(before) => loadThread(current.id, before)}
-              onSend={(text, clientId) => send(current.id, text, clientId)}
+              onSend={(text, clientId, replyTo) => send(current.id, text, clientId, replyTo)}
+              onReact={react}
+              onSetting={(change, value) => setting(current, change, value)}
               media={media}
               onSendMedia={(item, caption, clientId) => sendMedia(current.id, item, caption, clientId)}
               onNotice={setNotice}
@@ -636,11 +781,15 @@ function ThreadView({
   onEdit,
   onDelete,
   onLeave,
+  onReact,
+  onSetting,
   media,
   onSendMedia,
   onNotice,
   onExpired,
 }: {
+  onReact: (message: Message, name: MessageReaction) => Promise<void>;
+  onSetting: (change: "pin" | "mute", value: boolean) => Promise<void>;
   media: MediaSetup;
   onSendMedia: (
     item: { file: Blob; kind: MediaKind; preview: string | null; durationMs?: number },
@@ -661,12 +810,13 @@ function ThreadView({
   onTyping: () => void;
   onBack: () => void;
   onOlder: (before: number) => Promise<void>;
-  onSend: (text: string, clientId?: string) => void;
+  onSend: (text: string, clientId?: string, replyTo?: number) => void;
   onEdit: (message: Message, text: string) => Promise<void>;
   onDelete: (message: Message) => Promise<void>;
   onLeave: () => void;
 }) {
   const [editing, setEditing] = useState<Message | null>(null);
+  const [replying, setReplying] = useState<Message | null>(null);
   const [staged, setStaged] = useState<Staged | null>(null);
   const [dragging, setDragging] = useState(false);
   const [viewing, setViewing] = useState<{ item: MediaItem; mine: boolean } | null>(null);
@@ -681,6 +831,12 @@ function ThreadView({
   );
   const messages = thread?.messages ?? [];
   const group = conversation.kind === "group";
+  const names = useMemo(
+    () => new Map(conversation.members.map((m) => [m.userId, m.userId === me ? texts.you : m.displayName])),
+    [conversation.members, me, texts.you],
+  );
+  // The receipt shows under one's newest message only.
+  const lastMine = [...messages].reverse().find((m) => m.authorId === me && !m.deletedAt)?.seq;
   const others = conversation.members.filter((m) => m.userId !== me);
   const sizes = {
     image: formatBytes(media.limits?.image ?? 10 * 1048576, texts.language),
@@ -746,21 +902,24 @@ function ThreadView({
             {texts.communities}
           </Link>
         )}
-        {group && !conversation.communityId && (
-          <Menu label={texts.conversationOptions}>
-            {(close) => (
-              <Confirm
-                texts={texts}
-                question={fill(texts.confirmLeaveGroup, { name })}
-                action={texts.leaveGroup}
-                onConfirm={() => {
-                  close();
-                  onLeave();
-                }}
-              />
-            )}
-          </Menu>
-        )}
+        <Menu label={texts.conversationOptions}>
+          {(close) => (
+            <ConversationActions
+              texts={texts}
+              conversation={conversation}
+              name={name}
+              canLeave={group && !conversation.communityId}
+              onSetting={(change, value) => {
+                close();
+                onSetting(change, value);
+              }}
+              onLeave={() => {
+                close();
+                onLeave();
+              }}
+            />
+          )}
+        </Menu>
       </div>
 
       <div
@@ -822,6 +981,9 @@ function ThreadView({
                   {group && !mine && runStart && (
                     <span className="msg-author">{author?.displayName ?? "?"}</span>
                   )}
+                  {!message.deletedAt && message.replyTo ? (
+                    <ReplyQuote texts={texts} names={names} target={replyTarget(messages, message.replyTo)} />
+                  ) : null}
                   {!message.deletedAt &&
                   message.kind &&
                   message.kind !== "text" &&
@@ -840,10 +1002,30 @@ function ThreadView({
                     </div>
                   ) : (
                     <div className={`bubble${message.deletedAt ? " gone" : ""}`}>
-                      {message.deletedAt ? texts.deletedMessage : message.text}
+                      {message.deletedAt ? texts.removedMessage : message.text}
                     </div>
                   )}
-                  {runEnd || message.editedAt ? (
+                  {!message.deletedAt && message.reactions && message.reactions.length > 0 && (
+                    <div className="reactions">
+                      {message.reactions.map((r) => (
+                        <button
+                          key={r.reaction}
+                          type="button"
+                          className={`reaction${r.userIds.includes(me) ? " on" : ""}`}
+                          aria-pressed={r.userIds.includes(me)}
+                          title={reactionLabel(texts, r, names)}
+                          aria-label={reactionLabel(texts, r, names)}
+                          onClick={() => onReact(message, r.reaction)}
+                        >
+                          <span className={r.reaction === "gg" ? "gg" : undefined}>
+                            {glyphOf(r.reaction)}
+                          </span>
+                          {r.count > 1 && <b>{r.count}</b>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {runEnd || message.editedAt || message.seq === lastMine ? (
                     <span className="msg-meta">
                       <time dateTime={message.createdAt}>
                         {new Date(message.createdAt).toLocaleTimeString(locale, {
@@ -852,20 +1034,32 @@ function ThreadView({
                         })}
                       </time>
                       {message.editedAt && !message.deletedAt && <> · {texts.edited}</>}
+                      {message.seq === lastMine && (
+                        <ReceiptText texts={texts} receipt={receiptOf(conversation, message, me)} />
+                      )}
                     </span>
                   ) : null}
                 </div>
-                {mine && !message.deletedAt && (
+                {!message.deletedAt && (
                   <Menu label={texts.messageOptions} small>
                     {(close) => (
                       <MessageActions
                         texts={texts}
-                        canEdit={
-                          now - Date.parse(message.createdAt) < editWindowMs &&
-                          (!message.kind || message.kind === "text" || Boolean(message.caption))
-                        }
+                        mine={mine}
+                        reacted={(name) => hasReacted(message, name, me)}
+                        canEdit={canEditMessage(message, me, now)}
+                        onReact={(name) => {
+                          close();
+                          onReact(message, name);
+                        }}
+                        onReply={() => {
+                          close();
+                          setEditing(null);
+                          setReplying(message);
+                        }}
                         onEdit={() => {
                           close();
+                          setReplying(null);
                           setEditing(message);
                         }}
                         onDelete={() => {
@@ -898,7 +1092,9 @@ function ThreadView({
                     type="button"
                     className="link"
                     onClick={() =>
-                      p.media ? onSendMedia(p.media, p.text, p.clientId) : onSend(p.text, p.clientId)
+                      p.media
+                        ? onSendMedia(p.media, p.text, p.clientId)
+                        : onSend(p.text, p.clientId, p.replyTo)
                     }
                   >
                     {texts.retry}
@@ -937,6 +1133,18 @@ function ThreadView({
       <Composer
         key={editing?.seq ?? "new"}
         texts={texts}
+        replying={
+          replying
+            ? {
+                name: names.get(replying.authorId ?? "") ?? "?",
+                text:
+                  replying.kind && replying.kind !== "text"
+                    ? (replying.caption ?? replying.text ?? "")
+                    : (replying.text ?? ""),
+              }
+            : null
+        }
+        onCancelReply={() => setReplying(null)}
         placeholder={staged ? texts.captionPlaceholder : fill(texts.composerPlaceholder, { name })}
         editing={editing}
         media={media}
@@ -966,7 +1174,10 @@ function ThreadView({
           } else if (staged) {
             onSendMedia({ file: staged.file, kind: staged.kind, preview: staged.preview }, text);
             setStaged(null);
-          } else onSend(text);
+          } else {
+            onSend(text, undefined, replying?.seq);
+            setReplying(null);
+          }
         }}
       />
       <MediaViewer
@@ -1017,6 +1228,8 @@ function Composer({
   texts,
   placeholder,
   editing,
+  replying,
+  onCancelReply,
   media,
   staged,
   onStage,
@@ -1030,6 +1243,8 @@ function Composer({
   texts: UiStrings;
   placeholder: string;
   editing: Message | null;
+  replying: { name: string; text: string } | null;
+  onCancelReply: () => void;
   media: MediaSetup;
   staged: Staged | null;
   onStage: (file: File | null | undefined) => void;
@@ -1074,6 +1289,7 @@ function Composer({
       submit();
     }
     if (event.key === "Escape" && editing) onCancel();
+    else if (event.key === "Escape" && replying) onCancelReply();
   };
 
   if (recording)
@@ -1120,6 +1336,17 @@ function Composer({
             <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
+          </button>
+        </div>
+      )}
+      {replying && !editing && (
+        <div className="editing-bar replying-bar">
+          <span className="lines">
+            <span>{fill(texts.replyingTo, { name: replying.name })}</span>
+            <span className="quote-text">{replying.text}</span>
+          </span>
+          <button type="button" className="link" onClick={onCancelReply}>
+            {texts.cancel}
           </button>
         </div>
       )}
@@ -1210,39 +1437,145 @@ function Composer({
   );
 }
 
+/** React with one of the fixed set, reply, and for one's own message edit or unsend. */
 function MessageActions({
   texts,
+  mine,
+  reacted,
   canEdit,
+  onReact,
+  onReply,
   onEdit,
   onDelete,
 }: {
   texts: UiStrings;
+  mine: boolean;
+  reacted: (name: MessageReaction) => boolean;
   canEdit: boolean;
+  onReact: (name: MessageReaction) => void;
+  onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const [asking, setAsking] = useState(false);
   if (asking)
     return (
-      <Confirm
-        texts={texts}
-        question={texts.confirmDeleteMessage}
-        action={texts.deleteMessage}
-        onConfirm={onDelete}
-      />
+      <Confirm texts={texts} question={texts.confirmUnsend} action={texts.unsend} onConfirm={onDelete} />
     );
   return (
     <>
-      {canEdit && (
+      <fieldset className="react-row" aria-label={texts.react}>
+        {reactionChoices.map((r) => (
+          <button
+            key={r.name}
+            type="button"
+            className={`react-choice${reacted(r.name) ? " on" : ""}${r.name === "gg" ? " gg" : ""}`}
+            aria-pressed={reacted(r.name)}
+            aria-label={texts[r.label]}
+            title={texts[r.label]}
+            onClick={() => onReact(r.name)}
+          >
+            {r.glyph}
+          </button>
+        ))}
+      </fieldset>
+      <button type="button" role="menuitem" onClick={onReply}>
+        {texts.reply}
+      </button>
+      {mine && canEdit && (
         <button type="button" role="menuitem" onClick={onEdit}>
           {texts.editMessage}
         </button>
       )}
-      <button type="button" role="menuitem" className="danger" onClick={() => setAsking(true)}>
-        {texts.deleteMessage}
-      </button>
+      {mine && (
+        <button type="button" role="menuitem" className="danger" onClick={() => setAsking(true)}>
+          {texts.unsend}
+        </button>
+      )}
     </>
   );
+}
+
+/** Pin, mute and, for a group of one's own making or joining, leave. */
+function ConversationActions({
+  texts,
+  conversation,
+  name,
+  canLeave,
+  onSetting,
+  onLeave,
+}: {
+  texts: UiStrings;
+  conversation: Conversation;
+  name: string;
+  canLeave: boolean;
+  onSetting: (change: "pin" | "mute", value: boolean) => void;
+  onLeave: () => void;
+}) {
+  const [asking, setAsking] = useState(false);
+  if (asking)
+    return (
+      <Confirm
+        texts={texts}
+        question={fill(texts.confirmLeaveGroup, { name })}
+        action={texts.leaveGroup}
+        onConfirm={onLeave}
+      />
+    );
+  return (
+    <>
+      <button type="button" role="menuitem" onClick={() => onSetting("pin", !conversation.pinned)}>
+        {conversation.pinned ? texts.unpinConversation : texts.pinConversation}
+      </button>
+      <button type="button" role="menuitem" onClick={() => onSetting("mute", !conversation.muted)}>
+        {conversation.muted ? texts.unmuteConversation : texts.muteConversation}
+      </button>
+      {canLeave && (
+        <button type="button" role="menuitem" className="danger" onClick={() => setAsking(true)}>
+          {texts.leaveGroup}
+        </button>
+      )}
+    </>
+  );
+}
+
+/** The message a reply answers, in a small quote above it. */
+function ReplyQuote({
+  texts,
+  names,
+  target,
+}: {
+  texts: UiStrings;
+  names: Map<string, string>;
+  target: ReturnType<typeof replyTarget>;
+}) {
+  if (!target) return null;
+  return (
+    <span className="reply-quote">
+      {target.found && target.authorId && <b>{names.get(target.authorId) ?? "?"}</b>}
+      <span className={target.removed ? "gone" : undefined}>
+        {target.removed ? texts.removedMessage : target.found ? target.text : texts.originalMessage}
+      </span>
+    </span>
+  );
+}
+
+/** Sent, delivered, read, or seen by some or all of a group. */
+function ReceiptText({ texts, receipt }: { texts: UiStrings; receipt: ReturnType<typeof receiptOf> }) {
+  if (!receipt) return null;
+  const words =
+    receipt.kind === "seen"
+      ? receipt.everyone
+        ? texts.seenByEveryone
+        : receipt.count > 0
+          ? fill(texts.seenBy, { n: receipt.count })
+          : texts.receiptSent
+      : receipt.kind === "read"
+        ? texts.receiptRead
+        : receipt.kind === "delivered"
+          ? texts.receiptDelivered
+          : texts.receiptSent;
+  return <span className={`receipt ${receipt.kind}`}> · {words}</span>;
 }
 
 /** A question with a dangerous answer, inside a menu. */
