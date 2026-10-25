@@ -33,35 +33,22 @@ export function Shot({ name, alt, sizes, priority = false }: ShotProps) {
   );
 }
 
-/** A Mac window around a launcher picture: the traffic lights and the app's name. */
+/** A launcher picture on the Mac: the screen itself, no window drawn around it. */
 export function MacFrame({
   children,
-  title = "AnyPS5",
   className = "",
 }: { children: ReactNode; title?: string; className?: string }) {
   return (
     <figure className={`device mac ${className}`}>
-      <div className="chrome" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <span>{title}</span>
-      </div>
       <div className="screen">{children}</div>
     </figure>
   );
 }
 
-/** A PC window: the title bar of a desktop app, buttons on the right. */
+/** A launcher picture on a PC, the same way. */
 export function PcFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <figure className={`device pc ${className}`}>
-      <div className="chrome" aria-hidden="true">
-        <span>AnyPS5 Desktop</span>
-        <b />
-        <b />
-        <b />
-      </div>
       <div className="screen">{children}</div>
     </figure>
   );
@@ -76,16 +63,10 @@ export function PhoneFrame({ children, className = "" }: { children: ReactNode; 
   );
 }
 
-/** A browser window, for the website's own pages. */
+/** A picture of the website's own pages. */
 export function BrowserFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <figure className={`device browser ${className}`}>
-      <div className="chrome" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <span className="address">anytogether.kodla.agency</span>
-      </div>
       <div className="screen">{children}</div>
     </figure>
   );

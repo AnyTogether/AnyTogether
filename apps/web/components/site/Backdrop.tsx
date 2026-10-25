@@ -1,21 +1,13 @@
 "use client";
 
 import type { Look, Ribbons } from "@/lib/ribbons";
-import { type CSSProperties, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 /** Asks every backdrop on the page to take another look (the front page's background switch). */
 export const lookEvent = "anytogether:look";
 
-type Glyph = {
-  shape: "triangle" | "circle" | "cross" | "square";
-  x: number;
-  y: number;
-  size: number;
-  depth: number;
-};
-
 /** The DualSense's face buttons, drawn as outlines in the seat colours. */
-export function GlyphShape({ shape }: { shape: Glyph["shape"] }) {
+export function GlyphShape({ shape }: { shape: "triangle" | "circle" | "cross" | "square" }) {
   return (
     <svg viewBox="0 0 48 48" aria-hidden="true">
       {shape === "triangle" && <path d="M24 9 40 37H8Z" />}
@@ -26,31 +18,21 @@ export function GlyphShape({ shape }: { shape: Glyph["shape"] }) {
   );
 }
 
-const heroGlyphs: Glyph[] = [
-  { shape: "triangle", x: 86, y: 13, size: 74, depth: 1 },
-  { shape: "circle", x: 95, y: 41, size: 46, depth: 0.55 },
-  { shape: "cross", x: 4, y: 49, size: 40, depth: 0.4 },
-  { shape: "square", x: 68, y: 14, size: 50, depth: 0.8 },
-];
-const sideGlyphs: Glyph[] = [
-  { shape: "circle", x: 93, y: 24, size: 44, depth: 0.6 },
-  { shape: "square", x: 4, y: 70, size: 36, depth: 0.4 },
-];
-
 /** A moving background in the launcher's style: its WebGL ribbons once the page has settled, a CSS
- *  gradient of the same colours until then (and wherever WebGL or motion is off), and, if asked,
- *  the PlayStation shapes drifting in front with a little parallax. Purely decorative. */
+ *  gradient of the same colours until then (and wherever WebGL or motion is off). Purely
+ *  decorative. */
 export function Backdrop({
   look,
-  glyphs,
   gain = 1,
   base = 0.5,
+  switchable = false,
   className = "",
 }: {
   look: Look;
-  glyphs?: "hero" | "side";
   gain?: number;
   base?: number;
+  /** Follows the background switch (LookSwitch) on the page. */
+  switchable?: boolean;
   className?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
@@ -103,7 +85,7 @@ export function Backdrop({
       ribbons?.setLook(next);
     };
     document.addEventListener("visibilitychange", update);
-    window.addEventListener(lookEvent, onLook);
+    if (switchable) window.addEventListener(lookEvent, onLook);
     return () => {
       gone = true;
       observer.disconnect();
@@ -111,35 +93,11 @@ export function Backdrop({
       window.removeEventListener(lookEvent, onLook);
       ribbons?.destroy();
     };
-  }, [look, gain, base]);
+  }, [look, gain, base, switchable]);
 
-  const shapes = glyphs === "hero" ? heroGlyphs : glyphs === "side" ? sideGlyphs : [];
   return (
     <div ref={host} className={`backdrop ${className}`} data-look={look} aria-hidden="true">
       <canvas ref={canvas} />
-      {shapes.length > 0 && (
-        <div className="glyphs">
-          {shapes.map((g, i) => (
-            <span
-              key={g.shape}
-              className={`glyph ${g.shape}`}
-              style={
-                {
-                  "--x": `${g.x}%`,
-                  "--y": `${g.y}%`,
-                  "--s": `${g.size}px`,
-                  "--z": g.depth,
-                  "--i": i,
-                } as CSSProperties
-              }
-            >
-              <i>
-                <GlyphShape shape={g.shape} />
-              </i>
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

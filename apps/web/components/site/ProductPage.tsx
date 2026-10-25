@@ -1,13 +1,18 @@
 import { CopyButton } from "@/components/CopyButton";
 import { installLine } from "@/lib/downloads";
+import { motionStrings } from "@/lib/i18n-motion";
 import type { Chapter, Frame, ProductPage as Page, ProductStrings, ShotRef, Tag } from "@/lib/i18n-products";
-import type { SiteStrings } from "@/lib/i18n-site";
+import { type SiteStrings, siteStrings } from "@/lib/i18n-site";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import "@/app/motion.css";
+import "@/app/live.css";
 import { Backdrop } from "./Backdrop";
+import { LiveChat, LiveFriends, LivePad, LiveParty } from "./LiveBits";
+import { LiveLauncher } from "./LiveLauncher";
 import { Reveal } from "./Reveal";
 import { BrowserFrame, MacFrame, PcFrame, PhoneFrame, Shot } from "./Shot";
+import { wide } from "./fonts";
 
 type Key = "mac" | "pc" | "phone" | "together";
 
@@ -62,6 +67,8 @@ export function ProductPage({
   cta: ReactNode;
 }) {
   const others = (["mac", "pc", "phone", "together"] as Key[]).filter((k) => k !== which);
+  const language = s === siteStrings("tr") ? "tr" : "en";
+  const m = motionStrings(language);
   const href: Record<Key, string> = { mac: "/mac", pc: "/pc", phone: "/phone", together: "/together" };
   const names: Record<Key, [string, string]> = {
     mac: ["AnyPS5-ARM", s.landing.products[0]?.where ?? ""],
@@ -70,10 +77,10 @@ export function ProductPage({
     together: ["AnyTogether", s.landing.products[3]?.where ?? ""],
   };
   return (
-    <div className={`site product-page is-${which}`}>
+    <div className={`site product-page is-${which} ${wide.variable}`}>
       <Reveal />
       <div className="p-top" data-parallax>
-        <Backdrop look={looks[which]} glyphs="side" gain={0.78} className="p-backdrop" />
+        <Backdrop look={looks[which]} gain={0.78} className="p-backdrop" />
         <section className="p-hero">
           <div className="p-hero-text">
             <p className="kicker in d1" lang="en">
@@ -88,10 +95,28 @@ export function ProductPage({
             <p className="p-lead in d3">{page.lead}</p>
             <div className="cta-row in d3">{cta}</div>
           </div>
-          <div className={`p-hero-art in d4${page.heroSide ? " with-side" : ""}`}>
-            <Framed shot={page.hero} sizes="(max-width: 760px) 100vw, 640px" priority className="hero-main" />
-            {page.heroSide && (
-              <Framed shot={page.heroSide} sizes="(max-width: 760px) 50vw, 300px" className="hero-side" />
+          <div className={`p-hero-art live in d4 hero-${which}`}>
+            {(which === "mac" || which === "pc") && (
+              <div className="hero-main">
+                <LiveLauncher
+                  t={m.launcher}
+                  language={language}
+                  label={page.hero.alt}
+                  unlocking={which === "mac"}
+                />
+              </div>
+            )}
+            {which === "phone" && (
+              <div className="hero-main" role="img" aria-label={page.hero.alt}>
+                <LivePad user={m.launcher.user} />
+              </div>
+            )}
+            {which === "together" && (
+              <div className="hero-main hero-stack" role="img" aria-label={page.hero.alt}>
+                <LiveParty t={m.party} />
+                <LiveChat t={m.chat} />
+                <LiveFriends t={m.friends} />
+              </div>
             )}
           </div>
         </section>
