@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
+import { type Appeal, type Restriction, appealCookie } from "./restrictions";
 
 export const accessCookie = "at_access";
 export const refreshCookie = "at_refresh";
@@ -10,6 +11,9 @@ export const apiUrl = () => process.env.API_URL ?? "http://127.0.0.1:8080";
 export interface Me {
   account: { id: string; email: string | null; role?: string };
   profile: { handle: string; displayName: string; avatar: string | null };
+  /** A mute in force (older API answers have none). */
+  restrictions?: Restriction[];
+  appeal?: Appeal | null;
 }
 
 /** The browser's address as the proxy in front of the website saw it, passed on so the API counts
@@ -123,4 +127,27 @@ export async function relayUpload(request: Request, path: string, maxBytes: numb
     status: response.status,
     headers: { "content-type": "application/json", "cache-control": "no-store" },
   });
+}
+
+/** The token that opens one's restrictions and appeals: the access token, or the appeal token a
+ *  refused sign-in left (a banned account has no session). */
+export async function restrictionToken() {
+  const jar = await cookies();
+  return jar.get(accessCookie)?.value ?? jar.get(appealCookie)?.value;
+}
+
+/** Keeps an appeal token from a refused sign-in (403 account_banned with appealToken) for the
+ *  hour it works. */
+export async function keepAppealToken(body: { appealToken?: unknown; appealTokenExpiresIn?: unknown }) {
+  if (typeof body.appealToken !== "string") return;
+  const seconds = typeof body.appealTokenExpiresIn === "number" ? body.appealTokenExpiresIn : 3600;
+  (await cookies()).set(appealCookie, body.appealToken, cookieOptions(seconds));
+}
+
+/** A refused sign-in's answer for the browser: the appeal token stays in its cookie, never in
+ *  the page. */
+export async function refusedSignIn(body: Record<string, unknown>, status: number) {
+  await keepAppealToken(body);
+  const { appealToken: _token, ...rest } = body;
+  return Response.json(rest, { status });
 }

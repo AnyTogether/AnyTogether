@@ -1,6 +1,7 @@
 import {
   type Database,
   accounts,
+  appeals,
   auditLog,
   bans,
   conversationMembers,
@@ -10,26 +11,53 @@ import {
   reports,
   themes,
 } from "@anytogether/db";
-import { ErrorCode, ReportCreate, presenceKey } from "@anytogether/shared";
-import { and, count, desc, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import {
+  type AppealView,
+  ErrorCode,
+  ReportCreate,
+  type RestrictedAction,
+  type Restriction,
+  presenceKey,
+} from "@anytogether/shared";
+import { and, asc, count, desc, eq, gt, inArray, isNull, or } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
 import { revokeAll } from "./account.js";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
+import { publish } from "./events.js";
 import { body } from "./http.js";
 import { mediaService } from "./media.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { rateLimiter } from "./ratelimit.js";
 import { reviewIfReported } from "./themes.js";
-import { hash } from "./tokens.js";
+import { type TokenSigner, appealLifetime, hash } from "./tokens.js";
 
 type Ctx = { db: Database; valkey: Redis };
 
 export const emailHash = (email: string) => hash(email.trim().toLowerCase());
-export const liveBan = () =>
+/** A restriction in force: not lifted, not run out. */
+export const liveRestriction = () =>
   and(isNull(bans.liftedAt), or(isNull(bans.expiresAt), gt(bans.expiresAt, new Date())));
+/** A ban (not a mute) in force. */
+export const liveBan = () => and(eq(bans.kind, "ban"), liveRestriction());
+
+type BanRow = typeof bans.$inferSelect;
+const mutedActions: RestrictedAction[] = ["messages", "posts", "friend_requests", "profile", "themes"];
+
+/** A restriction as the person sees it (never the moderators' own note). */
+export function restrictionView(row: BanRow, appealable: boolean): Restriction {
+  return {
+    id: row.id,
+    kind: row.kind === "mute" ? "muted" : row.expiresAt ? "suspended" : "banned",
+    restricts: row.kind === "mute" ? mutedActions : ["sign_in"],
+    reason: row.publicReason,
+    since: row.createdAt.toISOString(),
+    until: row.expiresAt ? row.expiresAt.toISOString() : null,
+    appealable,
+  };
+}
 
 /** Whether a ban in force covers this account or this address. */
 export async function isBanned(
@@ -49,8 +77,87 @@ export async function isBanned(
   return found.length > 0;
 }
 
-export const bannedError = () =>
-  new HttpError(403, ErrorCode.accountBanned, "This account is banned from AnyTogether");
+/** The restrictions in force on an account (bans on its address too), bans first, and its newest
+ *  appeal. */
+export async function restrictionsOf(db: Pick<Database, "select">, accountId: string) {
+  const [account] = await db
+    .select({ email: accounts.email })
+    .from(accounts)
+    .where(eq(accounts.id, accountId));
+  const rows = await db
+    .select()
+    .from(bans)
+    .where(
+      and(
+        liveRestriction(),
+        or(
+          eq(bans.accountId, accountId),
+          ...(account?.email
+            ? [and(eq(bans.kind, "ban"), eq(bans.emailHash, emailHash(account.email)))]
+            : []),
+        ),
+      ),
+    )
+    .orderBy(asc(bans.kind), desc(bans.createdAt));
+  const [appeal] = await db
+    .select()
+    .from(appeals)
+    .where(eq(appeals.accountId, accountId))
+    .orderBy(desc(appeals.createdAt))
+    .limit(1);
+  const open = appeal?.status === "open";
+  return {
+    restrictions: rows.map((row) => restrictionView(row, !open)),
+    appeal: appeal ? appealView(appeal) : null,
+  };
+}
+
+export const appealView = (row: typeof appeals.$inferSelect): AppealView => ({
+  id: row.id,
+  restrictionId: row.banId,
+  status: row.status as AppealView["status"],
+  text: row.text,
+  reply: row.reply,
+  createdAt: row.createdAt.toISOString(),
+  answeredAt: row.handledAt ? row.handledAt.toISOString() : null,
+});
+
+export const bannedError = (extra: Record<string, unknown> = {}) =>
+  new HttpError(403, ErrorCode.accountBanned, "This account is banned from AnyTogether", extra);
+
+/** The refusal for a banned account that just proved who it is (a code, a provider, a passkey):
+ *  what is restricted, why and until when, and an appeal token for GET /me/restrictions and
+ *  POST /me/appeals. */
+export async function restrictedSignIn(
+  ctx: { db: Database; tokens: Pick<TokenSigner, "signAppeal"> },
+  accountId: string,
+) {
+  const { restrictions } = await restrictionsOf(ctx.db, accountId);
+  const restriction = restrictions.find((r) => r.kind !== "muted");
+  return bannedError({
+    ...(restriction ? { restriction } : {}),
+    appealToken: await ctx.tokens.signAppeal(accountId),
+    appealTokenExpiresIn: appealLifetime,
+  });
+}
+
+/** Refuses with 403 account_muted while the account is muted. */
+export async function assertNotMuted(db: Pick<Database, "select">, accountId: string) {
+  const [row] = await db
+    .select()
+    .from(bans)
+    .where(and(eq(bans.kind, "mute"), eq(bans.accountId, accountId), liveRestriction()))
+    .orderBy(desc(bans.createdAt))
+    .limit(1);
+  if (!row) return;
+  const open = await db
+    .select({ id: appeals.id })
+    .from(appeals)
+    .where(and(eq(appeals.accountId, accountId), eq(appeals.status, "open")));
+  throw new HttpError(403, ErrorCode.accountMuted, "This account is muted for now", {
+    restriction: restrictionView(row, !open.length),
+  });
+}
 
 /** An account by @handle, email or ID, for the moderators' tools. */
 export async function findAccount(db: Database, who: string) {
@@ -70,63 +177,126 @@ export async function findAccount(db: Database, who: string) {
   return row;
 }
 
+interface RestrictOptions {
+  /** The moderators' own note. */
+  reason?: string | undefined;
+  /** What the person is told. */
+  publicReason?: string | undefined;
+  days?: number | undefined;
+  by?: string | undefined;
+  actorId?: string | undefined;
+}
+
 /** Bans the account (and its email), or only an email that has no account. Every session ends at once. */
-export async function ban(
-  ctx: Ctx,
-  who: string,
-  options: { reason?: string; days?: number; by?: string; actorId?: string } = {},
-) {
+export async function ban(ctx: Ctx, who: string, options: RestrictOptions = {}) {
+  return restrict(ctx, who, "ban", options);
+}
+
+/** Mutes an account: it signs in and plays, but writes to no one until it runs out or is lifted. */
+export async function mute(ctx: Ctx, who: string, options: RestrictOptions = {}) {
+  return restrict(ctx, who, "mute", options);
+}
+
+async function restrict(ctx: Ctx, who: string, kind: "ban" | "mute", options: RestrictOptions) {
   const found = await findAccount(ctx.db, who);
-  const email = found?.account.email ?? (who.includes("@") ? who.trim().toLowerCase() : null);
+  const email =
+    kind === "ban" ? (found?.account.email ?? (who.includes("@") ? who.trim().toLowerCase() : null)) : null;
   if (!found && !email) throw new Error(`No account for ${who}`);
   const expiresAt = options.days ? new Date(Date.now() + options.days * 86_400_000) : null;
-  await ctx.db.insert(bans).values({
-    id: uuidv7(),
-    accountId: found?.account.id ?? null,
-    emailHash: email ? emailHash(email) : null,
-    reason: options.reason ?? null,
-    createdBy: options.by ?? null,
-    expiresAt,
-  });
-  if (found) {
-    await ctx.db.update(accounts).set({ status: "banned" }).where(eq(accounts.id, found.account.id));
-    await ctx.valkey.del(presenceKey(found.account.id));
-    await revokeAll(ctx, found.account.id);
+  const [row] = await ctx.db
+    .insert(bans)
+    .values({
+      id: uuidv7(),
+      kind,
+      accountId: found?.account.id ?? null,
+      emailHash: email ? emailHash(email) : null,
+      reason: options.reason ?? null,
+      publicReason: options.publicReason ?? null,
+      createdBy: options.by ?? null,
+      expiresAt,
+    })
+    .returning();
+  if (found && row) {
+    // Told first: a ban then signs every device out, and their sockets close.
+    await publish(ctx.valkey, found.account.id, {
+      type: "account.restricted",
+      data: restrictionView(row, true),
+    });
+    if (kind === "ban") {
+      await ctx.db.update(accounts).set({ status: "banned" }).where(eq(accounts.id, found.account.id));
+      await ctx.valkey.del(presenceKey(found.account.id));
+      await revokeAll(ctx, found.account.id);
+    }
   }
   await ctx.db.insert(auditLog).values({
     id: uuidv7(),
     actorId: options.actorId ?? null,
-    action: "ban",
+    action: kind,
     target: found?.account.id ?? "email",
-    data: { reason: options.reason ?? null, days: options.days ?? null, by: options.by ?? null },
+    data: {
+      reason: options.reason ?? null,
+      publicReason: options.publicReason ?? null,
+      days: options.days ?? null,
+      by: options.by ?? null,
+    },
   });
-  return { accountId: found?.account.id ?? null, handle: found?.profile?.handle ?? null, expiresAt };
+  return {
+    id: row?.id ?? null,
+    accountId: found?.account.id ?? null,
+    handle: found?.profile?.handle ?? null,
+    expiresAt,
+  };
 }
 
-/** Lifts every ban on the account and its email. */
-export async function unban(ctx: Ctx, who: string, by?: string, actorId?: string) {
+/** Lifts one restriction; with no ban left in force a banned account is active again. The person
+ *  is told (account.restored). Null when there is no such restriction in force. */
+export async function liftRestriction(ctx: Ctx, id: string) {
+  const [lifted] = await ctx.db
+    .update(bans)
+    .set({ liftedAt: new Date() })
+    .where(and(eq(bans.id, id), isNull(bans.liftedAt)))
+    .returning();
+  if (!lifted) return null;
+  if (lifted.accountId) {
+    if (lifted.kind === "ban") await liftExpired(ctx.db, lifted.accountId);
+    await publish(ctx.valkey, lifted.accountId, {
+      type: "account.restored",
+      data: { id: lifted.id, kind: restrictionView(lifted, false).kind },
+    });
+  }
+  return lifted;
+}
+
+/** Lifts every ban (or every mute) on the account and its email. */
+export async function unban(
+  ctx: Ctx,
+  who: string,
+  by?: string,
+  actorId?: string,
+  kind: "ban" | "mute" = "ban",
+) {
   const found = await findAccount(ctx.db, who);
   const email = found?.account.email ?? (who.includes("@") ? who.trim().toLowerCase() : null);
   const matches = [
     ...(found ? [eq(bans.accountId, found.account.id)] : []),
-    ...(email ? [eq(bans.emailHash, emailHash(email))] : []),
+    ...(email && kind === "ban" ? [eq(bans.emailHash, emailHash(email))] : []),
   ];
   if (!matches.length) throw new Error(`No account for ${who}`);
-  const lifted = await ctx.db
-    .update(bans)
-    .set({ liftedAt: new Date() })
-    .where(and(isNull(bans.liftedAt), or(...matches)))
-    .returning({ id: bans.id });
-  if (found?.account.status === "banned")
+  const live = await ctx.db
+    .select({ id: bans.id })
+    .from(bans)
+    .where(and(eq(bans.kind, kind), isNull(bans.liftedAt), or(...matches)));
+  for (const { id } of live) await liftRestriction(ctx, id);
+  if (kind === "ban" && found?.account.status === "banned")
     await ctx.db.update(accounts).set({ status: "active" }).where(eq(accounts.id, found.account.id));
   await ctx.db.insert(auditLog).values({
     id: uuidv7(),
     actorId: actorId ?? null,
-    action: "unban",
+    action: kind === "ban" ? "unban" : "unmute",
     target: found?.account.id ?? "email",
     data: { by: by ?? null },
   });
-  return lifted.length;
+  return live.length;
 }
 
 /** A ban that ran out lifts itself at the next sign-in. */

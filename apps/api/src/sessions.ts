@@ -6,7 +6,7 @@ import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
 import { HttpError } from "./errors.js";
 import { publish, revokedKey } from "./events.js";
-import { bannedError, isBanned, liftExpired } from "./moderation.js";
+import { isBanned, liftExpired, restrictedSignIn } from "./moderation.js";
 import { forgetPush } from "./notifications.js";
 import { type TokenSigner, accessLifetime, hash, refreshLifetimeDays, secret } from "./tokens.js";
 
@@ -25,8 +25,11 @@ export async function startSession(
   deviceName?: string,
 ): Promise<Tokens> {
   const [account] = await ctx.db.select().from(accounts).where(eq(accounts.id, accountId));
-  if (account?.status === "banned" && !(await liftExpired(ctx.db, accountId))) throw bannedError();
-  if (account?.email && (await isBanned(ctx.db, { email: account.email }))) throw bannedError();
+  // Banned or suspended: what, why and until when, and a token to appeal with.
+  if (account?.status === "banned" && !(await liftExpired(ctx.db, accountId)))
+    throw await restrictedSignIn(ctx, accountId);
+  if (account?.email && (await isBanned(ctx.db, { email: account.email })))
+    throw await restrictedSignIn(ctx, accountId);
   if (account?.status === "deleting") {
     // Signing in within the 14 days keeps the account.
     await ctx.db

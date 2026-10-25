@@ -73,6 +73,9 @@ export const defaultLimits = {
   family: { max: 60, seconds: 3600 },
   /** Profiles read signed out (a profile page asks four times, a link preview twice), per address. */
   publicProfile: { max: 120, seconds: 60 },
+  /** Appeals sent by one account, and from one address (an appeal token needs no session). */
+  appeal: { max: 3, seconds: 86_400 },
+  appealIp: { max: 10, seconds: 86_400 },
 };
 export type Limits = { [name in keyof typeof defaultLimits]: { max: number; seconds: number } };
 

@@ -77,6 +77,11 @@ export function PasskeySignIn({
     }
     setBusy(false);
     const problem = (await finished?.json().catch(() => ({}))) ?? {};
+    // Banned: why, and the appeal, are on /restricted (the appeal token is in its cookie now).
+    if (problem.code === "account_banned" && problem.restriction) {
+      router.push("/restricted");
+      return false;
+    }
     setError(
       problem.code === "passkey_invalid"
         ? texts.passkeyUnknown

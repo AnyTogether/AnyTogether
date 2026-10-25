@@ -1,5 +1,5 @@
 import { randomInt, timingSafeEqual } from "node:crypto";
-import { sessions, signInRequests } from "@anytogether/db";
+import { accounts, sessions, signInRequests } from "@anytogether/db";
 import {
   DeviceApprove,
   DeviceStart,
@@ -46,7 +46,13 @@ export function authRoutes(deps: Deps) {
   app.post("/email/start", async (c) => {
     const { email } = await body(c, EmailStart);
     const address = email.toLowerCase();
-    if (await isBanned(deps.db, { email: address })) throw bannedError();
+    // A banned address: refused, but when an account has it the code is still mailed, so its
+    // owner can sign in to read why and appeal (the sign-in itself is refused with the details).
+    const banned = await isBanned(deps.db, { email: address });
+    const owner = banned
+      ? (await deps.db.select({ id: accounts.id }).from(accounts).where(eq(accounts.email, address)))[0]
+      : undefined;
+    if (banned && !owner) throw bannedError();
     const recent = await deps.db
       .select({ id: signInRequests.id })
       .from(signInRequests)
@@ -73,6 +79,7 @@ export function authRoutes(deps: Deps) {
     url.searchParams.set("email", address);
     url.searchParams.set("token", link);
     await deps.mailer.signInCode(address, code, url.toString());
+    if (banned) throw bannedError({ codeSent: true });
     return c.body(null, 202);
   });
 

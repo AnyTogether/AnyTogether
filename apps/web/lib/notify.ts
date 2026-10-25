@@ -17,7 +17,8 @@ export interface Notice {
     | "family_request"
     | "family_answer"
     | "family_alert"
-    | "family_summary";
+    | "family_summary"
+    | "appeal";
   actor: Person | null;
   subjectId: string;
   data: {
@@ -28,6 +29,9 @@ export interface Notice {
     titleId?: string;
     gameNames?: Record<string, string>;
     reason?: string;
+    /** appeal: the moderator's decision and answer. */
+    decision?: "accepted" | "declined";
+    reply?: string | null;
     postId?: string;
     purpose?: string;
     invite?: { kind: "party" | "share_play"; id: string } | null;
@@ -101,6 +105,8 @@ export function noticeHref(notice: Notice) {
     case "family_alert":
     case "family_summary":
       return "/family";
+    case "appeal":
+      return "/restricted";
     default:
       return null;
   }

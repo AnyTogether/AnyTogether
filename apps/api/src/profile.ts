@@ -22,6 +22,7 @@ import { publish } from "./events.js";
 import { mayShow } from "./family.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { assertNotMuted, restrictionsOf } from "./moderation.js";
 import { type ProfileRow, handleProblem, skeletonClash } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
 
@@ -67,12 +68,16 @@ export function profileRoutes(deps: Deps) {
     return c.json({
       account: { id: account.id, email: account.email, role: account.role, createdAt: account.createdAt },
       profile: own(await load(userId)),
+      // What the account may not do now (a mute; a banned account has no session), and its
+      // newest appeal.
+      ...(await restrictionsOf(db, userId)),
     });
   });
 
   app.patch("/me/profile", async (c) => {
     const userId = c.get("userId");
     const input = await body(c, ProfileUpdate);
+    if (input.displayName !== undefined || input.bio) await assertNotMuted(db, userId);
     if ((input.displayName && hasLink(input.displayName)) || (input.bio && hasLink(input.bio)))
       throw new HttpError(400, ErrorCode.linksNotAllowed, "Names and bios cannot carry links");
     const changes = {

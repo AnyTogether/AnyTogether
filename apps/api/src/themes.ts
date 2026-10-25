@@ -24,6 +24,7 @@ import { HttpError } from "./errors.js";
 import { body } from "./http.js";
 import { curatorHandle } from "./hubImport.js";
 import { type AuthVariables, optionalUser, requireUser } from "./middleware.js";
+import { assertNotMuted } from "./moderation.js";
 import { clientIp, rateLimiter } from "./ratelimit.js";
 import { type BlobStore, postgresStore, readAll, streamOf } from "./storage.js";
 import { makeStills, packTheme, readTheme } from "./themeFile.js";
@@ -490,6 +491,7 @@ export function themeRoutes(deps: Deps) {
 
   app.post("/themes", signedIn, uploadLimit, async (c) => {
     const me = c.get("userId");
+    await assertNotMuted(deps.db, me);
     await limit("themeUpload", me);
     const profile = await authorName(me);
     const id = uuidv7();
@@ -536,6 +538,7 @@ export function themeRoutes(deps: Deps) {
 
   app.post("/themes/:id/versions", signedIn, uploadLimit, async (c) => {
     const me = c.get("userId");
+    await assertNotMuted(deps.db, me);
     const { row, mine, maker } = await load(c.req.param("id"), me);
     if (!mine) throw new HttpError(403, ErrorCode.forbidden, "Only its maker can change a theme");
     await limit("themeUpload", me);

@@ -26,6 +26,12 @@ export function LoginForm({ texts, next }: { texts: Texts; next: string }) {
     setBusy(false);
     if (response.ok) return response;
     const problem = await response.json().catch(() => ({}));
+    // A banned address still gets its code: signing in with it shows why, and how to appeal.
+    if (problem.code === "account_banned" && problem.codeSent) return response;
+    if (problem.code === "account_banned" && path === "/auth/email/verify") {
+      router.push("/restricted");
+      return null;
+    }
     setError(problem.title ?? texts.failed);
     return null;
   }
@@ -66,7 +72,8 @@ export function LoginForm({ texts, next }: { texts: Texts; next: string }) {
       className="card form"
       onSubmit={async (event) => {
         event.preventDefault();
-        if (await post("/auth/email/verify", { email, code })) {
+        const verified = await post("/auth/email/verify", { email, code });
+        if (verified) {
           router.push(next);
           router.refresh();
         }

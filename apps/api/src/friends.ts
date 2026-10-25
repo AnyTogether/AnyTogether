@@ -10,6 +10,7 @@ import { familyGuard } from "./family.js";
 import { forgetFriendship, recordFriendship } from "./feed.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { assertNotMuted } from "./moderation.js";
 import type { Notifier } from "./notifications.js";
 import { type ProfileRow, blockedBetween, canSee, findProfile, relationOf } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
@@ -120,6 +121,7 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
 
   app.post("/me/friends/requests", async (c) => {
     const me = c.get("userId");
+    await assertNotMuted(deps.db, me);
     const { handle } = await body(c, z.object({ handle: z.string().min(1).max(40) }));
     await limit("friendRequest", me);
     const target = await findProfile(deps.db, handle);

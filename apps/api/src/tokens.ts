@@ -3,6 +3,8 @@ import { type KeyLike, SignJWT, exportJWK, generateKeyPair, importPKCS8, jwtVeri
 
 export const accessLifetime = 15 * 60;
 export const refreshLifetimeDays = 90;
+/** Seconds an appeal token works. */
+export const appealLifetime = 3600;
 
 export interface AccessClaims {
   userId: string;
@@ -21,6 +23,9 @@ export async function createTokenSigner(privateKeyPem: string | undefined, issue
     ({ privateKey, publicKey } = await generateKeyPair("EdDSA", { crv: "Ed25519" }));
   }
   const audience = "anytogether";
+  /** Appeal tokens: what a banned account gets from a sign-in that proved who it is, good only for
+   *  reading its restrictions and appealing (GET /me/restrictions, /me/appeals), for an hour. */
+  const appealAudience = "anytogether-appeal";
   return {
     publicJwk: async () => ({ ...(await exportJWK(publicKey)), alg: "EdDSA", use: "sig", kid: "1" }),
     sign: (claims: AccessClaims) =>
@@ -49,6 +54,24 @@ export async function createTokenSigner(privateKeyPem: string | undefined, issue
       const { payload } = await jwtVerify(token, publicKey, { issuer, audience, algorithms: ["EdDSA"] });
       if (!payload.sub || typeof payload.sid !== "string") throw new Error("incomplete token");
       return { userId: payload.sub, sessionId: payload.sid };
+    },
+    signAppeal: (userId: string) =>
+      new SignJWT({})
+        .setProtectedHeader({ alg: "EdDSA", kid: "1" })
+        .setSubject(userId)
+        .setIssuer(issuer)
+        .setAudience(appealAudience)
+        .setIssuedAt()
+        .setExpirationTime(`${appealLifetime}s`)
+        .sign(privateKey),
+    verifyAppeal: async (token: string) => {
+      const { payload } = await jwtVerify(token, publicKey, {
+        issuer,
+        audience: appealAudience,
+        algorithms: ["EdDSA"],
+      });
+      if (!payload.sub) throw new Error("incomplete token");
+      return payload.sub;
     },
   };
 }

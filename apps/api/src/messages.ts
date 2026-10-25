@@ -30,6 +30,7 @@ import { body } from "./http.js";
 import { blockedLink } from "./links.js";
 import { mediaService } from "./media.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { assertNotMuted } from "./moderation.js";
 import type { Notifier } from "./notifications.js";
 import { people } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
@@ -217,6 +218,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
 
   app.post("/conversations", async (c) => {
     const me = c.get("userId");
+    await assertNotMuted(deps.db, me);
     const input = await body(c, ConversationCreate);
     const others = input.members.filter((id) => id !== me);
     if (!others.length) throw new HttpError(400, ErrorCode.badRequest, "members: someone besides you");
@@ -376,6 +378,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
 
   app.post("/conversations/:id/messages", async (c) => {
     const me = c.get("userId");
+    await assertNotMuted(deps.db, me);
     const { conversation } = await membership(c.req.param("id"), me);
     const input = await body(c, MessageSend);
     await limit("message", me);
@@ -492,6 +495,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
 
   app.patch("/conversations/:id/messages/:seq", async (c) => {
     const me = c.get("userId");
+    await assertNotMuted(deps.db, me);
     const { conversation } = await membership(c.req.param("id"), me);
     const message = await own(conversation.id, me, c.req.param("seq"));
     const { text } = await body(c, MessageEdit);

@@ -1,4 +1,5 @@
-import { accessCookie, api, cookieOptions, refreshCookie } from "@/lib/session";
+import { appealCookie } from "@/lib/restrictions";
+import { accessCookie, api, cookieOptions, refreshCookie, refusedSignIn } from "@/lib/session";
 import { cookies } from "next/headers";
 
 /** Checks what the passkey signed and keeps the session in HttpOnly cookies, like the email code. */
@@ -10,9 +11,11 @@ export async function POST(request: Request) {
   );
   if (!response) return Response.json({ code: "unavailable", title: "Try again" }, { status: 502 });
   const body = await response.json();
-  if (!response.ok) return Response.json(body, { status: response.status });
+  // Banned: the appeal token is kept for /restricted; the browser gets the rest.
+  if (!response.ok) return refusedSignIn(body, response.status);
   const jar = await cookies();
   jar.set(accessCookie, body.accessToken, cookieOptions(body.expiresIn));
   jar.set(refreshCookie, body.refreshToken, cookieOptions(90 * 86_400));
+  jar.delete(appealCookie);
   return Response.json({ user: body.user });
 }

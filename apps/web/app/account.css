@@ -11,3 +11,188 @@
   margin: 0;
   font-size: 13px;
 }
+
+/* Account restrictions: the page a restricted account reads, and the banner of a muted one. */
+.restricted-page {
+  max-width: 560px;
+}
+.restriction {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 16px;
+  --tone: var(--danger);
+}
+.restriction.is-muted {
+  --tone: var(--away);
+}
+.restriction::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--tone);
+  opacity: 0.85;
+}
+.restriction header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.restriction h3 {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-weight: 700;
+}
+.restriction header .lines {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.restriction header .meta {
+  margin-top: 6px;
+}
+.restriction-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
+}
+.restriction-mark svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.restriction-lead {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.restriction-reason,
+.appeal-reply {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+}
+.restriction-reason .label,
+.appeal-reply .label {
+  font: 500 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.restriction-reason p {
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+.restriction-reason p.none {
+  color: var(--mute);
+}
+.restriction-empty {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+.appeal-form {
+  display: grid;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.appeal-form .hint {
+  margin: 0;
+}
+.appeal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.appeal-card {
+  display: grid;
+  gap: 12px;
+}
+.appeal-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.appeal-card blockquote {
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-line;
+  padding-left: 14px;
+  border-left: 2px solid var(--line);
+  color: var(--ink);
+}
+.appeal-status.is-open {
+  color: var(--away);
+}
+.appeal-status.is-accepted {
+  color: var(--c);
+}
+.appeal-status.is-declined {
+  color: var(--danger);
+}
+
+/* The banner takes a row of its own between the header and the page. */
+main.has-banner {
+  grid-template-rows: auto auto 1fr auto;
+}
+.restriction-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px auto 0;
+  width: min(100%, 980px);
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(245, 184, 75, 0.08);
+  border: 1px solid rgba(245, 184, 75, 0.3);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.restriction-banner svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--away);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.restriction-banner p {
+  flex: 1;
+  min-width: 0;
+}
+.restriction-banner .why {
+  color: var(--mute);
+}
+.restriction-banner .pill {
+  flex: none;
+}
+@media (max-width: 560px) {
+  .restriction-banner {
+    flex-wrap: wrap;
+  }
+  .restriction-banner .pill {
+    margin-left: 32px;
+  }
+}

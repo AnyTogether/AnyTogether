@@ -11,6 +11,7 @@ import { shareInviteStrings } from "@/lib/i18n-share";
 import { siteStrings } from "@/lib/i18n-site";
 import { callStrings } from "@/lib/i18n-social";
 import { fill } from "@/lib/people";
+import { longDate } from "@/lib/restrictions";
 import { apiJson, currentUser, incomingRequests } from "@/lib/session";
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
@@ -69,8 +70,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     apiJson<{ unread: number }>("/me/notifications/unread"),
   ]);
   const site = siteStrings(texts.language);
+  // A mute in force shows on every page until it ends (a banned account is never signed in).
+  const muted = user?.restrictions?.find((r) => r.kind === "muted");
   const page = (
-    <main>
+    <main className={muted ? "has-banner" : undefined}>
       <header className="in">
         <Link href="/" className="brand" aria-label="AnyTogether">
           <Mark />
@@ -183,6 +186,24 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           )}
         </div>
       </header>
+      {muted && (
+        <aside className="restriction-banner in" aria-live="polite">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A1.5 1.5 0 0 1 4 15.5zM9 8.5l6 5M15 8.5l-6 5" />
+          </svg>
+          <p>
+            {fill(texts.bannerMuted, {
+              until: muted.until
+                ? fill(texts.rUntil, { date: longDate(muted.until, texts.language) })
+                : texts.rUntilLifted,
+            })}
+            {muted.reason && <span className="why"> {muted.reason}</span>}
+          </p>
+          <Link href="/restricted" className="pill small">
+            {texts.bannerSeeWhy}
+          </Link>
+        </aside>
+      )}
       {children}
       <SiteFooter
         s={site}

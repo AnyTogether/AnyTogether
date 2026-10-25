@@ -4,6 +4,8 @@ import { When } from "@/components/When";
 
 import { Avatar } from "@/components/Avatar";
 import {
+  type AdminAppeal,
+  type AdminAppealPage,
   type AdminBanRow,
   type AdminLookup,
   type AdminPerson,
@@ -82,7 +84,9 @@ type Action =
   | "hide_theme"
   | "publish_theme"
   | "hide_media"
-  | "delete_media";
+  | "delete_media"
+
+  | "mute";
 const durations: { days: number | null; key: "days1" | "days7" | "days30" | "forGood" }[] = [
   { days: 1, key: "days1" },
   { days: 7, key: "days7" },
@@ -90,26 +94,32 @@ const durations: { days: number | null; key: "days1" | "days7" | "days30" | "for
   { days: null, key: "forGood" },
 ];
 
-/** How long a ban lasts, and why: the choices a ban asks for. */
+/** How long a ban or mute lasts, why as the person reads it, and a note for the moderators. */
 function BanFields({
   days,
   setDays,
   reason,
   setReason,
+  publicReason,
+  setPublicReason,
   texts,
   name,
+  legend,
 }: {
   days: number | null;
   setDays: (days: number | null) => void;
   reason: string;
   setReason: (reason: string) => void;
+  publicReason: string;
+  setPublicReason: (reason: string) => void;
   texts: Texts;
   name: string;
+  legend: string;
 }) {
   return (
     <>
       <fieldset className="durations">
-        <legend>{texts.banFor}</legend>
+        <legend>{legend}</legend>
         {durations.map((d) => (
           <label key={d.key} className={days === d.days ? "on" : undefined}>
             <input type="radio" name={name} checked={days === d.days} onChange={() => setDays(d.days)} />
@@ -117,7 +127,22 @@ function BanFields({
           </label>
         ))}
       </fieldset>
-      <ReasonField reason={reason} setReason={setReason} hint={texts.banReasonHint} texts={texts} />
+      <label className="reason">
+        <span>{texts.publicReasonLabel}</span>
+        <input
+          value={publicReason}
+          maxLength={300}
+          onChange={(event) => setPublicReason(event.target.value)}
+        />
+        <small className="meta">{texts.publicReasonHint}</small>
+      </label>
+      <ReasonField
+        reason={reason}
+        setReason={setReason}
+        hint={texts.modNoteHint}
+        label={texts.modNote}
+        texts={texts}
+      />
     </>
   );
 }
@@ -126,16 +151,18 @@ function ReasonField({
   reason,
   setReason,
   hint,
+  label,
   texts,
 }: {
   reason: string;
   setReason: (reason: string) => void;
   hint: string;
+  label?: string;
   texts: Texts;
 }) {
   return (
     <label className="reason">
-      <span>{texts.modReason}</span>
+      <span>{label ?? texts.modReason}</span>
       <input value={reason} maxLength={300} onChange={(event) => setReason(event.target.value)} />
       <small className="meta">{hint}</small>
     </label>
@@ -235,17 +262,20 @@ function ReportItem({
   const [action, setAction] = useState<Action | null>(null);
   const [days, setDays] = useState<number | null>(7);
   const [reason, setReason] = useState("");
+  const [publicReason, setPublicReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const reasonText = texts[`reason_${report.reason}` as keyof Texts] as string | undefined;
 
   async function run(chosen: Action) {
+    const restricting = chosen === "ban" || chosen === "mute";
     setBusy(true);
     setError(null);
     const done = await admin<{ closed: number }>(`admin/reports/${report.id}`, {
       action: chosen,
-      ...(chosen === "ban" ? { days } : {}),
-      ...((chosen === "ban" || chosen === "warn") && reason.trim() ? { reason: reason.trim() } : {}),
+      ...(restricting ? { days } : {}),
+      ...((restricting || chosen === "warn") && reason.trim() ? { reason: reason.trim() } : {}),
+      ...(restricting && publicReason.trim() ? { publicReason: publicReason.trim() } : {}),
     });
     setBusy(false);
     if (!done.ok) return setError(done.status === 409 ? texts.cannotBanAdmin : texts.failed);
@@ -255,6 +285,7 @@ function ReportItem({
 
   const choices: { key: Action; label: string; show: boolean; danger?: boolean }[] = [
     { key: "warn", label: texts.acWarn, show: true },
+    { key: "mute", label: texts.acMute, show: report.target?.role !== "admin", danger: true },
     { key: "ban", label: texts.acBan, show: report.target?.role !== "admin", danger: true },
     {
       key: "remove_message",
@@ -390,14 +421,17 @@ function ReportItem({
                 run(action);
               }}
             >
-              {action === "ban" && (
+              {(action === "ban" || action === "mute") && (
                 <BanFields
                   days={days}
                   setDays={setDays}
                   reason={reason}
                   setReason={setReason}
+                  publicReason={publicReason}
+                  setPublicReason={setPublicReason}
                   texts={texts}
                   name={`days-${report.id}`}
+                  legend={action === "mute" ? texts.muteFor : texts.banFor}
                 />
               )}
               {action === "warn" && (
@@ -509,6 +543,196 @@ function ReportsPanel({
             className="pill"
             disabled={loading}
             onClick={() => load(status, page.reports.at(-1)?.id)}
+          >
+            {loading ? texts.loading : texts.loadMore}
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** One appeal: who, against what (the moderators' own note too), what they wrote, and the answer. */
+function AppealItem({
+  appeal,
+  texts,
+  now,
+  onDone,
+}: {
+  appeal: AdminAppeal;
+  texts: Texts;
+  now: number;
+  onDone: (appeal: AdminAppeal) => void;
+}) {
+  const { language } = texts;
+  const [reply, setReply] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const r = appeal.restriction;
+
+  async function decide(decision: "accept" | "decline") {
+    setBusy(true);
+    setError(null);
+    const done = await admin<{ appeal: AdminAppeal }>(`admin/appeals/${appeal.id}`, {
+      decision,
+      ...(reply.trim() ? { reply: reply.trim() } : {}),
+    });
+    setBusy(false);
+    if (!done.ok || !done.body?.appeal) return setError(texts.failed);
+    onDone(done.body.appeal);
+  }
+
+  return (
+    <li className={`report-item appeal-item is-${appeal.status}`}>
+      <div className="report-top">
+        {r ? (
+          <span className={`flair${r.kind === "muted" ? "" : " banned-flag"}`}>
+            {fill(texts.appealAgainst, { kind: texts[`restriction_${r.kind}`] })}
+          </span>
+        ) : (
+          <span className="flair">{texts.appealRestrictionGone}</span>
+        )}
+        {r && !r.live && <span className="meta">{texts.appealRestrictionOver}</span>}
+        <time className="meta" dateTime={appeal.createdAt}>
+          {since(appeal.createdAt, language, now)}
+        </time>
+      </div>
+      {appeal.account ? (
+        <Who person={appeal.account} texts={texts} />
+      ) : (
+        <p className="hint">{texts.targetGone}</p>
+      )}
+      {r && (
+        <p className="meta">
+          {r.reason ? `“${r.reason}”` : texts.rNoReason}
+          {r.until
+            ? ` · ${fill(texts.banUntil, { date: date(r.until, language) })}`
+            : ` · ${texts.banForever}`}
+          {r.createdBy ? ` · ${fill(texts.banBy, { name: r.createdBy })}` : ""}
+        </p>
+      )}
+      {r?.note && <p className="meta">{fill(texts.appealNote, { note: r.note })}</p>}
+      <figure className="said">
+        <figcaption className="meta">{texts.appealYour}</figcaption>
+        <blockquote>{appeal.text}</blockquote>
+      </figure>
+      {appeal.status === "open" ? (
+        <form
+          className="confirm-action"
+          onSubmit={(event: FormEvent) => {
+            event.preventDefault();
+          }}
+        >
+          <label className="reason">
+            <span>{texts.appealReplyLabel}</span>
+            <textarea
+              rows={3}
+              maxLength={1000}
+              value={reply}
+              onChange={(event) => setReply(event.target.value)}
+            />
+          </label>
+          <div className="row">
+            <button type="button" className="pill" disabled={busy} onClick={() => decide("decline")}>
+              {texts.appealDecline}
+            </button>
+            <button type="button" className="primary small" disabled={busy} onClick={() => decide("accept")}>
+              {texts.appealAccept}
+            </button>
+          </div>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+        </form>
+      ) : (
+        <>
+          {appeal.reply && <p className="report-note">“{appeal.reply}”</p>}
+          <p className="meta handled">
+            {fill(texts.handledBy, {
+              status: appeal.status === "accepted" ? texts.appealStatusAccepted : texts.appealStatusDeclined,
+              name: appeal.handledBy ?? "?",
+              when: appeal.answeredAt ? since(appeal.answeredAt, language, now) : "",
+            })}
+          </p>
+        </>
+      )}
+    </li>
+  );
+}
+
+function AppealsPanel({
+  initial,
+  texts,
+  now,
+}: { initial: AdminAppealPage | null; texts: Texts; now: number }) {
+  const [status, setStatus] = useState<"open" | "all">("open");
+  const [page, setPage] = useState(initial ?? { appeals: [], more: false, open: 0 });
+  const [loading, setLoading] = useState(false);
+
+  async function load(next = status, before?: string) {
+    setLoading(true);
+    const got = await admin<AdminAppealPage>(
+      `admin/appeals?status=${next}${before ? `&before=${before}` : ""}`,
+    );
+    setLoading(false);
+    if (!got.body) return;
+    const body = got.body;
+    setPage((current) => (before ? { ...body, appeals: [...current.appeals, ...body.appeals] } : body));
+  }
+
+  return (
+    <>
+      <div className="admin-bar">
+        <div className="seg-mini">
+          {(["open", "all"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={status === value}
+              onClick={() => {
+                setStatus(value);
+                load(value);
+              }}
+            >
+              {value === "open" ? texts.filterOpen : texts.filterAll}
+              {value === "open" && page.open > 0 && <b className="n">{page.open}</b>}
+            </button>
+          ))}
+        </div>
+      </div>
+      {page.appeals.length ? (
+        <ul className="reports">
+          {page.appeals.map((appeal) => (
+            <AppealItem
+              key={appeal.id}
+              appeal={appeal}
+              texts={texts}
+              now={now}
+              onDone={(answered) =>
+                setPage((current) => ({
+                  ...current,
+                  open: Math.max(0, current.open - 1),
+                  appeals:
+                    status === "open"
+                      ? current.appeals.filter((a) => a.id !== answered.id)
+                      : current.appeals.map((a) => (a.id === answered.id ? answered : a)),
+                }))
+              }
+            />
+          ))}
+        </ul>
+      ) : (
+        <p className="hint empty">{status === "open" ? texts.noAppeals : texts.noAppealsAll}</p>
+      )}
+      {page.more && (
+        <div className="more-row">
+          <button
+            type="button"
+            className="pill"
+            disabled={loading}
+            onClick={() => load(status, page.appeals.at(-1)?.id)}
           >
             {loading ? texts.loading : texts.loadMore}
           </button>
@@ -707,7 +931,10 @@ function BanItem({
         </span>
       )}
       <span className="lines ban-lines">
-        <span className={`meta${ban.live ? " live" : ""}`}>{until}</span>
+        <span className={`meta${ban.live ? " live" : ""}`}>
+          {ban.kind === "mute" && <span className="flair">{texts.kindMute}</span>} {until}
+        </span>
+        {ban.publicReason && <span className="meta">“{ban.publicReason}”</span>}
         {ban.reason && <span className="meta">{ban.reason}</span>}
         {ban.createdBy && <span className="meta">{fill(texts.banBy, { name: ban.createdBy })}</span>}
       </span>
@@ -813,7 +1040,8 @@ function PeoplePanel({ initialQuery, texts, now }: { initialQuery: string; texts
   const [busy, setBusy] = useState(false);
   const [days, setDays] = useState<number | null>(7);
   const [reason, setReason] = useState("");
-  const [banning, setBanning] = useState(false);
+  const [publicReason, setPublicReason] = useState("");
+  const [banning, setBanning] = useState<"ban" | "mute" | false>(false);
   const [error, setError] = useState<string | null>(null);
 
   async function find(term = query) {
@@ -827,15 +1055,17 @@ function PeoplePanel({ initialQuery, texts, now }: { initialQuery: string; texts
     setBanning(false);
   }
 
-  async function banUser(userId: string) {
+  async function banUser(userId: string, kind: "ban" | "mute") {
     setBusy(true);
-    const done = await admin(`admin/users/${userId}/ban`, {
+    const done = await admin(`admin/users/${userId}/${kind}`, {
       days,
       ...(reason.trim() ? { reason: reason.trim() } : {}),
+      ...(publicReason.trim() ? { publicReason: publicReason.trim() } : {}),
     });
     setBusy(false);
     if (!done.ok) return setError(done.status === 409 ? texts.cannotBanAdmin : texts.failed);
     setReason("");
+    setPublicReason("");
     await find();
   }
 
@@ -931,7 +1161,7 @@ function PeoplePanel({ initialQuery, texts, now }: { initialQuery: string; texts
               className="confirm-action"
               onSubmit={(event) => {
                 event.preventDefault();
-                banUser(user.userId);
+                banUser(user.userId, banning);
               }}
             >
               <BanFields
@@ -939,8 +1169,11 @@ function PeoplePanel({ initialQuery, texts, now }: { initialQuery: string; texts
                 setDays={setDays}
                 reason={reason}
                 setReason={setReason}
+                publicReason={publicReason}
+                setPublicReason={setPublicReason}
                 texts={texts}
                 name="lookup-days"
+                legend={banning === "mute" ? texts.muteFor : texts.banFor}
               />
               <div className="row">
                 <button type="button" className="pill" onClick={() => setBanning(false)}>
@@ -952,9 +1185,14 @@ function PeoplePanel({ initialQuery, texts, now }: { initialQuery: string; texts
               </div>
             </form>
           ) : (
-            <button type="button" className="pill danger" onClick={() => setBanning(true)}>
-              {texts.banPerson}
-            </button>
+            <div className="row">
+              <button type="button" className="pill danger" onClick={() => setBanning("mute")}>
+                {texts.mutePerson}
+              </button>
+              <button type="button" className="pill danger" onClick={() => setBanning("ban")}>
+                {texts.banPerson}
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -1004,9 +1242,10 @@ function AuditPanel({
   const extra = (entry: AuditEntry) => {
     const data = entry.data ?? {};
     const parts: string[] = [];
+    if (typeof data.publicReason === "string" && data.publicReason) parts.push(`“${data.publicReason}”`);
     if (typeof data.reason === "string" && data.reason) parts.push(data.reason);
     if (typeof data.days === "number") parts.push(fill(texts.auditDays, { n: data.days }));
-    else if (entry.action === "ban") parts.push(texts.banForever);
+    else if (entry.action === "ban" || entry.action === "mute") parts.push(texts.banForever);
     return parts.join(" · ");
   };
 
@@ -1053,8 +1292,8 @@ function AuditPanel({
   );
 }
 
-/** The admin page: the reports queue, the theme queue, finding a person, bans, and the audit log,
- *  one tab each. */
+/** The admin page: the reports queue, appeals, the theme queue, finding a person, bans, and the
+ *  audit log, one tab each. */
 export function AdminBoard({
   texts,
   tab,
@@ -1062,6 +1301,7 @@ export function AdminBoard({
   initialBans,
   initialAudit,
   initialThemes,
+  initialAppeals,
   initialQuery,
   now,
 }: {
@@ -1069,6 +1309,7 @@ export function AdminBoard({
   tab: AdminTab;
   me: string;
   initialReports: { reports: AdminReport[]; more: boolean; open: number };
+  initialAppeals: AdminAppealPage | null;
   initialThemes: AdminThemePage | null;
   initialBans: { bans: AdminBanRow[]; more: boolean } | null;
   initialAudit: { entries: AuditEntry[]; more: boolean } | null;
@@ -1077,6 +1318,7 @@ export function AdminBoard({
 }) {
   const tabs: { key: AdminTab; label: string; n?: number }[] = [
     { key: "reports", label: texts.tabReports, n: initialReports.open },
+    { key: "appeals", label: texts.tabAppeals, n: initialAppeals?.open },
     { key: "themes", label: texts.tabThemes, n: initialThemes?.review },
     { key: "people", label: texts.tabPeople },
     { key: "bans", label: texts.tabBans },
@@ -1098,6 +1340,7 @@ export function AdminBoard({
       </nav>
       <article className="card in d3 admin-card">
         {tab === "reports" && <ReportsPanel initial={initialReports} texts={texts} now={now} />}
+        {tab === "appeals" && <AppealsPanel initial={initialAppeals} texts={texts} now={now} />}
         {tab === "themes" && <ThemesPanel initial={initialThemes} texts={texts} />}
         {tab === "people" && <PeoplePanel initialQuery={initialQuery} texts={texts} now={now} />}
         {tab === "bans" && <BansPanel initial={initialBans} texts={texts} />}

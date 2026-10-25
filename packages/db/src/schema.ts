@@ -221,21 +221,61 @@ export const reports = pgTable(
   ],
 );
 
-/** Bans on an account, on an email address (kept only as its SHA-256), or both; a ban without an
- *  end lasts until lifted. */
+/** Restrictions on an account: bans (on an account, on an email address kept only as its
+ *  SHA-256, or both) and mutes (an account only; it may sign in but not write to others). One
+ *  without an end lasts until lifted. */
 export const bans = pgTable(
   "bans",
   {
     id: uuid().primaryKey(),
+    /** ban | mute */
+    kind: text().notNull().default("ban"),
     accountId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     emailHash: bytea(),
+    /** The moderators' own note. */
     reason: text(),
+    /** What the person is told about why (on the website, the launcher and the phone). */
+    publicReason: text(),
     createdBy: text(),
     expiresAt: timestamp({ withTimezone: true }),
     liftedAt: timestamp({ withTimezone: true }),
     createdAt: now(),
   },
-  (table) => [index().on(table.accountId), index().on(table.emailHash)],
+  (table) => [
+    index().on(table.accountId),
+    index().on(table.emailHash),
+    check("ban_kind", sql`${table.kind} in ('ban', 'mute')`),
+    check("ban_public_reason", sql`length(${table.publicReason}) <= 300`),
+  ],
+);
+
+/** Someone asking the moderators to lift a restriction: one open at a time per account. */
+export const appeals = pgTable(
+  "appeals",
+  {
+    id: uuid().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** The restriction asked about (gone when it is). */
+    banId: uuid().references(() => bans.id, { onDelete: "set null" }),
+    text: text().notNull(),
+    /** open | accepted | declined */
+    status: text().notNull().default("open"),
+    /** The moderator's answer, shown to the person. */
+    reply: text(),
+    handledBy: text(),
+    handledAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+  },
+  (table) => [
+    index().on(table.accountId, table.createdAt.desc()),
+    index().on(table.status, table.createdAt),
+    uniqueIndex("one_open_appeal").on(table.accountId).where(sql`${table.status} = 'open'`),
+    check("appeal_status", sql`${table.status} in ('open', 'accepted', 'declined')`),
+    check("appeal_text", sql`length(${table.text}) between 1 and 2000`),
+    check("appeal_reply", sql`length(${table.reply}) <= 1000`),
+  ],
 );
 
 export const auditLog = pgTable("audit_log", {
@@ -700,7 +740,7 @@ export const notifications = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     /** friend_request | friend_accepted | message | party_invite | game_invite | missed_call |
      *  lfg_request | lfg_accepted | warning | family_invite | family_request | family_answer |
-     *  family_alert | family_summary */
+     *  family_alert | family_summary | appeal (a moderator answered an appeal) */
     kind: text().notNull(),
     actorId: uuid().references(() => accounts.id, { onDelete: "cascade" }),
     /** What it is about: the conversation, party, game session or call; for a friend request or
@@ -722,7 +762,7 @@ export const notifications = pgTable(
       .where(sql`${table.readAt} is null`),
     check(
       "notification_kind",
-      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning', 'family_invite', 'family_request', 'family_answer', 'family_alert', 'family_summary')`,
+      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning', 'family_invite', 'family_request', 'family_answer', 'family_alert', 'family_summary', 'appeal')`,
     ),
   ],
 );

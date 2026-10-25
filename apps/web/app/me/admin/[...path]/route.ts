@@ -6,16 +6,17 @@ const id = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 /** The admin API paths the admin page may reach through here; the API itself checks that the
  *  signed-in account is an admin on every one of them. */
 const allowed: Record<string, RegExp[]> = {
-  GET: [/^admin\/(reports|users|bans|audit|themes)$/],
+  GET: [/^admin\/(reports|users|bans|audit|themes|appeals)$/],
   POST: [
     new RegExp(`^admin/reports/${id}$`),
     new RegExp(`^admin/themes/${id}$`),
-    new RegExp(`^admin/users/${id}/ban$`),
+    new RegExp(`^admin/users/${id}/(ban|mute)$`),
+    new RegExp(`^admin/appeals/${id}$`),
     new RegExp(`^admin/bans/${id}/lift$`),
   ],
 };
 const queries: Record<string, RegExp> = {
-  status: /^(open|actioned|dismissed|all|review|hidden|published)$/,
+  status: /^(open|actioned|dismissed|all|review|hidden|published|accepted|declined)$/,
   before: new RegExp(`^${id}$`),
   limit: /^[0-9]{1,3}$/,
   all: /^1$/,

@@ -1,8 +1,8 @@
 import { z } from "zod";
 import type { MemberView } from "./messages.js";
 
-/** What a notification can be about. Each but `warning` can be turned off in the settings; a
- *  moderator's warning always arrives. */
+/** What a notification can be about. Each but `warning` and `appeal` can be turned off in the
+ *  settings; a moderator's warning, and their answer to an appeal, always arrive. */
 export const notificationKinds = [
   "friend_request",
   "friend_accepted",
@@ -18,10 +18,11 @@ export const notificationKinds = [
   "family_answer",
   "family_alert",
   "family_summary",
+  "appeal",
 ] as const;
 export type NotificationKind = (typeof notificationKinds)[number];
 export const optionalNotificationKinds = notificationKinds.filter(
-  (kind): kind is Exclude<NotificationKind, "warning"> => kind !== "warning",
+  (kind): kind is Exclude<NotificationKind, "warning" | "appeal"> => kind !== "warning" && kind !== "appeal",
 );
 export type OptionalNotificationKind = (typeof optionalNotificationKinds)[number];
 
@@ -37,6 +38,7 @@ export interface NotificationView {
   subjectId: string | null;
   /** message: {conversationId, title, group, count, text}; party_invite: {partyId, size};
    *  game_invite: {sessionId, titleId}; missed_call: {callId}; warning: {reason};
+   *  appeal: {decision: accepted | declined, reply};
    *  lfg_request: {postId, titleId, gameNames, purpose, count}; lfg_accepted: {postId, titleId,
    *  gameNames, purpose, invite: {kind, id} | null}; family_invite: {inviteId, familyId, familyName,
    *  role}; family_request: {requestId, kind, minutes, titleId, gameName, person}; family_answer:

@@ -175,6 +175,10 @@ function Item({
       line = texts.n_warning;
       detail = notice.data.reason ? fill(texts.n_warning_reason, { reason: notice.data.reason }) : null;
       break;
+    case "appeal":
+      line = notice.data.decision === "accepted" ? texts.n_appeal_accepted : texts.n_appeal_declined;
+      detail = notice.data.reply ? fill(texts.n_appeal_reply, { reply: notice.data.reply }) : null;
+      break;
     default:
       line = rich(texts[`n_${notice.kind}`], { name });
   }

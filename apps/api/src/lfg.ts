@@ -28,6 +28,7 @@ import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { blockedLink } from "./links.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { assertNotMuted } from "./moderation.js";
 import type { Notifier } from "./notifications.js";
 import type { PartyService } from "./parties.js";
 import { blockedBetween, noBlockBetween, people } from "./people.js";
@@ -362,6 +363,7 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
 
   app.post("/lfg", async (c) => {
     const me = c.get("userId");
+    await assertNotMuted(deps.db, me);
     const input = await body(c, LfgCreate);
     await board(me);
     const now = Date.now();
@@ -422,6 +424,7 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
   /** "I'm in": the poster hears it and gets a notification; asking again changes nothing. */
   app.post("/lfg/:id/requests", async (c) => {
     const me = c.get("userId");
+    await assertNotMuted(deps.db, me);
     const post = await visible(c.req.param("id"), me);
     if (post.authorId === me) throw new HttpError(400, ErrorCode.badRequest, "That is your own post");
     await board(me);

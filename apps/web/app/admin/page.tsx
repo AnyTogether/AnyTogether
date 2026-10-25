@@ -1,5 +1,6 @@
 import { AdminBoard } from "@/components/AdminBoard";
 import {
+  type AdminAppealPage,
   type AdminBanRow,
   type AdminReport,
   type AdminTab,
@@ -23,8 +24,10 @@ export default async function Admin({
   if (!user) redirect("/login?next=/admin");
   if (user.account.role !== "admin") notFound();
   const tab: AdminTab = adminTabs.includes(query.tab as AdminTab) ? (query.tab as AdminTab) : "reports";
-  const [reports, themes, bans, audit] = await Promise.all([
+  const [reports, appeals, themes, bans, audit] = await Promise.all([
     apiJson<{ reports: AdminReport[]; more: boolean; open: number }>("/admin/reports"),
+    // Always: the tab shows how many appeals wait.
+    apiJson<AdminAppealPage>("/admin/appeals"),
     // Always: the tab shows how many themes wait for review.
     apiJson<AdminThemePage>("/admin/themes"),
     tab === "bans" ? apiJson<{ bans: AdminBanRow[]; more: boolean }>("/admin/bans") : null,
@@ -44,6 +47,7 @@ export default async function Admin({
         initialBans={bans?.body ?? null}
         initialAudit={audit?.body ?? null}
         initialThemes={themes.body}
+        initialAppeals={appeals.body}
         initialQuery={tab === "people" ? (query.q ?? "") : ""}
         now={Date.now()}
       />

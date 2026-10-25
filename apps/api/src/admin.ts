@@ -2,8 +2,10 @@
  *
  *   pnpm --filter @anytogether/api admin reports [--all]
  *   pnpm --filter @anytogether/api admin report <id> dismiss|action
- *   pnpm --filter @anytogether/api admin ban <@handle|email|id> [--days 7] [--reason "spam"]
+ *   pnpm --filter @anytogether/api admin ban <@handle|email|id> [--days 7] [--reason "spam"] [--public "what they read"]
  *   pnpm --filter @anytogether/api admin unban <@handle|email|id>
+ *   pnpm --filter @anytogether/api admin mute <@handle|email|id> [--days 7] [--reason "spam"] [--public "what they read"]
+ *   pnpm --filter @anytogether/api admin unmute <@handle|email|id>
  *   pnpm --filter @anytogether/api admin user <@handle|email|id>
  *   pnpm --filter @anytogether/api admin grant <@handle|email|id>    (the admin page at /admin)
  *   pnpm --filter @anytogether/api admin revoke <@handle|email|id>
@@ -19,13 +21,15 @@ import { uuidv7 } from "uuidv7";
 import { purgeDeletedAccounts } from "./account.js";
 import { config } from "./config.js";
 import { importHub } from "./hubImport.js";
-import { ban, findAccount, handleReport, isBanned, listReports, unban } from "./moderation.js";
+import { ban, findAccount, handleReport, isBanned, listReports, mute, unban } from "./moderation.js";
 import { setThemeStatus, settleThemeReports } from "./themes.js";
 
 const usage = `usage: admin reports [--all]
        admin report <id> dismiss|action
-       admin ban <@handle|email|id> [--days N] [--reason text]
+       admin ban <@handle|email|id> [--days N] [--reason text] [--public text]
        admin unban <@handle|email|id>
+       admin mute <@handle|email|id> [--days N] [--reason text] [--public text]
+       admin unmute <@handle|email|id>
        admin user <@handle|email|id>
        admin grant <@handle|email|id>
        admin revoke <@handle|email|id>
@@ -67,16 +71,25 @@ export async function run(
       await handleReport(ctx.db, target, verdict, by);
       return `report ${target} ${verdict}`;
     }
-    case "ban": {
+    case "ban":
+    case "mute": {
       if (!target) return usage;
       const days = option("days") ? Number(option("days")) : undefined;
       if (days !== undefined && !(days > 0)) return "--days needs a positive number";
-      const done = await ban(ctx, target, { reason: option("reason"), days, by });
-      return `banned ${done.handle ? `@${done.handle}` : target}${done.expiresAt ? ` until ${done.expiresAt.toISOString()}` : ""}; every session signed out`;
+      const options = { reason: option("reason"), publicReason: option("public"), days, by };
+      const done = await (command === "ban" ? ban : mute)(ctx, target, options);
+      const until = done.expiresAt ? ` until ${done.expiresAt.toISOString()}` : "";
+      return command === "ban"
+        ? `banned ${done.handle ? `@${done.handle}` : target}${until}; every session signed out`
+        : `muted @${done.handle ?? target}${until}`;
     }
     case "unban": {
       if (!target) return usage;
       return `lifted ${await unban(ctx, target, by)} ban(s) on ${target}`;
+    }
+    case "unmute": {
+      if (!target) return usage;
+      return `lifted ${await unban(ctx, target, by, undefined, "mute")} mute(s) on ${target}`;
     }
     case "user": {
       if (!target) return usage;

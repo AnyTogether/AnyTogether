@@ -42,7 +42,15 @@ export const ErrorCode = {
   badTheme: "bad_theme",
   /** A theme needs a still: a preview file, one inside the theme, or a background picture. */
   previewRequired: "preview_required",
+  /** Banned or suspended: the answer carries `restriction` and, after a sign-in that proved who
+   *  it is, `appealToken` (see POST /me/appeals). */
   accountBanned: "account_banned",
+  /** Muted: the account may not write to others now; the answer carries `restriction`. */
+  accountMuted: "account_muted",
+  /** An appeal is open already: one at a time. */
+  appealOpen: "appeal_open",
+  /** Mail could not be sent now (the mail server refused or could not be reached). */
+  mailUnavailable: "mail_unavailable",
   /** A passkey's challenge was used already or is too old: ask for a new one. */
   challengeExpired: "challenge_expired",
   /** The passkey is unknown here (removed, or made for another site) or its signature is wrong. */

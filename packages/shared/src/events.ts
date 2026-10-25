@@ -3,6 +3,7 @@ import type { DiscoverEvent } from "./discover.js";
 import type { FeedEvent } from "./feed.js";
 import type { GamePresence, GameSessionEvent, GameSignalKind } from "./gameSessions.js";
 import type { MessageEvent } from "./messages.js";
+import type { Restriction, RestrictionKind } from "./moderation.js";
 import type { NotificationEvent } from "./notifications.js";
 import type { PartyEvent, PartyPresence } from "./parties.js";
 import type { SharePlayEvent, SharePresence } from "./sharePlays.js";
@@ -10,6 +11,10 @@ import type { SharePlayEvent, SharePresence } from "./sharePlays.js";
 /** What the realtime gateway pushes; the API publishes them for each recipient. */
 export type GatewayEvent =
   | { type: "account.signed_out"; data: { sessionId: string } }
+  /** A moderator banned, suspended or muted the account (a ban signs every device out next). */
+  | { type: "account.restricted"; data: Restriction }
+  /** A restriction was lifted (by a moderator, or an accepted appeal). */
+  | { type: "account.restored"; data: { id: string; kind: RestrictionKind } }
   | {
       type: "presence.updated";
       data: {

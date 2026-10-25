@@ -1,3 +1,4 @@
+import type { Restriction } from "./restrictions";
 import type { MediaItem, MediaKind } from "./storage";
 import type { ThemeColors, ThemeStatus } from "./themes";
 
@@ -53,9 +54,13 @@ export interface AdminReport {
 
 export interface AdminBanRow {
   id: string;
+  /** ban, or mute (older API answers: ban). */
+  kind?: "ban" | "mute";
   account: AdminPerson | null;
   emailOnly: boolean;
   reason: string | null;
+  /** What the person reads. */
+  publicReason?: string | null;
   createdBy: string | null;
   createdAt: string;
   expiresAt: string | null;
@@ -131,5 +136,25 @@ export interface AdminThemePage {
 export const adminThumb = (id: string, version?: number | null) =>
   `/me/admin/admin/themes/${id}/thumb.webp${version ? `?v=${version}` : ""}`;
 
-export const adminTabs = ["reports", "themes", "people", "bans", "audit"] as const;
+/** An appeal as the moderators see it: who, against what (with their own note), and the answer. */
+export interface AdminAppeal {
+  id: string;
+  restrictionId: string | null;
+  status: "open" | "accepted" | "declined";
+  text: string;
+  reply: string | null;
+  createdAt: string;
+  answeredAt: string | null;
+  account: AdminPerson | null;
+  restriction: (Restriction & { note: string | null; createdBy: string | null; live: boolean }) | null;
+  handledBy: string | null;
+}
+
+export interface AdminAppealPage {
+  appeals: AdminAppeal[];
+  more: boolean;
+  open: number;
+}
+
+export const adminTabs = ["reports", "appeals", "themes", "people", "bans", "audit"] as const;
 export type AdminTab = (typeof adminTabs)[number];

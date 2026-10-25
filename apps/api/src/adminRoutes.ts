@@ -1,5 +1,6 @@
 import {
   accounts,
+  appeals,
   auditLog,
   avatars,
   bans,
@@ -14,6 +15,7 @@ import {
 } from "@anytogether/db";
 import {
   AdminBan,
+  AppealDecision,
   ErrorCode,
   ReportVerdict,
   ThemeModeration,
@@ -33,7 +35,16 @@ import { lfgService } from "./lfg.js";
 import { mediaService } from "./media.js";
 import { messageView } from "./messages.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
-import { ban, emailHash, handleReport, liveBan } from "./moderation.js";
+import {
+  appealView,
+  ban,
+  emailHash,
+  handleReport,
+  liftRestriction,
+  liveRestriction,
+  mute,
+  restrictionView,
+} from "./moderation.js";
 import type { Notifier } from "./notifications.js";
 import { people } from "./people.js";
 import { readAll } from "./storage.js";
@@ -276,7 +287,12 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
 
   /** What a moderator does to the person a report is about, or to what they wrote. */
   const act = async (
-    input: { action: string; reason?: string | undefined; days?: number | null | undefined },
+    input: {
+      action: string;
+      reason?: string | undefined;
+      publicReason?: string | undefined;
+      days?: number | null | undefined;
+    },
     report: Report,
     target: typeof accounts.$inferSelect,
     subject: string,
@@ -296,6 +312,19 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
           throw new HttpError(409, ErrorCode.conflict, "Revoke their admin role first");
         await ban({ db, valkey }, subject, {
           reason: input.reason ?? report.reason,
+          publicReason: input.publicReason,
+          days: input.days ?? undefined,
+          by,
+          actorId,
+        });
+        break;
+      }
+      case "mute": {
+        if (target.role === "admin")
+          throw new HttpError(409, ErrorCode.conflict, "Revoke their admin role first");
+        await mute({ db, valkey }, subject, {
+          reason: input.reason ?? report.reason,
+          publicReason: input.publicReason,
           days: input.days ?? undefined,
           by,
           actorId,
@@ -545,9 +574,11 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
       const person = b.accountId ? people.get(b.accountId) : undefined;
       return {
         id: b.id,
+        kind: b.kind,
         account: person ? personView(person) : null,
         emailOnly: !b.accountId,
         reason: b.reason,
+        publicReason: b.publicReason,
         createdBy: b.createdBy,
         createdAt: b.createdAt.toISOString(),
         expiresAt: iso(b.expiresAt),
@@ -618,23 +649,25 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
     });
   });
 
-  app.post("/admin/users/:id/ban", async (c) => {
+  /** Bans (signs out everywhere, no sign-in) or mutes (no writing to others) an account. */
+  app.post("/admin/users/:id/:kind{ban|mute}", async (c) => {
     const id = c.req.param("id");
     const input = await body(c, AdminBan);
     const [target] = isId(id) ? await db.select().from(accounts).where(eq(accounts.id, id)) : [];
     if (!target) throw new HttpError(404, ErrorCode.notFound, "No such account");
     if (target.role === "admin")
       throw new HttpError(409, ErrorCode.conflict, "Revoke their admin role first");
-    const done = await ban({ db, valkey }, id, {
+    const done = await (c.req.param("kind") === "mute" ? mute : ban)({ db, valkey }, id, {
       reason: input.reason,
+      publicReason: input.publicReason,
       days: input.days ?? undefined,
       by: c.get("adminHandle"),
       actorId: c.get("userId"),
     });
-    return c.json({ expiresAt: iso(done.expiresAt) }, 201);
+    return c.json({ id: done.id, expiresAt: iso(done.expiresAt) }, 201);
   });
 
-  /** Bans, the ones in force first by default (all=1 for every one), newest first. */
+  /** Bans and mutes, the ones in force by default (all=1 for every one), newest first. */
   app.get("/admin/bans", async (c) => {
     const all = c.req.query("all") === "1";
     const before = c.req.query("before");
@@ -642,40 +675,108 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
     const rows = await db
       .select()
       .from(bans)
-      .where(and(all ? undefined : liveBan(), isId(before) ? lt(bans.id, before as string) : undefined))
+      .where(
+        and(all ? undefined : liveRestriction(), isId(before) ? lt(bans.id, before as string) : undefined),
+      )
       .orderBy(desc(bans.id))
       .limit(limit + 1);
     return c.json({ bans: await banViews(rows.slice(0, limit)), more: rows.length > limit });
   });
 
-  /** Lifts one ban; with no other ban in force the account is active again. */
+  /** Lifts one ban or mute; with no other ban in force the account is active again. */
   app.post("/admin/bans/:id/lift", async (c) => {
     const id = c.req.param("id");
-    const [lifted] = isId(id)
-      ? await db
-          .update(bans)
-          .set({ liftedAt: new Date() })
-          .where(and(eq(bans.id, id), isNull(bans.liftedAt)))
-          .returning()
-      : [];
+    const lifted = isId(id) ? await liftRestriction({ db, valkey }, id) : null;
     if (!lifted) throw new HttpError(404, ErrorCode.notFound, "No such ban in force");
-    if (lifted.accountId) {
-      const [account] = await db.select().from(accounts).where(eq(accounts.id, lifted.accountId));
-      const matches = [
-        eq(bans.accountId, lifted.accountId),
-        ...(account?.email ? [eq(bans.emailHash, emailHash(account.email))] : []),
-      ];
-      const still = await db
-        .select({ id: bans.id })
-        .from(bans)
-        .where(and(liveBan(), or(...matches)))
-        .limit(1);
-      if (!still.length && account?.status === "banned")
-        await db.update(accounts).set({ status: "active" }).where(eq(accounts.id, account.id));
-    }
-    await audit(c, "unban", lifted.accountId ?? "email", { ban: lifted.id });
+    await audit(c, lifted.kind === "mute" ? "unmute" : "unban", lifted.accountId ?? "email", {
+      ban: lifted.id,
+    });
     const [view] = await banViews([lifted]);
     return c.json({ ban: view });
+  });
+
+  const appealViews = async (rows: (typeof appeals.$inferSelect)[]) => {
+    const people = await accountRows(rows.map((a) => a.accountId));
+    const banIds = rows.flatMap((a) => (a.banId ? [a.banId] : []));
+    const restrictions = new Map(
+      banIds.length
+        ? (await db.select().from(bans).where(inArray(bans.id, banIds))).map((b) => [b.id, b])
+        : [],
+    );
+    return rows.map((a) => {
+      const person = people.get(a.accountId);
+      const restriction = a.banId ? restrictions.get(a.banId) : undefined;
+      return {
+        ...appealView(a),
+        account: person ? personView(person) : null,
+        restriction: restriction
+          ? {
+              ...restrictionView(restriction, false),
+              note: restriction.reason,
+              createdBy: restriction.createdBy,
+              live:
+                !restriction.liftedAt &&
+                (!restriction.expiresAt || restriction.expiresAt.getTime() > Date.now()),
+            }
+          : null,
+        handledBy: a.handledBy,
+      };
+    });
+  };
+
+  /** Appeals, open ones by default, oldest open first (newest first for the others), 30 a page. */
+  app.get("/admin/appeals", async (c) => {
+    const status = c.req.query("status") ?? "open";
+    if (!["open", "accepted", "declined", "all"].includes(status))
+      throw new HttpError(400, ErrorCode.badRequest, "status: open, accepted, declined or all");
+    const before = c.req.query("before");
+    const limit = page(c.req.query("limit"));
+    const rows = await db
+      .select()
+      .from(appeals)
+      .where(
+        and(
+          status === "all" ? undefined : eq(appeals.status, status),
+          isId(before) ? lt(appeals.id, before as string) : undefined,
+        ),
+      )
+      .orderBy(desc(appeals.id))
+      .limit(limit + 1);
+    const [open] = await db.select({ n: count() }).from(appeals).where(eq(appeals.status, "open"));
+    return c.json({
+      appeals: await appealViews(rows.slice(0, limit)),
+      more: rows.length > limit,
+      open: open?.n ?? 0,
+    });
+  });
+
+  /** Accepts an appeal (its restriction is lifted) or declines it, with an answer; the person gets a
+   *  notification either way. */
+  app.post("/admin/appeals/:id", async (c) => {
+    const id = c.req.param("id");
+    const input = await body(c, AppealDecision);
+    const status = input.decision === "accept" ? "accepted" : "declined";
+    const [answered] = isId(id)
+      ? await db
+          .update(appeals)
+          .set({ status, reply: input.reply || null, handledBy: c.get("adminHandle"), handledAt: new Date() })
+          .where(and(eq(appeals.id, id), eq(appeals.status, "open")))
+          .returning()
+      : [];
+    if (!answered) throw new HttpError(404, ErrorCode.notFound, "No such open appeal");
+    const lifted =
+      status === "accepted" && answered.banId ? await liftRestriction({ db, valkey }, answered.banId) : null;
+    await notes.notify(answered.accountId, {
+      kind: "appeal",
+      subjectId: answered.id,
+      data: { decision: status, reply: answered.reply },
+    });
+    await audit(c, `appeal.${status}`, answered.accountId, {
+      appeal: answered.id,
+      lifted: lifted?.id ?? null,
+    });
+    const [view] = await appealViews([answered]);
+    return c.json({ appeal: view });
   });
 
   /** The audit log, newest first, 50 a page (before = the last ID). */

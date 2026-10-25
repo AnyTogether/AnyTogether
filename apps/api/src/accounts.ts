@@ -26,11 +26,15 @@ export async function findOrCreateAccount(db: Database, identity: Identity) {
     if (known[0]) return { accountId: known[0].accountId, created: false };
 
     const email = identity.emailVerified ? identity.email?.toLowerCase() : undefined;
-    // A banned address makes no new account and joins no other.
-    // Asked inside the transaction: a second connection per sign-in could run the pool dry.
-    if (email && (await isBanned(tx, { email }))) throw bannedError();
+    // A banned address makes no new account and joins no other; when an account has it, the
+    // sign-in goes on to that account, which then refuses it saying why (without this way in
+    // joining it). Asked inside the transaction: a second connection per sign-in could run the
+    // pool dry.
+    const banned = email ? await isBanned(tx, { email }) : false;
     if (email) {
       const byEmail = await tx.select({ id: accounts.id }).from(accounts).where(eq(accounts.email, email));
+      if (byEmail[0] && banned) return { accountId: byEmail[0].id, created: false };
+      if (banned) throw bannedError();
       if (byEmail[0]) {
         await tx
           .insert(identities)

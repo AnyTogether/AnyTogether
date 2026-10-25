@@ -91,6 +91,8 @@ const pushTexts = {
     family_alert_member_joined: ["{name}", "joined your family."],
     family_alert_child_declined: ["{name}", "said the new account is not theirs and left the family."],
     family_summary: ["AnyTogether", "Your family's week of play is ready."],
+    appeal_accepted: ["AnyTogether", "Your appeal was accepted. {reply}"],
+    appeal_declined: ["AnyTogether", "Your appeal was declined. {reply}"],
   },
   tr: {
     friend_request: ["{name}", "arkadaşın olmak istiyor."],
@@ -118,6 +120,8 @@ const pushTexts = {
       "yeni hesabın kendisine ait olmadığını söyledi ve aileden çıktı.",
     ],
     family_summary: ["AnyTogether", "Ailenin oyun haftası hazır."],
+    appeal_accepted: ["AnyTogether", "İtirazın kabul edildi. {reply}"],
+    appeal_declined: ["AnyTogether", "İtirazın reddedildi. {reply}"],
   },
 } as const;
 
@@ -144,6 +148,8 @@ export function notificationPath(n: Pick<NotificationView, "kind" | "subjectId" 
     case "family_alert":
     case "family_summary":
       return "/family";
+    case "appeal":
+      return "/restricted";
     case "lfg_accepted": {
       const invite = (n.data as { invite?: { kind?: string; id?: string } | null }).invite;
       return invite?.kind === "share_play" && invite.id ? `/watch/${invite.id}` : "/party";
@@ -165,7 +171,11 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
         ? `family_answer_${data.approved ? "yes" : "no"}`
         : n.kind === "family_alert"
           ? `family_alert_${String(data.event)}`
-          : null;
+          : n.kind === "appeal"
+            ? data.decision === "accepted"
+              ? "appeal_accepted"
+              : "appeal_declined"
+            : null;
   const key = (
     familyKey && familyKey in texts
       ? familyKey
@@ -192,6 +202,7 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
     family: String(data.familyName ?? ""),
     minutes: Number(data.minutes ?? 0),
     person: String((data.person as { displayName?: string } | null)?.displayName ?? ""),
+    reply: String(data.reply ?? ""),
   };
   const [title, text] = texts[key];
   return {
@@ -274,7 +285,12 @@ export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
       .from(profiles)
       .where(eq(profiles.accountId, accountId));
     if (!profile) return null;
-    if (input.kind !== "warning" && !notificationSettingsOf(profile.settings)[input.kind]) return null;
+    if (
+      input.kind !== "warning" &&
+      input.kind !== "appeal" &&
+      !notificationSettingsOf(profile.settings)[input.kind]
+    )
+      return null;
     const online = await hasLiveSocket(valkey, accountId);
     if (input.kind === "message" && online) return null;
     const data = input.data ?? {};

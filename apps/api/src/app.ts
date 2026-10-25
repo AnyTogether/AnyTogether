@@ -5,6 +5,7 @@ import { bodyLimit } from "hono/body-limit";
 import type { Redis } from "ioredis";
 import { accountRoutes } from "./account.js";
 import { adminRoutes } from "./adminRoutes.js";
+import { appealRoutes } from "./appeals.js";
 import { passkeyRoutes } from "./auth/passkeys.js";
 import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
@@ -127,6 +128,8 @@ export function createApp(deps: Deps) {
   v1.route("/", statsRoutes(deps));
   // Profiles read signed out; a signed-in request goes on to the routes below.
   v1.route("/", publicProfileRoutes(deps));
+  // Restrictions and appeals: a banned account comes with an appeal token, not a session.
+  v1.route("/", appealRoutes(deps));
   const notes = notifier(deps);
   // Before the profile routes, whose PATCH /me/* counts against the profile limit.
   const family = familyRoutes(deps, notes);
