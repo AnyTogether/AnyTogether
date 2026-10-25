@@ -2,6 +2,7 @@
 
 import { Avatar } from "@/components/Avatar";
 import { CallButton } from "@/components/Calls";
+import { LevelBadge } from "@/components/LevelBadge";
 import { useLive, useLiveEvents } from "@/components/Live";
 import { familyRefusal } from "@/lib/family";
 import type { UiStrings } from "@/lib/i18n";
@@ -281,16 +282,25 @@ export function FriendsBoard({
         )}
 
         <div className="card raise">
-          <h3 className="sub">
-            {texts.friends} <span className="n">{friends.length}</span>
-          </h3>
+          <div className="card-head">
+            <h3 className="sub">
+              {texts.friends} <span className="n">{friends.length}</span>
+            </h3>
+            <Link href="/players" className="quiet-link">
+              {texts.playersMet}
+            </Link>
+          </div>
           {sorted.length === 0 ? (
             <p className="hint empty">{texts.noFriends}</p>
           ) : (
             <ul className="people">
               {sorted.map((friend) => (
                 <li key={friend.userId} className={`person ${friend.presence.state}`}>
-                  <Who person={friend} presence={friend}>
+                  <Who
+                    person={friend}
+                    presence={friend}
+                    badge={<LevelBadge level={friend.level} texts={texts} />}
+                  >
                     <Status friend={friend} now={now} texts={texts} />
                   </Who>
                   <div className="acts">
@@ -356,10 +366,13 @@ export function FriendsBoard({
 function Who({
   person,
   presence,
+  badge,
   children,
 }: {
   person: Person;
   presence?: Friend;
+  /** Beside the name: the trophy level. */
+  badge?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -368,6 +381,7 @@ function Who({
       <span className="lines">
         <span className="name">
           {person.displayName}
+          {badge}
           {children && <span className="handle"> @{person.handle}</span>}
         </span>
         <span className="meta">{children ?? <span className="handle">@{person.handle}</span>}</span>

@@ -1,4 +1,6 @@
 import type { ConnectionBadge } from "./connections";
+import type { AccentName, CoverView, LevelBadgeData, TrophyLevel } from "@/lib/psn";
+
 /** People as the API shows them (no tokens or emails ever reach these). */
 export interface Person {
   userId: string;
@@ -26,6 +28,8 @@ export interface Presence {
 
 export interface Friend extends Person {
   presence: Presence;
+  /** Their trophy level, when they show their trophies (older API answers lack it). */
+  level?: LevelBadgeData | null;
 }
 
 /** The list with one friend's presence changed, as a presence.updated event from the gateway
@@ -70,6 +74,10 @@ export interface Profile extends Person {
   bio: string | null;
   country: string | null;
   friendship: Friendship;
+  /** Only to who may see the trophies (older API answers lack these three). */
+  trophyLevel?: TrophyLevel | null;
+  cover?: CoverView | null;
+  accent?: AccentName | null;
   /** Which parts the viewer may open (older API answers lack it: then friends and self only). */
   visible?: Record<Section, boolean>;
   /** Only when the viewer may see it. */
@@ -96,6 +104,11 @@ export interface Own {
     country: string | null;
     handleChangeAt: string | null;
     privacy: Privacy;
+    /** Older API answers lack these. */
+    cover?: CoverView | null;
+    accent?: AccentName | null;
+    trophyLevel?: TrophyLevel;
+    rememberMet?: boolean;
   };
 }
 

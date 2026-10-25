@@ -1,6 +1,8 @@
 import { Avatar } from "@/components/Avatar";
 import { FeedList } from "@/components/FeedList";
 import { FriendAction } from "@/components/FriendAction";
+import { LevelBadge, LevelCard } from "@/components/LevelBadge";
+import { ProfileShowcase } from "@/components/ProfileShowcase";
 import { Gallery } from "@/components/Gallery";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { providerName } from "@/lib/connections";
@@ -19,6 +21,7 @@ import {
 import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
 import type { Person, Profile, PublicProfile } from "@/lib/people";
+import { type LevelBadgeData, type Showcase, accents, localArt } from "@/lib/psn";
 import { api, currentUser, publicJson } from "@/lib/session";
 import type { MediaItem, StorageInfo } from "@/lib/storage";
 import type { Metadata } from "next";
@@ -34,13 +37,14 @@ const clean = (handle: string) => decodeURIComponent(handle).replace(/^@/, "").t
 async function load(handle: string) {
   if (!/^[a-z0-9_.]{1,40}$/.test(handle)) return null;
   const path = `/users/${encodeURIComponent(handle)}`;
-  const [profile, library, trophies, friends, activity, storage] = await Promise.all([
+  const [profile, library, trophies, friends, activity, storage, showcase] = await Promise.all([
     publicJson<Profile>(path),
     publicJson<{ games: LibraryGame[] }>(`${path}/library`),
     publicJson<{ trophies: EarnedTrophy[] }>(`${path}/trophies`),
-    publicJson<{ friends: Person[] }>(`${path}/friends`),
+    publicJson<{ friends: (Person & { level?: LevelBadgeData | null })[] }>(`${path}/friends`),
     publicJson<FeedPage>(`${path}/activity?limit=8`),
     publicJson<StorageInfo>("/storage"),
+    publicJson<Showcase>(`${path}/showcase`),
   ]);
   if (!profile.body) return null;
   const shown = <T,>(part: { status: number; body: T | null }, fallback: T) =>
@@ -60,6 +64,7 @@ async function load(handle: string) {
           max: storage.body?.galleryMax ?? 12,
         }
       : null,
+    showcase: showcase.body ?? { trophies: null, games: null },
   };
 }
 
@@ -111,7 +116,7 @@ export default async function UserProfile({ params }: Params) {
   const [texts, user] = await Promise.all([strings(), currentUser()]);
   const loaded = await load(handle);
   if (!loaded) notFound();
-  const { profile, games, trophies, friends, activity, gallery } = loaded;
+  const { profile, games, trophies, friends, activity, gallery, showcase } = loaded;
   // An old handle still finds the person for 30 days; the address shows the new one.
   if (profile.handle.toLowerCase() !== handle) redirect(`/u/${profile.handle}`);
   const { language } = texts;
@@ -130,10 +135,19 @@ export default async function UserProfile({ params }: Params) {
     [texts.statTrophies, countsHidden ? "–" : number.format(earned)],
     [texts.statPoints, countsHidden ? "–" : number.format(points)],
   ];
+  const cover = profile.cover ? localArt(profile.cover.url) : null;
+  const accent = profile.accent ? accents[profile.accent] : null;
   return (
     <section className="page">
-      <article className="card profile in d1">
-        <div className="banner" aria-hidden="true" />
+      <article
+        className={`card profile in d1${accent ? " accented" : ""}`}
+        style={accent ? ({ "--accent": accent } as React.CSSProperties) : undefined}
+      >
+        <div
+          className={`banner${cover ? ` cover ${profile.cover?.kind}` : ""}`}
+          style={cover ? { backgroundImage: `url("${cover}")` } : undefined}
+          aria-hidden="true"
+        />
         {!self && user && <ProfileMenu person={profile} texts={ui(texts)} />}
         <Avatar
           person={profile}
@@ -205,6 +219,7 @@ export default async function UserProfile({ params }: Params) {
             ))}
           </dl>
         )}
+        {profile.trophyLevel && <LevelCard level={profile.trophyLevel} texts={texts} language={language} />}
         <div className="in d4">
           {user ? (
             <FriendAction profile={profile} texts={ui(texts)} />
@@ -220,7 +235,36 @@ export default async function UserProfile({ params }: Params) {
             </div>
           )}
         </div>
+        {user && (self || (trophies && profile.trophyLevel)) && (
+          <div className="profile-links in d4">
+            {!self && (
+              <Link href={`/u/${profile.handle}/compare`} className="pill">
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">
+                  <path d="M7 4h10v4a5 5 0 0 1-10 0zM12 13v4M8 20h8M3 12h4M17 12h4" />
+                </svg>
+                {texts.compareTrophies}
+              </Link>
+            )}
+            {self && (
+              <Link href="/players" className="pill">
+                {texts.playersMet}
+              </Link>
+            )}
+            {self && (
+              <Link href="/settings#look" className="pill">
+                {texts.sectionLook}
+              </Link>
+            )}
+          </div>
+        )}
       </article>
+
+      <ProfileShowcase
+        showcase={showcase}
+        self={self}
+        texts={ui(texts)}
+        mine={self ? { trophies: trophies ?? [], games: games ?? [] } : undefined}
+      />
 
       {/* Signed out the gallery is left out rather than shown as private. */}
       {gallery && (gallery.items === null ? Boolean(user) : gallery.items.length > 0 || self) && (
@@ -352,7 +396,10 @@ export default async function UserProfile({ params }: Params) {
                 <Link href={`/u/${friend.handle}`} className="who">
                   <Avatar person={friend} size={36} />
                   <span className="lines">
-                    <span className="name">{friend.displayName}</span>
+                    <span className="name">
+                      {friend.displayName}
+                      <LevelBadge level={friend.level} texts={texts} />
+                    </span>
                     <span className="meta">@{friend.handle}</span>
                   </span>
                 </Link>

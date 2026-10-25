@@ -30,6 +30,10 @@ const allowed: Record<string, RegExp[]> = {
     /^discover\/(players|suggestions)$/,
     /^me\/discovery$/,
     new RegExp(`^games/${title}/hub$`),
+    /^me\/(players-met|communities|events)$/,
+    /^communities$/,
+    new RegExp(`^communities/${id}(/(members|bans|events))?$`),
+    new RegExp(`^events/${id}$`),
   ],
   POST: [
     /^conversations$/,
@@ -48,6 +52,9 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^(lfg|parties|share-plays)/${id}/requests$`),
     // A share play's requests are answered by its host, in the launcher.
     new RegExp(`^(lfg|parties)/${id}/requests/${id}/(accept|decline)$`),
+    /^communities$/,
+    new RegExp(`^communities/${id}/(join|leave|decline|invites|bans|owner|events)$`),
+    new RegExp(`^events/${id}/start$`),
   ],
   PATCH: [
     new RegExp(`^conversations/${id}$`),
@@ -55,6 +62,14 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^parties/${id}$`),
     /^me\/notifications\/settings$/,
     /^me\/discovery$/,
+    /^me\/(look|players-met)$/,
+    new RegExp(`^(communities|events)/${id}$`),
+  ],
+  PUT: [
+    /^me\/showcase$/,
+    new RegExp(`^conversations/${id}/mute$`),
+    new RegExp(`^communities/${id}/members/${id}/role$`),
+    new RegExp(`^events/${id}/rsvp$`),
   ],
   DELETE: [
     new RegExp(`^conversations/${id}/messages/${seq}$`),
@@ -62,9 +77,25 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^lfg/${id}$`),
     new RegExp(`^(lfg|parties|share-plays)/${id}/requests/me$`),
     new RegExp(`^parties/${id}/code$`),
+    new RegExp(`^me/players-met/${id}$`),
+    new RegExp(`^communities/${id}$`),
+    new RegExp(`^communities/${id}/(members|bans)/${id}$`),
+    new RegExp(`^events/${id}(/rsvp)?$`),
   ],
 };
-const queries = ["before", "after", "limit", "titleId", "purpose", "language", "now", "live"];
+const queries = [
+  "before",
+  "after",
+  "limit",
+  "titleId",
+  "purpose",
+  "language",
+  "now",
+  "live",
+  "q",
+  "days",
+  "when",
+];
 
 async function pass(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const path = (await params).path.join("/");
@@ -77,7 +108,9 @@ async function pass(request: Request, { params }: { params: Promise<{ path: stri
   const search = new URLSearchParams();
   for (const key of queries) {
     const value = url.searchParams.get(key);
-    if (value !== null && /^[0-9A-Za-z:.+-]{1,40}$/.test(value)) search.set(key, value);
+    // A search may hold words in any language; everything else is plain.
+    const shape = key === "q" ? /^[\p{L}\p{N} ._'-]{1,40}$/u : /^[0-9A-Za-z:.+-]{1,40}$/;
+    if (value !== null && shape.test(value)) search.set(key, value);
   }
   const body = request.method === "GET" || request.method === "DELETE" ? undefined : await request.text();
   if (body && body.length > 16_384)
@@ -88,4 +121,4 @@ async function pass(request: Request, { params }: { params: Promise<{ path: stri
   });
 }
 
-export { pass as GET, pass as POST, pass as PATCH, pass as DELETE };
+export { pass as GET, pass as POST, pass as PATCH, pass as PUT, pass as DELETE };

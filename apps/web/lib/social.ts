@@ -30,6 +30,9 @@ export interface Conversation {
   unread: number;
   lastMessage: Message | null;
   updatedAt: string;
+  /** A community's chat: its members come and go with the community (older API answers lack it). */
+  communityId?: string | null;
+  muted?: boolean;
 }
 
 export interface PartyMember extends Person {

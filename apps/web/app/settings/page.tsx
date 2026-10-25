@@ -3,6 +3,7 @@ import { ConnectionList } from "@/components/Connections";
 import { DiscoverySettings } from "@/components/Discover";
 import { InstallApp } from "@/components/InstallApp";
 import { LegalLinks } from "@/components/LegalLinks";
+import { LookSettings } from "@/components/LookSettings";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
 import { PushSwitch } from "@/components/PushSwitch";
@@ -11,6 +12,7 @@ import { StorageSettings } from "@/components/StorageSettings";
 import { type ConnectionProvider, type ConnectionSetup, providerName } from "@/lib/connections";
 import { countryOptions } from "@/lib/countries";
 import type { Discovery } from "@/lib/discover";
+import type { LibraryGame } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
 import type { NoticeSetup } from "@/lib/notify";
 import { type Own, type SignedIn, fill, privacySectionsWithGallery } from "@/lib/people";
@@ -41,6 +43,12 @@ export default async function Settings({
   const files = storage.body?.enabled ? storage.body : null;
   if (!own.body) redirect("/login?next=/settings");
   const me = own.body;
+  const library = await apiJson<{ games: LibraryGame[] }>(
+    `/users/${encodeURIComponent(me.profile.handle)}/library`,
+  );
+  const withArt = (library.body?.games ?? []).flatMap((game) =>
+    game.iconUrl ? [{ titleId: game.titleId, names: game.names, iconUrl: game.iconUrl }] : [],
+  );
   const t = ui(texts);
   // Back from Steam or Discord: how linking went.
   const provider = providerName[(query.linked ?? query.provider) as ConnectionProvider] ?? "";
@@ -57,6 +65,7 @@ export default async function Settings({
       : null;
   const sections = [
     ["profile", texts.sectionProfile],
+    ["look", texts.sectionLook],
     ["privacy", texts.sectionPrivacy],
     ["connections", texts.sectionConnections],
     ["discovery", texts.sectionDiscovery],
@@ -95,6 +104,17 @@ export default async function Settings({
           <HandleForm own={me} texts={t} />
           <hr />
           <ProfileForm own={me} texts={t} options={countryOptions(texts.language)} />
+        </article>
+
+        <article className="card" id="look">
+          <h3 className="sub">{texts.sectionLook}</h3>
+          <p className="hint section-lead">{texts.lookLead}</p>
+          <LookSettings
+            texts={t}
+            cover={me.profile.cover ?? null}
+            accent={me.profile.accent ?? null}
+            games={withArt}
+          />
         </article>
 
         <article className="card" id="privacy">

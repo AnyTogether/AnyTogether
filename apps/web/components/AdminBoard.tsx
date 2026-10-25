@@ -85,7 +85,9 @@ type Action =
   | "publish_theme"
   | "hide_media"
   | "delete_media"
-  | "mute";
+  | "mute"
+  | "remove_community"
+  | "remove_event";
 const durations: { days: number | null; key: "days1" | "days7" | "days30" | "forGood" }[] = [
   { days: 1, key: "days1" },
   { days: 7, key: "days7" },
@@ -325,6 +327,18 @@ function ReportItem({
       show: report.targetKind === "media" && report.media?.status !== "deleted",
       danger: true,
     },
+    {
+      key: "remove_community",
+      label: texts.acRemoveCommunity,
+      show: report.targetKind === "community" && !report.community?.removed,
+      danger: true,
+    },
+    {
+      key: "remove_event",
+      label: texts.acRemoveEvent,
+      show: report.targetKind === "event" && !report.community?.removed,
+      danger: true,
+    },
     { key: "reset_avatar", label: texts.acResetAvatar, show: Boolean(report.target?.avatar) },
     { key: "reset_bio", label: texts.acResetBio, show: Boolean(report.target?.bio) },
   ];
@@ -337,7 +351,11 @@ function ReportItem({
           ? texts.kindPost
           : report.targetKind === "media"
             ? texts.kindMedia
-            : texts.kindUser;
+            : report.targetKind === "community"
+              ? texts.kindCommunity
+              : report.targetKind === "event"
+                ? texts.kindEvent
+                : texts.kindUser;
   // Putting a theme back is not a punishment: it is confirmed like a warning.
   const gentle = action === "warn" || action === "publish_theme";
   const statusLabel =
@@ -384,6 +402,17 @@ function ReportItem({
       )}
       {report.theme && <ReportedTheme theme={report.theme} texts={texts} />}
       {report.media && <ReportedMedia media={report.media} texts={texts} />}
+      {report.community && (
+        <figure className="said">
+          <figcaption className="meta">
+            {report.community.title
+              ? `${report.community.name} · ${report.community.title}`
+              : report.community.name}
+            {report.community.removed && <span className="flair banned-flag">{texts.postRemoved}</span>}
+          </figcaption>
+          <blockquote>{report.community.description ?? "…"}</blockquote>
+        </figure>
+      )}
       {report.target?.bio && report.targetKind === "user" && <p className="said-bio">{report.target.bio}</p>}
       {report.note && <p className="report-note">“{report.note}”</p>}
       <p className="meta">

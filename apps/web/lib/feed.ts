@@ -1,9 +1,17 @@
+import type { LevelBadgeData } from "@/lib/psn";
 import type { Grade, Rarity } from "./games";
 import type { Person } from "./people";
 
 /** The activity feed and leaderboards as the API shows them (the website keeps its own copy of
  *  the shapes). */
-export type ActivityKind = "trophy" | "platinum" | "first_play" | "long_session" | "friendship" | "milestone";
+export type ActivityKind =
+  | "trophy"
+  | "platinum"
+  | "first_play"
+  | "long_session"
+  | "friendship"
+  | "milestone"
+  | "level_up";
 export type Reaction = "fire" | "clap" | "wow" | "heart";
 export const reactions: { key: Reaction; emoji: string }[] = [
   { key: "fire", emoji: "🔥" },
@@ -39,6 +47,8 @@ export interface Activity {
   seconds?: number;
   friend?: Person;
   milestone?: { kind: "trophies" | "platinums" | "games" | "hours"; value: number };
+  /** level_up: the trophy level reached. */
+  level?: LevelBadgeData;
   reactions: { counts: Partial<Record<Reaction, number>>; mine: Reaction | null };
 }
 
@@ -54,6 +64,8 @@ export interface BoardEntry {
   rank: number;
   user: Person;
   value: number;
+  /** Their trophy level (older API answers lack it). */
+  level?: LevelBadgeData;
 }
 
 export interface Board {

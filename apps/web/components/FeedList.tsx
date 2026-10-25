@@ -43,6 +43,8 @@ function KindMark({ item }: { item: Activity }) {
             <circle cx="12" cy="12" r="8.5" />
             <path d="M12 7.5V12l3 2" />
           </>
+        ) : item.kind === "level_up" ? (
+          <path d="M12 3 19.8 7.5v9L12 21l-7.8-4.5v-9zM9 13l3-3 3 3" />
         ) : item.kind === "friendship" ? (
           <>
             <circle cx="9" cy="8.5" r="3" />
@@ -110,6 +112,12 @@ function Item({
         time: <b>{playTime(item.seconds ?? 0, texts)}</b>,
       });
       break;
+    case "level_up":
+      line = rich(texts.act_level_up, {
+        name: who(item.actor),
+        level: <b>{number.format(item.level?.level ?? 0)}</b>,
+      });
+      break;
     case "friendship":
       line = rich(texts.act_friendship, {
         name: who(item.actor),
@@ -136,6 +144,7 @@ function Item({
           {item.highlight === "platinum" && <span className="flair platinum">{texts.platinumTag}</span>}
           {item.highlight === "rare" && <span className="flair rare">{texts.rare}</span>}
           {item.kind === "milestone" && <span className="flair milestone">{texts.milestoneTag}</span>}
+          {item.kind === "level_up" && <span className="flair level">{texts.levelTag}</span>}
           <When iso={item.createdAt} language={language} now={now} />
           {single?.rarity != null && (
             <span>{fill(texts.ofPlayers, { p: rarityPercent(single.rarity, language) })}</span>

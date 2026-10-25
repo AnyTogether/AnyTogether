@@ -18,7 +18,7 @@ export interface AdminReport {
   status: "open" | "actioned" | "dismissed";
   reason: string;
   note: string | null;
-  targetKind: "user" | "message" | "theme" | "lfg" | "media";
+  targetKind: "user" | "message" | "theme" | "lfg" | "media" | "community" | "event";
   targetId: string;
   message: { text: string | null; sentAt: string | null; removed: boolean } | null;
   /** A reported looking-for-group post, as it was when reported. */
@@ -43,6 +43,14 @@ export interface AdminReport {
     kind: MediaKind | null;
     status: "active" | "hidden" | "deleted";
     view: MediaItem | null;
+  } | null;
+  /** A reported community or event: its name (and the event's title) when reported, and whether
+   *  it is gone now (older API answers lack it). */
+  community?: {
+    name: string | null;
+    title: string | null;
+    description: string | null;
+    removed: boolean;
   } | null;
   reporter: AdminPerson | null;
   target: AdminPerson | null;

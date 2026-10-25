@@ -23,6 +23,7 @@ export function FindTabs({ current, texts }: { current: "board" | "live" | "peop
     ["board", "/find", texts.tabBoard],
     ["live", "/find/live", texts.tabLive],
     ["people", "/find/people", texts.tabPeople],
+    ["communities", "/communities", texts.communities],
   ] as const;
   return (
     <nav className="switch find-tabs in d2" aria-label={texts.findPlayers}>

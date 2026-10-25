@@ -63,6 +63,20 @@ function Mark({ kind }: { kind: Notice["kind"] }) {
               <path d="M10.5 7.8v5.4M7.8 10.5h5.4" />
             )}
           </>
+        ) : kind === "level_up" ? (
+          <path d="M12 3 19.8 7.5v9L12 21l-7.8-4.5v-9zM9 13l3-3 3 3" />
+        ) : kind === "community_invite" ? (
+          <>
+            <circle cx="8" cy="9" r="2.6" />
+            <circle cx="16" cy="9" r="2.6" />
+            <path d="M3 18.5c.6-2.6 2.6-4 5-4s4.4 1.4 5 4M12.5 15.2c.9-.5 2.1-.7 3.5-.7 2.4 0 4.4 1.4 5 4" />
+          </>
+        ) : kind === "event_reminder" || kind === "event_started" ? (
+          <>
+            <rect x="3.5" y="5" width="17" height="15" rx="3" />
+            <path d="M3.5 10h17M8 3v4M16 3v4" />
+            {kind === "event_started" && <path d="M10.5 13l3.5 2-3.5 2z" />}
+          </>
         ) : kind.startsWith("family_") ? (
           <>
             <path d="M4 11.5L12 5l8 6.5V20h-5.5v-5h-5v5H4z" />
@@ -171,6 +185,20 @@ function Item({
         .join(" · ");
       break;
     }
+    case "level_up":
+      line = rich(texts.n_level_up, { level: <b>{notice.data.level ?? "?"}</b> });
+      break;
+    case "community_invite":
+      line = rich(texts.n_community_invite, { name, community: <b>{notice.data.name ?? ""}</b> });
+      break;
+    case "event_reminder":
+    case "event_started":
+      line = rich(notice.kind === "event_started" ? texts.n_event_started : texts.n_event_reminder, {
+        name,
+        event: <b>{notice.data.title ?? ""}</b>,
+      });
+      detail = notice.data.community ?? null;
+      break;
     case "warning":
       line = texts.n_warning;
       detail = notice.data.reason ? fill(texts.n_warning_reason, { reason: notice.data.reason }) : null;

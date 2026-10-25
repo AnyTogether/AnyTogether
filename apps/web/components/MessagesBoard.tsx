@@ -19,6 +19,7 @@ import {
   typingEveryMs,
   typingShownMs,
 } from "@/lib/social";
+import Link from "next/link";
 import {
   type MediaItem,
   type MediaKind,
@@ -740,7 +741,12 @@ function ThreadView({
         {!group && others[0] && (
           <CallButton person={others[0]} label={fill(texts.callFriend, { name: others[0].displayName })} />
         )}
-        {group && (
+        {group && conversation.communityId && (
+          <Link href={`/communities/${conversation.communityId}`} className="pill">
+            {texts.communities}
+          </Link>
+        )}
+        {group && !conversation.communityId && (
           <Menu label={texts.conversationOptions}>
             {(close) => (
               <Confirm

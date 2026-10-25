@@ -18,7 +18,11 @@ export interface Notice {
     | "family_answer"
     | "family_alert"
     | "family_summary"
-    | "appeal";
+    | "appeal"
+    | "level_up"
+    | "community_invite"
+    | "event_reminder"
+    | "event_started";
   actor: Person | null;
   subjectId: string;
   data: {
@@ -44,6 +48,13 @@ export interface Notice {
     event?: string;
     familyName?: string;
     children?: { userId: string; displayName: string; seconds: number }[];
+    level?: number;
+    name?: string;
+    community?: string;
+    communityId?: string;
+    eventId?: string;
+    startsAt?: string;
+    link?: { kind: "party" | "share_play"; id: string } | null;
   };
   read: boolean;
   createdAt: string;
@@ -71,6 +82,10 @@ export const noticeKinds = [
   "family_answer",
   "family_alert",
   "family_summary",
+  "level_up",
+  "community_invite",
+  "event_reminder",
+  "event_started",
 ] as const;
 export type NoticeKind = (typeof noticeKinds)[number];
 /** familyMail: the weekly family summary by mail (older servers leave it out). */
@@ -107,6 +122,18 @@ export function noticeHref(notice: Notice) {
       return "/family";
     case "appeal":
       return "/restricted";
+    case "level_up":
+      return notice.actor ? `/u/${notice.actor.handle}` : null;
+    case "community_invite":
+      return `/communities/${notice.subjectId}`;
+    case "event_reminder":
+      return `/events/${notice.subjectId}`;
+    case "event_started":
+      return notice.data.link?.kind === "share_play"
+        ? `/watch/${notice.data.link.id}`
+        : notice.data.link
+          ? "/party"
+          : `/events/${notice.subjectId}`;
     default:
       return null;
   }

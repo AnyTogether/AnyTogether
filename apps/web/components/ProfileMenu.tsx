@@ -17,7 +17,12 @@ const reasons = [
 
 /** What a report is about: a person (by default), a theme or a looking-for-group post, with its own
  *  words for the menu item, the sheet's title and its lead. */
-type Target = { kind?: "user" | "theme" | "lfg" | "media"; lead?: string; label?: string; title?: string };
+type Target = {
+  kind?: "user" | "theme" | "lfg" | "media" | "community" | "event";
+  lead?: string;
+  label?: string;
+  title?: string;
+};
 
 /** The ⋯ on someone's profile card (or a theme's page); for now it holds "Report", which opens the
  *  report sheet. */

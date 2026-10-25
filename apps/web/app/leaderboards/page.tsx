@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/Avatar";
 import { BoardPicker } from "@/components/BoardPicker";
+import { LevelBadge } from "@/components/LevelBadge";
 import type { Board, BoardEntry, BoardGame, GameBoard, Scope } from "@/lib/feed";
 import { since } from "@/lib/feed";
 import { localName, totalTime } from "@/lib/games";
@@ -178,6 +179,7 @@ function Rows({
             <span className="lines">
               <span className="name">
                 {entry.user.displayName}
+                <LevelBadge level={entry.level} texts={texts} />
                 {entry.user.userId === me && <span className="tag you-tag">{texts.you}</span>}
               </span>
               <span className="meta">@{entry.user.handle}</span>

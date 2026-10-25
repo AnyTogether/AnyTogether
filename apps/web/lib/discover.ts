@@ -1,4 +1,5 @@
 import type { Person } from "@/lib/people";
+import type { CommunityCard } from "@/lib/psn";
 
 /** Looking for group, public parties and share plays, and people to meet, as the API shows them
  *  (the website keeps its own copy of the shapes). */
@@ -146,6 +147,8 @@ export interface Hub {
   parties: PublicParty[];
   sharePlays: PublicShare[];
   recentPlayers: PersonCard[];
+  /** Public communities of the game (older API answers lack it). */
+  communities?: CommunityCard[];
 }
 
 /** A language's name in the reader's language ("Turkish", "Türkçe"), or its code. */

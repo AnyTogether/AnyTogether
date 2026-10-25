@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/Avatar";
+import { CommunityRow } from "@/components/Communities";
 import { CompatVerdict } from "@/components/CompatVerdict";
 import { LfgComposer, RefreshOn } from "@/components/Discover";
 import { GameMark, LfgCard, PartyRow, PersonRow, ShareRow, gameName } from "@/components/DiscoverCards";
@@ -44,6 +45,7 @@ export default async function GameHub({ params }: Params) {
   ]);
   if (!hub.body) notFound();
   const { game, playing, lfg, parties, sharePlays, recentPlayers, players } = hub.body;
+  const communities = hub.body.communities ?? [];
   const { language } = texts;
   const t = ui(texts);
   const now = Date.now();
@@ -137,6 +139,28 @@ export default async function GameHub({ params }: Params) {
                 ))}
                 {parties.map((party) => (
                   <PartyRow key={party.id} party={party} texts={texts} ui={t} />
+                ))}
+              </ul>
+            )}
+          </article>
+
+          <article className="card">
+            <div className="card-head">
+              <h3 className="sub">
+                {texts.communities} <span className="n">{communities.length}</span>
+              </h3>
+              <Link href={`/communities?game=${id}`} className="quiet-link">
+                {texts.seeAll}
+              </Link>
+            </div>
+            {communities.length === 0 ? (
+              <p className="hint empty">{texts.noCommunities}</p>
+            ) : (
+              <ul className="community-list">
+                {communities.map((community) => (
+                  <li key={community.id}>
+                    <CommunityRow community={community} texts={t} />
+                  </li>
                 ))}
               </ul>
             )}
