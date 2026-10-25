@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { MailError, classifyMailError, maskAddress } from "./mailCheck.js";
 
 /** Sends sign-in codes, account-deletion codes and the notification digest. Development prints
  *  them; production uses SMTP or Resend. */
@@ -215,7 +216,13 @@ export function resendMailer(apiKey: string, from: string, fetcher: typeof fetch
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({ from, to, ...mail }),
     });
-    if (!response.ok) throw new Error(`mail failed: ${response.status}`);
+    if (!response.ok)
+      throw Object.assign(
+        new Error(`${response.status} ${(await response.text().catch(() => "")).slice(0, 200)}`),
+        {
+          status: response.status,
+        },
+      );
   };
   return {
     signInCode: (to, code, link) => send(to, signInMail(code, link)),
@@ -233,15 +240,39 @@ export interface MailSettings {
   from: string;
 }
 
-/** The mailer MAIL_TRANSPORT names: smtp, resend, or log (development). */
+/** The mailer MAIL_TRANSPORT names: smtp, resend, or log (development). A mail that fails is
+ *  logged with its class (DNS, TCP, TLS, auth, recipient, …; never a password) and thrown as a
+ *  MailError. */
 export function mailerFor(settings: MailSettings): Mailer & { kind: "smtp" | "resend" | "log" } {
   if (settings.transport === "smtp") {
     if (!settings.smtpUrl) throw new Error("MAIL_TRANSPORT=smtp needs SMTP_URL");
-    return { kind: "smtp", ...smtpMailer(settings.smtpUrl, settings.from) };
+    return { kind: "smtp", ...reporting("smtp", smtpMailer(settings.smtpUrl, settings.from)) };
   }
   if (settings.transport === "resend")
-    return { kind: "resend", ...resendMailer(settings.resendKey, settings.from) };
+    return { kind: "resend", ...reporting("resend", resendMailer(settings.resendKey, settings.from)) };
   return { kind: "log", ...logMailer() };
+}
+
+/** The same mailer, its failures logged as one classified line and thrown as MailError. */
+export function reporting(kind: string, mailer: Mailer, log: (line: string) => void = console.error): Mailer {
+  const guard =
+    <A extends unknown[]>(what: string, send: (to: string, ...rest: A) => Promise<void>) =>
+    async (to: string, ...rest: A) => {
+      try {
+        await send(to, ...rest);
+      } catch (error) {
+        const { failure, detail, hint } = classifyMailError(error);
+        log(`[mail] ${what} to ${maskAddress(to)} via ${kind} failed: ${failure}: ${detail} (${hint})`);
+        throw new MailError(failure, detail);
+      }
+    };
+  return {
+    signInCode: guard("sign-in code", mailer.signInCode),
+    deletionCode: guard("deletion code", mailer.deletionCode),
+    digest: guard("digest", mailer.digest),
+    familyChild: guard("family child notice", mailer.familyChild),
+    familySummary: guard("family summary", mailer.familySummary),
+  };
 }
 
 /** Keeps what was sent, for the tests. */

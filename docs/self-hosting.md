@@ -91,6 +91,19 @@ for STARTTLS), or `MAIL_TRANSPORT=resend` with `RESEND_API_KEY`. Set `MAIL_FROM`
 mail provider lets you send from, and give that domain SPF and DKIM records, or the codes land in
 spam. `docker compose up -d` again after changing `.env`.
 
+To check it, send a test mail with the API's own settings:
+
+```sh
+docker compose exec api node dist/admin.js mail-test you@example.org
+```
+
+It goes step by step and stops at the first one that fails: the settings, DNS for the mail
+server, the TCP connection, TLS as the port wants it (465 is `smtps://`, TLS from the start; 587
+and 25 are `smtp://` with STARTTLS), signing in, and the server taking the recipient, with a hint
+for each failure. A sign-in code that cannot be sent is logged the same way, by class and without
+the password (`[mail] sign-in code to u***@example.org via smtp failed: auth: …`), and the person is
+asked to try again later (503 `mail_unavailable`).
+
 ### Voice calls and the TURN relay
 
 Calls go straight between the people in them where their networks allow; behind strict NATs and
@@ -268,6 +281,8 @@ docker compose exec -e USER=yourname api node dist/admin.js report <id> dismiss 
 docker compose exec -e USER=yourname api node dist/admin.js user @handle        # or an email or ID
 docker compose exec -e USER=yourname api node dist/admin.js ban @handle --days 7 --reason "spam"
 docker compose exec -e USER=yourname api node dist/admin.js unban @handle
+docker compose exec -e USER=yourname api node dist/admin.js mute @handle --days 3 --public "what they read"
+docker compose exec -e USER=yourname api node dist/admin.js unmute @handle
 docker compose exec api node dist/admin.js purge                               # delete accounts past their 14 days now
 docker compose exec -e USER=yourname api node dist/admin.js grant @handle       # make an admin (the admin page at /admin)
 docker compose exec -e USER=yourname api node dist/admin.js revoke @handle      # and back to a normal account
@@ -275,7 +290,11 @@ docker compose exec -e USER=yourname api node dist/admin.js theme <id> hide     
 ```
 
 A ban signs the account out everywhere at once and refuses every way back in (email code,
-providers, passkeys); a ban on an email also stops new accounts with it. Accounts whose owners
+providers, passkeys); a ban on an email also stops new accounts with it. A mute keeps the account
+signed in but stops it writing to others (messages, posts, friend requests, name and bio, themes).
+`--public` is the reason the person is told, on the website and in a refused sign-in; `--reason`
+stays with the moderators. They can appeal once at a time; appeals wait in the admin page's
+Appeals tab. Accounts whose owners
 asked for deletion are purged every hour by the API itself; `purge` only does it sooner.
 
 ### Starting the Theme Hub

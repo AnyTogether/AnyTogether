@@ -50,6 +50,7 @@ import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { refreshRarityOf } from "./games.js";
 import { body } from "./http.js";
+import { MailError } from "./mailCheck.js";
 import { mediaService } from "./media.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { rateLimiter } from "./ratelimit.js";
@@ -401,7 +402,19 @@ export function accountRoutes(deps: Deps) {
       "EX",
       codeLifetime,
     );
-    await deps.mailer.deletionCode(account.email, code);
+    try {
+      await deps.mailer.deletionCode(account.email, code);
+    } catch (error) {
+      if (error instanceof MailError)
+        throw new HttpError(
+          503,
+          ErrorCode.mailUnavailable,
+          "The code could not be mailed; try again later",
+          {},
+          { "retry-after": "60" },
+        );
+      throw error;
+    }
     return c.json({ confirmWith: "code" }, 202);
   });
 

@@ -12,6 +12,7 @@
  *   pnpm --filter @anytogether/api admin purge
  *   pnpm --filter @anytogether/api admin theme <id> hide|show|review
  *   pnpm --filter @anytogether/api admin hub import <folder>   (themes.json + .anyps5theme files)
+ *   pnpm --filter @anytogether/api admin mail-test <address>   (sends a test mail, says where it fails)
  *
  * In the API's container: node dist/admin.js <the same>. */
 import { accounts, auditLog, connect } from "@anytogether/db";
@@ -21,6 +22,8 @@ import { uuidv7 } from "uuidv7";
 import { purgeDeletedAccounts } from "./account.js";
 import { config } from "./config.js";
 import { importHub } from "./hubImport.js";
+import type { MailSettings } from "./mail.js";
+import { mailTest, mailTestReport } from "./mailCheck.js";
 import { ban, findAccount, handleReport, isBanned, listReports, mute, unban } from "./moderation.js";
 import { setThemeStatus, settleThemeReports } from "./themes.js";
 
@@ -35,12 +38,13 @@ const usage = `usage: admin reports [--all]
        admin revoke <@handle|email|id>
        admin purge
        admin theme <id> hide|show|review
-       admin hub import <folder>`;
+       admin hub import <folder>
+       admin mail-test <address>`;
 
 /** Runs one command and returns what to print; the tests call it directly. */
 export async function run(
   args: string[],
-  ctx: Parameters<typeof ban>[0] & Parameters<typeof importHub>[0],
+  ctx: Parameters<typeof ban>[0] & Parameters<typeof importHub>[0] & { mail?: MailSettings },
 ): Promise<string> {
   const [command, target, ...rest] = args;
   const option = (name: string) => {
@@ -143,6 +147,11 @@ export async function run(
       // The themes of the old GitHub hub (or any folder like it), shared by @anyps5.
       if (target !== "import" || !rest[0]) return usage;
       return (await importHub(ctx, rest[0], by)).text;
+    }
+    case "mail-test": {
+      // Uses the API's own mail settings (MAIL_TRANSPORT, SMTP_URL, RESEND_API_KEY, MAIL_FROM).
+      if (!target) return usage;
+      return mailTestReport(await mailTest(ctx.mail ?? config().mail, target));
     }
     default:
       return usage;

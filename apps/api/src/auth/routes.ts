@@ -19,6 +19,7 @@ import { findOrCreateAccount } from "../accounts.js";
 import type { Deps } from "../app.js";
 import { HttpError } from "../errors.js";
 import { body, clientKind } from "../http.js";
+import { MailError } from "../mailCheck.js";
 import { type AuthVariables, requireUser } from "../middleware.js";
 import { bannedError, isBanned } from "../moderation.js";
 import { verifyProvider } from "../providers.js";
@@ -89,7 +90,20 @@ export function authRoutes(deps: Deps) {
     const url = new URL("/login/email", deps.publicUrl);
     url.searchParams.set("email", address);
     url.searchParams.set("token", link);
-    await deps.mailer.signInCode(address, code, url.toString());
+    try {
+      await deps.mailer.signInCode(address, code, url.toString());
+    } catch (error) {
+      // Logged with its class where it failed; the person is told to try later.
+      if (error instanceof MailError)
+        throw new HttpError(
+          503,
+          ErrorCode.mailUnavailable,
+          "The sign-in mail could not be sent; try again later",
+          {},
+          { "retry-after": "60" },
+        );
+      throw error;
+    }
     if (banned) throw bannedError({ codeSent: true });
     return c.body(null, 202);
   });
