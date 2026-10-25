@@ -27,6 +27,19 @@ describe("email codes", () => {
     expect(again.body.user.id).toBe(first.body.user.id);
   });
 
+  it("makes many new accounts at once without running out of database connections", async () => {
+    // More at once than the test pool has connections (4): each sign-up holds one for its
+    // transaction and must not need a second.
+    const emails = Array.from({ length: 8 }, (_, i) => `new${i}@example.com`);
+    await Promise.all(emails.map((email) => h.call("POST", "/api/v1/auth/email/start", { email })));
+    const signedIn = await Promise.all(
+      emails.map((email) =>
+        h.call("POST", "/api/v1/auth/email/verify", { email, code: h.mailer.lastCode(email) }),
+      ),
+    );
+    expect(signedIn.map((r) => r.status)).toEqual(emails.map(() => 200));
+  });
+
   it("refuses a wrong code and locks after ten", async () => {
     await h.call("POST", "/api/v1/auth/email/start", { email: "a@example.com" });
     const right = h.mailer.lastCode("a@example.com");
