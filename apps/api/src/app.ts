@@ -6,6 +6,7 @@ import type { Redis } from "ioredis";
 import { accountRoutes } from "./account.js";
 import { adminRoutes } from "./adminRoutes.js";
 import { appealRoutes } from "./appeals.js";
+import { artRoutes } from "./art.js";
 import { passkeyRoutes } from "./auth/passkeys.js";
 import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
@@ -38,6 +39,7 @@ import { realtimeRoutes } from "./realtime.js";
 import { releaseRoutes } from "./releases.js";
 import { saveRoutes } from "./saves.js";
 import { sharePlayRoutes } from "./sharePlays.js";
+import { showcaseRoutes } from "./showcase.js";
 import { statsRoutes } from "./stats.js";
 import type { BlobStore } from "./storage.js";
 import { isThemeUpload, themeRoutes } from "./themes.js";
@@ -126,6 +128,8 @@ export function createApp(deps: Deps) {
   const media = mediaService(deps);
   v1.route("/", saveRoutes(deps));
   v1.route("/", mediaRoutes(deps, media));
+  // Covers and community icons, drawn from presets.
+  v1.route("/", artRoutes());
   // The Theme Hub, the compatibility list, downloads and the front page's totals are open to anyone too.
   v1.route("/", themeRoutes(deps));
   v1.route("/", compatRoutes(deps));
@@ -149,6 +153,7 @@ export function createApp(deps: Deps) {
   v1.route("/", friendRoutes(deps, notes));
   v1.route("/", connectionRoutes(deps));
   v1.route("/", gameRoutes(deps, notes));
+  v1.route("/", showcaseRoutes(deps));
   v1.route("/", feedRoutes(deps));
   v1.route("/", leaderboardRoutes(deps));
   v1.route("/", reportRoutes(deps));

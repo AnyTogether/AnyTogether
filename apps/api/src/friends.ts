@@ -16,6 +16,7 @@ import { assertNotMuted } from "./moderation.js";
 import type { Notifier } from "./notifications.js";
 import { type ProfileRow, blockedBetween, canSee, findProfile, relationOf } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
+import { lookOf } from "./showcase.js";
 
 const pair = (a: string, b: string) => (a < b ? { userA: a, userB: b } : { userA: b, userB: a });
 const offline = { state: "offline" };
@@ -291,6 +292,7 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
       visible,
       connections: await connectionBadges(deps.db, profile.accountId),
       trophyLevel: visible.trophies ? trophyLevelOf(profile.trophyPoints) : null,
+      ...(await lookOf(deps.db, deps.publicUrl, profile)),
       ...(visible.presence
         ? { presence: (await presenceOf([profile], relation)).get(profile.accountId) }
         : {}),

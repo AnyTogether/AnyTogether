@@ -26,6 +26,7 @@ import { type AuthVariables, requireUser } from "./middleware.js";
 import { assertNotMuted, restrictionsOf } from "./moderation.js";
 import { type ProfileRow, handleProblem, skeletonClash } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
+import { lookOf } from "./showcase.js";
 
 const cooldown = handleCooldownDays * 86_400_000;
 
@@ -67,9 +68,15 @@ export function profileRoutes(deps: Deps) {
     const userId = c.get("userId");
     const [account] = await db.select().from(accounts).where(eq(accounts.id, userId));
     if (!account) throw new HttpError(401, ErrorCode.unauthorized, "No such account");
+    const profile = await load(userId);
     return c.json({
       account: { id: account.id, email: account.email, role: account.role, createdAt: account.createdAt },
-      profile: own(await load(userId)),
+      profile: {
+        ...own(profile),
+        ...(await lookOf(db, deps.publicUrl, profile)),
+        showcase: profile.showcase,
+        rememberMet: profile.rememberMet,
+      },
       // What the account may not do now (a mute; a banned account has no session), and its
       // newest appeal.
       ...(await restrictionsOf(db, userId)),
