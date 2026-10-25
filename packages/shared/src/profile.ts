@@ -135,8 +135,9 @@ export type Visibility = (typeof visibilities)[number];
 const VisibilityValue = z.enum(visibilities);
 
 /** library: games and play time; trophies; friends: the friends list; presence: online and what is
- *  being played; search: who finds the account by name (a request to the exact handle always works). */
-export const privacySections = ["library", "trophies", "friends", "presence", "search"] as const;
+ *  being played; search: who finds the account by name (a request to the exact handle always works);
+ *  gallery: the pinned screenshots and clips on the profile. */
+export const privacySections = ["library", "trophies", "friends", "presence", "search", "gallery"] as const;
 export type PrivacySection = (typeof privacySections)[number];
 export type Privacy = Record<PrivacySection, Visibility>;
 export const defaultPrivacy: Privacy = {
@@ -145,6 +146,7 @@ export const defaultPrivacy: Privacy = {
   friends: "friends",
   presence: "friends",
   search: "everyone",
+  gallery: "friends",
 };
 
 /** The stored settings over the defaults; anything unknown is ignored. */

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** What can be reported; activities join this list when they exist. */
-export const reportTargets = ["user", "message", "theme", "lfg"] as const;
+export const reportTargets = ["user", "message", "theme", "lfg", "media"] as const;
 export const reportReasons = [
   "spam",
   "harassment",
@@ -16,7 +16,8 @@ export type ReportReason = (typeof reportReasons)[number];
 
 export const ReportCreate = z.object({
   targetKind: z.enum(reportTargets),
-  /** For a user, their user ID; for a message, a theme or a looking-for-group post, its ID. */
+  /** For a user, their user ID; for a message, a theme, a looking-for-group post or a piece of
+   *  media (a photo, clip or voice note), its ID. */
   targetId: z.string().min(1).max(100),
   reason: z.enum(reportReasons),
   note: z.string().trim().max(500).optional(),
@@ -37,6 +38,10 @@ export const reportActions = [
   "hide_theme",
   /** Puts a reported theme (held for review) back on the Hub: its open reports are dismissed. */
   "publish_theme",
+  /** Hides reported media (a photo, clip or voice note) from everyone but its owner. */
+  "hide_media",
+  /** Deletes reported media: gone from messages, the gallery and the owner's storage. */
+  "delete_media",
 ] as const;
 export type ReportAction = (typeof reportActions)[number];
 

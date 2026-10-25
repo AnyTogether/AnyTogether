@@ -9,6 +9,12 @@ const list = (value: string | undefined) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+/** A size in megabytes from the environment, or the default when unset or not a positive number. */
+const megabytes = (value: string | undefined, fallback: number) => {
+  const parsed = Number(value);
+  return Math.round((Number.isFinite(parsed) && parsed > 0 ? parsed : fallback) * 1024 * 1024);
+};
+
 /** Settings from the environment (see .env.example). */
 export function config(env = process.env) {
   const providers: ProviderConfig = {
@@ -57,6 +63,22 @@ export function config(env = process.env) {
       publicKey: env.VAPID_PUBLIC_KEY ?? "",
       privateKey: env.VAPID_PRIVATE_KEY ?? "",
       subject: env.VAPID_SUBJECT ?? "",
+    },
+    /** Cloud saves and media: a folder (STORAGE_DIR) or an S3-compatible bucket (S3_*); neither
+     *  keeps them off. STORAGE_QUOTA_MB per account for both, SAVE_MAX_MB per save archive. */
+    storage: {
+      dir: env.STORAGE_DIR ?? "",
+      s3: {
+        endpoint: env.S3_ENDPOINT ?? "",
+        bucket: env.S3_BUCKET ?? "",
+        accessKey: env.S3_ACCESS_KEY ?? "",
+        secretKey: env.S3_SECRET_KEY ?? "",
+        region: env.S3_REGION ?? "auto",
+      },
+      stagingDir: env.STORAGE_STAGING_DIR ?? "",
+      quotaBytes: megabytes(env.STORAGE_QUOTA_MB, 100),
+      saveMaxBytes: megabytes(env.SAVE_MAX_MB, 50),
+      urlSecret: env.FILE_LINK_SECRET || undefined,
     },
     blockedLinkDomains:
       env.BLOCKED_LINK_DOMAINS === undefined

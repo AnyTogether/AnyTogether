@@ -40,6 +40,7 @@ describe("privacy", () => {
       friends: "friends",
       presence: "friends",
       search: "everyone",
+      gallery: "friends",
     });
 
     const seen = await h.call("GET", `${v1}/users/utku`, undefined, stranger.token);

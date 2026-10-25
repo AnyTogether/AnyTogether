@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { AttachmentView, MessageKind } from "./storage.js";
 
 /** The most people in a group conversation, its creator included. */
 export const maxGroupMembers = 32;
@@ -29,24 +30,39 @@ export const ConversationMembers = z.object({
     .max(maxGroupMembers - 1),
 });
 
-/** clientId is the client's own UUID (v7), so a resent message is stored once. Text only for now. */
-export const MessageSend = z.object({
-  clientId: z.string().uuid(),
-  text: Text,
-  replyTo: z.number().int().positive().optional(),
-});
+/** clientId is the client's own UUID (v7), so a resent message is stored once. Text, or one piece
+ *  of the sender's own media (uploaded first with POST /me/media) with an optional caption. */
+export const MessageSend = z
+  .object({
+    clientId: z.string().uuid(),
+    text: z.string().trim().max(maxMessageLength).optional(),
+    replyTo: z.number().int().positive().optional(),
+    attachments: z
+      .array(z.object({ mediaId: z.string().uuid() }))
+      .max(1)
+      .optional(),
+  })
+  .refine((m) => Boolean(m.text) || Boolean(m.attachments?.length), {
+    message: "a message needs text or an attachment",
+    path: ["text"],
+  });
 export const MessageEdit = z.object({ text: Text });
 export const ReadUpTo = z.object({ upToSeq: z.number().int().min(0) });
 
 export type ConversationKind = "direct" | "group";
 
-/** A message as every client sees it; a deleted one keeps its place with no text. */
+/** A message as every client sees it; a deleted one keeps its place with no text. A message with
+ *  media has its kind and attachments; its `text` is the caption or, for clients that know no media,
+ *  a stand-in such as "[photo]", and `caption` is the caption alone. */
 export interface MessageView {
   id: string;
   conversationId: string;
   seq: number;
   authorId: string | null;
+  kind: MessageKind;
   text: string | null;
+  caption: string | null;
+  attachments: AttachmentView[];
   replyTo: number | null;
   editedAt: string | null;
   deletedAt: string | null;

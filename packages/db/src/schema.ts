@@ -505,8 +505,9 @@ export const conversationMembers = pgTable(
   (table) => [primaryKey({ columns: [table.conversationId, table.accountId] }), index().on(table.accountId)],
 );
 
-/** Text only for now; attachments stays an empty list until uploads exist. A deleted message is
- *  emptied at once and keeps only its place. */
+/** Text, or one piece of the author's media: attachments is [{mediaId, kind}] (resolved to the
+ *  media, or "removed", when read) and text is then the caption. A deleted message is emptied at
+ *  once and keeps only its place. */
 export const messages = pgTable(
   "messages",
   {
@@ -1054,4 +1055,168 @@ export const familyLog = pgTable(
     createdAt: now(),
   },
   (table) => [index("family_log_by_family").on(table.familyId, table.id.desc())],
+);
+
+/** Cloud storage per account: the bytes it keeps (saves and media together), changed in the same
+ *  transaction as its files. Every change to an account's files locks this row first, so they
+ *  happen one at a time per account. */
+export const storageAccounts = pgTable(
+  "storage_accounts",
+  {
+    accountId: uuid()
+      .primaryKey()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    usedBytes: bigint({ mode: "number" }).notNull().default(0),
+    updatedAt: now(),
+  },
+  (table) => [check("storage_used", sql`${table.usedBytes} >= 0`)],
+);
+
+/** An account's files in the file store, by the SHA-256 of their bytes (the store's key is
+ *  <account>/<first two hex>/<sha256>): the same bytes are kept and counted once per account,
+ *  whatever save versions or media use them. A file nothing uses is deleted with its row. */
+export const storedFiles = pgTable(
+  "stored_files",
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    sha256: text().notNull(),
+    size: bigint({ mode: "number" }).notNull(),
+    contentType: text().notNull(),
+    /** save | media: which part of the usage bar it counts in. */
+    kind: text().notNull(),
+    createdAt: now(),
+    lastUsedAt: now(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.sha256] }),
+    check("stored_file_kind", sql`${table.kind} in ('save', 'media')`),
+    check("stored_file_size", sql`${table.size} >= 0`),
+  ],
+);
+
+/** A game's save slot in the cloud; its versions are the archives the launcher sent. */
+export const saveSlots = pgTable(
+  "save_slots",
+  {
+    id: uuid().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    titleId: text().notNull(),
+    slot: text().notNull(),
+    /** The newest version number given out; versions only go up, even after deletes. */
+    lastVersion: integer().notNull().default(0),
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  (table) => [
+    uniqueIndex("save_slot_name").on(table.accountId, table.titleId, table.slot),
+    check("save_title_id", sql`${table.titleId} ~ '^[A-Z]{4}[0-9]{5}$'`),
+    check("save_slot_length", sql`length(${table.slot}) between 1 and 64`),
+  ],
+);
+
+/** One archive (a zip) of a slot; the newest three are kept. */
+export const saveVersions = pgTable(
+  "save_versions",
+  {
+    id: uuid().primaryKey(),
+    slotId: uuid()
+      .notNull()
+      .references(() => saveSlots.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    version: integer().notNull(),
+    sha256: text().notNull(),
+    size: bigint({ mode: "number" }).notNull(),
+    device: text(),
+    launcherVersion: text(),
+    createdAt: now(),
+  },
+  (table) => [
+    uniqueIndex("save_version_number").on(table.slotId, table.version),
+    index().on(table.accountId),
+    foreignKey({
+      columns: [table.accountId, table.sha256],
+      foreignColumns: [storedFiles.accountId, storedFiles.sha256],
+    }),
+  ],
+);
+
+/** A save upload in parts: begun, parts arriving (in any order, again if lost), then completed.
+ *  The parts wait in the server's staging folder; an upload not completed in a day is dropped. */
+export const uploads = pgTable(
+  "uploads",
+  {
+    id: uuid().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    size: bigint({ mode: "number" }).notNull(),
+    sha256: text().notNull(),
+    partSize: integer().notNull(),
+    parts: integer().notNull(),
+    /** The part numbers received so far. */
+    received: integer().array().notNull().default(sql`'{}'::integer[]`),
+    /** What the save will be: titleId, slot, device, launcherVersion, baseVersion, replaceLatest. */
+    meta: jsonb().$type<Record<string, unknown>>().notNull(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: now(),
+  },
+  (table) => [index().on(table.accountId), index().on(table.expiresAt)],
+);
+
+/** Photos, clips and voice notes: sent in messages or pinned to the profile gallery. Media not used
+ *  in a day after it was uploaded is deleted. */
+export const media = pgTable(
+  "media",
+  {
+    id: uuid().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** image | clip | voice */
+    kind: text().notNull(),
+    sha256: text().notNull(),
+    contentType: text().notNull(),
+    /** A smaller still for lists (images), and the still before a clip plays (from the client). */
+    thumbSha256: text(),
+    posterSha256: text(),
+    /** Bytes of the file, its thumbnail and its poster together. */
+    size: bigint({ mode: "number" }).notNull(),
+    width: integer(),
+    height: integer(),
+    durationMs: integer(),
+    /** active | hidden (by a moderator) */
+    status: text().notNull().default("active"),
+    /** When it was first sent or pinned; until then it is a leftover upload. */
+    usedAt: timestamp({ withTimezone: true }),
+    /** Its place in the profile gallery (0-11), or none. */
+    galleryPosition: integer(),
+    createdAt: now(),
+  },
+  (table) => [
+    index().on(table.accountId, table.id.desc()),
+    uniqueIndex("media_gallery_place")
+      .on(table.accountId, table.galleryPosition)
+      .where(sql`${table.galleryPosition} is not null`),
+    foreignKey({
+      columns: [table.accountId, table.sha256],
+      foreignColumns: [storedFiles.accountId, storedFiles.sha256],
+    }),
+    foreignKey({
+      columns: [table.accountId, table.thumbSha256],
+      foreignColumns: [storedFiles.accountId, storedFiles.sha256],
+    }),
+    foreignKey({
+      columns: [table.accountId, table.posterSha256],
+      foreignColumns: [storedFiles.accountId, storedFiles.sha256],
+    }),
+    check("media_kind", sql`${table.kind} in ('image', 'clip', 'voice')`),
+    check("media_status", sql`${table.status} in ('active', 'hidden')`),
+    check("media_gallery", sql`${table.galleryPosition} between 0 and 11`),
+  ],
 );

@@ -62,6 +62,10 @@ export const defaultLimits = {
    *  walking into open ones, by one account and by a new one. */
   joinRequest: { max: 60, seconds: 3600 },
   joinRequestNew: { max: 10, seconds: 3600 },
+  /** Save uploads begun or completed, restores and deletes by one account. */
+  saveUpload: { max: 240, seconds: 3600 },
+  /** Photos, clips and voice notes uploaded by one account. */
+  mediaUpload: { max: 120, seconds: 3600 },
   /** Discovery lists (players of a game, suggestions, game hubs) per account. */
   discover: { max: 60, seconds: 60 },
   /** A child's requests to the parents, and family changes (invites, codes, new child accounts). */

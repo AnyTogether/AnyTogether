@@ -5,6 +5,7 @@ import {
   bans,
   conversationMembers,
   lfgPosts,
+  media,
   messages,
   profiles,
   reports,
@@ -26,8 +27,10 @@ import { z } from "zod";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
+import { needFiles } from "./files.js";
 import { body } from "./http.js";
 import { lfgService } from "./lfg.js";
+import { mediaService } from "./media.js";
 import { messageView } from "./messages.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { ban, emailHash, handleReport, liveBan } from "./moderation.js";
@@ -74,6 +77,7 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
   const who = people(db);
   const board = lfgService(deps, notes);
   const { store } = themeFiles(deps);
+  const mediaOf = mediaService(deps);
 
   const audit = (
     c: { get: (key: "userId" | "adminHandle") => string },
@@ -157,6 +161,12 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
           ).map((t) => [t.id, t])
         : [],
     );
+    const mediaIds = rows.filter((r) => r.targetKind === "media" && isId(r.targetId)).map((r) => r.targetId);
+    const mediaRows = new Map(
+      mediaIds.length && deps.files
+        ? (await db.select().from(media).where(inArray(media.id, mediaIds))).map((m) => [m.id, m])
+        : [],
+    );
     const removed = new Set(
       messageIds.length
         ? (
@@ -216,6 +226,20 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
                 status: theme?.status ?? null,
                 colors: theme?.colors ?? null,
               }
+            : null,
+        media:
+          r.targetKind === "media"
+            ? (() => {
+                const row = mediaRows.get(r.targetId);
+                const kind = (r.snapshot as { kind?: string } | null)?.kind ?? null;
+                if (!row || !deps.files) return { id: r.targetId, kind, status: "deleted", view: null };
+                // A short link made as for the owner, so a hidden item still shows to moderators.
+                const view = mediaOf.view(deps.files, row, {
+                  owner: true,
+                  expires: deps.files.now() + 3600_000,
+                });
+                return { id: row.id, kind: row.kind, status: row.status, view };
+              })()
             : null,
         reporter: reporter ? personView(reporter) : null,
         target: subject ? personView(subject) : null,
@@ -281,6 +305,10 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
       case "remove_message": {
         if (report.targetKind !== "message")
           throw new HttpError(400, ErrorCode.badRequest, "Only a reported message can be removed");
+        const [before] = await db
+          .select()
+          .from(messages)
+          .where(and(eq(messages.id, report.targetId), isNull(messages.deletedAt)));
         const [removed] = await db
           .update(messages)
           .set({ text: null, attachments: [], deletedAt: new Date() })
@@ -293,6 +321,8 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
             .where(eq(conversationMembers.conversationId, removed.conversationId));
           for (const member of members)
             await publish(valkey, member.id, { type: "message.deleted", data: messageView(removed) });
+          // Its media goes with it, unless pinned or in another message.
+          if (before) await mediaOf.releaseFrom(before);
         }
         await audit(c, "message.removed", report.targetId, { author: subject, report: report.id });
         break;
@@ -309,6 +339,21 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
         const [post] = await db.select().from(lfgPosts).where(eq(lfgPosts.id, report.targetId));
         if (post) await board.close(post, "removed");
         await audit(c, "lfg.removed", report.targetId, { author: subject, report: report.id });
+        break;
+      }
+      case "hide_media":
+      case "delete_media": {
+        if (report.targetKind !== "media")
+          throw new HttpError(400, ErrorCode.badRequest, "Only reported media can be hidden or deleted");
+        const files = needFiles(deps.files);
+        const row = await mediaOf.find(db, report.targetId);
+        if (row && input.action === "hide_media")
+          await db.update(media).set({ status: "hidden" }).where(eq(media.id, row.id));
+        if (row && input.action === "delete_media") await mediaOf.remove(files, row);
+        await audit(c, input.action === "hide_media" ? "media.hidden" : "media.deleted", report.targetId, {
+          owner: subject,
+          report: report.id,
+        });
         break;
       }
       case "reset_bio": {

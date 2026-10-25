@@ -1,11 +1,13 @@
 import { conversationMembers, conversations, messages } from "@anytogether/db";
 import {
+  type AttachmentView,
   ConversationCreate,
   ConversationMembers,
   ConversationUpdate,
   type ConversationView,
   ErrorCode,
   type GatewayEvent,
+  type MediaKind,
   MessageEdit,
   MessageSend,
   type MessageView,
@@ -14,6 +16,7 @@ import {
   conversationMembersSeconds,
   editWindowMs,
   maxGroupMembers,
+  mediaFallbackText,
 } from "@anytogether/shared";
 import { and, asc, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -25,6 +28,7 @@ import { publish } from "./events.js";
 import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { blockedLink } from "./links.js";
+import { mediaService } from "./media.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import type { Notifier } from "./notifications.js";
 import { people } from "./people.js";
@@ -36,17 +40,24 @@ type Message = typeof messages.$inferSelect;
 const Seq = z.coerce.number().int().min(0);
 const iso = (date: Date | null) => (date ? date.toISOString() : null);
 
-export const messageView = (m: Message): MessageView => ({
-  id: m.id,
-  conversationId: m.conversationId,
-  seq: m.seq,
-  authorId: m.authorId,
-  text: m.deletedAt ? null : m.text,
-  replyTo: m.replyTo,
-  editedAt: iso(m.editedAt),
-  deletedAt: iso(m.deletedAt),
-  createdAt: m.createdAt.toISOString(),
-});
+/** A message as clients see it; `attachments` are its media as resolved for the one who reads. */
+export const messageView = (m: Message, attachments: AttachmentView[] = []): MessageView => {
+  const kind = m.deletedAt ? undefined : (m.attachments as { kind: MediaKind }[])[0]?.kind;
+  return {
+    id: m.id,
+    conversationId: m.conversationId,
+    seq: m.seq,
+    authorId: m.authorId,
+    kind: kind ?? "text",
+    text: m.deletedAt ? null : (m.text ?? (kind ? mediaFallbackText[kind] : null)),
+    caption: m.deletedAt || !kind ? null : m.text,
+    attachments: m.deletedAt ? [] : attachments,
+    replyTo: m.replyTo,
+    editedAt: iso(m.editedAt),
+    deletedAt: iso(m.deletedAt),
+    createdAt: m.createdAt.toISOString(),
+  };
+};
 
 /** Direct conversations between friends and groups made by a member: send, edit for 15 minutes,
  *  delete, read state and unread counts. Every change reaches the members' gateway channels. */
@@ -57,6 +68,19 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
   const who = people(db);
   const limit = rateLimiter(deps.valkey, deps.limits);
   const family = familyGuard(db);
+  const mediaOf = mediaService(deps);
+
+  /** Messages as `viewer` sees them, their media resolved for them. */
+  const viewsFor = async (viewer: string, rows: Message[]) => {
+    const attached = await mediaOf.attachmentsFor(viewer, rows);
+    return rows.map((m) => messageView(m, attached.get(m.id)));
+  };
+  const viewFor = async (viewer: string, m: Message) => (await viewsFor(viewer, [m]))[0] as MessageView;
+  /** A message event to every member, each with the media as they may see it. */
+  const tellMessage = async (userIds: string[], type: "message.created" | "message.updated", m: Message) => {
+    for (const userId of new Set(userIds))
+      await publish(deps.valkey, userId, { type, data: await viewFor(userId, m) } as GatewayEvent);
+  };
 
   const memberIds = async (conversationId: string) =>
     (
@@ -103,7 +127,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
   };
 
   /** Conversations as the list and the thread show them, for one member. */
-  const views = async (rows: { conversation: Conversation; readSeq: number }[]) => {
+  const views = async (rows: { conversation: Conversation; readSeq: number }[], viewer: string) => {
     if (!rows.length) return [];
     const ids = rows.map((r) => r.conversation.id);
     const members = await db
@@ -123,9 +147,9 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
             )})`,
           )
       : [];
-    const lastBy = new Map(last.map((m) => [m.conversationId, m]));
+    const lastViews = new Map((await viewsFor(viewer, last)).map((v) => [v.conversationId, v]));
     return rows.map(({ conversation: c, readSeq }): ConversationView => {
-      const lastMessage = lastBy.get(c.id);
+      const lastMessage = lastViews.get(c.id);
       return {
         id: c.id,
         kind: c.kind as ConversationView["kind"],
@@ -138,7 +162,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         lastSeq: c.lastSeq,
         readSeq,
         unread: Math.max(0, c.lastSeq - readSeq),
-        lastMessage: lastMessage ? messageView(lastMessage) : null,
+        lastMessage: lastMessage ?? null,
         updatedAt: c.updatedAt.toISOString(),
       };
     });
@@ -146,7 +170,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
 
   const viewOne = async (me: string, conversationId: string) => {
     const { conversation, member } = await membership(conversationId, me);
-    const [view] = await views([{ conversation, readSeq: member.readSeq }]);
+    const [view] = await views([{ conversation, readSeq: member.readSeq }], me);
     return view as ConversationView;
   };
 
@@ -174,7 +198,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       )
       .orderBy(desc(conversations.updatedAt))
       .limit(50);
-    return c.json({ conversations: await views(rows) });
+    return c.json({ conversations: await views(rows, me) });
   });
 
   /** The header's badge: conversations with something unread, and how many messages. */
@@ -336,7 +360,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         .orderBy(asc(messages.seq))
         .limit(limit + 1);
       const more = rows.length > limit;
-      return c.json({ messages: rows.slice(0, limit).map(messageView), more });
+      return c.json({ messages: await viewsFor(me, rows.slice(0, limit)), more });
     }
     const seq = before === undefined ? undefined : Seq.safeParse(before);
     if (seq && !seq.success) throw new HttpError(400, ErrorCode.badRequest, "before: a message seq");
@@ -347,7 +371,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       .orderBy(desc(messages.seq))
       .limit(limit + 1);
     const more = rows.length > limit;
-    return c.json({ messages: rows.slice(0, limit).reverse().map(messageView), more });
+    return c.json({ messages: await viewsFor(me, rows.slice(0, limit).reverse()), more });
   });
 
   app.post("/conversations/:id/messages", async (c) => {
@@ -356,7 +380,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const input = await body(c, MessageSend);
     await limit("message", me);
     await limit("messageDay", me);
-    allowedText(input.text);
+    if (input.text) allowedText(input.text);
     const members = await memberIds(conversation.id);
     await remember(conversation.id, members);
     if (conversation.kind === "direct") {
@@ -369,12 +393,18 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       const [existing] = await db.select().from(messages).where(eq(messages.id, input.clientId));
       if (!existing || existing.authorId !== me || existing.conversationId !== conversation.id)
         throw new HttpError(409, ErrorCode.conflict, "That message ID is taken");
-      return c.json(messageView(existing), 200);
+      return c.json(await viewFor(me, existing), 200);
     };
     if ((await db.select({ id: messages.id }).from(messages).where(eq(messages.id, input.clientId))).length)
       return resent();
     if (input.replyTo !== undefined && input.replyTo > conversation.lastSeq)
       throw new HttpError(400, ErrorCode.badRequest, "replyTo: no such message");
+    // Media: the sender's own, uploaded first; one piece per message, with the text as its caption.
+    const attached = await mediaOf.attachable(
+      me,
+      (input.attachments ?? []).map((a) => a.mediaId),
+    );
+    const attachments = attached.map((m) => ({ mediaId: m.id, kind: m.kind as MediaKind }));
 
     const stored = await db
       .transaction(async (tx) => {
@@ -391,7 +421,8 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
             seq: bumped.seq,
             id: input.clientId,
             authorId: me,
-            text: input.text,
+            text: input.text || null,
+            attachments,
             replyTo: input.replyTo ?? null,
           })
           .onConflictDoNothing({ target: messages.id })
@@ -414,8 +445,9 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         throw error;
       });
     if (!stored) return resent();
-    const view = messageView(stored);
-    await tell(members, { type: "message.created", data: view });
+    const view = await viewFor(me, stored);
+    await tellMessage(members, "message.created", stored);
+    const said = view.text ?? "";
     // Writing in it means reading it; the others, unless they muted it, get a notification while
     // none of their devices is connected.
     await notes.settle(me, "message", conversation.id);
@@ -439,7 +471,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
             conversationId: conversation.id,
             title: conversation.title,
             group: conversation.kind === "group",
-            text: input.text.length > 140 ? `${input.text.slice(0, 139)}…` : input.text,
+            text: said.length > 140 ? `${said.slice(0, 139)}…` : said,
           },
         });
     return c.json(view, 201);
@@ -471,9 +503,8 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       .set({ text, editedAt: new Date() })
       .where(and(eq(messages.conversationId, conversation.id), eq(messages.seq, message.seq)))
       .returning();
-    const view = messageView(updated as Message);
-    await tell(await memberIds(conversation.id), { type: "message.updated", data: view });
-    return c.json(view);
+    await tellMessage(await memberIds(conversation.id), "message.updated", updated as Message);
+    return c.json(await viewFor(me, updated as Message));
   });
 
   app.delete("/conversations/:id/messages/:seq", async (c) => {
@@ -490,6 +521,8 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       type: "message.deleted",
       data: messageView(deleted as Message),
     });
+    // Its media goes with it, unless it is pinned or in another message.
+    await mediaOf.releaseFrom(message);
     return c.body(null, 204);
   });
 

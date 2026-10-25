@@ -48,6 +48,19 @@ export const ErrorCode = {
    *  `feature` says which, `side` whether the limit is the asker's own ("self") or the other
    *  person's ("other"). */
   restrictedByFamily: "restricted_by_family",
+  /** The server keeps no files (no STORAGE_DIR or S3 bucket): saves and media are off. */
+  storageDisabled: "storage_disabled",
+  /** Saves and media together would pass the account's quota; the answer has used, limit and
+   *  needed (bytes). */
+  quotaExceeded: "quota_exceeded",
+  /** The cloud has a newer save than the version the upload was based on; the answer has it. */
+  saveConflict: "save_conflict",
+  /** The bytes received do not have the SHA-256 the upload named. */
+  checksumMismatch: "checksum_mismatch",
+  /** A clip or voice note that is not the container and codec it must be, or too long. */
+  badMedia: "bad_media",
+  /** A signed file link whose time is over or whose signature is wrong: ask for a new one. */
+  linkExpired: "link_expired",
   internal: "internal",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

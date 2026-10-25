@@ -19,6 +19,7 @@ import { revokeAll } from "./account.js";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { body } from "./http.js";
+import { mediaService } from "./media.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { rateLimiter } from "./ratelimit.js";
 import { reviewIfReported } from "./themes.js";
@@ -211,6 +212,7 @@ export function reportRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const limit = rateLimiter(deps.valkey, deps.limits);
+  const mediaOf = mediaService(deps);
 
   app.post("/reports", async (c) => {
     const me = c.get("userId");
@@ -247,6 +249,7 @@ export function reportRoutes(deps: Deps) {
         conversationId: found.message.conversationId,
         seq: found.message.seq,
         text: found.message.text,
+        attachments: found.message.attachments,
         createdAt: found.message.createdAt,
       };
     }
@@ -272,6 +275,19 @@ export function reportRoutes(deps: Deps) {
         purpose: found.purpose,
         languages: found.languages,
         note: found.note,
+        createdAt: found.createdAt,
+      };
+    }
+    // Media: anyone who can see it but its owner; what it is (not its bytes) is kept.
+    if (input.targetKind === "media") {
+      const found = await mediaOf.find(deps.db, input.targetId);
+      if (!found || !(await mediaOf.canView(me, found)))
+        throw new HttpError(404, ErrorCode.notFound, "No such media");
+      if (found.accountId === me) throw new HttpError(400, ErrorCode.badRequest, "That is yours");
+      snapshot = {
+        authorId: found.accountId,
+        kind: found.kind,
+        sha256: found.sha256,
         createdAt: found.createdAt,
       };
     }

@@ -48,6 +48,7 @@ import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { refreshRarityOf } from "./games.js";
 import { body } from "./http.js";
+import { mediaService } from "./media.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { rateLimiter } from "./ratelimit.js";
 import { revoke } from "./sessions.js";
@@ -71,8 +72,13 @@ export async function revokeAll(ctx: { db: Database; valkey: Redis }, accountId:
   return live.filter(({ id }) => id !== keep).length;
 }
 
-/** Everything held about the account, for "Download my data" (KVKK and GDPR). */
-export async function exportAccount(db: Database, accountId: string) {
+/** Everything held about the account, for "Download my data" (KVKK and GDPR). Cloud saves and media
+ *  are listed with links to download them, good for a week. */
+export async function exportAccount(
+  db: Database,
+  accountId: string,
+  storage?: () => Promise<Record<string, unknown> | null>,
+) {
   const [account] = await db.select().from(accounts).where(eq(accounts.id, accountId));
   const [profile] = await db.select().from(profiles).where(eq(profiles.accountId, accountId));
   const [avatar] = await db.select().from(avatars).where(eq(avatars.accountId, accountId));
@@ -282,12 +288,16 @@ export async function exportAccount(db: Database, accountId: string) {
       .select({ action: auditLog.action, target: auditLog.target, createdAt: auditLog.createdAt })
       .from(auditLog)
       .where(or(eq(auditLog.actorId, accountId), eq(auditLog.target, accountId))),
+    storage: storage ? await storage() : null,
   };
 }
 
 /** Deletes the accounts whose 14 days are over: everything of theirs goes with the row (the
  *  foreign keys cascade); what others keep (games they taught) loses the name. */
-export async function purgeDeletedAccounts(ctx: { db: Database; valkey: Redis }, now = new Date()) {
+export async function purgeDeletedAccounts(
+  ctx: { db: Database; valkey: Redis; files?: { forgetAccount(id: string): Promise<void> } | undefined },
+  now = new Date(),
+) {
   // Sign-in requests are of no use a while after they expired (they hold the address mailed).
   await ctx.db
     .delete(signInRequests)
@@ -327,6 +337,10 @@ export async function purgeDeletedAccounts(ctx: { db: Database; valkey: Redis },
         deletionKey(id),
       )
       .exec();
+    // Their cloud saves and media leave the file store (the hourly sweep catches any left).
+    await ctx.files
+      ?.forgetAccount(id)
+      .catch((error) => console.error("could not delete files of", id, error));
     // One player fewer for every game they had.
     await refreshRarityOf(ctx.db, titles);
   }
@@ -339,11 +353,12 @@ export function accountRoutes(deps: Deps) {
   app.use("*", requireUser(deps));
   const limit = rateLimiter(deps.valkey, deps.limits);
   const ctx = { db: deps.db, valkey: deps.valkey, tokens: deps.tokens };
+  const mediaOf = mediaService(deps);
 
   app.get("/me/export", async (c) => {
     const me = c.get("userId");
     await limit("export", me);
-    const data = await exportAccount(deps.db, me);
+    const data = await exportAccount(deps.db, me, () => mediaOf.exportFor(me));
     const day = new Date().toISOString().slice(0, 10);
     return c.body(JSON.stringify(data, null, 2), 200, {
       "content-type": "application/json; charset=utf-8",

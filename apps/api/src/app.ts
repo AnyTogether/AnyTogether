@@ -14,12 +14,14 @@ import { discoverRoutes } from "./discover.js";
 import { HttpError } from "./errors.js";
 import { familyRoutes, sendFamilySummaries } from "./family.js";
 import { feedRoutes } from "./feed.js";
+import type { FileService } from "./files.js";
 import { friendRoutes } from "./friends.js";
 import { gameSessionRoutes } from "./gameSessions.js";
 import { gameRoutes } from "./games.js";
 import { leaderboardRoutes } from "./leaderboards.js";
 import { lfgRoutes } from "./lfg.js";
 import type { Mailer } from "./mail.js";
+import { isStreamedUpload, mediaRoutes, mediaService } from "./media.js";
 import { messageRoutes } from "./messages.js";
 import type { AuthVariables } from "./middleware.js";
 import { reportRoutes } from "./moderation.js";
@@ -30,6 +32,7 @@ import type { ProviderConfig } from "./providers.js";
 import { type ClientIpHeader, type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
 import { releaseRoutes } from "./releases.js";
+import { saveRoutes } from "./saves.js";
 import { sharePlayRoutes } from "./sharePlays.js";
 import { statsRoutes } from "./stats.js";
 import type { BlobStore } from "./storage.js";
@@ -62,6 +65,8 @@ export interface Deps {
   push?: PushSender;
   /** Where theme files are kept: PostgreSQL when left out. */
   blobs?: BlobStore;
+  /** Cloud saves and media (a folder or an S3 bucket, and the quota); off when left out. */
+  files?: FileService;
   /** How GitHub is asked for releases (the tests answer themselves), and a token for more calls. */
   githubFetch?: typeof fetch;
   githubToken?: string;
@@ -100,12 +105,20 @@ export function createApp(deps: Deps) {
       throw new HttpError(413, ErrorCode.payloadTooLarge, "The request is too large");
     },
   });
-  v1.use("*", (c, next) => (c.req.method === "POST" && isThemeUpload(c.req.path) ? next() : capped(c, next)));
+  v1.use("*", (c, next) =>
+    (c.req.method === "POST" && isThemeUpload(c.req.path)) || isStreamedUpload(c.req.method, c.req.path)
+      ? next()
+      : capped(c, next),
+  );
   v1.route("/auth", authRoutes(deps));
   v1.route("/auth", passkeyRoutes(deps));
 
-  // Before the signed-in routes: avatars are served to anyone.
+  // Before the signed-in routes: avatars are served to anyone, and signed file links to whoever
+  // holds one.
   v1.route("/", avatarRoutes(deps));
+  const media = mediaService(deps);
+  v1.route("/", saveRoutes(deps));
+  v1.route("/", mediaRoutes(deps, media));
   // The Theme Hub, the compatibility list, downloads and the front page's totals are open to anyone too.
   v1.route("/", themeRoutes(deps));
   v1.route("/", compatRoutes(deps));
@@ -149,5 +162,6 @@ export function createApp(deps: Deps) {
     sweepLfg: lfg.sweep,
     /** The weekly summaries for parents. */
     sendFamilySummaries: (now?: Date) => sendFamilySummaries(deps, notes, family.activityOf, now),
+    media,
   });
 }

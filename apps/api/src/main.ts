@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { connect } from "@anytogether/db";
 import { runMigrations } from "@anytogether/db/migrate";
 import { serve } from "@hono/node-server";
@@ -5,6 +6,8 @@ import { Redis } from "ioredis";
 import { purgeDeletedAccounts } from "./account.js";
 import { createApp } from "./app.js";
 import { config } from "./config.js";
+import { storeFromSettings } from "./fileStore.js";
+import { type FileService, fileService } from "./files.js";
 import { mailerFor } from "./mail.js";
 import { pruneNotifications, sendDigests, webPushSender } from "./notifications.js";
 import { sweepThemeFiles } from "./themes.js";
@@ -22,6 +25,35 @@ const push = webPushSender(settings.vapid);
 console.log(
   `push notifications: ${push ? "on" : "off (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT)"}`,
 );
+// Cloud saves and media only when the server has somewhere to keep them, and it works.
+let files: FileService | undefined;
+const store = storeFromSettings(settings.storage);
+if (store) {
+  try {
+    await store.check();
+    files = fileService({
+      db,
+      store,
+      publicUrl: settings.publicUrl,
+      quotaBytes: settings.storage.quotaBytes,
+      saveMaxBytes: settings.storage.saveMaxBytes,
+      // Links survive restarts when they are signed with a key that does.
+      urlSecret:
+        settings.storage.urlSecret ??
+        (settings.jwtPrivateKey
+          ? createHmac("sha256", settings.jwtPrivateKey).update("file-links").digest()
+          : undefined),
+    });
+    console.log(
+      `cloud saves and media: on (${store.kind}, ${Math.round(files.quota / 1048576)} MB per account)`,
+    );
+  } catch (error) {
+    console.error(`cloud saves and media: off, the ${store.kind} store cannot be used:`, error);
+  }
+} else
+  console.log(
+    "cloud saves and media: off (STORAGE_DIR or S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY)",
+  );
 const app = createApp({
   db,
   valkey,
@@ -36,15 +68,22 @@ const app = createApp({
   clientIpHeader: settings.clientIpHeader,
   push,
   githubToken: settings.githubToken,
+  ...(files ? { files } : {}),
 });
 serve({ fetch: app.fetch, port: settings.port }, (info) => console.log(`api listening on ${info.port}`));
 
 // Accounts whose 14 days to change their mind are over are deleted, checked every hour, and the
 // files of their themes after them.
 const purge = () =>
-  purgeDeletedAccounts({ db, valkey })
+  purgeDeletedAccounts({ db, valkey, files })
     .then((count) => count && console.log(`deleted ${count} account(s)`))
     .then(() => sweepThemeFiles({ db, publicUrl: settings.publicUrl }))
+    // Then cloud files nothing uses: unfinished uploads, unsent media, deleted accounts' files.
+    .then(() => files?.sweep())
+    .then((swept) => {
+      const total = swept ? Object.values(swept).reduce((a, b) => a + b, 0) : 0;
+      if (total) console.log("storage cleanup", swept);
+    })
     .catch((error) => console.error("purge failed", error));
 setTimeout(purge, 60_000);
 setInterval(purge, 3_600_000);
