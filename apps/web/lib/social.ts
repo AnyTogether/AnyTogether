@@ -36,19 +36,56 @@ export interface PartyMember extends Person {
   joinedAt: string;
 }
 
+/** A join code that works now: anyone holding it may ask to join. */
+export interface JoinCode {
+  code: string;
+  url: string;
+  expiresAt: string;
+}
+
 export interface Party {
   id: string;
   leaderId: string;
   privacy: "invite" | "friends";
   members: PartyMember[];
   invited: Person[];
-  call: { id: string; in: string[]; muted?: string[] } | null;
+  call: { id: string; in: string[]; muted?: string[]; deafened?: string[] } | null;
   /** Listed in public, and how (older API answers lack it). */
   public?: { join: "request" | "open"; titleId: string | null; language: string | null } | null;
-  /** Who asked to join a public party (members only). */
+  /** Who asked to join, from the public list or with the code (members only). */
   requests?: Person[];
+  /** The leader's join code while it works (members only; older API answers lack it). */
+  joinCode?: JoinCode | null;
+  /** The party's Discord server or channel (members only). */
+  discord?: string | null;
   createdAt: string;
 }
+
+/** What a join code opens, as GET /join/{code} says. */
+export interface JoinCodeView {
+  code: string;
+  kind: "party" | "share_play";
+  id: string;
+  host: { userId?: string; handle: string; displayName: string; avatar: string | null } | null;
+  game: {
+    titleId: string;
+    title: string | null;
+    names: Record<string, string>;
+    iconUrl: string | null;
+  } | null;
+  size: number;
+  max: number;
+  expiresAt: string;
+  state?: "none" | "member" | "requested" | "invited";
+}
+
+const codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+/** A code as typed or pasted: case, spaces and dashes do not matter. */
+export const normalizeJoinCode = (raw: string) => raw.toUpperCase().replace(/[\s-]/g, "");
+export const isJoinCode = (code: string) =>
+  code.length === 8 && [...code].every((c) => codeAlphabet.includes(c));
+/** XXXX-XXXX, for reading out. */
+export const formatJoinCode = (code: string) => `${code.slice(0, 4)}-${code.slice(4)}`;
 
 export interface PartyInvite {
   partyId: string;
@@ -61,6 +98,7 @@ export interface CallPeer {
   userId: string;
   device: string;
   muted?: boolean;
+  deafened?: boolean;
 }
 
 export interface CallJoin {

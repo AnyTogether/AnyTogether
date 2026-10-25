@@ -5,7 +5,7 @@ import { useLive, useLiveEvents } from "@/components/Live";
 import type { CallStrings } from "@/lib/i18n-social";
 import { type Person, fill } from "@/lib/people";
 import { type CallJoin, json, social } from "@/lib/social";
-import { VoiceMesh, type VoiceState } from "@/lib/voice";
+import { type MicState, VoiceMesh, type VoiceState, micState, toggleDeafen, toggleMic } from "@/lib/voice";
 import { type ReactNode, createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 type Ended = "ended" | "declined" | "no_answer" | "elsewhere" | "failed" | "mic";
@@ -20,6 +20,8 @@ export interface ActiveCall {
   since: number | null;
   ended?: Ended;
   peerMuted: boolean;
+  /** The other person hears no one. */
+  peerDeafened?: boolean;
 }
 
 interface Incoming {
@@ -49,7 +51,8 @@ export function CallProvider({ texts, children }: { texts: CallStrings; children
   const [active, setActive] = useState<ActiveCall | null>(null);
   const [incoming, setIncoming] = useState<Incoming[]>([]);
   const [voice, setVoice] = useState<VoiceState | null>(null);
-  const [muted, setMuted] = useState(false);
+  const [mic, setMic] = useState<MicState>(micState);
+  const muted = !mic.micOn;
   const [busy, setBusy] = useState(false);
   const mesh = useRef<VoiceMesh | null>(null);
   const activeRef = useRef(active);
@@ -71,7 +74,7 @@ export function CallProvider({ texts, children }: { texts: CallStrings; children
       mesh.current?.close();
       mesh.current = null;
       setVoice(null);
-      setMuted(false);
+      setMic(micState());
       clearTimeout(noAnswer.current);
       if (tellServer && current?.id) social(`calls/${current.id}/leave`, { method: "POST" });
       if (!current) return;
@@ -171,6 +174,7 @@ export function CallProvider({ texts, children }: { texts: CallStrings; children
         phase: "connecting",
         since: null,
         peerMuted: !!caller?.muted,
+        peerDeafened: !!caller?.deafened,
       });
       const started = startVoice(item.callId, stream, answered.body.iceServers);
       // We answered last, so we make the offer.
@@ -197,12 +201,17 @@ export function CallProvider({ texts, children }: { texts: CallStrings; children
     social(`calls/${item.callId}/decline`, { method: "POST" });
   }
 
-  function toggleMute() {
+  /** The mic or hearing changed: the voice follows, and the other person is told. */
+  function change(next: MicState) {
     const call = activeRef.current;
-    const next = !muted;
-    setMuted(next);
-    mesh.current?.setTalking(!next);
-    if (call?.id) social(`calls/${call.id}/mute`, { method: "POST", ...json({ muted: next }) });
+    setMic(next);
+    mesh.current?.setTalking(next.micOn);
+    mesh.current?.setDeafened(next.deafened);
+    if (call?.id)
+      social(`calls/${call.id}/mute`, {
+        method: "POST",
+        ...json({ muted: !next.micOn, deafened: next.deafened }),
+      });
   }
 
   useLiveEvents((event) => {
@@ -232,7 +241,7 @@ export function CallProvider({ texts, children }: { texts: CallStrings; children
         return;
       case "call.updated":
         if (current && current.id === data.callId && data.userId !== me)
-          show({ ...current, peerMuted: !!data.muted });
+          show({ ...current, peerMuted: !!data.muted, peerDeafened: !!data.deafened });
         return;
       case "signal":
         if (mesh.current && current?.id && data.call === current.id)
@@ -327,7 +336,9 @@ export function CallProvider({ texts, children }: { texts: CallStrings; children
             call={active}
             voice={voice}
             muted={muted}
-            onMute={toggleMute}
+            deafened={mic.deafened}
+            onMute={() => change(toggleMic(mic))}
+            onDeafen={() => change(toggleDeafen(mic))}
             onEnd={() => finish("ended", true)}
           />
         )}
@@ -341,14 +352,18 @@ function CallPanel({
   call,
   voice,
   muted,
+  deafened,
   onMute,
+  onDeafen,
   onEnd,
 }: {
   texts: CallStrings;
   call: ActiveCall;
   voice: VoiceState | null;
   muted: boolean;
+  deafened: boolean;
   onMute: () => void;
+  onDeafen: () => void;
   onEnd: () => void;
 }) {
   const name = call.peer.displayName;
@@ -376,9 +391,12 @@ function CallPanel({
         }`}
       >
         <Avatar person={call.peer} size={64} />
-        {call.peerMuted && !over && (
-          <i className="muted-badge" title={fill(texts.peerMuted, { name })}>
-            <MicIcon off />
+        {(call.peerMuted || call.peerDeafened) && !over && (
+          <i
+            className="muted-badge"
+            title={fill(call.peerDeafened ? texts.peerDeafened : texts.peerMuted, { name })}
+          >
+            {call.peerDeafened ? <HeadphonesIcon off /> : <MicIcon off />}
           </i>
         )}
       </span>
@@ -386,7 +404,11 @@ function CallPanel({
         <span className="name">{name}</span>
         <span className="meta" aria-live="polite">
           {status ?? <Clock since={call.since ?? Date.now()} />}
-          {call.peerMuted && !over && <span className="sr-only">{fill(texts.peerMuted, { name })}</span>}
+          {(call.peerMuted || call.peerDeafened) && !over && (
+            <span className="sr-only">
+              {fill(call.peerDeafened ? texts.peerDeafened : texts.peerMuted, { name })}
+            </span>
+          )}
         </span>
       </span>
       {!over && (
@@ -401,6 +423,17 @@ function CallPanel({
             onClick={onMute}
           >
             <MicIcon off={muted} />
+          </button>
+          <button
+            type="button"
+            className={`mic small-mic deafen${deafened ? "" : " on"}`}
+            aria-pressed={deafened}
+            aria-label={deafened ? texts.undeafen : texts.deafen}
+            title={deafened ? texts.undeafen : texts.deafen}
+            disabled={!call.id}
+            onClick={onDeafen}
+          >
+            <HeadphonesIcon off={deafened} />
           </button>
           <button
             type="button"
@@ -479,6 +512,17 @@ export function PhoneIcon({ down }: { down?: boolean }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={`stroke${down ? " hang-up" : ""}`}>
       <path d="M6.6 3.8 8.9 4.3a1.5 1.5 0 0 1 1.1 1.2l.4 2.6a1.5 1.5 0 0 1-.6 1.4l-1.4 1a12 12 0 0 0 5.1 5.1l1-1.4a1.5 1.5 0 0 1 1.4-.6l2.6.4a1.5 1.5 0 0 1 1.2 1.1l.5 2.3a1.6 1.6 0 0 1-1.6 1.9A16 16 0 0 1 4.7 5.4a1.6 1.6 0 0 1 1.9-1.6z" />
+    </svg>
+  );
+}
+
+function HeadphonesIcon({ off }: { off?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
+      <path d="M4 15v-3a8 8 0 0 1 16 0v3" />
+      <rect x="3.5" y="14" width="4" height="6" rx="1.6" />
+      <rect x="16.5" y="14" width="4" height="6" rx="1.6" />
+      {off && <path d="M4 4l16 16" />}
     </svg>
   );
 }

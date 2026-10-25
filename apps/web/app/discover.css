@@ -656,6 +656,91 @@ a.plain:hover {
   margin-top: 14px;
 }
 
+/* A party's join code and Discord link. */
+.join-code .hint,
+.party-discord .hint {
+  margin-top: 4px;
+}
+.join-code .code-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 14px 0 12px;
+}
+.join-code .code {
+  font: 600 28px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  user-select: all;
+}
+.join-code .acts,
+.discord-form {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.join-code > .primary,
+.discord-open {
+  margin-top: 12px;
+}
+.discord-form {
+  margin-top: 10px;
+}
+.discord-form input {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.discord-open {
+  display: inline-flex;
+}
+.code-entry {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.code-entry input {
+  flex: 1 1 140px;
+  max-width: 200px;
+  font-family: var(--font-mono), monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The page a join code opens. */
+.join-page .join-card {
+  display: grid;
+  gap: 18px;
+}
+.join-page .join-host {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.join-page .join-game {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--mute);
+  font-size: 14px;
+}
+.join-page .join-game img {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.join-page .join-code-tag {
+  font: 500 12px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  color: var(--mute);
+}
+.join-page .join-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
 @media (max-width: 760px) {
   .hub-grid {
     grid-template-columns: minmax(0, 1fr);

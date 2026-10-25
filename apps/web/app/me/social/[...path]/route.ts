@@ -4,8 +4,9 @@ import { relay } from "@/lib/session";
 const id = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const seq = "[0-9]{1,15}";
 const title = "[A-Z]{4}[0-9]{5}";
+const joinCode = "[A-HJ-NP-Z2-9]{8}";
 
-/** The API paths the messages, party, watch, notification and Find players pages may reach
+/** The API paths the messages, party, join, watch, notification and Find players pages may reach
  *  through here, by method; nothing else passes, and only these query parameters. */
 const allowed: Record<string, RegExp[]> = {
   GET: [
@@ -34,7 +35,9 @@ const allowed: Record<string, RegExp[]> = {
     /^conversations$/,
     new RegExp(`^conversations/${id}/(messages|read|members)$`),
     /^parties$/,
-    new RegExp(`^parties/${id}/(invites|join|decline|leave|kick|leader)$`),
+    new RegExp(`^parties/${id}/(invites|join|decline|leave|kick|leader|code)$`),
+    // Asking to join with a join code (the page that shows it reads it on the server).
+    new RegExp(`^join/${joinCode}$`),
     /^calls$/,
     new RegExp(`^calls/${id}/(answer|decline|leave|mute)$`),
     // The website only watches: it never starts a share play or hands out pads.
@@ -58,6 +61,7 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^conversations/${id}/members/${id}$`),
     new RegExp(`^lfg/${id}$`),
     new RegExp(`^(lfg|parties|share-plays)/${id}/requests/me$`),
+    new RegExp(`^parties/${id}/code$`),
   ],
 };
 const queries = ["before", "after", "limit", "titleId", "purpose", "language", "now", "live"];

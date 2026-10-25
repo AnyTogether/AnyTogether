@@ -1,13 +1,33 @@
 "use client";
 
 import { Avatar } from "@/components/Avatar";
+import { CopyButton } from "@/components/CopyButton";
 import { PartyListing } from "@/components/Discover";
 import { useLive, useLiveEvents } from "@/components/Live";
 import { Menu } from "@/components/MessagesBoard";
 import type { UiStrings } from "@/lib/i18n";
 import { type Friend, type Person, byPresence, fill } from "@/lib/people";
-import { type CallJoin, type Party, type PartyInvite, json, maxPartySize, social } from "@/lib/social";
-import { VoiceMesh, type VoiceState, keyLabel } from "@/lib/voice";
+import {
+  type CallJoin,
+  type Party,
+  type PartyInvite,
+  formatJoinCode,
+  isJoinCode,
+  json,
+  maxPartySize,
+  normalizeJoinCode,
+  social,
+} from "@/lib/social";
+import {
+  type MicState,
+  VoiceMesh,
+  type VoiceState,
+  keyLabel,
+  micState,
+  toggleDeafen,
+  toggleMic,
+} from "@/lib/voice";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type FriendWithParty = Friend & {
@@ -64,7 +84,8 @@ export function PartyBoard({
   const [callId, setCallId] = useState<string | null>(null);
   const [voice, setVoice] = useState<VoiceState | null>(null);
   const [joining, setJoining] = useState(false);
-  const [micOn, setMicOn] = useState(true);
+  const [mic, setMic] = useState<MicState>(micState);
+  const micOn = mic.micOn;
   const [prefs, setPrefs] = useState<{ mode: Mode; key: string }>({ mode: "open", key: "KeyV" });
   const [held, setHeld] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -112,17 +133,20 @@ export function PartyBoard({
   const talking = micOn && (prefs.mode === "open" || held);
   useEffect(() => mesh.current?.setTalking(talking), [talking]);
 
-  // The others see who muted themselves (push-to-talk not held is not muted).
-  const toldMuted = useRef(false);
+  useEffect(() => mesh.current?.setDeafened(mic.deafened), [mic.deafened]);
+
+  // The others see who muted or deafened themselves (push-to-talk not held is not muted).
+  const told = useRef("open");
   useEffect(() => {
     if (!callId) {
-      toldMuted.current = false;
+      told.current = "open";
       return;
     }
-    if (toldMuted.current === !micOn) return;
-    toldMuted.current = !micOn;
-    social(`calls/${callId}/mute`, { method: "POST", ...json({ muted: !micOn }) });
-  }, [callId, micOn]);
+    const now = mic.deafened ? "deaf" : micOn ? "open" : "muted";
+    if (told.current === now) return;
+    told.current = now;
+    social(`calls/${callId}/mute`, { method: "POST", ...json({ muted: !micOn, deafened: mic.deafened }) });
+  }, [callId, micOn, mic.deafened]);
 
   // Push to talk: hold the key anywhere on the page but in a text field.
   useEffect(() => {
@@ -227,6 +251,7 @@ export function PartyBoard({
       mesh.current = started;
       setCallId(call);
       started.setTalking(micOn && prefs.mode === "open");
+      started.setDeafened(mic.deafened);
       setVoice(started.state());
       // We are the newcomer: we call everyone already in.
       for (const peer of joined.body.call.in) if (peer.userId !== me) await started.connectTo(peer);
@@ -248,6 +273,7 @@ export function PartyBoard({
   const leader = party?.leaderId === me;
   const inVoice = new Set(party?.call?.in ?? []);
   const mutedSet = new Set(party?.call?.muted ?? []);
+  const deafSet = new Set(party?.call?.deafened ?? []);
   const peerState = new Map(voice?.peers.map((p) => [p.userId, p]));
   const connected = voice?.peers.filter((p) => p.state === "connected").length ?? 0;
   const connecting = voice?.peers.filter((p) => p.state !== "connected").length ?? 0;
@@ -279,6 +305,7 @@ export function PartyBoard({
             </button>
           </div>
           {notice && <p className={`notice ${notice.kind}`}>{notice.text}</p>}
+          <CodeEntry texts={texts} />
           {invites.length > 0 && (
             <div className="card">
               <h3 className="sub">
@@ -395,13 +422,23 @@ export function PartyBoard({
                 aria-pressed={!micOn}
                 aria-label={micOn ? texts.micOn : texts.micOff}
                 title={micOn ? texts.micOn : texts.micOff}
-                onClick={() => setMicOn(!micOn)}
+                onClick={() => setMic(toggleMic)}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
                   <rect x="9" y="3" width="6" height="11" rx="3" />
                   <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
                   {!micOn && <path d="M4 4l16 16" />}
                 </svg>
+              </button>
+              <button
+                type="button"
+                className={`mic deafen${mic.deafened ? "" : " on"}`}
+                aria-pressed={mic.deafened}
+                aria-label={mic.deafened ? texts.undeafen : texts.deafen}
+                title={mic.deafened ? texts.undeafen : texts.deafen}
+                onClick={() => setMic(toggleDeafen)}
+              >
+                <HeadphonesIcon off={mic.deafened} />
               </button>
               <div className="voice-mode">
                 <Segmented
@@ -449,6 +486,10 @@ export function PartyBoard({
 
         <PartyListing party={party} leader={leader} games={games} texts={texts} onChange={reload} />
 
+        <JoinCodeCard party={party} leader={leader} texts={texts} onChange={reload} />
+
+        <DiscordCard party={party} leader={leader} texts={texts} onChange={reload} />
+
         <div className="card raise">
           <div className="members-head">
             <h3 className="sub">
@@ -479,6 +520,7 @@ export function PartyBoard({
               const speaking = self ? !!voice?.speaking && talking : !!peer?.speaking;
               const voiceIn = self ? !!mesh.current : inVoice.has(member.userId);
               const muted = self ? !micOn : mutedSet.has(member.userId);
+              const deaf = self ? mic.deafened : deafSet.has(member.userId);
               return (
                 <li key={member.userId} className="person">
                   <span className={`ring${speaking ? " speaking" : ""}`}>
@@ -492,14 +534,16 @@ export function PartyBoard({
                     <span className="meta member-meta">
                       {party.leaderId === member.userId && <span className="crown">{texts.leader}</span>}
                       {voiceIn && (
-                        <span className={`in-voice${muted ? " muted" : ""}`}>
-                          {muted
-                            ? texts.muted
-                            : speaking
-                              ? texts.speaking
-                              : peer && peer.state !== "connected"
-                                ? texts.connectingShort
-                                : texts.inVoice}
+                        <span className={`in-voice${muted || deaf ? " muted" : ""}`}>
+                          {deaf
+                            ? texts.deafened
+                            : muted
+                              ? texts.muted
+                              : speaking
+                                ? texts.speaking
+                                : peer && peer.state !== "connected"
+                                  ? texts.connectingShort
+                                  : texts.inVoice}
                         </span>
                       )}
                       {!voiceIn && <span>@{member.handle}</span>}
@@ -655,5 +699,212 @@ function Segmented<T extends string>({
         </button>
       ))}
     </div>
+  );
+}
+
+function HeadphonesIcon({ off }: { off?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
+      <path d="M4 15v-3a8 8 0 0 1 16 0v3" />
+      <rect x="3.5" y="14" width="4" height="6" rx="1.6" />
+      <rect x="16.5" y="14" width="4" height="6" rx="1.6" />
+      {off && <path d="M4 4l16 16" />}
+    </svg>
+  );
+}
+
+/** The party's join code: the leader makes, renews and stops it; members see it to share. */
+function JoinCodeCard({
+  party,
+  leader,
+  texts,
+  onChange,
+}: {
+  party: Party;
+  leader: boolean;
+  texts: UiStrings;
+  onChange: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const code = party.joinCode ?? null;
+  if (!leader && !code) return null;
+
+  async function run(init: RequestInit) {
+    setBusy(true);
+    setError(null);
+    const result = await social<{ code?: string }>(`parties/${party.id}/code`, init);
+    setBusy(false);
+    if (!result.ok)
+      setError(
+        result.body?.code === "restricted_by_family"
+          ? texts.joinFamily
+          : result.body?.code === "account_muted"
+            ? texts.joinMuted
+            : result.status === 429
+              ? texts.joinTooMany
+              : texts.failed,
+      );
+    onChange();
+  }
+
+  const until = code
+    ? new Date(code.expiresAt).toLocaleString(texts.language, {
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+  return (
+    <div className="card join-code">
+      <h3 className="sub">{texts.joinCode}</h3>
+      <p className="hint">{leader ? texts.joinCodeLead : texts.joinCodeMember}</p>
+      {code ? (
+        <>
+          <div className="code-row">
+            <output className="code" aria-label={texts.joinCode}>
+              {formatJoinCode(code.code)}
+            </output>
+            <span className="meta">{fill(texts.codeUntil, { time: until })}</span>
+          </div>
+          <div className="row start acts">
+            <CopyButton text={formatJoinCode(code.code)} label={texts.copyCode} done={texts.copied} />
+            <CopyButton text={code.url} label={texts.copyLink} done={texts.copied} />
+            {leader && (
+              <>
+                <button
+                  type="button"
+                  className="pill"
+                  disabled={busy}
+                  onClick={() => run({ method: "POST", ...json({}) })}
+                >
+                  {texts.newCode}
+                </button>
+                <button
+                  type="button"
+                  className="pill danger"
+                  disabled={busy}
+                  onClick={() => run({ method: "DELETE" })}
+                >
+                  {texts.stopCode}
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      ) : (
+        <button
+          type="button"
+          className="primary small"
+          disabled={busy}
+          onClick={() => run({ method: "POST", ...json({}) })}
+        >
+          {texts.makeCode}
+        </button>
+      )}
+      {error && <p className="notice error">{error}</p>}
+    </div>
+  );
+}
+
+/** The party's Discord server or channel: the leader sets it, everyone opens it. */
+function DiscordCard({
+  party,
+  leader,
+  texts,
+  onChange,
+}: {
+  party: Party;
+  leader: boolean;
+  texts: UiStrings;
+  onChange: () => void;
+}) {
+  const link = party.discord ?? null;
+  const [draft, setDraft] = useState(link ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => setDraft(link ?? ""), [link]);
+  if (!leader && !link) return null;
+
+  async function save(discord: string | null) {
+    setBusy(true);
+    setError(null);
+    const result = await social(`parties/${party.id}`, { method: "PATCH", ...json({ discord }) });
+    setBusy(false);
+    if (!result.ok) setError(result.status === 400 ? texts.discordBad : texts.failed);
+    onChange();
+  }
+
+  return (
+    <div className="card party-discord">
+      <h3 className="sub">{texts.discord}</h3>
+      {leader && (
+        <form
+          className="row start discord-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const value = draft.trim();
+            if (value !== (link ?? "")) save(value || null);
+          }}
+        >
+          <input
+            type="url"
+            inputMode="url"
+            aria-label={texts.discordLead}
+            placeholder={texts.discordPlaceholder}
+            value={draft}
+            maxLength={300}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <button type="submit" className="pill" disabled={busy || draft.trim() === (link ?? "")}>
+            {texts.saveLink}
+          </button>
+          {link && (
+            <button type="button" className="pill danger" disabled={busy} onClick={() => save(null)}>
+              {texts.removeLink}
+            </button>
+          )}
+        </form>
+      )}
+      {leader && !link && <p className="hint">{texts.discordLead}</p>}
+      {link && (
+        <a className="primary small discord-open" href={link} target="_blank" rel="noopener noreferrer">
+          {texts.openInDiscord}
+        </a>
+      )}
+      {error && <p className="notice error">{error}</p>}
+    </div>
+  );
+}
+
+/** Someone's join code, typed in: opens its page, where one asks to join. */
+function CodeEntry({ texts }: { texts: UiStrings }) {
+  const router = useRouter();
+  const [value, setValue] = useState("");
+  const code = normalizeJoinCode(value);
+  return (
+    <form
+      className="card code-entry row start"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (isJoinCode(code)) router.push(`/join/${code}`);
+      }}
+    >
+      <label className="sub" htmlFor="join-code">
+        {texts.haveCode}
+      </label>
+      <input
+        id="join-code"
+        autoComplete="off"
+        spellCheck={false}
+        placeholder={texts.codePlaceholder}
+        value={value}
+        maxLength={12}
+        onChange={(event) => setValue(event.target.value)}
+      />
+      <button type="submit" className="pill" disabled={!isJoinCode(code)}>
+        {texts.go}
+      </button>
+    </form>
   );
 }

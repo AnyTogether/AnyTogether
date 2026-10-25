@@ -38,6 +38,7 @@ export const privatePaths = [
   "/link",
   "/login",
   "/watch/",
+  "/join/",
 ];
 
 export function sitemapFor(origin: string, now = new Date()): MetadataRoute.Sitemap {

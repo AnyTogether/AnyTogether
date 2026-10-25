@@ -14,6 +14,23 @@ interface Peer {
   quietSince: number;
 }
 
+/** The mic and hearing, as the person set them: deafened hears no one and is always muted;
+ *  `micBefore` is the mic before deafening, given back when undeafening. */
+export interface MicState {
+  micOn: boolean;
+  deafened: boolean;
+  micBefore: boolean;
+}
+export const micState = (): MicState => ({ micOn: true, deafened: false, micBefore: true });
+/** The mic button: unmuting while deafened undeafens too. */
+export const toggleMic = (state: MicState): MicState =>
+  state.deafened ? { micOn: true, deafened: false, micBefore: true } : { ...state, micOn: !state.micOn };
+/** The deafen button: on mutes, off gives back the mic as it was. */
+export const toggleDeafen = (state: MicState): MicState =>
+  state.deafened
+    ? { micOn: state.micBefore, deafened: false, micBefore: state.micBefore }
+    : { micOn: false, deafened: true, micBefore: state.micOn };
+
 export interface VoiceState {
   peers: { userId: string; state: RTCPeerConnectionState; speaking: boolean }[];
   speaking: boolean;
@@ -34,6 +51,7 @@ export class VoiceMesh {
   private context: AudioContext | null = null;
   private local: AnalyserNode | null = null;
   private talking = false;
+  private deafened = false;
   private speaking = false;
   private quietSince = 0;
   private level = 0;
@@ -68,6 +86,12 @@ export class VoiceMesh {
   setTalking(on: boolean) {
     this.talking = on;
     for (const track of this.stream?.getAudioTracks() ?? []) track.enabled = on;
+  }
+
+  /** Hears no one (deafened) or everyone again; people who join later follow it. */
+  setDeafened(on: boolean) {
+    this.deafened = on;
+    for (const peer of this.peers.values()) peer.audio.muted = on;
   }
 
   /** Calls a member already in the call (we are the newcomer, so we offer). */
@@ -152,6 +176,7 @@ export class VoiceMesh {
     const pc = new RTCPeerConnection({ iceServers: this.options.iceServers });
     const audio = new Audio();
     audio.autoplay = true;
+    audio.muted = this.deafened;
     const peer: Peer = {
       ...target,
       pc,
