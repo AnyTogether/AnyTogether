@@ -7,10 +7,13 @@ import {
   auditLog,
   avatars,
   blocks,
+  childRestrictions,
   conversationMembers,
   conversations,
   devices,
   earnedTrophies,
+  familyMembers,
+  familyRequests,
   friendships,
   games,
   handleHistory,
@@ -250,6 +253,31 @@ export async function exportAccount(db: Database, accountId: string) {
     pushSubscriptions: (
       await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.accountId, accountId))
     ).map((p) => ({ service: new URL(p.endpoint).host, lang: p.lang, createdAt: p.createdAt })),
+    family: await (async () => {
+      const [member] = await db.select().from(familyMembers).where(eq(familyMembers.accountId, accountId));
+      const [rules] = await db
+        .select()
+        .from(childRestrictions)
+        .where(eq(childRestrictions.accountId, accountId));
+      return {
+        membership: member
+          ? {
+              familyId: member.familyId,
+              role: member.role,
+              joinedAt: member.joinedAt,
+              confirmedAt: member.confirmedAt,
+            }
+          : null,
+        restrictions: rules ? { settings: rules.settings, updatedAt: rules.updatedAt } : null,
+        requests: (
+          await db
+            .select()
+            .from(familyRequests)
+            .where(eq(familyRequests.childId, accountId))
+            .orderBy(asc(familyRequests.id))
+        ).map(({ familyId: _, childId: __, ...r }) => r),
+      };
+    })(),
     auditLog: await db
       .select({ action: auditLog.action, target: auditLog.target, createdAt: auditLog.createdAt })
       .from(auditLog)

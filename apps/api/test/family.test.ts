@@ -157,6 +157,13 @@ describe("families", () => {
     });
     expect(bad.status).toBe(400);
 
+    // The child's data export carries the family part.
+    const exported = await h.app.request(`${v1}/me/export`, {
+      headers: { authorization: `Bearer ${kid.token}` },
+    });
+    const data = JSON.parse(await exported.text());
+    expect(data.family.membership.role).toBe("child");
+    expect(data.family.restrictions.settings.voiceChat).toBe(true);
     expect((await h.call("DELETE", `${v1}/me/family/members/${kid.id}`, undefined, mom.token)).status).toBe(
       204,
     );
