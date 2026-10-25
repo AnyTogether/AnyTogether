@@ -780,15 +780,6 @@ function ThreadView({
           stick.current = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
         }}
       >
-        {dragging && (
-          <div className="drop-hint" aria-hidden="true">
-            <svg viewBox="0 0 24 24" className="stroke" aria-hidden="true">
-              <path d="M12 16V4M7 9l5-5 5 5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15" />
-            </svg>
-            <strong>{texts.dropToAdd}</strong>
-            <span>{fill(texts.dropHint, sizes)}</span>
-          </div>
-        )}
         {thread?.more && (
           <button
             type="button"
@@ -923,6 +914,15 @@ function ThreadView({
         )}
       </div>
 
+      {dragging && (
+        <div className="drop-hint" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="stroke" aria-hidden="true">
+            <path d="M12 16V4M7 9l5-5 5 5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15" />
+          </svg>
+          <strong>{texts.dropToAdd}</strong>
+          <span>{fill(texts.dropHint, sizes)}</span>
+        </div>
+      )}
       {notice && (
         <p className="notice error thread-notice" role="alert">
           {notice}
@@ -1175,7 +1175,7 @@ function Composer({
         {canAttach && !text.trim() && !staged ? (
           <button
             type="button"
-            className="pill icon mic"
+            className="pill icon voice-btn"
             aria-label={texts.recordVoice}
             title={texts.recordVoice}
             onClick={() => {

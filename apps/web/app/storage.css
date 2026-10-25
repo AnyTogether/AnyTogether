@@ -72,7 +72,7 @@
 }
 
 /* The voice note player */
-.voice {
+.voice-note {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -90,7 +90,7 @@
   background: linear-gradient(135deg, #8fb0ff, #d4a6ff);
   box-shadow: 0 4px 14px rgba(143, 176, 255, 0.25);
 }
-.voice.mine .voice-play {
+.voice-note.mine .voice-play {
   background: #eef0f6;
 }
 .voice-play svg {
@@ -129,7 +129,7 @@
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
-.voice.playing .voice-time {
+.voice-note.playing .voice-time {
   color: var(--ink);
 }
 
@@ -206,7 +206,7 @@
 
 /* Composer: the file waiting for its caption, the attach and microphone buttons */
 .composer .pill.icon.attach,
-.composer .pill.icon.mic {
+.composer .pill.icon.voice-btn {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
@@ -216,11 +216,11 @@
   color: var(--mute);
 }
 .composer .pill.icon.attach:hover,
-.composer .pill.icon.mic:hover {
+.composer .pill.icon.voice-btn:hover {
   color: var(--ink);
 }
 .composer .pill.icon.attach svg,
-.composer .pill.icon.mic svg {
+.composer .pill.icon.voice-btn svg {
   width: 20px;
   height: 20px;
 }
@@ -322,16 +322,13 @@
 }
 
 /* Dragging a file over the thread */
-.messages {
+.chat .card.thread {
   position: relative;
 }
 .drop-hint {
-  position: sticky;
-  top: 0;
+  position: absolute;
+  inset: 76px 12px 82px;
   z-index: 4;
-  height: 100%;
-  min-height: 220px;
-  margin-bottom: -100%;
   display: grid;
   place-content: center;
   justify-items: center;
@@ -579,7 +576,7 @@ dialog.viewer::backdrop {
 .save-game-head .game-name {
   font-weight: 600;
 }
-.mono {
+.meta-mono {
   font: 400 11.5px / 1.2 var(--font-mono), monospace;
   color: var(--mute);
 }
@@ -701,12 +698,14 @@ dialog.viewer::backdrop {
   list-style: none;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 14px 12px;
 }
 .media-grid li {
   display: grid;
   gap: 6px;
+  align-content: start;
+  min-width: 0;
 }
 .media-cell,
 .gallery-cell,
@@ -755,7 +754,7 @@ dialog.viewer::backdrop {
   display: flex;
   align-items: center;
   gap: 3px;
-  height: 40%;
+  height: 44px;
   width: 62%;
 }
 .tile-wave i {
@@ -789,10 +788,19 @@ dialog.viewer::backdrop {
   align-items: center;
   gap: 6px;
   min-height: 28px;
+  min-width: 0;
+  overflow: hidden;
+}
+.cell-foot .meta-mono {
+  white-space: nowrap;
 }
 .cell-foot .tag {
   font-size: 10px;
   padding: 3px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 .cell-delete {
   margin-left: auto;
@@ -822,43 +830,52 @@ dialog.viewer::backdrop {
 }
 .gallery-edit {
   position: absolute;
-  top: 18px;
-  right: 18px;
+  top: 14px;
+  right: 16px;
+}
+.gallery-card .pin-grid {
+  margin-top: 18px;
 }
 .gallery-edit svg {
   width: 13px;
   height: 13px;
 }
-.gallery {
+.pin-grid {
   list-style: none;
   padding: 0;
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-.gallery.count-1 {
+/* Every cell is a square (the sizes come from the columns, never from the pictures); three or
+ *  more: the first one large, the rest around it. */
+.pin-grid li {
+  min-width: 0;
+  aspect-ratio: 1;
+}
+.pin-grid.count-1 {
   grid-template-columns: minmax(0, 1fr);
 }
-.gallery.count-1 .tile-media {
+.pin-grid.count-1 li {
   aspect-ratio: 16 / 9;
 }
-.gallery.count-2 {
+.pin-grid.count-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.gallery.count-2 .tile-media {
+.pin-grid.count-2 li {
   aspect-ratio: 4 / 3;
 }
-/* Three or more: the first one large, the rest around it. */
-.gallery.count-3 li:first-child,
-.gallery.count-4 li:first-child {
+.pin-grid.count-3 li:first-child,
+.pin-grid.count-4 li:first-child {
   grid-column: span 2;
   grid-row: span 2;
 }
-.gallery li {
-  min-width: 0;
+.pin-grid .gallery-cell {
+  height: 100%;
 }
-.gallery li:first-child .gallery-cell,
-.gallery li:first-child .tile-media {
+.pin-grid .tile-media {
+  aspect-ratio: auto;
+  width: 100%;
   height: 100%;
 }
 .gallery-cell {
@@ -922,7 +939,7 @@ dialog.viewer::backdrop {
   align-items: center;
   gap: 8px;
 }
-.sheet-body .row.spread .mono {
+.sheet-body .row.spread .meta-mono {
   margin-right: auto;
 }
 .pill.solid {
@@ -952,11 +969,11 @@ dialog.viewer::backdrop {
   .media-frame {
     width: min(280px, 64vw);
   }
-  .gallery {
+  .pin-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .gallery.count-3 li:first-child,
-  .gallery.count-4 li:first-child {
+  .pin-grid.count-3 li:first-child,
+  .pin-grid.count-4 li:first-child {
     grid-row: span 1;
   }
 }

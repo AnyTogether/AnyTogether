@@ -148,7 +148,7 @@ export function VoicePlayer({
   };
 
   return (
-    <div className={`voice${mine ? " mine" : ""}${playing ? " playing" : ""}`}>
+    <div className={`voice-note${mine ? " mine" : ""}${playing ? " playing" : ""}`}>
       <button
         type="button"
         className="voice-play"

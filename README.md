@@ -19,6 +19,10 @@ The website, with made-up demo people and data.
 | ![Leaderboards](docs/screenshots/web-leaderboards.jpg) | ![Themes](docs/screenshots/web-themes.jpg) |
 | **Compatibility** | **Download** |
 | ![Compatibility](docs/screenshots/web-compat.jpg) | ![Download](docs/screenshots/web-download.jpg) |
+| **Photos, clips and voice notes** | **Profile gallery** |
+| ![Media in messages](docs/screenshots/web-media-messages.jpg) | ![Profile gallery](docs/screenshots/web-gallery.jpg) |
+| **Settings → Storage** | |
+| ![Cloud saves and media in Settings](docs/screenshots/web-storage.jpg) | |
 
 On a phone:
 
@@ -33,6 +37,8 @@ On a phone:
 - `packages/db`: Drizzle schema and SQL migrations
 - `infra/`: local development services and the Dockerfiles
 - `deploy/`: Docker Compose for running your own AnyTogether ([docs/self-hosting.md](docs/self-hosting.md))
+- [docs/cloud-storage.md](docs/cloud-storage.md): the API for cloud saves and media (off until the
+  server has a folder or a bucket for them)
 
 ## Clients
 

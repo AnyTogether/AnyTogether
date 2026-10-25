@@ -170,8 +170,8 @@ export function StorageSettings({ initial, texts }: { initial: StorageOverview; 
             <li key={game.titleId} className="save-game">
               <div className="save-game-head">
                 <span className="game-name">{game.game ?? game.titleId}</span>
-                <span className="mono">{game.titleId}</span>
-                <span className="mono size">{size(game.size)}</span>
+                <span className="meta-mono">{game.titleId}</span>
+                <span className="meta-mono size">{size(game.size)}</span>
               </div>
               <ul className="save-slots">
                 {game.slots.map((slot) => {
@@ -200,7 +200,7 @@ export function StorageSettings({ initial, texts }: { initial: StorageOverview; 
                             {latest?.device ? ` · ${fill(texts.fromDevice, { device: latest.device })}` : ""}
                           </span>
                         </span>
-                        <span className="mono size">{latest ? size(latest.size) : ""}</span>
+                        <span className="meta-mono size">{latest ? size(latest.size) : ""}</span>
                         <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke chevron">
                           <path d="M8 10l4 4 4-4" />
                         </svg>
@@ -295,7 +295,7 @@ export function StorageSettings({ initial, texts }: { initial: StorageOverview; 
                 <MediaTile item={item} texts={texts} />
               </button>
               <span className="cell-foot">
-                <span className="mono">{size(item.size)}</span>
+                <span className="meta-mono">{size(item.size)}</span>
                 {typeof item.gallery === "number" && <span className="tag">{texts.inGallery}</span>}
                 {item.hidden && <span className="tag warn">{texts.hiddenByModerator}</span>}
                 <button

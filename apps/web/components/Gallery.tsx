@@ -49,7 +49,7 @@ export function Gallery({
           {mine ? fill(texts.galleryEmptyMine, { max }) : fill(texts.galleryEmpty, { name })}
         </p>
       ) : (
-        <ul className={`gallery count-${Math.min(items.length, 4)}`}>
+        <ul className={`pin-grid count-${Math.min(items.length, 4)}`}>
           {items.map((item) => (
             <li key={item.id}>
               <button
@@ -173,7 +173,7 @@ function GalleryPicker({
           </p>
         )}
         <div className="row spread">
-          <span className="mono">{fill(texts.galleryPicked, { n: picked.length, max })}</span>
+          <span className="meta-mono">{fill(texts.galleryPicked, { n: picked.length, max })}</span>
           <input
             ref={picker}
             type="file"
