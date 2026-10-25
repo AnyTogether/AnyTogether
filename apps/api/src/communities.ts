@@ -43,7 +43,7 @@ import {
   maxPartySize,
 } from "@anytogether/shared";
 import { type SQL, and, asc, count, desc, eq, gt, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
@@ -51,6 +51,7 @@ import type { Deps } from "./app.js";
 import { iconUrl } from "./art.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
+import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { levelsFor } from "./level.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
@@ -213,6 +214,21 @@ export function communityRoutes(
   app.use("*", requireUser(deps));
   const { db, valkey } = deps;
   const ctx: Ctx = { db, valkey };
+  // A child whose parents keep communities off (the default for a child) can do nothing here but
+  // leave one, turn down an invite or drop an RSVP. Only these paths: this app's routes are merged
+  // with the others', so a "*" guard would reach them too.
+  const family = familyGuard(db);
+  const childGuard: MiddlewareHandler<{ Variables: AuthVariables }> = async (c, next) => {
+    const leaving =
+      (c.req.method === "POST" && /\/communities\/[^/]+\/(leave|decline)$/.test(c.req.path)) ||
+      (c.req.method === "DELETE" && /\/events\/[^/]+\/rsvp$/.test(c.req.path));
+    if (!leaving)
+      await family.need(c.get("userId"), "communities", "Your family settings keep communities off");
+    await next();
+  };
+  app.use("/communities", childGuard);
+  app.use("/communities/*", childGuard);
+  app.use("/events/*", childGuard);
   const who = people(db);
   const limit = rateLimiter(valkey, deps.limits);
 

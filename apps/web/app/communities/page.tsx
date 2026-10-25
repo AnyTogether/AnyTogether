@@ -26,6 +26,19 @@ export default async function Communities({ searchParams }: Search) {
     apiJson<{ events: PlannedEvent[] }>("/me/events"),
     apiJson<{ games: LibraryGame[] }>(`/users/${encodeURIComponent(user.profile.handle)}/library`),
   ]);
+  // A child whose parents keep communities off: the API refuses the list, and the page says why.
+  if (found.status === 403)
+    return (
+      <section className="page">
+        <h2 className="in d1">{texts.communities}</h2>
+        <p className="lead in d2">{texts.restrictedNotice}</p>
+        <div className="toolbar in d2">
+          <Link href="/family" className="pill">
+            {texts.family}
+          </Link>
+        </div>
+      </section>
+    );
   const t = ui(texts);
   const games = gameOptions(library.body?.games ?? [], texts.language);
   const listed = found.body?.communities.find((c) => c.titleId === game);

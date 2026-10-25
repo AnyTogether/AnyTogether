@@ -356,7 +356,9 @@ export function discoverRoutes(
       listings ? pieces.parties.publicParties(me, { titleId, limit: 10 }) : [],
       listings && (!rules || rules.sharePlay) ? pieces.shares.publicShares(me, { titleId, limit: 10 }) : [],
       people ? playersOf(me, titleId, 8) : [],
-      listings && pieces.communities ? pieces.communities(me, titleId) : Promise.resolve([]),
+      listings && (!rules || rules.communities) && pieces.communities
+        ? pieces.communities(me, titleId)
+        : Promise.resolve([]),
     ]);
     return c.json({
       game: { titleId: game.titleId, names: game.names, iconUrl: game.iconUrl },

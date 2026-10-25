@@ -507,3 +507,49 @@ describe("community moderation", () => {
     expect((await h.call("DELETE", `${v1}/admin/communities/${id}`, undefined, ben.token)).status).toBe(403);
   });
 });
+
+describe("communities and family settings", () => {
+  it("keep a child out while the parents' Communities switch is off, and let them leave", async () => {
+    const mom = await h.user("mom@example.com");
+    await h.call("POST", `${v1}/families`, { name: "Home" }, mom.token);
+    const kid = await h.user("kid@example.com");
+    const { body: link } = await h.call("POST", `${v1}/me/family/link-codes`, {}, mom.token);
+    await h.call("POST", `${v1}/me/family/join`, { code: link.code, timeZone: "UTC" }, kid.token);
+    const ada = await h.user("ada@example.com");
+    const id = (await make(ada)).body.id as string;
+
+    // Off by default for a child: no list, no page, no joining, no making one.
+    const refused = [
+      await h.call("GET", `${v1}/communities`, undefined, kid.token),
+      await h.call("GET", `${v1}/communities/${id}`, undefined, kid.token),
+      await h.call("POST", `${v1}/communities/${id}/join`, {}, kid.token),
+      await make(kid, { name: "Kid Club" }),
+    ];
+    for (const r of refused) {
+      expect(r.status).toBe(403);
+      expect(r.body).toMatchObject({ code: "restricted_by_family", feature: "communities" });
+    }
+    expect(
+      (await h.call("GET", `${v1}/games/${game}/hub`, undefined, kid.token)).body.communities ?? [],
+    ).toEqual([]);
+
+    // A parent turns it on: in. Off again: only leaving works.
+    await h.call(
+      "PATCH",
+      `${v1}/me/family/children/${kid.id}/restrictions`,
+      { communities: true },
+      mom.token,
+    );
+    expect((await h.call("POST", `${v1}/communities/${id}/join`, {}, kid.token)).status).toBe(200);
+    await h.call(
+      "PATCH",
+      `${v1}/me/family/children/${kid.id}/restrictions`,
+      { communities: false },
+      mom.token,
+    );
+    expect((await h.call("GET", `${v1}/communities/${id}/members`, undefined, kid.token)).status).toBe(403);
+    expect((await h.call("POST", `${v1}/communities/${id}/leave`, {}, kid.token)).status).toBe(204);
+    // Adults are not affected.
+    expect((await h.call("GET", `${v1}/communities/${id}`, undefined, mom.token)).status).toBe(200);
+  });
+});
