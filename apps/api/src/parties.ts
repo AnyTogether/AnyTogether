@@ -26,6 +26,7 @@ import { broadcast, publish, topicsFor } from "./events.js";
 import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { joinCodeStore } from "./joinCodes.js";
+import { playingNow, recordMeeting } from "./met.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { assertNotMuted } from "./moderation.js";
 import type { Notifier } from "./notifications.js";
@@ -696,6 +697,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
       );
     await showInPresence(party, everyone);
     if (party.publicJoin) await relist(party, "updated");
+    await recordMeeting(deps, me, everyone, "party", party.titleId ?? (await playingNow(deps.valkey, me)));
     return c.json(await view(party));
   });
 

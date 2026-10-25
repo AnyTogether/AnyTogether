@@ -24,6 +24,7 @@ import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { familyGuard } from "./family.js";
 import { body } from "./http.js";
+import { recordMeeting } from "./met.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import type { Notifier } from "./notifications.js";
 import { people } from "./people.js";
@@ -400,6 +401,7 @@ export function gameSessionRoutes(deps: Deps, notes: Notifier) {
     if (joined === "full") throw new HttpError(409, ErrorCode.full, "This game is full");
     await notes.settle(me, "game_invite", session.id);
     await changed(session);
+    await recordMeeting(deps, me, players, "game_session", session.titleId);
     return c.json(await view(session, undefined, true));
   });
 

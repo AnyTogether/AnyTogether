@@ -9,6 +9,7 @@ import { config } from "./config.js";
 import { storeFromSettings } from "./fileStore.js";
 import { type FileService, fileService } from "./files.js";
 import { mailerFor } from "./mail.js";
+import { pruneMeetings } from "./met.js";
 import { pruneNotifications, sendDigests, webPushSender } from "./notifications.js";
 import { restoreRevocations } from "./sessions.js";
 import { sweepThemeFiles } from "./themes.js";
@@ -105,6 +106,14 @@ setInterval(
     pruneNotifications(db)
       .then((count) => count && console.log(`pruned ${count} old notification(s)`))
       .catch((error) => console.error("notification prune failed", error)),
+  3_600_000,
+);
+// Players met are forgotten 90 days after the last time.
+setInterval(
+  () =>
+    pruneMeetings(db)
+      .then((count) => count && console.log(`forgot ${count} old meeting(s)`))
+      .catch((error) => console.error("meeting prune failed", error)),
   3_600_000,
 );
 

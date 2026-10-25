@@ -27,6 +27,7 @@ import { lfgRoutes } from "./lfg.js";
 import type { Mailer } from "./mail.js";
 import { isStreamedUpload, mediaRoutes, mediaService } from "./media.js";
 import { messageRoutes } from "./messages.js";
+import { metRoutes } from "./met.js";
 import type { AuthVariables } from "./middleware.js";
 import { reportRoutes } from "./moderation.js";
 import { type PushSender, notificationRoutes, notifier } from "./notifications.js";
@@ -154,6 +155,7 @@ export function createApp(deps: Deps) {
   v1.route("/", connectionRoutes(deps));
   v1.route("/", gameRoutes(deps, notes));
   v1.route("/", showcaseRoutes(deps));
+  v1.route("/", metRoutes(deps));
   v1.route("/", feedRoutes(deps));
   v1.route("/", leaderboardRoutes(deps));
   v1.route("/", reportRoutes(deps));

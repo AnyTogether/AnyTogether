@@ -44,6 +44,7 @@ import { broadcast, publish, topicsFor } from "./events.js";
 import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { joinCodeStore } from "./joinCodes.js";
+import { recordMeeting } from "./met.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { assertNotMuted } from "./moderation.js";
 import { people } from "./people.js";
@@ -725,6 +726,14 @@ export function sharePlayRoutes(deps: Deps) {
     await write.exec();
     await touch(share, [device]);
     await changed(share);
+    if (!before)
+      await recordMeeting(
+        deps,
+        me,
+        [share.hostId, ...(await seats(share.id)).keys()],
+        "share_play",
+        share.titleId,
+      );
     return c.json(await joined(share, me, false), before ? 200 : 201);
   });
 

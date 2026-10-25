@@ -27,6 +27,7 @@ import { broadcast, publish, topicsFor } from "./events.js";
 import { familyGuard } from "./family.js";
 import { body } from "./http.js";
 import { blockedLink } from "./links.js";
+import { recordMeeting } from "./met.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { assertNotMuted } from "./moderation.js";
 import type { Notifier } from "./notifications.js";
@@ -576,6 +577,7 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
       return next as Post;
     });
     if (!updated) throw new HttpError(409, ErrorCode.full, "Every slot is taken");
+    await recordMeeting(deps, me, [userId], "lfg", post.titleId);
     await publish(deps.valkey, userId, {
       type: "lfg.answered",
       data: { postId: post.id, answer: "accepted", invite },
