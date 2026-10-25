@@ -190,7 +190,9 @@ describe("a child's limits, enforced by the API", () => {
 
     await restrict(mom, kid, { profileVisibility: "nobody" });
     const after = await h.call("GET", `${v1}/me`, undefined, kid.token);
+    // Every section, the gallery too.
     expect(Object.values(after.body.profile.privacy)).toEqual([
+      "nobody",
       "nobody",
       "nobody",
       "nobody",
