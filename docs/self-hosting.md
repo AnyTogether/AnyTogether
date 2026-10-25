@@ -13,6 +13,7 @@ on one machine with Docker Compose:
 | `postgres` | PostgreSQL 17, where the data is kept (cloud saves and media, when on, are files beside it) |
 | `valkey` | Valkey: rate limits, sign-in challenges, presence, the event bus (nothing kept on disk) |
 | `coturn` | optional: a STUN/TURN relay so voice calls connect behind strict networks |
+| `backup` | optional: scheduled, encrypted backups of the database and files to S3, Google Drive, SFTP and more ([Backups](#backups)) |
 
 AnyTogether is MIT licensed: use it, change it and run it however you like.
 
@@ -215,6 +216,7 @@ rest.
 | `FILE_LINK_SECRET` | api | `.env` | signs the expiring links to files; empty: derived from `JWT_PRIVATE_KEY` |
 | `GATEWAY_PUBLIC_URL` | web | not set | where browsers open the gateway socket, when it is not `wss://<site>/rt` |
 | `HOSTNAME`, `NODE_ENV` | web | set by the image | the website listens on all addresses, in production mode (HTTPS-only cookies) |
+| `BACKUP_STATUS_FILE` | api | `/data/backup-state/status.json` | what the backup service last did, for the admin page and a log line when backups are late ([Backups](#backups) has the backup service's own settings) |
 | `USER` | api's admin tool | your shell's | the name recorded with a ban or a handled report; `admin` when unset |
 
 ## Upgrading
@@ -228,47 +230,279 @@ docker compose up -d --build
 
 The API applies new database migrations when it starts. They only ever add (tables, columns,
 indexes), so a running website keeps working while the new images start. Back up first anyway
-(below). Read the commit log for anything that needs a new setting.
+(`docker compose exec backup backup run`, see [Backups](#backups)). Read the commit log for anything that needs a new setting.
 
-## Backup and restore
+## Backups
 
-All data is in PostgreSQL (profiles, avatars, messages, trophies, everything) and, with cloud saves
-and media on, in the `files` volume (or the bucket); Valkey holds nothing worth keeping, and Caddy's
-certificates are fetched again if lost. A dump is a full backup of the database:
+Everything worth keeping is in PostgreSQL (accounts, profiles, avatars, messages, trophies,
+communities, everything) and, with cloud saves and media on, in the `files` volume. Valkey holds
+nothing that has to survive, and Caddy fetches its certificates again. If the machine dies with
+the only copy on it, all of that is gone, so keep backups **somewhere else**.
+
+The `backup` service does it for you:
+
+- on a schedule (every night at 03:00 UTC by default) and whenever you ask, it dumps the database
+  (`pg_dump`, custom format: one consistent snapshot) and packs the files volume after it
+  (uploads still arriving are left out);
+- writes a `manifest.json` beside them: the database and `pg_dump` versions, the newest
+  migration, the number of accounts, sizes and SHA-256 of every part before and after encryption;
+- encrypts both parts with [age](https://age-encryption.org) (a public key: the server can make
+  backups but cannot read them) or with a passphrase (gpg, AES-256);
+- uploads them with [rclone](https://rclone.org), so one setting covers AWS S3, Cloudflare R2,
+  Backblaze B2, Wasabi, MinIO and every other S3-compatible storage, Google Drive, Dropbox,
+  OneDrive, SFTP (any other server), WebDAV (Nextcloud and the like) and more, and checks that what
+  arrived is the size it sent; the manifest goes last, so a backup without one is unfinished;
+- keeps a copy in the `backups` volume too, unless you turn that off;
+- deletes what retention no longer keeps: the newest backup of each of the last 7 days, 4 weeks
+  and 3 months by default (always at least the newest one);
+- reports to the admin page (`/admin`): when the last backup worked, its size and where it went,
+  and a warning when the last success is older than two schedule periods, which the API's log
+  and the backup service's own log say every hour as well. The container turns unhealthy then
+  (`docker compose ps`).
+
+It is not started unless you ask for it (`--profile backup`), so an upgrade never starts making
+backups somewhere you did not choose.
+
+### Turning it on
+
+1. **Pick where backups go** and fill in `.env` from one of the examples below. The remote is
+   called `offsite` in them; `BACKUP_REMOTE` is that name, a colon and a folder (or bucket):
+   `BACKUP_REMOTE=offsite:anytogether-backups`.
+2. **Encryption (recommended).** On your own computer, not the server, make an age key pair
+   ([install age](https://github.com/FiloSottile/age#installation), or
+   `docker run --rm -it alpine sh -c 'apk add -q age && age-keygen'`):
+
+   ```sh
+   age-keygen -o anytogether-backup.key
+   # Public key: age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+   ```
+
+   Put the public key in `.env` as `BACKUP_AGE_RECIPIENTS` (several, comma separated, if more than
+   one person may restore). Keep `anytogether-backup.key` **off the server**, in a password manager
+   and one more place: it is the only way to read the backups, and the server never needs it to
+   make them. If you would rather type a passphrase, set `BACKUP_PASSPHRASE` instead (it then lives
+   in `.env` on the server, so anyone who takes the server can read the backups too).
+3. **Start it** and make the first backup at once:
+
+   ```sh
+   docker compose --profile backup up -d --build
+   docker compose exec backup backup run       # a backup now
+   docker compose exec backup backup list      # what is where
+   docker compose exec backup backup status    # the last one, and whether backups are late
+   ```
+
+   The log says what it does: `docker compose logs backup`.
+4. **Keep `.env` safe as well**, somewhere off the server: it is not in the backups and holds the
+   signing key (`JWT_PRIVATE_KEY`; without it everyone signs in again), the VAPID keys and the
+   settings for the backups themselves.
+
+From then on `docker compose --profile backup up -d` (with `--build` after `git pull`) keeps it
+running beside the rest.
+
+### S3 and S3-compatible storage
+
+Make a private bucket and a key that may list, read, write and delete in it (and nothing else),
+then in `.env`:
+
+**Cloudflare R2** (R2 → Manage API tokens → Object Read & Write, for this bucket):
 
 ```sh
-mkdir -p backups
-docker compose exec -T postgres pg_dump -U anytogether -Fc anytogether > backups/anytogether-$(date +%F).dump
+BACKUP_REMOTE=offsite:anytogether-backups
+RCLONE_CONFIG_OFFSITE_TYPE=s3
+RCLONE_CONFIG_OFFSITE_PROVIDER=Cloudflare
+RCLONE_CONFIG_OFFSITE_ENDPOINT=https://<account id>.r2.cloudflarestorage.com
+RCLONE_CONFIG_OFFSITE_ACCESS_KEY_ID=…
+RCLONE_CONFIG_OFFSITE_SECRET_ACCESS_KEY=…
+# A key limited to one bucket may not check that the bucket exists:
+RCLONE_CONFIG_OFFSITE_NO_CHECK_BUCKET=true
 ```
 
-With `STORAGE_DIR`, copy the files volume too, after the dump (files nothing in the dump knows
-about are cleaned up after a restore):
+**AWS S3** (an IAM user with `s3:ListBucket` on the bucket and `s3:GetObject`, `s3:PutObject`,
+`s3:DeleteObject` on `arn:aws:s3:::anytogether-backups/*`):
 
 ```sh
-docker run --rm -v anytogether_files:/data/files:ro -v "$PWD/backups":/out alpine \
-  tar czf /out/files-$(date +%F).tar.gz -C /data files
+BACKUP_REMOTE=offsite:anytogether-backups
+RCLONE_CONFIG_OFFSITE_TYPE=s3
+RCLONE_CONFIG_OFFSITE_PROVIDER=AWS
+RCLONE_CONFIG_OFFSITE_REGION=eu-central-1
+RCLONE_CONFIG_OFFSITE_ACCESS_KEY_ID=…
+RCLONE_CONFIG_OFFSITE_SECRET_ACCESS_KEY=…
 ```
 
-Run it nightly from cron, copy the files off the machine, and keep them as long as your privacy
-policy allows: a deleted account is gone from the database after 14 days, but stays in older
-backups until they are deleted too.
+**Backblaze B2** (B2 → Application Keys, limited to the bucket):
 
-To restore, stop what writes to the database, load the dump, start again:
+```sh
+BACKUP_REMOTE=offsite:anytogether-backups
+RCLONE_CONFIG_OFFSITE_TYPE=b2
+RCLONE_CONFIG_OFFSITE_ACCOUNT=<keyID>
+RCLONE_CONFIG_OFFSITE_KEY=<applicationKey>
+# B2 otherwise only hides deleted files and keeps charging for them:
+RCLONE_CONFIG_OFFSITE_HARD_DELETE=true
+```
+
+**Wasabi, MinIO and others**: `TYPE=s3`, `PROVIDER=Wasabi` or `Minio` (or `Other`), their
+`ENDPOINT`, and the key as above.
+
+Leave the bucket's own expiry rules off (or longer than your retention): the service deletes old
+backups itself. Object versioning or a lock on the bucket is a good extra against someone who gets
+the server's key deleting the backups too.
+
+### Google Drive
+
+Drive needs a sign-in in a browser once. rclone does that on any computer with a browser, and the
+server only gets the result:
+
+1. On your own computer, [install rclone](https://rclone.org/install/) and run
+
+   ```sh
+   rclone authorize "drive"
+   ```
+
+   A browser opens; sign in with the Google account the backups should go to and allow access.
+   rclone then prints a token, one line of JSON starting with `{"access_token":`.
+2. In `.env` on the server, with the token between single quotes:
+
+   ```sh
+   BACKUP_REMOTE=offsite:AnyTogether backups
+   RCLONE_CONFIG_OFFSITE_TYPE=drive
+   # Only the files rclone itself makes, not the rest of the Drive:
+   RCLONE_CONFIG_OFFSITE_SCOPE=drive.file
+   RCLONE_CONFIG_OFFSITE_TOKEN='{"access_token":"…","token_type":"Bearer","refresh_token":"…","expiry":"…"}'
+   ```
+
+3. `docker compose --profile backup up -d` and `docker compose exec backup backup run`. The folder
+   `AnyTogether backups` appears in the Drive.
+
+rclone renews the access part of the token by itself; the refresh token in `.env` keeps working
+until you remove the access in your Google account. For more than a little use, make your own
+OAuth client in the Google Cloud console (a Desktop app, with the Drive API turned on, and
+**published**: in "testing" Google ends its tokens after 7 days), and add
+`RCLONE_CONFIG_OFFSITE_CLIENT_ID` and `_CLIENT_SECRET`, and pass the same two to
+`rclone authorize "drive" <client id> <client secret>`.
+
+**Dropbox and OneDrive** work the same way: `rclone authorize "dropbox"` (`TYPE=dropbox`, `TOKEN`)
+or `rclone authorize "onedrive"`. OneDrive also needs the drive's ID and type, which is easiest
+with a configuration file (below).
+
+### SFTP: another server
+
+Any machine you can reach over SSH: a second server, a NAS, a storage box. Make a user there just
+for backups, give it a folder, and make it a key without a passphrase:
+
+```sh
+ssh-keygen -t ed25519 -N "" -f anytogether-backup-ssh
+ssh-copy-id -i anytogether-backup-ssh.pub backup@backup.example.org
+```
+
+Then in `.env`, with the private key on one line, its line breaks written as `\n`
+(`awk '{printf "%s\\n", $0}' anytogether-backup-ssh` prints it so):
+
+```sh
+BACKUP_REMOTE=offsite:anytogether-backups
+RCLONE_CONFIG_OFFSITE_TYPE=sftp
+RCLONE_CONFIG_OFFSITE_HOST=backup.example.org
+RCLONE_CONFIG_OFFSITE_USER=backup
+RCLONE_CONFIG_OFFSITE_PORT=22
+RCLONE_CONFIG_OFFSITE_KEY_PEM='-----BEGIN OPENSSH PRIVATE KEY-----\nb3Blbn…\n-----END OPENSSH PRIVATE KEY-----\n'
+```
+
+The folder is relative to the user's home (`offsite:/srv/backups` for an absolute one). To check
+the server's host key, put its line from `ssh-keyscan backup.example.org` in a file, mount it into
+the service and point `RCLONE_CONFIG_OFFSITE_KNOWN_HOSTS_FILE` at it. A password instead of a key:
+`RCLONE_CONFIG_OFFSITE_PASS`, as rclone obscures it:
+`docker compose --profile backup run --rm --entrypoint rclone backup obscure 'the password'`.
+
+**WebDAV** (Nextcloud, ownCloud…): `TYPE=webdav`, `URL=https://cloud.example.org/remote.php/dav/files/<user>`,
+`VENDOR=nextcloud`, `USER`, and `PASS` obscured the same way.
+
+### An rclone configuration file instead
+
+Anything rclone supports, with as many remotes as you like: make the folder, owned by the
+container's user, uncomment the `./rclone:/config/rclone` line under `backup:` in `compose.yaml`,
+and let rclone ask its questions:
+
+```sh
+mkdir -p rclone && sudo chown 1000:1000 rclone
+docker compose --profile backup run --rm --entrypoint rclone backup config
+```
+
+`BACKUP_REMOTE` then names a remote from that file. rclone keeps renewed tokens there too.
+
+### Settings
+
+| Setting | Default | What it does |
+|---|---|---|
+| `BACKUP_SCHEDULE` | `0 3 * * *` | when, as a cron expression (minute hour day month weekday; `*/n`, ranges, lists, `@daily`, `@weekly`) |
+| `BACKUP_TZ` | `UTC` | the time zone the schedule is read in, e.g. `Europe/Istanbul` |
+| `BACKUP_REMOTE` | empty | the rclone remote and folder; empty: only the local copy |
+| `BACKUP_KEEP_LOCAL` | `true` | also keep backups in the `backups` volume |
+| `BACKUP_KEEP_DAILY`, `_WEEKLY`, `_MONTHLY` | `7`, `4`, `3` | how many days, ISO weeks and months keep their newest backup |
+| `BACKUP_AGE_RECIPIENTS` | empty | age public keys (`age1…`, or ssh public keys), comma separated |
+| `BACKUP_PASSPHRASE` | empty | a passphrase for gpg instead (not both) |
+| `BACKUP_AGE_IDENTITY_FILE` | empty | the age private key file, for restores only |
+| `BACKUP_ON_START` | `false` | make a backup whenever the service starts, too |
+| `RCLONE_CONFIG_OFFSITE_*` | empty | the remote `offsite`, as above (rclone's own [settings](https://rclone.org/docs/#config-file) in capitals) |
+
+Retention and privacy go together: a deleted account is gone from the database after 14 days, but
+stays in older backups until they are deleted too. Say how long you keep backups in your privacy
+notice, and keep retention to what you need.
+
+With the files in a bucket (`S3_*` instead of `STORAGE_DIR`), they are not in these backups: turn
+on versioning or replication for that bucket at its provider.
+
+Another backup script can report to the admin page too: the API reads `BACKUP_STATUS_FILE`
+(`/data/backup-state/status.json`, the `backup-state` volume) in the format of
+`packages/shared/src/backup.ts`.
+
+### Restoring
+
+`restore` downloads a backup, checks every part's SHA-256 against the manifest, decrypts it (and
+checks again), and only then loads the database (`pg_restore` in one transaction) and unpacks the
+files. It refuses a database that has accounts in it, or a files volume with files, unless you add
+`--force`, which replaces everything in them. For age, the private key goes in for the restore
+only and is removed after:
 
 ```sh
 docker compose stop api realtime web
-docker compose exec -T postgres pg_restore -U anytogether -d anytogether --clean --if-exists < backups/anytogether-2026-10-24.dump
+docker compose --profile backup run --rm \
+  -v "$PWD/anytogether-backup.key:/run/secrets/age.key:ro" -e BACKUP_AGE_IDENTITY_FILE=/run/secrets/age.key \
+  backup restore latest --force
 docker compose up -d
 ```
 
-On a new machine: clone, copy over `.env` (with the same `JWT_PRIVATE_KEY`, or everyone signs in
-again), start only the database and wait until it is ready, restore, then start everything:
+The key file must be readable by uid 1000 (`chmod 644` it for the restore, and delete it from the
+server afterwards). `restore <name>` takes a name from `backup list` instead of the latest;
+`--from local` or `--from remote` picks where from; `--skip-files` restores only the database.
+`backup verify latest` does everything but the restore: a good check, now and then, that the
+backups can really be read (with the key mounted the same way).
+
+**On a new machine** (the old one is gone): clone the repository, put back `.env` (with the same
+`JWT_PRIVATE_KEY`, or everyone signs in again), start only the database, restore, then start
+everything. A new database has no accounts, so no `--force`:
 
 ```sh
 docker compose up -d --wait postgres
-docker compose exec -T postgres pg_restore -U anytogether -d anytogether --clean --if-exists < backups/anytogether-2026-10-24.dump
-docker compose up -d --build
+docker compose --profile backup run --rm \
+  -v "$PWD/anytogether-backup.key:/run/secrets/age.key:ro" -e BACKUP_AGE_IDENTITY_FILE=/run/secrets/age.key \
+  backup restore latest
+docker compose --profile backup up -d --build
 ```
+
+A backup from an older AnyTogether restores into a newer one (the API applies the newer
+migrations when it starts); one from a newer AnyTogether is refused until you update.
+
+### By hand
+
+Without the service, a dump is still a full backup of the database:
+
+```sh
+docker compose exec -T postgres pg_dump -U anytogether -Fc anytogether > anytogether-$(date +%F).dump
+docker run --rm -v anytogether_files:/data/files:ro -v "$PWD":/out alpine \
+  tar czf /out/files-$(date +%F).tar.gz -C /data files
+```
+
+and `docker compose exec -T postgres pg_restore -U anytogether -d anytogether --clean --if-exists < anytogether-2026-10-24.dump`
+(with `api`, `realtime` and `web` stopped) brings it back.
 
 ## Moderation
 

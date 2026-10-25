@@ -1,0 +1,27 @@
+# The backup service (apps/backup): pg_dump, tar, rclone for the off-site copy, age and gpg for
+# encryption. docker build -f infra/Dockerfile.backup .
+# The build stage is the same as Dockerfile.node's up to the install, so the images share it.
+FROM node:22-alpine AS build
+WORKDIR /repo
+RUN corepack enable
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
+COPY apps ./apps
+COPY packages ./packages
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @anytogether/backup build
+
+FROM node:22-alpine
+# The PostgreSQL client matches the server in deploy/compose.yaml (pg_dump must be as new as it).
+RUN apk add --no-cache postgresql17-client tar gzip rclone age gnupg tzdata
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build /repo/apps/backup/dist ./dist
+RUN printf '#!/bin/sh\nexec node /app/dist/main.js "$@"\n' > /usr/local/bin/backup && chmod +x /usr/local/bin/backup && \
+    mkdir -p /backups /data/backup-state /data/files /config/rclone && \
+    chown node:node /backups /data/backup-state /data/files /config/rclone
+# As the API's own user (uid 1000), which owns the files volume; rclone keeps its config (and
+# refreshed Google Drive or OneDrive tokens) in /config/rclone/rclone.conf when one is mounted.
+USER node
+ENV RCLONE_CONFIG=/config/rclone/rclone.conf
+ENTRYPOINT ["node", "/app/dist/main.js"]
+CMD ["daemon"]

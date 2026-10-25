@@ -1,0 +1,25 @@
+{
+  "name": "@anytogether/backup",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node dist/main.js",
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/main.js --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "backup": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "sh test/e2e.sh"
+  },
+  "dependencies": {
+    "@anytogether/shared": "workspace:*",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@anytogether/db": "workspace:*",
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.24.2",
+    "tsx": "^4.19.2",
+    "vitest": "^2.1.8"
+  }
+}

@@ -33,6 +33,8 @@ On a phone:
 - `apps/api`: the REST API (`/api/v1`), TypeScript and Hono
 - `apps/realtime`: the WebSocket gateway (`/rt`): presence, messages, signalling
 - `apps/worker`: background jobs (pg-boss)
+- `apps/backup`: scheduled, encrypted backups of the database and files to any rclone target, and
+  restores ([docs/self-hosting.md](docs/self-hosting.md#backups))
 - `packages/shared`: schemas, error codes, gateway events
 - `packages/db`: Drizzle schema and SQL migrations
 - `infra/`: local development services and the Dockerfiles
@@ -71,7 +73,8 @@ pnpm test
 ## Running your own
 
 `deploy/` runs the whole thing on one machine with `docker compose up -d`: PostgreSQL, Valkey, the
-API, the gateway, the website, Caddy with automatic HTTPS, and optionally a TURN relay. See
+API, the gateway, the website, Caddy with automatic HTTPS, and optionally a TURN relay and
+off-site backups (S3, Google Drive, SFTP and more). See
 [docs/self-hosting.md](docs/self-hosting.md).
 
 ## License

@@ -1,5 +1,6 @@
 # Your own AnyTogether on one machine: cp .env.example .env, fill it in, docker compose up -d.
-# See docs/self-hosting.md. The optional TURN relay for calls starts with --profile turn.
+# See docs/self-hosting.md. The optional TURN relay for calls starts with --profile turn, the
+# backup service with --profile backup.
 name: anytogether
 
 x-node: &node
@@ -78,9 +79,13 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       S3_REGION: ${S3_REGION:-auto}
       FILE_LINK_SECRET: ${FILE_LINK_SECRET:-}
+      # What the backup service last did, for the admin page (missing until it runs).
+      BACKUP_STATUS_FILE: /data/backup-state/status.json
     # Where cloud saves and media are kept with STORAGE_DIR=/data/files (and where uploads wait
-    # while they arrive, with S3 too). Back it up with the database.
-    volumes: [files:/data/files]
+    # while they arrive, with S3 too). The backup service backs it up with the database.
+    volumes:
+      - files:/data/files
+      - backup-state:/data/backup-state:ro
     depends_on:
       postgres: { condition: service_healthy }
       valkey: { condition: service_healthy }
@@ -123,6 +128,75 @@ services:
       timeout: 5s
       start_period: 20s
       retries: 6
+
+  # Backups (docker compose --profile backup up -d): the database and the files volume on a
+  # schedule, encrypted, to any rclone target (S3, R2, B2, Google Drive, SFTP…) and/or the backups
+  # volume. Settings: BACKUP_* and RCLONE_CONFIG_* in .env. See docs/self-hosting.md ("Backups").
+  backup:
+    <<: *node
+    build: { context: .., dockerfile: infra/Dockerfile.backup }
+    image: anytogether-backup:local
+    profiles: [backup]
+    environment:
+      DATABASE_URL: postgres://anytogether:${POSTGRES_PASSWORD}@postgres:5432/anytogether
+      BACKUP_FILES_DIR: /data/files
+      BACKUP_LOCAL_DIR: /backups
+      BACKUP_STATE_DIR: /data/backup-state
+      # From .env when set there (a name alone passes the value on, and nothing when unset).
+      BACKUP_SCHEDULE:
+      BACKUP_REMOTE:
+      BACKUP_KEEP_LOCAL:
+      BACKUP_KEEP_DAILY:
+      BACKUP_KEEP_WEEKLY:
+      BACKUP_KEEP_MONTHLY:
+      BACKUP_AGE_RECIPIENTS:
+      BACKUP_AGE_IDENTITY_FILE:
+      BACKUP_PASSPHRASE:
+      BACKUP_ENCRYPTION:
+      BACKUP_ON_START:
+      # The rclone remote "offsite" from .env (the docs have examples); a mounted rclone.conf
+      # (below) can define any others.
+      RCLONE_CONFIG_OFFSITE_TYPE:
+      RCLONE_CONFIG_OFFSITE_PROVIDER:
+      RCLONE_CONFIG_OFFSITE_ENDPOINT:
+      RCLONE_CONFIG_OFFSITE_REGION:
+      RCLONE_CONFIG_OFFSITE_ACCESS_KEY_ID:
+      RCLONE_CONFIG_OFFSITE_SECRET_ACCESS_KEY:
+      RCLONE_CONFIG_OFFSITE_NO_CHECK_BUCKET:
+      RCLONE_CONFIG_OFFSITE_ACCOUNT:
+      RCLONE_CONFIG_OFFSITE_KEY:
+      RCLONE_CONFIG_OFFSITE_HARD_DELETE:
+      RCLONE_CONFIG_OFFSITE_CLIENT_ID:
+      RCLONE_CONFIG_OFFSITE_CLIENT_SECRET:
+      RCLONE_CONFIG_OFFSITE_SCOPE:
+      RCLONE_CONFIG_OFFSITE_TOKEN:
+      RCLONE_CONFIG_OFFSITE_ROOT_FOLDER_ID:
+      RCLONE_CONFIG_OFFSITE_HOST:
+      RCLONE_CONFIG_OFFSITE_PORT:
+      RCLONE_CONFIG_OFFSITE_USER:
+      RCLONE_CONFIG_OFFSITE_PASS:
+      RCLONE_CONFIG_OFFSITE_KEY_PEM:
+      RCLONE_CONFIG_OFFSITE_KNOWN_HOSTS_FILE:
+      RCLONE_CONFIG_OFFSITE_URL:
+      RCLONE_CONFIG_OFFSITE_VENDOR:
+      TZ: ${BACKUP_TZ:-UTC}
+    volumes:
+      - files:/data/files
+      - backups:/backups
+      - backup-state:/data/backup-state
+      # A file of rclone remotes instead of RCLONE_CONFIG_* variables (see the docs), and the age
+      # private key for restores only: uncomment and create them first.
+      # - ./rclone:/config/rclone
+      # - ./age-identity.txt:/run/secrets/age-identity.txt:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      # Unhealthy when the last successful backup is older than two schedule periods.
+      test: ["CMD", "node", "/app/dist/main.js", "status", "--quiet"]
+      interval: 15m
+      timeout: 30s
+      start_period: 1m
+      retries: 1
 
   caddy:
     image: caddy:2-alpine
@@ -197,5 +271,7 @@ services:
 volumes:
   postgres:
   files:
+  backups:
+  backup-state:
   caddy-data:
   caddy-config:

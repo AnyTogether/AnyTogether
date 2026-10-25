@@ -25,7 +25,8 @@ WORKDIR /app
 COPY --from=build /repo/apps/${APP}/dist ./dist
 COPY --from=build /natives/node_modules ./node_modules
 COPY --from=build /repo/packages/db/drizzle ./drizzle
-# The API's files volume (cloud saves and media) starts out owned by the user it runs as.
-RUN mkdir -p /data/files && chown node:node /data/files
+# The API's files volume (cloud saves and media) starts out owned by the user it runs as, and so
+# does the backup service's status volume, whichever container mounts it first.
+RUN mkdir -p /data/files /data/backup-state && chown node:node /data/files /data/backup-state
 USER node
 CMD ["node", "dist/main.js"]
