@@ -1,20 +1,29 @@
-import { strings } from "@/lib/i18n";
+import { Arrow, ErrorScreen } from "@/components/site/ErrorScreen";
+import { language } from "@/lib/i18n";
+import { errorStrings } from "@/lib/i18n-errors";
 import Link from "next/link";
 
+export const metadata = { title: "Not found · AnyTogether", robots: { index: false } };
+
 export default async function NotFound() {
-  const texts = await strings();
+  const t = errorStrings(await language()).notFound;
   return (
-    <section className="narrow">
-      <p className="eyebrow in d1">404</p>
-      <h2 className="in d2" style={{ marginTop: 16 }}>
-        {texts.notFoundTitle}
-      </h2>
-      <p className="lead in d3">{texts.notFoundLead}</p>
-      <div className="in d4">
-        <Link className="pill" style={{ marginTop: 24 }} href="/">
-          {texts.home}
-        </Link>
-      </div>
-    </section>
+    <ErrorScreen
+      code="404"
+      kicker={t.kicker}
+      title={t.title}
+      lead={t.lead}
+      actions={
+        <>
+          <Link href="/" className="cta primary">
+            {t.home}
+            <Arrow />
+          </Link>
+          <Link href="/help" className="cta ghost">
+            {t.help}
+          </Link>
+        </>
+      }
+    />
   );
 }

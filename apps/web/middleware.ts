@@ -1,14 +1,18 @@
+import { requestId, requestIdHeader } from "@/lib/errorLog";
 import { fromAnotherSite, safeMethods } from "@/lib/origin";
 import { type NextRequest, NextResponse } from "next/server";
 
-/** Refuses changes sent by other sites' pages; keeps the access token fresh: when it has expired
- *  and a refresh token is there, turn it in. */
+/** Gives every request an ID (server errors are logged with it); refuses changes sent by other
+ *  sites' pages; keeps the access token fresh: when it has expired and a refresh token is there,
+ *  turn it in. */
 export async function middleware(request: NextRequest) {
+  request.headers.set(requestIdHeader, requestId(request.headers.get(requestIdHeader)));
+  const pass = () => NextResponse.next({ request: { headers: request.headers } });
   if (!safeMethods.includes(request.method) && fromAnotherSite(request))
     return NextResponse.json({ code: "forbidden", title: "Not from this website" }, { status: 403 });
   // Signing in and out keeps its own cookies.
-  if (request.nextUrl.pathname.startsWith("/auth/")) return NextResponse.next();
-  const response = NextResponse.next();
+  if (request.nextUrl.pathname.startsWith("/auth/")) return pass();
+  const response = pass();
   if (request.cookies.get("at_access") || !request.cookies.get("at_refresh")) return response;
   const refreshed = await fetch(`${process.env.API_URL ?? "http://127.0.0.1:8080"}/api/v1/auth/token`, {
     method: "POST",

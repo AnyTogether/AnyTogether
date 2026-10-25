@@ -1233,3 +1233,85 @@
     transition: none;
   }
 }
+
+/* Not found and errors (components/site/ErrorScreen.tsx): the code as a large, quiet outline
+   behind the title, lit from below by the accent, and the error ID in a mono chip. */
+.err-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: min(72vh, 760px);
+}
+.err-hero {
+  position: relative;
+  padding-bottom: clamp(32px, 6vh, 64px);
+}
+.err-code {
+  position: absolute;
+  z-index: -1;
+  top: clamp(8px, 3vh, 40px);
+  right: -0.04em;
+  font: 800 clamp(160px, 30vw, 420px) / 0.8 var(--font-head);
+  font-stretch: 125%;
+  letter-spacing: -0.06em;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--rule-2);
+  background: linear-gradient(180deg, transparent 30%, oklch(76% 0.13 250 / 0.16));
+  -webkit-background-clip: text;
+  background-clip: text;
+  user-select: none;
+  pointer-events: none;
+  animation: err-drift 9s ease-in-out infinite alternate;
+}
+@keyframes err-drift {
+  to {
+    transform: translate3d(-1.5%, 2%, 0);
+  }
+}
+.err-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px oklch(76% 0.13 250 / 0.14), 0 0 14px var(--accent-glow);
+}
+.err-page button.cta {
+  border: 0;
+  cursor: pointer;
+}
+.err-ref {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 34px;
+  font-size: 13px;
+  color: var(--mute);
+}
+.err-ref code {
+  padding: 6px 10px;
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  background: var(--paper-2);
+  font: 500 12.5px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.err-none {
+  max-width: 54ch;
+}
+@media (max-width: 640px) {
+  .err-code {
+    top: auto;
+    bottom: -0.08em;
+    font-size: 46vw;
+    opacity: 0.8;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .err-code {
+    animation: none;
+  }
+}
