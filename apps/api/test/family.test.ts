@@ -197,9 +197,13 @@ describe("a child's limits, enforced by the API", () => {
     const stranger = await h.user("stranger@example.com");
     const asked = await h.call("POST", `${v1}/me/friends/requests`, { handle: stranger.handle }, kid.token);
     expect(asked.status).toBe(403);
-    expect(asked.body).toMatchObject({ code: "restricted_by_family", feature: "friend_requests" });
+    expect(asked.body).toMatchObject({
+      code: "restricted_by_family",
+      feature: "friend_requests",
+      side: "self",
+    });
     const toKid = await h.call("POST", `${v1}/me/friends/requests`, { handle: kid.handle }, stranger.token);
-    expect(toKid.body.code).toBe("restricted_by_family");
+    expect(toKid.body).toMatchObject({ code: "restricted_by_family", side: "other" });
     // Family members are always fine.
     expect(
       (await h.call("POST", `${v1}/me/friends/requests`, { handle: kid.handle }, mom.token)).status,

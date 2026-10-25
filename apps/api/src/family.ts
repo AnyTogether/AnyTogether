@@ -79,9 +79,10 @@ type Member = typeof familyMembers.$inferSelect;
 type Family = typeof families.$inferSelect;
 type RequestRow = typeof familyRequests.$inferSelect;
 
-/** The 403 every family limit answers with; `feature` says which. */
-export const restricted = (feature: FamilyFeature, message: string) =>
-  new HttpError(403, ErrorCode.restrictedByFamily, message, { feature });
+/** The 403 every family limit answers with; `feature` says which, `side` whose limit it is: the
+ *  asker's own ("self") or the other person's ("other"). */
+export const restricted = (feature: FamilyFeature, message: string, side: "self" | "other" = "self") =>
+  new HttpError(403, ErrorCode.restrictedByFamily, message, { feature, side });
 
 /** Someone's family and role, if they are in one. */
 export async function membershipOf(db: Querier, userId: string) {
@@ -212,7 +213,7 @@ export function familyGuard(db: Querier) {
       );
     const theirs = kids.get(other);
     if (theirs && !(await allows(other, theirs, me, "friend")))
-      throw restricted("friend_requests", "This person cannot get friend requests from you");
+      throw restricted("friend_requests", "This person cannot get friend requests from you", "other");
   }
 
   /** Messages among these people (`me` among them): every child in it must be allowed to reach each
@@ -225,7 +226,7 @@ export function familyGuard(db: Querier) {
         if (other !== child && !(await allows(child, rules, other, "message")))
           throw child === me
             ? restricted("messages", "Your family settings do not allow messages with this person")
-            : restricted("messages", "Someone here cannot get messages from you");
+            : restricted("messages", "Someone here cannot get messages from you", "other");
   }
 
   /** A call: voice chat on for each child in it, and for a call between two people, messages too. */
@@ -234,7 +235,7 @@ export function familyGuard(db: Querier) {
     if (kids.get(me) && !kids.get(me)?.voiceChat)
       throw restricted("voice_chat", "Your family settings turn voice chat off");
     if (callee && kids.get(callee) && !kids.get(callee)?.voiceChat)
-      throw restricted("voice_chat", "This person cannot take calls");
+      throw restricted("voice_chat", "This person cannot take calls", "other");
     if (callee) await mayMessage(me, [callee]);
   }
 

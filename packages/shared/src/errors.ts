@@ -45,7 +45,8 @@ export const ErrorCode = {
   /** The passkey is unknown here (removed, or made for another site) or its signature is wrong. */
   passkeyInvalid: "passkey_invalid",
   /** A parent's family settings do not allow this for the child (or for reaching the child);
-   *  `feature` says which. */
+   *  `feature` says which, `side` whether the limit is the asker's own ("self") or the other
+   *  person's ("other"). */
   restrictedByFamily: "restricted_by_family",
   internal: "internal",
 } as const;

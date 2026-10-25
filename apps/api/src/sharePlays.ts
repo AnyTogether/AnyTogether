@@ -565,6 +565,7 @@ export function sharePlayRoutes(deps: Deps) {
     if ((await family.without(asked, "share_play")).size)
       throw new HttpError(403, ErrorCode.restrictedByFamily, "Someone you invited cannot watch share plays", {
         feature: "share_play",
+        side: "other",
       });
     return c.json({ invited: await inviteTo(share, asked) });
   });
