@@ -74,6 +74,8 @@ beforeEach(async () => {
   keys = await generateKeyPair("EdDSA", { crv: "Ed25519" });
   valkey = new Redis(process.env.TEST_VALKEY_URL ?? "redis://127.0.0.1:63799/2");
   await valkey.flushdb();
+  // The API copies the recent sign-outs from PostgreSQL into Valkey and marks it done.
+  await valkey.set("revocations-loaded", "1");
   gateway = await createGateway({
     keys: keys.publicKey,
     issuer,
@@ -156,6 +158,23 @@ describe("the gateway", () => {
     await c.opened;
     c.send({ op: "hello", token: await token("u1", "old") });
     expect(await c.closed).toBe(4003);
+  });
+
+  it("waits for the API to restore the sign-outs after Valkey restarted empty", async () => {
+    await valkey.flushdb();
+    const early = client();
+    await early.opened;
+    early.send({ op: "hello", token: await token("u1", "old") });
+    // Not known yet whether this session was signed out: try again shortly.
+    expect(await early.closed).toBe(1011);
+    await valkey.set("revocations-loaded", "1");
+    await valkey.set("revoked:old", "1");
+    const refused = client();
+    await refused.opened;
+    refused.send({ op: "hello", token: await token("u1", "old") });
+    expect(await refused.closed).toBe(4003);
+    const fine = await signedIn("u1", "s1");
+    fine.socket.close();
   });
 
   it("replays what a reconnecting socket missed", async () => {

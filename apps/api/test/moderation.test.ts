@@ -71,6 +71,18 @@ describe("bans", () => {
     expect(back.id).toBe(troll.id);
   });
 
+  it("a ban still signs the account out after Valkey restarts empty", async () => {
+    h = await harness();
+    const troll = await h.user("troll@example.com");
+    const ayse = await h.user("ayse@example.com");
+    expect(await admin("ban", "@troll", "--reason", "spam")).toContain("banned @troll");
+    await h.valkey.flushdb();
+    const refused = await h.call("GET", `${v1}/me`, undefined, troll.token);
+    expect(refused.status).toBe(401);
+    expect(refused.body.code).toBe("session_revoked");
+    expect((await h.call("GET", `${v1}/me`, undefined, ayse.token)).status).toBe(200);
+  });
+
   it("bans an address that has no account yet, and a ban for some days runs out", async () => {
     h = await harness();
     expect(await admin("ban", "spammer@example.com")).toContain("banned spammer@example.com");

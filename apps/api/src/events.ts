@@ -27,6 +27,3 @@ export async function broadcast(valkey: Redis, topics: string[], event: GatewayE
 /** A board or list topic, and the same for one game. */
 export const topicsFor = (topic: "lfg" | "discover", titleId: string | null | undefined) =>
   titleId ? [topic, `${topic}:${titleId}`] : [topic];
-
-/** Revoked sessions, kept as long as an access token of theirs could still be valid. */
-export const revokedKey = (sessionId: string) => `revoked:${sessionId}`;

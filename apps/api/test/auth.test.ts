@@ -148,6 +148,23 @@ describe("tokens and sessions", () => {
     expect(heard.some((message) => JSON.parse(message).type === "account.signed_out")).toBe(true);
     events.disconnect();
   });
+
+  it("keeps a signed-out session's access token refused after Valkey restarts empty", async () => {
+    const mac = await emailSignIn("d@example.com", "launcher-macos/0.2.13");
+    const web = await emailSignIn("d@example.com", "web/1.0");
+    expect((await h.call("POST", "/api/v1/auth/logout", {}, mac.body.accessToken)).status).toBe(204);
+    // Valkey keeps nothing across a restart.
+    await h.valkey.flushdb();
+    const refused = await h.call("GET", "/api/v1/me", undefined, mac.body.accessToken);
+    expect(refused.status).toBe(401);
+    expect(refused.body.code).toBe("session_revoked");
+    // A session still signed in is untouched.
+    expect((await h.call("GET", "/api/v1/me", undefined, web.body.accessToken)).status).toBe(200);
+    // The refusal is cached again: Valkey says so on its own from now on.
+    await h.valkey.flushdb();
+    expect((await h.call("GET", "/api/v1/me", undefined, web.body.accessToken)).status).toBe(200);
+    expect((await h.call("GET", "/api/v1/me", undefined, mac.body.accessToken)).status).toBe(401);
+  });
 });
 
 describe("providers", () => {

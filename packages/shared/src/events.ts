@@ -106,6 +106,14 @@ export const userEvents = (userId: string) => `events:${userId}`;
 export const realtimeTicketKey = (hash: string) => `rt-ticket:${hash}`;
 export const realtimeTicketSeconds = 30;
 
+/** A signed-out session, kept by the API as long as an access token of theirs could still be valid;
+ *  the API and the gateway refuse its tokens. */
+export const revokedKey = (sessionId: string) => `revoked:${sessionId}`;
+/** Set by the API once it has copied the recent sign-outs from PostgreSQL (where they are kept)
+ *  into Valkey. Valkey keeps nothing across a restart: until this is back, no one can tell from
+ *  Valkey alone whether a session was signed out. */
+export const revocationsLoadedKey = "revocations-loaded";
+
 /** Each user's friends, kept by the API for the gateway's presence fan-out. */
 export const friendsKey = (userId: string) => `friends:${userId}`;
 /** One device's presence while its socket is open, kept by the gateway (60 s, renewed by

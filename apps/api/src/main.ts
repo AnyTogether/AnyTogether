@@ -10,6 +10,7 @@ import { storeFromSettings } from "./fileStore.js";
 import { type FileService, fileService } from "./files.js";
 import { mailerFor } from "./mail.js";
 import { pruneNotifications, sendDigests, webPushSender } from "./notifications.js";
+import { restoreRevocations } from "./sessions.js";
 import { sweepThemeFiles } from "./themes.js";
 import { createTokenSigner } from "./tokens.js";
 
@@ -75,6 +76,14 @@ const app = createApp({
   steam: { apiKey: settings.steamApiKey },
 });
 serve({ fetch: app.fetch, port: settings.port }, (info) => console.log(`api listening on ${info.port}`));
+
+// Valkey keeps nothing across a restart: the recent sign-outs (bans included) are copied back from
+// PostgreSQL at start and whenever Valkey comes back empty, looked at every 5 seconds (requests
+// that find them missing copy them at once as well).
+const restore = () =>
+  restoreRevocations({ db, valkey }).catch((error) => console.error("restoring sign-outs failed", error));
+void restore();
+setInterval(restore, 5_000);
 
 // Accounts whose 14 days to change their mind are over are deleted, checked every hour, and the
 // files of their themes after them.

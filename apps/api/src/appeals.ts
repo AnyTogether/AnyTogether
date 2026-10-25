@@ -5,10 +5,10 @@ import { Hono, type MiddlewareHandler } from "hono";
 import { uuidv7 } from "uuidv7";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
-import { revokedKey } from "./events.js";
 import { body } from "./http.js";
 import { appealView, liveRestriction, restrictionsOf } from "./moderation.js";
 import { clientIp, rateLimiter } from "./ratelimit.js";
+import { isRevoked } from "./sessions.js";
 
 type AppealVariables = { userId: string };
 
@@ -21,7 +21,7 @@ function accountOrAppealToken(deps: Deps): MiddlewareHandler<{ Variables: Appeal
     const token = header.slice(7);
     const access = await deps.tokens.verify(token).catch(() => null);
     if (access) {
-      if (await deps.valkey.exists(revokedKey(access.sessionId)))
+      if (await isRevoked(deps, access.sessionId))
         throw new HttpError(401, ErrorCode.sessionRevoked, "This sign-in has ended");
       c.set("userId", access.userId);
       return next();

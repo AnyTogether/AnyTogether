@@ -20,6 +20,8 @@ import {
   presenceExtraKey,
   presenceHiddenKey,
   realtimeTicketKey,
+  revocationsLoadedKey,
+  revokedKey,
   shareDeparturesKey,
   sharePlayKey,
   sharePlayMembersKey,
@@ -407,8 +409,11 @@ export async function createGateway(options: GatewayOptions) {
         clearTimeout(helloTimer);
         try {
           const { userId, sessionId } = await identify(frame);
-          if (await store.exists(`revoked:${sessionId}`))
-            return socket.close(CloseCode.signedOut, "signed out");
+          // The API keeps the sign-outs in Valkey; after Valkey restarted empty, it copies them
+          // back from PostgreSQL within seconds, and until then this cannot tell: try again.
+          const [revoked, loaded] = await store.mget(revokedKey(sessionId), revocationsLoadedKey);
+          if (revoked) return socket.close(CloseCode.signedOut, "signed out");
+          if (!loaded) return socket.close(1011, "try again");
           if ((byUser.get(userId)?.size ?? 0) >= maxSocketsPerUser)
             return socket.close(CloseCode.tooMany, "too many sockets");
           connection = {

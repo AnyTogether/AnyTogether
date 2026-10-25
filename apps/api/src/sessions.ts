@@ -1,11 +1,17 @@
 import { type Database, accounts, auditLog, profiles, sessions } from "@anytogether/db";
 import type { ClientKind, Tokens } from "@anytogether/shared";
-import { ErrorCode, presenceHiddenKey, privacyOf } from "@anytogether/shared";
-import { and, eq, isNull } from "drizzle-orm";
+import {
+  ErrorCode,
+  presenceHiddenKey,
+  privacyOf,
+  revocationsLoadedKey,
+  revokedKey,
+} from "@anytogether/shared";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
 import { HttpError } from "./errors.js";
-import { publish, revokedKey } from "./events.js";
+import { publish } from "./events.js";
 import { isBanned, liftExpired, restrictedSignIn } from "./moderation.js";
 import { forgetPush } from "./notifications.js";
 import { type TokenSigner, accessLifetime, hash, refreshLifetimeDays, secret } from "./tokens.js";
@@ -92,10 +98,51 @@ export async function revoke(ctx: Pick<Context, "db" | "valkey">, sessionId: str
     .update(sessions)
     .set({ revokedAt: new Date() })
     .where(and(eq(sessions.id, sessionId), isNull(sessions.revokedAt)));
-  await ctx.valkey.set(revokedKey(sessionId), "1", "EX", accessLifetime + 60);
+  await ctx.valkey.set(revokedKey(sessionId), "1", "EX", revokedSeconds);
   // Its browser gets no more push notifications.
   await forgetPush(ctx.db, sessionId);
   await publish(ctx.valkey, accountId, { type: "account.signed_out", data: { sessionId } });
+}
+
+/** How long Valkey keeps a sign-out: as long as an access token of the session could be valid. */
+const revokedSeconds = accessLifetime + 60;
+const restoring = new WeakMap<Redis, Promise<void>>();
+
+/** PostgreSQL keeps every sign-out (sessions.revoked_at, a ban's included); Valkey keeps a copy of
+ *  the recent ones for the checks on every request, and loses it when it restarts. Copies them back
+ *  once Valkey has none, in one transaction with the mark that they are there, so a restart in
+ *  between leaves neither. Several callers at once share the one copy. */
+export async function restoreRevocations(ctx: Pick<Context, "db" | "valkey">) {
+  if (await ctx.valkey.exists(revocationsLoadedKey)) return false;
+  let job = restoring.get(ctx.valkey);
+  if (!job) {
+    job = (async () => {
+      const since = new Date(Date.now() - revokedSeconds * 1000);
+      const recent = await ctx.db
+        .select({ id: sessions.id, revokedAt: sessions.revokedAt })
+        .from(sessions)
+        .where(gt(sessions.revokedAt, since));
+      const write = ctx.valkey.multi();
+      for (const { id, revokedAt } of recent) {
+        const left = Math.ceil(((revokedAt?.getTime() ?? 0) + revokedSeconds * 1000 - Date.now()) / 1000);
+        if (left > 0) write.set(revokedKey(id), "1", "EX", left);
+      }
+      await write.set(revocationsLoadedKey, "1").exec();
+    })().finally(() => restoring.delete(ctx.valkey));
+    restoring.set(ctx.valkey, job);
+  }
+  await job;
+  return true;
+}
+
+/** Whether the session was signed out: one Valkey round trip, and PostgreSQL only after Valkey
+ *  restarted empty. */
+export async function isRevoked(ctx: Pick<Context, "db" | "valkey">, sessionId: string) {
+  const [revoked, loaded] = await ctx.valkey.mget(revokedKey(sessionId), revocationsLoadedKey);
+  if (revoked) return true;
+  if (loaded) return false;
+  await restoreRevocations(ctx);
+  return (await ctx.valkey.exists(revokedKey(sessionId))) > 0;
 }
 
 async function tokensFor(
