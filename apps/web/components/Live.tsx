@@ -160,10 +160,11 @@ export function useLive() {
 
 /** Calls `handler` for every gateway event (and "live.ready" after each (re)connect). */
 export function useLiveEvents(handler: Listener) {
-  const { subscribe } = useLive();
+  // Signed out there is no socket (a public profile): nothing ever arrives.
+  const subscribe = useContext(LiveContext)?.subscribe;
   const latest = useRef(handler);
   latest.current = handler;
-  useEffect(() => subscribe((event) => latest.current(event)), [subscribe]);
+  useEffect(() => subscribe?.((event) => latest.current(event)), [subscribe]);
 }
 
 /** Watches public topics (the board, the public lists) while the component is shown. */

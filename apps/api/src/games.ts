@@ -37,7 +37,7 @@ import { publish } from "./events.js";
 import { recordMilestones, recordSessions, recordTrophies, totalsOf } from "./feed.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
-import { blockedBetween, canSee, findProfile, relationOf } from "./people.js";
+import { type ProfileRow, blockedBetween, canSee, findProfile, relationOf } from "./people.js";
 
 /** Clocks drift; a time a little ahead of ours is still believed. */
 const clockSlack = 5 * 60_000;
@@ -529,51 +529,7 @@ export function gameRoutes(deps: Deps) {
   app.get("/users/:handle/library", async (c) => {
     const me = c.get("userId");
     const owner = await viewable(me, c.req.param("handle"), "library");
-    // Trophy counts in the library follow the trophies setting, not the library's.
-    const trophiesShown = canSee(
-      privacyOf(owner.privacy).trophies,
-      await relationOf(db, me, owner.accountId),
-    );
-    const rows = await db
-      .select({ entry: library, game: games })
-      .from(library)
-      .innerJoin(games, eq(games.titleId, library.titleId))
-      .where(eq(library.accountId, owner.accountId))
-      .orderBy(sql`${library.lastPlayedAt} desc nulls last`, asc(library.titleId));
-    // Which computers each game was played on, for the owner only.
-    const computers = new Map<string, { id: string; name: string; platform: string }[]>();
-    if (owner.accountId === me) {
-      const used = await db
-        .selectDistinct({
-          titleId: playSessions.titleId,
-          id: devices.id,
-          name: devices.name,
-          platform: devices.platform,
-        })
-        .from(playSessions)
-        .innerJoin(devices, eq(devices.id, playSessions.deviceId))
-        .where(eq(playSessions.accountId, me));
-      for (const { titleId, ...device } of used)
-        computers.set(titleId, [...(computers.get(titleId) ?? []), device]);
-    }
-    return c.json({
-      games: rows.map(({ entry, game }) => ({
-        titleId: entry.titleId,
-        names: game.names,
-        iconUrl: game.iconUrl,
-        firstPlayedAt: entry.firstPlayedAt,
-        lastPlayedAt: entry.lastPlayedAt,
-        secondsPlayed: entry.secondsPlayed,
-        trophiesEarned: trophiesShown ? entry.trophiesEarned : null,
-        trophiesTotal: entry.trophiesTotal,
-        progress:
-          trophiesShown && entry.trophiesTotal
-            ? Math.min(100, Math.floor((entry.trophiesEarned * 100) / entry.trophiesTotal))
-            : null,
-        points: trophiesShown ? entry.points : null,
-        ...(owner.accountId === me ? { devices: computers.get(entry.titleId) ?? [] } : {}),
-      })),
-    });
+    return c.json(await libraryOf(db, me, owner));
   });
 
   app.get("/users/:handle/trophies", async (c) => {
@@ -581,97 +537,180 @@ export function gameRoutes(deps: Deps) {
     const query = c.req.query("titleId");
     const titleId = query === undefined ? undefined : param(TitleId, query, "titleId");
     const owner = await viewable(me, c.req.param("handle"), "trophies");
-    const self = owner.accountId === me;
-    /** Hidden trophies the asker earned themselves, whose texts they may see. */
-    const askerHas = async (titleIds: string[]) =>
-      new Set(
-        self || !titleIds.length
-          ? []
-          : (
-              await db
-                .select({ titleId: earnedTrophies.titleId, trophyId: earnedTrophies.trophyId })
-                .from(earnedTrophies)
-                .where(and(eq(earnedTrophies.accountId, me), inArray(earnedTrophies.titleId, titleIds)))
-            ).map((e) => `${e.titleId}/${e.trophyId}`),
-      );
-    const texts = (
-      t: { titleId: string; trophyId: number; hidden: boolean; texts: Texts },
-      has: Set<string>,
-    ) => (t.hidden && !self && !has.has(`${t.titleId}/${t.trophyId}`) ? null : t.texts);
-
-    if (titleId) {
-      const earned = await db
-        .select()
-        .from(earnedTrophies)
-        .where(and(eq(earnedTrophies.accountId, owner.accountId), eq(earnedTrophies.titleId, titleId)))
-        .orderBy(desc(earnedTrophies.earnedAt));
-      const setHash =
-        earned[0]?.setHash ??
-        (
-          await db
-            .select({ setHash: trophySets.setHash })
-            .from(trophySets)
-            .where(eq(trophySets.titleId, titleId))
-            .orderBy(asc(trophySets.createdAt), asc(trophySets.setHash))
-            .limit(1)
-        )[0]?.setHash ??
-        null;
-      if (!setHash) return c.json({ titleId, setHash: null, trophies: [] });
-      const list = await db
-        .select()
-        .from(trophies)
-        .where(and(eq(trophies.titleId, titleId), eq(trophies.setHash, setHash)))
-        .orderBy(asc(trophies.trophyId));
-      const when = new Map(earned.map((e) => [e.trophyId, e.earnedAt]));
-      const has = await askerHas([titleId]);
-      return c.json({
-        titleId,
-        setHash,
-        trophies: list.map((t) => ({
-          id: t.trophyId,
-          grade: t.grade,
-          hidden: t.hidden,
-          texts: texts(t, has),
-          earnedAt: when.get(t.trophyId) ?? null,
-          earnedCount: t.earnedCount,
-          rarity: roundRarity(t.rarity),
-          rarityLabel: rarityLabel(t.rarity),
-        })),
-      });
-    }
-
-    const timeline = await db
-      .select({ earned: earnedTrophies, trophy: trophies, names: games.names })
-      .from(earnedTrophies)
-      .innerJoin(
-        trophies,
-        and(
-          eq(trophies.titleId, earnedTrophies.titleId),
-          eq(trophies.setHash, earnedTrophies.setHash),
-          eq(trophies.trophyId, earnedTrophies.trophyId),
-        ),
-      )
-      .innerJoin(games, eq(games.titleId, earnedTrophies.titleId))
-      .where(eq(earnedTrophies.accountId, owner.accountId))
-      .orderBy(desc(earnedTrophies.earnedAt))
-      .limit(200);
-    const has = await askerHas([...new Set(timeline.map((r) => r.earned.titleId))]);
-    return c.json({
-      trophies: timeline.map(({ earned, trophy, names }) => ({
-        titleId: earned.titleId,
-        gameNames: names,
-        setHash: earned.setHash,
-        trophyId: earned.trophyId,
-        grade: trophy.grade,
-        hidden: trophy.hidden,
-        texts: texts(trophy, has),
-        earnedAt: earned.earnedAt,
-        earnedCount: trophy.earnedCount,
-        rarity: roundRarity(trophy.rarity),
-        rarityLabel: rarityLabel(trophy.rarity),
-      })),
-    });
+    return c.json(await trophiesOf(db, me, owner, titleId));
   });
 
   return app;
+}
+
+type Owner = Pick<ProfileRow, "accountId" | "privacy">;
+
+/** Someone's library as `me` sees it (null: signed out, who sees what is open to everyone); the
+ *  caller has checked that the library itself may be seen. */
+export async function libraryOf(db: Database, me: string | null, owner: Owner) {
+  const self = owner.accountId === me;
+  // Trophy counts in the library follow the trophies setting, not the library's.
+  const trophiesShown = canSee(
+    privacyOf(owner.privacy).trophies,
+    me ? await relationOf(db, me, owner.accountId) : "other",
+  );
+  const rows = await db
+    .select({ entry: library, game: games })
+    .from(library)
+    .innerJoin(games, eq(games.titleId, library.titleId))
+    .where(eq(library.accountId, owner.accountId))
+    .orderBy(sql`${library.lastPlayedAt} desc nulls last`, asc(library.titleId));
+  // Which computers each game was played on, for the owner only.
+  const computers = new Map<string, { id: string; name: string; platform: string }[]>();
+  if (self) {
+    const used = await db
+      .selectDistinct({
+        titleId: playSessions.titleId,
+        id: devices.id,
+        name: devices.name,
+        platform: devices.platform,
+      })
+      .from(playSessions)
+      .innerJoin(devices, eq(devices.id, playSessions.deviceId))
+      .where(eq(playSessions.accountId, owner.accountId));
+    for (const { titleId, ...device } of used)
+      computers.set(titleId, [...(computers.get(titleId) ?? []), device]);
+  }
+  return {
+    games: rows.map(({ entry, game }) => ({
+      titleId: entry.titleId,
+      names: game.names,
+      iconUrl: game.iconUrl,
+      firstPlayedAt: entry.firstPlayedAt,
+      lastPlayedAt: entry.lastPlayedAt,
+      secondsPlayed: entry.secondsPlayed,
+      trophiesEarned: trophiesShown ? entry.trophiesEarned : null,
+      trophiesTotal: entry.trophiesTotal,
+      progress:
+        trophiesShown && entry.trophiesTotal
+          ? Math.min(100, Math.floor((entry.trophiesEarned * 100) / entry.trophiesTotal))
+          : null,
+      points: trophiesShown ? entry.points : null,
+      ...(self ? { devices: computers.get(entry.titleId) ?? [] } : {}),
+    })),
+  };
+}
+
+/** Someone's trophies as `me` sees them (null: signed out): one game's set with what they earned,
+ *  or their newest 200; the caller has checked that the trophies may be seen. */
+export async function trophiesOf(db: Database, me: string | null, owner: Owner, titleId?: string) {
+  const self = owner.accountId === me;
+  /** Hidden trophies the asker earned themselves, whose texts they may see. */
+  const askerHas = async (titleIds: string[]) =>
+    new Set(
+      self || !me || !titleIds.length
+        ? []
+        : (
+            await db
+              .select({ titleId: earnedTrophies.titleId, trophyId: earnedTrophies.trophyId })
+              .from(earnedTrophies)
+              .where(and(eq(earnedTrophies.accountId, me), inArray(earnedTrophies.titleId, titleIds)))
+          ).map((e) => `${e.titleId}/${e.trophyId}`),
+    );
+  const texts = (
+    t: { titleId: string; trophyId: number; hidden: boolean; texts: Texts },
+    has: Set<string>,
+  ) => (t.hidden && !self && !has.has(`${t.titleId}/${t.trophyId}`) ? null : t.texts);
+
+  if (titleId) {
+    const earned = await db
+      .select()
+      .from(earnedTrophies)
+      .where(and(eq(earnedTrophies.accountId, owner.accountId), eq(earnedTrophies.titleId, titleId)))
+      .orderBy(desc(earnedTrophies.earnedAt));
+    const setHash =
+      earned[0]?.setHash ??
+      (
+        await db
+          .select({ setHash: trophySets.setHash })
+          .from(trophySets)
+          .where(eq(trophySets.titleId, titleId))
+          .orderBy(asc(trophySets.createdAt), asc(trophySets.setHash))
+          .limit(1)
+      )[0]?.setHash ??
+      null;
+    if (!setHash) return { titleId, setHash: null, trophies: [] };
+    const list = await db
+      .select()
+      .from(trophies)
+      .where(and(eq(trophies.titleId, titleId), eq(trophies.setHash, setHash)))
+      .orderBy(asc(trophies.trophyId));
+    const when = new Map(earned.map((e) => [e.trophyId, e.earnedAt]));
+    const has = await askerHas([titleId]);
+    return {
+      titleId,
+      setHash,
+      trophies: list.map((t) => ({
+        id: t.trophyId,
+        grade: t.grade,
+        hidden: t.hidden,
+        texts: texts(t, has),
+        earnedAt: when.get(t.trophyId) ?? null,
+        earnedCount: t.earnedCount,
+        rarity: roundRarity(t.rarity),
+        rarityLabel: rarityLabel(t.rarity),
+      })),
+    };
+  }
+
+  const timeline = await db
+    .select({ earned: earnedTrophies, trophy: trophies, names: games.names })
+    .from(earnedTrophies)
+    .innerJoin(
+      trophies,
+      and(
+        eq(trophies.titleId, earnedTrophies.titleId),
+        eq(trophies.setHash, earnedTrophies.setHash),
+        eq(trophies.trophyId, earnedTrophies.trophyId),
+      ),
+    )
+    .innerJoin(games, eq(games.titleId, earnedTrophies.titleId))
+    .where(eq(earnedTrophies.accountId, owner.accountId))
+    .orderBy(desc(earnedTrophies.earnedAt))
+    .limit(200);
+  const has = await askerHas([...new Set(timeline.map((r) => r.earned.titleId))]);
+  return {
+    trophies: timeline.map(({ earned, trophy, names }) => ({
+      titleId: earned.titleId,
+      gameNames: names,
+      setHash: earned.setHash,
+      trophyId: earned.trophyId,
+      grade: trophy.grade,
+      hidden: trophy.hidden,
+      texts: texts(trophy, has),
+      earnedAt: earned.earnedAt,
+      earnedCount: trophy.earnedCount,
+      rarity: roundRarity(trophy.rarity),
+      rarityLabel: rarityLabel(trophy.rarity),
+    })),
+  };
+}
+
+/** How many trophies of each grade someone earned, and their points (for share pictures). */
+export async function trophyCountsOf(db: Database, accountId: string) {
+  const rows = await db
+    .select({ grade: trophies.grade, n: count() })
+    .from(earnedTrophies)
+    .innerJoin(
+      trophies,
+      and(
+        eq(trophies.titleId, earnedTrophies.titleId),
+        eq(trophies.setHash, earnedTrophies.setHash),
+        eq(trophies.trophyId, earnedTrophies.trophyId),
+      ),
+    )
+    .where(eq(earnedTrophies.accountId, accountId))
+    .groupBy(trophies.grade);
+  const counts = { bronze: 0, silver: 0, gold: 0, platinum: 0 } as Record<Grade, number>;
+  for (const row of rows) counts[row.grade as Grade] = Number(row.n);
+  const points = (Object.keys(counts) as Grade[]).reduce(
+    (sum, grade) => sum + counts[grade] * trophyPoints[grade],
+    0,
+  );
+  return { ...counts, total: rows.reduce((sum, row) => sum + Number(row.n), 0), points };
 }

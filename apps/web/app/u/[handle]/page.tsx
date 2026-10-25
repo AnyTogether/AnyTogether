@@ -17,8 +17,8 @@ import {
 } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
-import type { Person, Profile } from "@/lib/people";
-import { apiJson, currentUser, publicJson } from "@/lib/session";
+import type { Person, Profile, PublicProfile } from "@/lib/people";
+import { api, currentUser, publicJson } from "@/lib/session";
 import type { MediaItem, StorageInfo } from "@/lib/storage";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -28,31 +28,36 @@ type Params = { params: Promise<{ handle: string }> };
 
 const clean = (handle: string) => decodeURIComponent(handle).replace(/^@/, "").toLowerCase();
 
-/** The card, and each part the viewer may open; a part that is private comes back as null. */
+/** The card, and each part the viewer may open; a part that is private comes back as null.
+ *  Signed out, only what the person opened to everyone comes back. */
 async function load(handle: string) {
   if (!/^[a-z0-9_.]{1,40}$/.test(handle)) return null;
   const path = `/users/${encodeURIComponent(handle)}`;
   const [profile, library, trophies, friends, activity, storage] = await Promise.all([
-    apiJson<Profile>(path),
-    apiJson<{ games: LibraryGame[] }>(`${path}/library`),
-    apiJson<{ trophies: EarnedTrophy[] }>(`${path}/trophies`),
-    apiJson<{ friends: Person[] }>(`${path}/friends`),
-    apiJson<FeedPage>(`${path}/activity?limit=8`),
+    publicJson<Profile>(path),
+    publicJson<{ games: LibraryGame[] }>(`${path}/library`),
+    publicJson<{ trophies: EarnedTrophy[] }>(`${path}/trophies`),
+    publicJson<{ friends: Person[] }>(`${path}/friends`),
+    publicJson<FeedPage>(`${path}/activity?limit=8`),
     publicJson<StorageInfo>("/storage"),
   ]);
   if (!profile.body) return null;
-  // The gallery only where the server keeps files; private comes back as 403.
-  const gallery = storage.body?.enabled ? await apiJson<{ items: MediaItem[] }>(`${path}/gallery`) : null;
+  const shown = <T,>(part: { status: number; body: T | null }, fallback: T) =>
+    part.status === 403 || part.status === 401 ? null : (part.body ?? fallback);
+  // The gallery only where the server keeps files; private (or signed out) comes back as null.
+  const gallery = storage.body?.enabled
+    ? await publicJson<{ items: MediaItem[] }>(`${path}/gallery`)
+    : null;
   return {
     profile: profile.body,
-    games: library.status === 403 ? null : (library.body?.games ?? []),
-    trophies: trophies.status === 403 ? null : (trophies.body?.trophies ?? []),
-    friends: friends.status === 403 ? null : (friends.body?.friends ?? []),
+    games: shown(library, { games: [] })?.games ?? null,
+    trophies: shown(trophies, { trophies: [] })?.trophies ?? null,
+    friends: shown(friends, { friends: [] })?.friends ?? null,
     // Items the viewer may not see are left out by the API; older API answers have none.
     activity: activity.body?.items ?? [],
     gallery: gallery
       ? {
-          items: gallery.status === 403 ? null : (gallery.body?.items ?? []),
+          items: shown(gallery, { items: [] })?.items ?? null,
           max: storage.body?.galleryMax ?? 12,
         }
       : null,
@@ -73,16 +78,38 @@ function Private({ text }: { text: string }) {
   );
 }
 
+/** The title, and what a link preview (Discord, X, iMessage) shows: always what anyone may see,
+ *  read signed out, whoever is looking. The picture is opengraph-image.tsx beside this page. */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const handle = clean((await params).handle);
-  return { title: `@${handle} · AnyTogether` };
+  const texts = await strings();
+  const response = /^[a-z0-9_.]{1,40}$/.test(handle)
+    ? await api(`/users/${encodeURIComponent(handle)}`).catch(() => undefined)
+    : undefined;
+  const profile = response?.ok ? ((await response.json()) as PublicProfile) : null;
+  if (!profile) return { title: `@${handle} · AnyTogether` };
+  const title = fill(texts.profileMeta, { name: profile.displayName, handle: profile.handle });
+  const counts = profile.trophyCounts;
+  const description =
+    profile.bio ||
+    (counts
+      ? fill(texts.profileMetaTrophies, { trophies: counts.total, platinums: counts.platinum })
+      : texts.profileMetaPlain);
+  return {
+    title: `${profile.displayName} (@${profile.handle}) · AnyTogether`,
+    description,
+    alternates: { canonical: `/u/${profile.handle}` },
+    // Shared links preview; search engines are not asked to list people.
+    robots: { index: false, follow: true },
+    openGraph: { type: "profile", title, description, url: `/u/${profile.handle}`, username: profile.handle },
+    twitter: { card: "summary_large_image", title, description },
+  };
 }
 
 /** A person's card, their games and play time, and the trophies they earned last. */
 export default async function UserProfile({ params }: Params) {
   const handle = clean((await params).handle);
   const [texts, user] = await Promise.all([strings(), currentUser()]);
-  if (!user) redirect(`/login?next=${encodeURIComponent(`/u/${handle}`)}`);
   const loaded = await load(handle);
   if (!loaded) notFound();
   const { profile, games, trophies, friends, activity, gallery } = loaded;
@@ -108,7 +135,7 @@ export default async function UserProfile({ params }: Params) {
     <section className="page">
       <article className="card profile in d1">
         <div className="banner" aria-hidden="true" />
-        {!self && <ProfileMenu person={profile} texts={ui(texts)} />}
+        {!self && user && <ProfileMenu person={profile} texts={ui(texts)} />}
         <Avatar
           person={profile}
           size={96}
@@ -163,11 +190,24 @@ export default async function UserProfile({ params }: Params) {
           </dl>
         )}
         <div className="in d4">
-          <FriendAction profile={profile} texts={ui(texts)} />
+          {user ? (
+            <FriendAction profile={profile} texts={ui(texts)} />
+          ) : (
+            <div className="visitor-actions">
+              <Link
+                href={`/login?next=${encodeURIComponent(`/u/${profile.handle}`)}`}
+                className="pill accent"
+              >
+                {fill(texts.signInToAdd, name)}
+              </Link>
+              <p className="hint">{fill(texts.publicView, name)}</p>
+            </div>
+          )}
         </div>
       </article>
 
-      {gallery && (gallery.items === null || gallery.items.length > 0 || self) && (
+      {/* Signed out the gallery is left out rather than shown as private. */}
+      {gallery && (gallery.items === null ? Boolean(user) : gallery.items.length > 0 || self) && (
         <article className="card gallery-card in d3">
           <h3 className="sub">
             {texts.gallery}{" "}
@@ -192,6 +232,7 @@ export default async function UserProfile({ params }: Params) {
         <FeedList
           texts={ui(texts)}
           initial={{ items: activity, next: null }}
+          readOnly={!user}
           now={Date.now()}
           empty={<p className="empty">{texts.noActivity}</p>}
         />
@@ -282,10 +323,10 @@ export default async function UserProfile({ params }: Params) {
       <article className="card in d4">
         <h3 className="sub">
           {texts.friends}{" "}
-          {friends ? <span className="n">{friends.length}</span> : <PrivateTag texts={texts} />}
+          {friends ? <span className="n">{friends.length}</span> : user && <PrivateTag texts={texts} />}
         </h3>
         {!friends ? (
-          <Private text={fill(texts.privateFriends, name)} />
+          <Private text={fill(user ? texts.privateFriends : texts.signInForFriends, name)} />
         ) : friends.length === 0 ? (
           <p className="empty">{texts.noFriendsYet}</p>
         ) : (

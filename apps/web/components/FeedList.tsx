@@ -66,7 +66,8 @@ function Item({
   item: Activity;
   texts: UiStrings;
   now: number;
-  onReact: (item: Activity, reaction: Reaction) => void;
+  /** Left out for a reader who is not signed in: the counts show, the buttons do nothing. */
+  onReact?: ((item: Activity, reaction: Reaction) => void) | undefined;
   /** Came in live: it slides in. */
   arrived: boolean;
 }) {
@@ -164,6 +165,8 @@ function Item({
         <div className="reacts">
           {reactions.map(({ key, emoji }) => {
             const count = item.reactions.counts[key] ?? 0;
+            // Read only, only the reactions someone gave are shown.
+            if (!onReact && !count) return null;
             const mine = item.reactions.mine === key;
             const label = texts[`react_${key}`];
             return (
@@ -174,7 +177,8 @@ function Item({
                 aria-pressed={mine}
                 aria-label={count ? fill(texts.reactLabel, { reaction: label, n: count }) : label}
                 title={label}
-                onClick={() => onReact(item, key)}
+                disabled={!onReact}
+                onClick={() => onReact?.(item, key)}
               >
                 <span aria-hidden="true">{emoji}</span>
                 {count > 0 && <span className="react-n">{number.format(count)}</span>}
@@ -194,6 +198,7 @@ export function FeedList({
   live = false,
   now: renderedAt,
   empty,
+  readOnly = false,
 }: {
   texts: UiStrings;
   initial: FeedPage;
@@ -201,6 +206,8 @@ export function FeedList({
   live?: boolean;
   now: number;
   empty: ReactNode;
+  /** A reader who is not signed in: no reactions. */
+  readOnly?: boolean;
 }) {
   const [items, setItems] = useState(initial.items);
   const [next, setNext] = useState(initial.next);
@@ -263,7 +270,7 @@ export function FeedList({
             item={item}
             texts={texts}
             now={now}
-            onReact={react}
+            onReact={readOnly ? undefined : react}
             arrived={fresh.has(item.id)}
           />
         ))}

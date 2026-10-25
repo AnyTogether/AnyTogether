@@ -49,6 +49,22 @@ export type Friendship = "me" | "none" | "pending_out" | "pending_in" | "friends
 
 export type Section = "library" | "trophies" | "friends" | "presence";
 
+/** Trophies earned by grade, and points: shown signed out when trophies are open to everyone. */
+export interface TrophyCounts {
+  bronze: number;
+  silver: number;
+  gold: number;
+  platinum: number;
+  total: number;
+  points: number;
+}
+
+/** A profile as anyone who is not signed in sees it: no user ID, never presence. */
+export interface PublicProfile extends Omit<Profile, "userId"> {
+  signedIn?: false;
+  trophyCounts?: TrophyCounts;
+}
+
 export interface Profile extends Person {
   bio: string | null;
   country: string | null;

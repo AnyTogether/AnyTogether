@@ -29,6 +29,7 @@ import { type PushSender, notificationRoutes, notifier } from "./notifications.j
 import { partyRoutes, partyService } from "./parties.js";
 import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
+import { publicProfileRoutes } from "./publicProfiles.js";
 import { type ClientIpHeader, type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
 import { releaseRoutes } from "./releases.js";
@@ -124,6 +125,8 @@ export function createApp(deps: Deps) {
   v1.route("/", compatRoutes(deps));
   v1.route("/", releaseRoutes(deps));
   v1.route("/", statsRoutes(deps));
+  // Profiles read signed out; a signed-in request goes on to the routes below.
+  v1.route("/", publicProfileRoutes(deps));
   const notes = notifier(deps);
   // Before the profile routes, whose PATCH /me/* counts against the profile limit.
   const family = familyRoutes(deps, notes);

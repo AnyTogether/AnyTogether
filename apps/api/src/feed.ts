@@ -432,27 +432,29 @@ export async function forgetFriendship(db: Database, a: string, b: string) {
     );
 }
 
+/** ?before= and ?limit= of a feed or activity page. */
+export function paging(query: (name: string) => string | undefined) {
+  const before = query("before");
+  if (before !== undefined && !uuid.test(before))
+    throw new HttpError(400, ErrorCode.badRequest, "before: an item ID");
+  const raw = query("limit");
+  const count = raw === undefined ? feedPageSize : Number(raw);
+  if (!Number.isInteger(count) || count < 1 || count > maxFeedPage)
+    throw new HttpError(400, ErrorCode.badRequest, `limit: 1 to ${maxFeedPage}`);
+  return { before, limit: count };
+}
+
+export const page = (items: ActivityView[], count: number): FeedPage => ({
+  items,
+  next: items.length === count ? (items[items.length - 1]?.id ?? null) : null,
+});
+
 /** Reading the feed and someone's activity, and reacting to items. */
 export function feedRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const { db } = deps;
   const limit = rateLimiter(deps.valkey, deps.limits);
-
-  const paging = (query: (name: string) => string | undefined) => {
-    const before = query("before");
-    if (before !== undefined && !uuid.test(before))
-      throw new HttpError(400, ErrorCode.badRequest, "before: an item ID");
-    const raw = query("limit");
-    const count = raw === undefined ? feedPageSize : Number(raw);
-    if (!Number.isInteger(count) || count < 1 || count > maxFeedPage)
-      throw new HttpError(400, ErrorCode.badRequest, `limit: 1 to ${maxFeedPage}`);
-    return { before, limit: count };
-  };
-  const page = (items: ActivityView[], count: number): FeedPage => ({
-    items,
-    next: items.length === count ? (items[items.length - 1]?.id ?? null) : null,
-  });
 
   app.get("/me/feed", async (c) => {
     const options = paging((name) => c.req.query(name));

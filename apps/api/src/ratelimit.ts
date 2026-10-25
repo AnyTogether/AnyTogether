@@ -71,6 +71,8 @@ export const defaultLimits = {
   /** A child's requests to the parents, and family changes (invites, codes, new child accounts). */
   familyRequest: { max: 30, seconds: 86_400 },
   family: { max: 60, seconds: 3600 },
+  /** Profiles read signed out (a profile page asks four times, a link preview twice), per address. */
+  publicProfile: { max: 120, seconds: 60 },
 };
 export type Limits = { [name in keyof typeof defaultLimits]: { max: number; seconds: number } };
 
