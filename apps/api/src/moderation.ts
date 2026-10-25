@@ -4,6 +4,8 @@ import {
   appeals,
   auditLog,
   bans,
+  communities,
+  communityEvents,
   conversationMembers,
   lfgPosts,
   messages,
@@ -25,6 +27,7 @@ import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
 import { revokeAll } from "./account.js";
 import type { Deps } from "./app.js";
+import { communityVisibleTo } from "./communities.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
@@ -463,6 +466,35 @@ export function reportRoutes(deps: Deps) {
         sha256: found.sha256,
         createdAt: found.createdAt,
       };
+    }
+    // A community or an event: anyone who can see it but its owner or host; what it said is kept.
+    if (input.targetKind === "community" || input.targetKind === "event") {
+      const id = /^[0-9a-f-]{36}$/i.test(input.targetId) ? input.targetId : null;
+      const [event] =
+        input.targetKind === "event" && id
+          ? await deps.db.select().from(communityEvents).where(eq(communityEvents.id, id))
+          : [];
+      const communityId = input.targetKind === "event" ? event?.communityId : id;
+      const [community] = communityId
+        ? await deps.db.select().from(communities).where(eq(communities.id, communityId))
+        : [];
+      const what = input.targetKind === "event" ? "event" : "community";
+      if (!community || (input.targetKind === "event" && (!event || event.status === "cancelled")))
+        throw new HttpError(404, ErrorCode.notFound, `No such ${what}`);
+      if (!(await communityVisibleTo(deps.db, community, me)))
+        throw new HttpError(404, ErrorCode.notFound, `No such ${what}`);
+      const authorId = event ? event.hostId : community.ownerId;
+      if (authorId === me) throw new HttpError(400, ErrorCode.badRequest, "That is yours");
+      snapshot = event
+        ? {
+            authorId,
+            communityId: community.id,
+            name: community.name,
+            title: event.title,
+            description: event.description,
+            startsAt: event.startsAt,
+          }
+        : { authorId, name: community.name, description: community.description, titleId: community.titleId };
     }
     // One open report per person and target: a second one adds nothing for the moderators.
     const [made] = await deps.db

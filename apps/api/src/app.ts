@@ -11,6 +11,7 @@ import { passkeyRoutes } from "./auth/passkeys.js";
 import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
 import { callRoutes } from "./calls.js";
+import { communityRoutes } from "./communities.js";
 import { compatRoutes } from "./compat.js";
 import { connectionRoutes } from "./connections.js";
 import { discoverRoutes } from "./discover.js";
@@ -167,7 +168,12 @@ export function createApp(deps: Deps) {
   v1.route("/", shares);
   const lfg = lfgRoutes(deps, notes, partyPieces, shares);
   v1.route("/", lfg);
-  v1.route("/", discoverRoutes(deps, { lfg, parties: partyPieces, shares }));
+  const communities = communityRoutes(deps, notes, partyPieces, shares);
+  v1.route("/", communities);
+  v1.route(
+    "/",
+    discoverRoutes(deps, { lfg, parties: partyPieces, shares, communities: communities.communitiesOfGame }),
+  );
   v1.route("/", realtimeRoutes(deps));
   v1.route("/", adminRoutes(deps, notes));
   app.route("/api/v1", v1);
@@ -184,5 +190,7 @@ export function createApp(deps: Deps) {
     /** The weekly summaries for parents. */
     sendFamilySummaries: (now?: Date) => sendFamilySummaries(deps, notes, family.activityOf, now),
     media,
+    /** Events starting within 15 minutes remind the people going. */
+    sweepEvents: communities.sweepEvents,
   });
 }

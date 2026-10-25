@@ -143,6 +143,16 @@ setInterval(
   5_000,
 );
 
+// Events starting within 15 minutes remind the people going or maybe, looked at every minute.
+setInterval(
+  () =>
+    app
+      .sweepEvents()
+      .then((count) => count && console.log(`reminded ${count} event(s)`))
+      .catch((error) => console.error("event reminders failed", error)),
+  60_000,
+);
+
 // Looking-for-group posts whose time ran out leave the board, looked at every minute.
 setInterval(
   () =>

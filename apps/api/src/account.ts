@@ -10,18 +10,23 @@ import {
   blocks,
   childRestrictions,
   connections,
+  communities,
+  communityEvents,
+  communityMembers,
   conversationMembers,
   conversations,
   devices,
   earnedTrophies,
   familyMembers,
   familyRequests,
+  eventRsvps,
   friendships,
   games,
   handleHistory,
   identities,
   library,
   messages,
+  metPlayers,
   notifications,
   passkeys,
   playSessions,
@@ -47,6 +52,7 @@ import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
 import type { Deps } from "./app.js";
+import { handOverCommunities } from "./communities.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { familyAfterManager } from "./family.js";
@@ -128,7 +134,34 @@ export async function exportAccount(
       avatarUrl: profile.avatarUrl,
       privacy: privacyOf(profile.privacy),
       notificationSettings: notificationSettingsOf(profile.notificationSettings),
+      trophyPoints: profile.trophyPoints,
+      trophyLevel: profile.trophyLevel,
+      cover: profile.cover,
+      accent: profile.accent,
+      showcase: profile.showcase,
+      rememberMet: profile.rememberMet,
     },
+    playersMet: (await db.select().from(metPlayers).where(eq(metPlayers.accountId, accountId))).map(
+      ({ accountId: _, ...met }) => met,
+    ),
+    communities: (
+      await db
+        .select({ member: communityMembers, community: communities })
+        .from(communityMembers)
+        .innerJoin(communities, eq(communities.id, communityMembers.communityId))
+        .where(eq(communityMembers.accountId, accountId))
+    ).map(({ member, community }) => ({
+      id: community.id,
+      name: community.name,
+      role: member.role,
+      joinedAt: member.joinedAt,
+    })),
+    eventsHosted: (await db.select().from(communityEvents).where(eq(communityEvents.hostId, accountId))).map(
+      ({ hostId: _, ...event }) => event,
+    ),
+    eventRsvps: (await db.select().from(eventRsvps).where(eq(eventRsvps.accountId, accountId))).map(
+      ({ accountId: _, ...rsvp }) => rsvp,
+    ),
     avatar: avatar ? `data:image/jpeg;base64,${Buffer.from(avatar.bytes).toString("base64")}` : null,
     connections: (await db.select().from(connections).where(eq(connections.accountId, accountId))).map(
       (row) => ({
@@ -329,6 +362,8 @@ export async function purgeDeletedAccounts(
     .from(accounts)
     .where(and(eq(accounts.status, "deleting"), lte(accounts.deleteAfter, now)));
   for (const { id, email } of due) {
+    // Communities they own pass to their longest-serving moderator, or go when nobody is left.
+    await handOverCommunities(ctx, undefined, id);
     const pairs = await ctx.db
       .select()
       .from(friendships)

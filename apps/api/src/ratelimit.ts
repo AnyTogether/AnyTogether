@@ -82,6 +82,12 @@ export const defaultLimits = {
   appealIp: { max: 10, seconds: 86_400 },
   /** Steam and Discord links started or finished by one account. */
   connection: { max: 30, seconds: 3600 },
+  /** Communities made by one account, and what one does in them (joining, inviting, moderating). */
+  communityCreate: { max: 5, seconds: 86_400 },
+  community: { max: 120, seconds: 3600 },
+  /** Events planned by one account, and going or maybe on them. */
+  event: { max: 20, seconds: 86_400 },
+  rsvp: { max: 300, seconds: 3600 },
 };
 export type Limits = { [name in keyof typeof defaultLimits]: { max: number; seconds: number } };
 

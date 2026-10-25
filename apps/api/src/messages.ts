@@ -11,6 +11,7 @@ import {
   MessageEdit,
   MessageSend,
   type MessageView,
+  MuteSet,
   ReadUpTo,
   conversationMembersKey,
   conversationMembersSeconds,
@@ -128,7 +129,10 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
   };
 
   /** Conversations as the list and the thread show them, for one member. */
-  const views = async (rows: { conversation: Conversation; readSeq: number }[], viewer: string) => {
+  const views = async (
+    rows: { conversation: Conversation; readSeq: number; muted?: boolean }[],
+    viewer: string,
+  ) => {
     if (!rows.length) return [];
     const ids = rows.map((r) => r.conversation.id);
     const members = await db
@@ -149,7 +153,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
           )
       : [];
     const lastViews = new Map((await viewsFor(viewer, last)).map((v) => [v.conversationId, v]));
-    return rows.map(({ conversation: c, readSeq }): ConversationView => {
+    return rows.map(({ conversation: c, readSeq, muted }): ConversationView => {
       const lastMessage = lastViews.get(c.id);
       return {
         id: c.id,
@@ -165,14 +169,24 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         unread: Math.max(0, c.lastSeq - readSeq),
         lastMessage: lastMessage ?? null,
         updatedAt: c.updatedAt.toISOString(),
+        communityId: c.communityId,
+        muted: muted ?? false,
       };
     });
   };
 
   const viewOne = async (me: string, conversationId: string) => {
     const { conversation, member } = await membership(conversationId, me);
-    const [view] = await views([{ conversation, readSeq: member.readSeq }], me);
+    const [view] = await views([{ conversation, readSeq: member.readSeq, muted: member.muted }], me);
     return view as ConversationView;
+  };
+
+  /** A community's chat follows the community: its title and members change there. */
+  const managedByCommunity = (conversation: Conversation) => {
+    if (conversation.communityId)
+      throw new HttpError(409, ErrorCode.conflict, "This chat belongs to a community: change it there", {
+        communityId: conversation.communityId,
+      });
   };
 
   /** Everyone added must be the adder's friend; strangers and blocked people are refused alike. */
@@ -186,7 +200,11 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const me = c.get("userId");
     const before = c.req.query("before");
     const rows = await db
-      .select({ conversation: conversations, readSeq: conversationMembers.readSeq })
+      .select({
+        conversation: conversations,
+        readSeq: conversationMembers.readSeq,
+        muted: conversationMembers.muted,
+      })
       .from(conversationMembers)
       .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
       .where(
@@ -264,6 +282,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const { conversation } = await membership(c.req.param("id"), me);
     if (conversation.kind !== "group")
       throw new HttpError(400, ErrorCode.badRequest, "Only a group has a title");
+    managedByCommunity(conversation);
     const { title } = await body(c, ConversationUpdate);
     await db
       .update(conversations)
@@ -281,6 +300,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const { conversation } = await membership(c.req.param("id"), me);
     if (conversation.kind !== "group")
       throw new HttpError(400, ErrorCode.badRequest, "Start a group to talk with more people");
+    managedByCommunity(conversation);
     const { userIds } = await body(c, ConversationMembers);
     const current = await memberIds(conversation.id);
     const added = [...new Set(userIds)].filter((id) => !current.includes(id));
@@ -319,6 +339,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const target = c.req.param("userId");
     if (conversation.kind !== "group")
       throw new HttpError(400, ErrorCode.badRequest, "A direct conversation cannot be left");
+    managedByCommunity(conversation);
     if (target !== me && conversation.createdBy !== me)
       throw new HttpError(403, ErrorCode.forbidden, "Only the group's creator can remove people");
     const removed = await db
@@ -528,6 +549,21 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     // Its media goes with it, unless it is pinned or in another message.
     await mediaOf.releaseFrom(message);
     return c.body(null, 204);
+  });
+
+  /** Muted: no notifications for it (unread counts still show). A community's chat starts muted. */
+  app.put("/conversations/:id/mute", async (c) => {
+    const me = c.get("userId");
+    const { conversation } = await membership(c.req.param("id"), me);
+    const { muted } = await body(c, MuteSet);
+    await db
+      .update(conversationMembers)
+      .set({ muted })
+      .where(
+        and(eq(conversationMembers.conversationId, conversation.id), eq(conversationMembers.accountId, me)),
+      );
+    if (muted) await notes.settle(me, "message", conversation.id);
+    return c.json(await viewOne(me, conversation.id));
   });
 
   app.post("/conversations/:id/read", async (c) => {

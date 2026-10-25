@@ -1,5 +1,6 @@
 import { games, library, profiles } from "@anytogether/db";
 import {
+  type CommunityCard,
   DiscoveryUpdate,
   type DiscoveryView,
   ErrorCode,
@@ -64,7 +65,13 @@ const cardOf = (p: {
  *  block either way, and what a card says follows the person's privacy settings. */
 export function discoverRoutes(
   deps: Deps,
-  pieces: { lfg: LfgRoutes; parties: PartyService; shares: SharePlayService },
+  pieces: {
+    lfg: LfgRoutes;
+    parties: PartyService;
+    shares: SharePlayService;
+    /** Public communities of a game (left out of the hub without it). */
+    communities?: (me: string, titleId: string) => Promise<CommunityCard[]>;
+  },
 ) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
@@ -337,12 +344,13 @@ export function discoverRoutes(
     const rules = await family.rulesOf(me);
     const people = !rules || rules.discovery;
     const listings = !rules || rules.publicMatchmaking;
-    const [playing, posts, partyList, shareList, recent] = await Promise.all([
+    const [playing, posts, partyList, shareList, recent, communityList] = await Promise.all([
       people ? playingNow(me, titleId) : [],
       listings ? pieces.lfg.openPosts(me, { titleId, limit: 10 }) : { posts: [] },
       listings ? pieces.parties.publicParties(me, { titleId, limit: 10 }) : [],
       listings && (!rules || rules.sharePlay) ? pieces.shares.publicShares(me, { titleId, limit: 10 }) : [],
       people ? playersOf(me, titleId, 8) : [],
+      listings && pieces.communities ? pieces.communities(me, titleId) : Promise.resolve([]),
     ]);
     return c.json({
       game: { titleId: game.titleId, names: game.names, iconUrl: game.iconUrl },
@@ -352,6 +360,7 @@ export function discoverRoutes(
       parties: partyList,
       sharePlays: shareList,
       recentPlayers: recent,
+      communities: communityList,
     });
   });
 

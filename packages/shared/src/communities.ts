@@ -178,5 +178,7 @@ export type CommunityEvent =
     }
   /** An event the reader is in (or of a community they are in) changed or was cancelled. */
   | { type: "event.updated"; data: EventView }
+  /** Cancelled by its host, the community's moderators or the site's. */
+  | { type: "event.cancelled"; data: { eventId: string; communityId: string; title: string } }
   /** The host started it: where to join. */
   | { type: "event.started"; data: { eventId: string; title: string; link: EventLink } };

@@ -4,6 +4,8 @@ import {
   auditLog,
   avatars,
   bans,
+  communities,
+  communityEvents,
   conversationMembers,
   lfgPosts,
   media,
@@ -27,6 +29,7 @@ import { Hono, type MiddlewareHandler } from "hono";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
 import type { Deps } from "./app.js";
+import { cancelEvent, deleteCommunity } from "./communities.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { needFiles } from "./files.js";
@@ -178,6 +181,29 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
         ? (await db.select().from(media).where(inArray(media.id, mediaIds))).map((m) => [m.id, m])
         : [],
     );
+    // Communities and events still there (a removed community is deleted; an event is cancelled).
+    const communityIds = rows
+      .filter((r) => r.targetKind === "community" && isId(r.targetId))
+      .map((r) => r.targetId);
+    const eventIds = rows.filter((r) => r.targetKind === "event" && isId(r.targetId)).map((r) => r.targetId);
+    const standing = new Set([
+      ...(communityIds.length
+        ? (
+            await db
+              .select({ id: communities.id })
+              .from(communities)
+              .where(inArray(communities.id, communityIds))
+          ).map((c) => c.id)
+        : []),
+      ...(eventIds.length
+        ? (
+            await db
+              .select({ id: communityEvents.id })
+              .from(communityEvents)
+              .where(and(inArray(communityEvents.id, eventIds), eq(communityEvents.status, "scheduled")))
+          ).map((e) => e.id)
+        : []),
+    ]);
     const removed = new Set(
       messageIds.length
         ? (
@@ -201,6 +227,8 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
         purpose?: string;
         name?: string;
         version?: number;
+        title?: string;
+        description?: string | null;
       } | null;
       const theme = r.targetKind === "theme" ? themeRows.get(r.targetId) : undefined;
       return {
@@ -251,6 +279,15 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
                 });
                 return { id: row.id, kind: row.kind, status: row.status, view };
               })()
+            : null,
+        community:
+          r.targetKind === "community" || r.targetKind === "event"
+            ? {
+                name: snapshot?.name ?? null,
+                title: snapshot?.title ?? null,
+                description: snapshot?.description ?? null,
+                removed: !standing.has(r.targetId),
+              }
             : null,
         reporter: reporter ? personView(reporter) : null,
         target: subject ? personView(subject) : null,
@@ -385,6 +422,20 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
         });
         break;
       }
+      case "remove_community": {
+        if (report.targetKind !== "community")
+          throw new HttpError(400, ErrorCode.badRequest, "Only a reported community can be removed");
+        await removeCommunity(report.targetId);
+        await audit(c, "community.removed", report.targetId, { owner: subject, report: report.id });
+        break;
+      }
+      case "remove_event": {
+        if (report.targetKind !== "event")
+          throw new HttpError(400, ErrorCode.badRequest, "Only a reported event can be removed");
+        await removeEvent(report.targetId);
+        await audit(c, "event.removed", report.targetId, { host: subject, report: report.id });
+        break;
+      }
       case "reset_bio": {
         await db.update(profiles).set({ bio: null }).where(eq(profiles.accountId, subject));
         await audit(c, "profile.bio_reset", subject, { report: report.id });
@@ -392,6 +443,32 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
       }
     }
   };
+
+  const removeCommunity = async (id: string) => {
+    const [community] = isId(id) ? await db.select().from(communities).where(eq(communities.id, id)) : [];
+    if (community) await deleteCommunity({ db, valkey }, notes, community, "removed");
+    return Boolean(community);
+  };
+  const removeEvent = async (id: string) => {
+    if (!isId(id)) return false;
+    return Boolean(await cancelEvent({ db, valkey }, notes, id));
+  };
+
+  /** Takes a community down (its chat and events go with it), reported or not. */
+  app.delete("/admin/communities/:id", async (c) => {
+    if (!(await removeCommunity(c.req.param("id"))))
+      throw new HttpError(404, ErrorCode.notFound, "No such community");
+    await audit(c, "community.removed", c.req.param("id"));
+    return c.body(null, 204);
+  });
+
+  /** Cancels an event, reported or not. */
+  app.delete("/admin/events/:id", async (c) => {
+    if (!(await removeEvent(c.req.param("id"))))
+      throw new HttpError(404, ErrorCode.notFound, "No such event");
+    await audit(c, "event.removed", c.req.param("id"));
+    return c.body(null, 204);
+  });
 
   /** The reports queue: open ones by default, newest first, 30 a page (before = the last ID). */
   app.get("/admin/reports", async (c) => {
