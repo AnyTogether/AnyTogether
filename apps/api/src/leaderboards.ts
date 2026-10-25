@@ -18,6 +18,7 @@ import { Hono } from "hono";
 import { uuidv7 } from "uuidv7";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
+import { levelsFor } from "./level.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { people } from "./people.js";
 
@@ -189,11 +190,13 @@ export function leaderboardRoutes(deps: Deps) {
     if (!Number.isInteger(limit) || limit < 1 || limit > maxLeaderboardEntries)
       throw new HttpError(400, ErrorCode.badRequest, `limit: 1 to ${maxLeaderboardEntries}`);
     const result = scope === "global" ? await global(board, me, limit) : await friends(board, me, limit);
-    const byId = await cards([...result.entries, ...result.around].map((r) => r.id));
+    const ids = [...result.entries, ...result.around].map((r) => r.id);
+    const [byId, levels] = await Promise.all([cards(ids), levelsFor(db, me, ids)]);
     const shown = (list: (Row & { rank: number })[]): LeaderboardEntry[] =>
       list.flatMap((r) => {
         const user = byId.get(r.id);
-        return user ? [{ rank: r.rank, user, value: r.value }] : [];
+        const level = levels.get(r.id);
+        return user ? [{ rank: r.rank, user, value: r.value, ...(level ? { level } : {}) }] : [];
       });
     const game = board.titleId
       ? (await db.select().from(games).where(eq(games.titleId, board.titleId)))[0]

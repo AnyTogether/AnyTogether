@@ -79,6 +79,10 @@ const pushTexts = {
     lfg_request: ["{name}", "wants in on your {game} post."],
     lfg_requests: ["{name}", "and {others} more want in on your {game} post."],
     lfg_accepted: ["{name}", "let you in for {game}. Your invite is waiting."],
+    level_up: ["AnyTogether", "You reached trophy level {level}."],
+    community_invite: ["{name}", "invited you to {community}."],
+    event_reminder: ["{event}", "starts in 15 minutes · {community}"],
+    event_started: ["{event}", "{name} started it. Join in."],
     warning: ["AnyTogether", "A moderator warned you: {reason}"],
     family_invite: ["{name}", "invited you to the family {family}."],
     family_request_more_time: ["{name}", "asks for {minutes} more minutes of play today."],
@@ -105,6 +109,10 @@ const pushTexts = {
     lfg_request: ["{name}", "{game} ilanına katılmak istiyor."],
     lfg_requests: ["{name}", "ve {others} kişi daha {game} ilanına katılmak istiyor."],
     lfg_accepted: ["{name}", "seni {game} için kabul etti. Davetin seni bekliyor."],
+    level_up: ["AnyTogether", "Kupa seviyen {level} oldu."],
+    community_invite: ["{name}", "seni {community} topluluğuna çağırdı."],
+    event_reminder: ["{event}", "15 dakika sonra başlıyor · {community}"],
+    event_started: ["{event}", "{name} başlattı. Katıl."],
     warning: ["AnyTogether", "Bir moderatör seni uyardı: {reason}"],
     family_invite: ["{name}", "seni {family} ailesine çağırdı."],
     family_request_more_time: ["{name}", "bugün {minutes} dakika daha oynamak istiyor."],
@@ -153,6 +161,20 @@ export function notificationPath(n: Pick<NotificationView, "kind" | "subjectId" 
     case "lfg_accepted": {
       const invite = (n.data as { invite?: { kind?: string; id?: string } | null }).invite;
       return invite?.kind === "share_play" && invite.id ? `/watch/${invite.id}` : "/party";
+    }
+    case "level_up":
+      return n.actor ? `/u/${n.actor.handle}` : "/notifications";
+    case "community_invite":
+      return `/communities/${n.subjectId}`;
+    case "event_reminder":
+      return `/events/${n.subjectId}`;
+    case "event_started": {
+      const link = (n.data as { link?: { kind?: string; id?: string } | null }).link;
+      return link?.kind === "share_play" && link.id
+        ? `/watch/${link.id}`
+        : link
+          ? "/party"
+          : `/events/${n.subjectId}`;
     }
     default:
       return "/notifications";
@@ -203,6 +225,9 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
     minutes: Number(data.minutes ?? 0),
     person: String((data.person as { displayName?: string } | null)?.displayName ?? ""),
     reply: String(data.reply ?? ""),
+    level: String(data.level ?? ""),
+    community: String(data.community ?? data.name ?? ""),
+    event: String(data.title ?? ""),
   };
   const [title, text] = texts[key];
   return {

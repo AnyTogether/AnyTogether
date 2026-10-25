@@ -48,6 +48,7 @@ export const MessageSend = z
   });
 export const MessageEdit = z.object({ text: Text });
 export const ReadUpTo = z.object({ upToSeq: z.number().int().min(0) });
+export const MuteSet = z.object({ muted: z.boolean() });
 
 export type ConversationKind = "direct" | "group";
 
@@ -87,6 +88,9 @@ export interface ConversationView {
   unread: number;
   lastMessage: MessageView | null;
   updatedAt: string;
+  /** The community whose chat it is: its members come and go with the community's. */
+  communityId?: string | null;
+  muted?: boolean;
 }
 
 export type MessageEvent =

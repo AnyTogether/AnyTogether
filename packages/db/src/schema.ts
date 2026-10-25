@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   check,
@@ -136,10 +137,26 @@ export const profiles = pgTable(
     /** What the handle looks like (handleSkeleton): no two people have look-alike handles. Null
      *  for the later of two handles that already looked alike before this was checked. */
     handleSkeleton: text(),
+    /** All trophy points (the sum over the library) and the trophy level they make, kept up to
+     *  date as trophies arrive. */
+    trophyPoints: integer().notNull().default(0),
+    trophyLevel: integer().notNull().default(1),
+    /** Pinned on the profile: {trophies: [{titleId, trophyId}], games: [titleId]}. */
+    showcase: jsonb()
+      .$type<{ trophies?: { titleId: string; trophyId: number }[]; games?: string[] }>()
+      .notNull()
+      .default({}),
+    /** "preset:<id>" (a cover the server draws) or "game:<titleId>" (the game's artwork). */
+    cover: text(),
+    /** One of the launcher's accents. */
+    accent: text(),
+    /** Players met in parties, share plays, game sessions and posts are remembered. */
+    rememberMet: boolean().notNull().default(true),
   },
   (table) => [
     check("bio_length", sql`length(${table.bio}) <= 160`),
     uniqueIndex("profiles_handle_skeleton").on(table.handleSkeleton),
+    index("profiles_by_level").on(table.trophyLevel.desc()),
   ],
 );
 
@@ -518,7 +535,7 @@ export const activities = pgTable(
     index().on(table.subjectId),
     check(
       "activity_kind",
-      sql`${table.kind} in ('trophy', 'platinum', 'first_play', 'long_session', 'friendship', 'milestone')`,
+      sql`${table.kind} in ('trophy', 'platinum', 'first_play', 'long_session', 'friendship', 'milestone', 'level_up')`,
     ),
     check("activity_section", sql`${table.section} in ('library', 'trophies', 'friends')`),
   ],
@@ -558,6 +575,10 @@ export const conversations = pgTable(
     createdAt: now(),
     /** The last message or change, for ordering the list. */
     updatedAt: now(),
+    /** A community's chat: its members are the community's, kept in step by the API. */
+    communityId: uuid()
+      .unique()
+      .references((): AnyPgColumn => communities.id, { onDelete: "cascade" }),
   },
   (table) => [
     check("kind", sql`${table.kind} in ('direct', 'group')`),
@@ -817,7 +838,7 @@ export const notifications = pgTable(
       .where(sql`${table.readAt} is null`),
     check(
       "notification_kind",
-      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning', 'family_invite', 'family_request', 'family_answer', 'family_alert', 'family_summary', 'appeal')`,
+      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning', 'family_invite', 'family_request', 'family_answer', 'family_alert', 'family_summary', 'appeal', 'level_up', 'community_invite', 'event_reminder', 'event_started')`,
     ),
   ],
 );
@@ -1321,5 +1342,172 @@ export const media = pgTable(
     check("media_kind", sql`${table.kind} in ('image', 'clip', 'voice')`),
     check("media_status", sql`${table.status} in ('active', 'hidden')`),
     check("media_gallery", sql`${table.galleryPosition} between 0 and 11`),
+  ],
+);
+
+/** Who played with whom, one row each way per pair: the last time, where and in which game.
+ *  Kept 90 days after the last meeting; only while both remember meetings. */
+export const metPlayers = pgTable(
+  "met_players",
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    otherId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** party | share_play | game_session | lfg */
+    source: text().notNull(),
+    titleId: text().references(() => games.titleId),
+    times: integer().notNull().default(1),
+    firstMetAt: now(),
+    lastMetAt: now(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.otherId] }),
+    index("met_by_account").on(table.accountId, table.lastMetAt.desc()),
+    index("met_by_time").on(table.lastMetAt),
+    index().on(table.otherId),
+    check("met_source", sql`${table.source} in ('party', 'share_play', 'game_session', 'lfg')`),
+    check("met_not_self", sql`${table.accountId} <> ${table.otherId}`),
+  ],
+);
+
+/** Communities: a name, maybe a game, a preset icon, public or by invite; its chat is the
+ *  conversation bound to it. */
+export const communities = pgTable(
+  "communities",
+  {
+    id: uuid().primaryKey(),
+    name: text().notNull(),
+    titleId: text().references(() => games.titleId),
+    description: text(),
+    icon: text().notNull(),
+    /** public | invite */
+    visibility: text().notNull().default("public"),
+    ownerId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    /** Kept with every join and leave, for lists and the size limit. */
+    memberCount: integer().notNull().default(0),
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  (table) => [
+    index("communities_public").on(table.visibility, table.memberCount.desc()),
+    index().on(table.titleId),
+    index().on(table.ownerId),
+    check("community_visibility", sql`${table.visibility} in ('public', 'invite')`),
+    check("community_name", sql`length(${table.name}) between 3 and 40`),
+    check("community_description", sql`length(${table.description}) <= 500`),
+  ],
+);
+
+export const communityMembers = pgTable(
+  "community_members",
+  {
+    communityId: uuid()
+      .notNull()
+      .references(() => communities.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** owner | moderator | member */
+    role: text().notNull().default("member"),
+    joinedAt: now(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.communityId, table.accountId] }),
+    index().on(table.accountId),
+    check("community_role", sql`${table.role} in ('owner', 'moderator', 'member')`),
+  ],
+);
+
+export const communityInvites = pgTable(
+  "community_invites",
+  {
+    communityId: uuid()
+      .notNull()
+      .references(() => communities.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    invitedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    createdAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.communityId, table.accountId] }), index().on(table.accountId)],
+);
+
+/** People a community's moderators put out; they cannot come back until unbanned. */
+export const communityBans = pgTable(
+  "community_bans",
+  {
+    communityId: uuid()
+      .notNull()
+      .references(() => communities.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    bannedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    reason: text(),
+    createdAt: now(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.communityId, table.accountId] }),
+    check("community_ban_reason", sql`length(${table.reason}) <= 200`),
+  ],
+);
+
+/** A community's planned play times. */
+export const communityEvents = pgTable(
+  "community_events",
+  {
+    id: uuid().primaryKey(),
+    communityId: uuid()
+      .notNull()
+      .references(() => communities.id, { onDelete: "cascade" }),
+    hostId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    title: text().notNull(),
+    titleId: text().references(() => games.titleId),
+    description: text(),
+    startsAt: timestamp({ withTimezone: true }).notNull(),
+    endsAt: timestamp({ withTimezone: true }).notNull(),
+    /** scheduled | cancelled */
+    status: text().notNull().default("scheduled"),
+    /** When the 15-minute reminder went out. */
+    remindedAt: timestamp({ withTimezone: true }),
+    /** {kind: party | share_play, id} once the host started it. */
+    link: jsonb().$type<{ kind: "party" | "share_play"; id: string }>(),
+    startedAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  (table) => [
+    index("events_by_community").on(table.communityId, table.startsAt),
+    index("events_due")
+      .on(table.startsAt)
+      .where(sql`${table.status} = 'scheduled' and ${table.remindedAt} is null`),
+    check("event_status", sql`${table.status} in ('scheduled', 'cancelled')`),
+    check("event_title", sql`length(${table.title}) between 3 and 80`),
+    check("event_description", sql`length(${table.description}) <= 1000`),
+    check("event_ends_after_starts", sql`${table.endsAt} > ${table.startsAt}`),
+  ],
+);
+
+export const eventRsvps = pgTable(
+  "event_rsvps",
+  {
+    eventId: uuid()
+      .notNull()
+      .references(() => communityEvents.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** going | maybe */
+    status: text().notNull(),
+    createdAt: now(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.eventId, table.accountId] }),
+    index().on(table.accountId),
+    check("rsvp_status", sql`${table.status} in ('going', 'maybe')`),
   ],
 );

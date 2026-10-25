@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Grade, RarityLabel } from "./games.js";
+import type { LevelBadge } from "./level.js";
 import type { MemberView } from "./messages.js";
 
 /** What goes in the activity feed, written when it happens:
@@ -8,7 +9,8 @@ import type { MemberView } from "./messages.js";
  *  - first_play: the first session of a game
  *  - long_session: a session of at least `longSessionSeconds`
  *  - friendship: two people became friends (one item per person)
- *  - milestone: a round number of trophies, platinums, games or hours. */
+ *  - milestone: a round number of trophies, platinums, games or hours
+ *  - level_up: a new trophy level (the highest reached at once). */
 export const activityKinds = [
   "trophy",
   "platinum",
@@ -16,6 +18,7 @@ export const activityKinds = [
   "long_session",
   "friendship",
   "milestone",
+  "level_up",
 ] as const;
 export type ActivityKind = (typeof activityKinds)[number];
 
@@ -77,6 +80,8 @@ export interface ActivityView {
   friend?: MemberView;
   /** milestone: what was reached. */
   milestone?: { kind: MilestoneKind; value: number };
+  /** level_up: the level reached. */
+  level?: LevelBadge;
   reactions: { counts: Partial<Record<Reaction, number>>; mine: Reaction | null };
 }
 
@@ -103,6 +108,8 @@ export const friendsBoardSeconds = 30;
 export interface LeaderboardEntry {
   rank: number;
   user: MemberView;
+  /** Their trophy level (older servers leave it out). */
+  level?: LevelBadge;
   /** points, seconds played, or completion percent. */
   value: number;
 }

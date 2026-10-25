@@ -13,6 +13,7 @@ import {
   presenceHiddenKey,
   presenceKey,
   privacyOf,
+  trophyLevelOf,
 } from "@anytogether/shared";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -54,6 +55,7 @@ export function profileRoutes(deps: Deps) {
     handleChangedAt: profile.handleChangedAt,
     handleChangeAt: nextHandleChange(profile),
     privacy: privacyOf(profile.privacy),
+    trophyLevel: trophyLevelOf(profile.trophyPoints),
   });
   const load = async (userId: string) => {
     const [profile] = await db.select().from(profiles).where(eq(profiles.accountId, userId));

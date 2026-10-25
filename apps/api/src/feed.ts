@@ -25,6 +25,7 @@ import {
   freshActivityMs,
   friendsKey,
   grades,
+  levelBadge,
   longSessionSeconds,
   maxFeedPage,
   milestones,
@@ -226,6 +227,8 @@ export async function readActivities(
     if (activity.kind === "friendship" && subject) view.friend = card(subject);
     if (activity.kind === "milestone")
       view.milestone = { kind: payload.kind as MilestoneKind, value: payload.value as number };
+    if (activity.kind === "level_up" && typeof payload.level === "number")
+      view.level = levelBadge(payload.level);
     for (const r of reactionRows.filter((r) => r.activityId === activity.id)) {
       view.reactions.counts[r.reaction as Reaction] = r.count;
       if (r.mine) view.reactions.mine = r.reaction as Reaction;
@@ -405,6 +408,15 @@ export async function recordMilestones(ctx: Ctx, me: string, before: Totals, aft
       });
   }
   await fanOut(ctx, me, await write(ctx, items));
+}
+
+/** A new trophy level: one item, with the level reached. */
+export async function recordLevelUp(ctx: Ctx, me: string, level: number) {
+  await fanOut(
+    ctx,
+    me,
+    await write(ctx, [{ actorId: me, kind: "level_up", section: "trophies", payload: { level } }]),
+  );
 }
 
 /** Two people became friends: an item for each, told to each one's other friends. */

@@ -83,7 +83,9 @@ const play = (user: User, deviceId: string, minutes: number, titleId = game, end
 const feed = async (user: User, query = "") => {
   const response = await h.call("GET", `${v1}/me/feed${query}`, undefined, user.token);
   expect(response.status).toBe(200);
-  return response.body as { items: Item[]; next: string | null };
+  const page = response.body as { items: Item[]; next: string | null };
+  // Trophy levels have their own tests (level.test.ts).
+  return { ...page, items: page.items.filter((item) => item.kind !== "level_up") };
 };
 
 async function listen(userId: string) {

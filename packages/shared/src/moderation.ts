@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** What can be reported; activities join this list when they exist. */
-export const reportTargets = ["user", "message", "theme", "lfg", "media"] as const;
+export const reportTargets = ["user", "message", "theme", "lfg", "media", "community", "event"] as const;
 export const reportReasons = [
   "spam",
   "harassment",
@@ -16,8 +16,8 @@ export type ReportReason = (typeof reportReasons)[number];
 
 export const ReportCreate = z.object({
   targetKind: z.enum(reportTargets),
-  /** For a user, their user ID; for a message, a theme, a looking-for-group post or a piece of
-   *  media (a photo, clip or voice note), its ID. */
+  /** For a user, their user ID; for a message, a theme, a looking-for-group post, a piece of
+   *  media (a photo, clip or voice note), a community or an event, its ID. */
   targetId: z.string().min(1).max(100),
   reason: z.enum(reportReasons),
   note: z.string().trim().max(500).optional(),
@@ -45,6 +45,10 @@ export const reportActions = [
   /** The person may still sign in and play, but not write to others (messages, posts, friend
    *  requests, their name and bio, themes) for some days or until lifted. */
   "mute",
+  /** Deletes a reported community, its chat and its events. */
+  "remove_community",
+  /** Cancels a reported event and takes it off the community. */
+  "remove_event",
 ] as const;
 export type ReportAction = (typeof reportActions)[number];
 

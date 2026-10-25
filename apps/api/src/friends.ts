@@ -1,5 +1,5 @@
 import { accounts, blocks, friendships, profiles } from "@anytogether/db";
-import { ErrorCode, friendsKey, presenceKey, privacyOf } from "@anytogether/shared";
+import { ErrorCode, friendsKey, presenceKey, privacyOf, trophyLevelOf } from "@anytogether/shared";
 import { and, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -10,6 +10,7 @@ import { publish } from "./events.js";
 import { familyGuard } from "./family.js";
 import { forgetFriendship, recordFriendship } from "./feed.js";
 import { body } from "./http.js";
+import { levelsFor } from "./level.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { assertNotMuted } from "./moderation.js";
 import type { Notifier } from "./notifications.js";
@@ -190,7 +191,16 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
   app.get("/me/friends", async (c) => {
     const people = await activePeople(await friendIds(c.get("userId")));
     const byId = await presenceOf(people, "friend");
-    const friends = people.map((p) => ({ ...card(p), presence: byId.get(p.accountId) ?? offline }));
+    const levels = await levelsFor(
+      deps.db,
+      c.get("userId"),
+      people.map((p) => p.accountId),
+    );
+    const friends = people.map((p) => ({
+      ...card(p),
+      presence: byId.get(p.accountId) ?? offline,
+      level: levels.get(p.accountId) ?? null,
+    }));
     // Playing first, then online, then the rest, each by name.
     const rank = (state: string) =>
       state === "in_game" ? 0 : state === "online" ? 1 : state === "away" ? 2 : 3;
@@ -280,6 +290,7 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
       friendship,
       visible,
       connections: await connectionBadges(deps.db, profile.accountId),
+      trophyLevel: visible.trophies ? trophyLevelOf(profile.trophyPoints) : null,
       ...(visible.presence
         ? { presence: (await presenceOf([profile], relation)).get(profile.accountId) }
         : {}),
@@ -311,7 +322,13 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
           ).map((b) => (b.blocker === me ? b.blocked : b.blocker))
         : [],
     );
-    const people = (await activePeople(ids.filter((id) => !hidden.has(id)))).map(card);
+    const shown = await activePeople(ids.filter((id) => !hidden.has(id)));
+    const levels = await levelsFor(
+      deps.db,
+      me,
+      shown.map((p) => p.accountId),
+    );
+    const people = shown.map((p) => ({ ...card(p), level: levels.get(p.accountId) ?? null }));
     people.sort((x, y) => x.displayName.localeCompare(y.displayName));
     return c.json({ friends: people });
   });

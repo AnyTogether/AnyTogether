@@ -148,7 +148,7 @@ export function createApp(deps: Deps) {
   v1.route("/", notificationRoutes(deps, notes));
   v1.route("/", friendRoutes(deps, notes));
   v1.route("/", connectionRoutes(deps));
-  v1.route("/", gameRoutes(deps));
+  v1.route("/", gameRoutes(deps, notes));
   v1.route("/", feedRoutes(deps));
   v1.route("/", leaderboardRoutes(deps));
   v1.route("/", reportRoutes(deps));

@@ -36,7 +36,9 @@ import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { recordMilestones, recordSessions, recordTrophies, totalsOf } from "./feed.js";
 import { body } from "./http.js";
+import { refreshTrophyLevel } from "./level.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import type { Notifier } from "./notifications.js";
 import { type ProfileRow, blockedBetween, canSee, findProfile, relationOf } from "./people.js";
 
 /** Clocks drift; a time a little ahead of ours is still believed. */
@@ -85,7 +87,7 @@ export async function refreshRarityOf(db: Database, titleIds: string[]) {
 }
 
 /** The game catalogue, computers, play sessions, trophy sets, earned trophies and libraries. */
-export function gameRoutes(deps: Deps) {
+export function gameRoutes(deps: Deps, notes?: Notifier) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const { db } = deps;
@@ -499,8 +501,9 @@ export function gameRoutes(deps: Deps) {
       await refreshLibrary(mine(me, [...titles]));
       await refreshRarity([...titles]);
       await recordTrophies(deps, me, kept);
-      if (before && kept.some((t) => Date.parse(t.earnedAt) > now - freshActivityMs))
-        await recordMilestones(deps, me, before, await totalsOf(db, me));
+      const recent = kept.some((t) => Date.parse(t.earnedAt) > now - freshActivityMs);
+      if (before && recent) await recordMilestones(deps, me, before, await totalsOf(db, me));
+      await refreshTrophyLevel(deps, notes, me, recent);
     }
 
     if (fresh.length) {

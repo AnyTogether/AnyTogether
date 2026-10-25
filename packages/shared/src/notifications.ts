@@ -12,6 +12,10 @@ export const notificationKinds = [
   "missed_call",
   "lfg_request",
   "lfg_accepted",
+  "level_up",
+  "community_invite",
+  "event_reminder",
+  "event_started",
   "warning",
   "family_invite",
   "family_request",
@@ -44,7 +48,9 @@ export interface NotificationView {
    *  role}; family_request: {requestId, kind, minutes, titleId, gameName, person}; family_answer:
    *  {requestId, kind, approved, minutes}; family_alert: {event: "limit_reached", childId, date,
    *  titleId}; family_summary: {familyId, from, until, children: [{userId, displayName, seconds,
-   *  games: [{titleId, name, seconds}], friendsAdded}]}. */
+   *  games: [{titleId, name, seconds}], friendsAdded}]}; level_up: {level, tier, frame};
+   *  community_invite: {communityId, name, icon}; event_reminder: {eventId, communityId, title,
+   *  startsAt, titleId, gameNames}; event_started: the same and {link: {kind, id}}. */
   data: Record<string, unknown>;
   read: boolean;
   createdAt: string;
@@ -78,6 +84,10 @@ export const defaultNotificationSettings: NotificationSettings = {
   family_answer: true,
   family_alert: true,
   family_summary: true,
+  level_up: true,
+  community_invite: true,
+  event_reminder: true,
+  event_started: true,
   digest: false,
   familyMail: false,
 };

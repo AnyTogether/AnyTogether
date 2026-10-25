@@ -1,7 +1,9 @@
 import type { CallEvent, SignalKind } from "./calls.js";
+import type { CommunityEvent } from "./communities.js";
 import type { DiscoverEvent } from "./discover.js";
 import type { FeedEvent } from "./feed.js";
 import type { GamePresence, GameSessionEvent, GameSignalKind } from "./gameSessions.js";
+import type { LevelTier } from "./level.js";
 import type { MessageEvent } from "./messages.js";
 import type { Restriction, RestrictionKind } from "./moderation.js";
 import type { NotificationEvent } from "./notifications.js";
@@ -44,6 +46,19 @@ export type GatewayEvent =
         name: string | null;
       };
     }
+  | {
+      type: "level.up";
+      /** The person reached a new trophy level: told to them and to friends who may see their
+       *  trophies. */
+      data: {
+        userId: string;
+        handle: string;
+        displayName: string;
+        level: number;
+        tier: LevelTier;
+        frame: number;
+      };
+    }
   | MessageEvent
   | PartyEvent
   | CallEvent
@@ -54,7 +69,8 @@ export type GatewayEvent =
   | DiscoverEvent
   /** The family changed for this person (limits, a role, joined or left): fetch
    *  /me/family/restrictions again. */
-  | { type: "family.updated"; data: { familyId: string | null } };
+  | { type: "family.updated"; data: { familyId: string | null } }
+  | CommunityEvent;
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 
