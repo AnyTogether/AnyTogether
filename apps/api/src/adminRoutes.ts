@@ -9,6 +9,7 @@ import {
   conversationMembers,
   lfgPosts,
   media,
+  messageReactions,
   messages,
   profiles,
   reports,
@@ -382,6 +383,14 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
           .where(and(eq(messages.id, report.targetId), isNull(messages.deletedAt)))
           .returning();
         if (removed) {
+          await db
+            .delete(messageReactions)
+            .where(
+              and(
+                eq(messageReactions.conversationId, removed.conversationId),
+                eq(messageReactions.seq, removed.seq),
+              ),
+            );
           const members = await db
             .select({ id: conversationMembers.accountId })
             .from(conversationMembers)

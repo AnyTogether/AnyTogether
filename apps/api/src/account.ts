@@ -25,6 +25,7 @@ import {
   handleHistory,
   identities,
   library,
+  messageReactions,
   messages,
   metPlayers,
   notifications,
@@ -140,6 +141,7 @@ export async function exportAccount(
       accent: profile.accent,
       showcase: profile.showcase,
       rememberMet: profile.rememberMet,
+      readReceipts: profile.readReceipts,
     },
     playersMet: (await db.select().from(metPlayers).where(eq(metPlayers.accountId, accountId))).map(
       ({ accountId: _, ...met }) => met,
@@ -277,6 +279,20 @@ export async function exportAccount(
       text: m.text,
       createdAt: m.createdAt,
       editedAt: m.editedAt,
+      editCount: m.editCount,
+      replyTo: m.replyTo,
+    })),
+    messageReactions: (
+      await db
+        .select()
+        .from(messageReactions)
+        .where(eq(messageReactions.accountId, accountId))
+        .orderBy(asc(messageReactions.createdAt))
+    ).map((r) => ({
+      conversationId: r.conversationId,
+      seq: r.seq,
+      reaction: r.reaction,
+      createdAt: r.createdAt,
     })),
     conversations: (
       await db
@@ -292,7 +308,9 @@ export async function exportAccount(
       createdByMe: conversation.createdBy === accountId,
       joinedAt: member.joinedAt,
       readSeq: member.readSeq,
+      deliveredSeq: member.deliveredSeq,
       muted: member.muted,
+      pinned: member.pinnedAt !== null,
     })),
     reportsSent: (
       await db.select().from(reports).where(eq(reports.reporterId, accountId)).orderBy(asc(reports.createdAt))

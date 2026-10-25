@@ -1,25 +1,34 @@
-import { conversationMembers, conversations, messages } from "@anytogether/db";
+import { conversationMembers, conversations, messageReactions, messages, profiles } from "@anytogether/db";
 import {
   type AttachmentView,
   ConversationCreate,
   ConversationMembers,
   ConversationUpdate,
   type ConversationView,
+  DeliveredUpTo,
   ErrorCode,
   type GatewayEvent,
   type MediaKind,
   MessageEdit,
+  type MessageReaction,
+  MessageReactionName,
   MessageSend,
   type MessageView,
   MuteSet,
+  PinSet,
+  type ReactionView,
   ReadUpTo,
+  type ReceiptView,
   conversationMembersKey,
   conversationMembersSeconds,
   editWindowMs,
   maxGroupMembers,
+  maxMessageEdits,
+  maxPinnedConversations,
   mediaFallbackText,
+  messageReactions as reactionNames,
 } from "@anytogether/shared";
-import { and, asc, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
@@ -42,8 +51,24 @@ type Message = typeof messages.$inferSelect;
 const Seq = z.coerce.number().int().min(0);
 const iso = (date: Date | null) => (date ? date.toISOString() : null);
 
+/** Reactions rows gathered per reaction, in the fixed order. */
+export const reactionViews = (rows: { reaction: string; accountId: string }[]): ReactionView[] => {
+  const by = new Map<string, string[]>();
+  for (const row of rows) by.set(row.reaction, [...(by.get(row.reaction) ?? []), row.accountId]);
+  return reactionNames
+    .filter((name) => by.has(name))
+    .map((name) => {
+      const userIds = by.get(name) as string[];
+      return { reaction: name as MessageReaction, count: userIds.length, userIds };
+    });
+};
+
 /** A message as clients see it; `attachments` are its media as resolved for the one who reads. */
-export const messageView = (m: Message, attachments: AttachmentView[] = []): MessageView => {
+export const messageView = (
+  m: Message,
+  attachments: AttachmentView[] = [],
+  reactions: ReactionView[] = [],
+): MessageView => {
   const kind = m.deletedAt ? undefined : (m.attachments as { kind: MediaKind }[])[0]?.kind;
   return {
     id: m.id,
@@ -56,13 +81,16 @@ export const messageView = (m: Message, attachments: AttachmentView[] = []): Mes
     attachments: m.deletedAt ? [] : attachments,
     replyTo: m.replyTo,
     editedAt: iso(m.editedAt),
+    editCount: m.editCount ?? 0,
+    reactions: m.deletedAt ? [] : reactions,
     deletedAt: iso(m.deletedAt),
     createdAt: m.createdAt.toISOString(),
   };
 };
 
-/** Direct conversations between friends and groups made by a member: send, edit for 15 minutes,
- *  delete, read state and unread counts. Every change reaches the members' gateway channels. */
+/** Direct conversations between friends and groups made by a member: send, reply, react, edit for
+ *  15 minutes (at most 20 times), unsend (one's own messages, at any time), delivered and read
+ *  marks, unread counts, mute and pin. Every change reaches the members' gateway channels. */
 export function messageRoutes(deps: Deps, notes: Notifier) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
@@ -72,10 +100,34 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
   const family = familyGuard(db);
   const mediaOf = mediaService(deps);
 
+  /** The reactions of these messages, by "conversationId:seq". */
+  const reactionsOf = async (rows: Message[]) => {
+    const live = rows.filter((m) => !m.deletedAt);
+    const found = live.length
+      ? await db
+          .select()
+          .from(messageReactions)
+          .where(
+            sql`(${messageReactions.conversationId}, ${messageReactions.seq}) in (${sql.join(
+              live.map((m) => sql`(${m.conversationId}::uuid, ${m.seq}::bigint)`),
+              sql`, `,
+            )})`,
+          )
+          .orderBy(asc(messageReactions.createdAt))
+      : [];
+    const by = new Map<string, (typeof found)[number][]>();
+    for (const row of found) {
+      const key = `${row.conversationId}:${row.seq}`;
+      by.set(key, [...(by.get(key) ?? []), row]);
+    }
+    return new Map([...by].map(([key, list]) => [key, reactionViews(list)]));
+  };
+
   /** Messages as `viewer` sees them, their media resolved for them. */
   const viewsFor = async (viewer: string, rows: Message[]) => {
     const attached = await mediaOf.attachmentsFor(viewer, rows);
-    return rows.map((m) => messageView(m, attached.get(m.id)));
+    const reacted = await reactionsOf(rows);
+    return rows.map((m) => messageView(m, attached.get(m.id), reacted.get(`${m.conversationId}:${m.seq}`)));
   };
   const viewFor = async (viewer: string, m: Message) => (await viewsFor(viewer, [m]))[0] as MessageView;
   /** A message event to every member, each with the media as they may see it. */
@@ -128,18 +180,85 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     return row;
   };
 
+  /** The others' messages after `readSeq` that are still there, per conversation, for one member. */
+  const unreadOf = async (viewer: string, rows: { conversation: Conversation; readSeq: number }[]) => {
+    const due = rows.filter((r) => r.conversation.lastSeq > r.readSeq).map((r) => r.conversation.id);
+    if (!due.length) return new Map<string, number>();
+    const counts = await db
+      .select({ id: messages.conversationId, n: sql<number>`count(*)::int` })
+      .from(messages)
+      .innerJoin(
+        conversationMembers,
+        and(
+          eq(conversationMembers.conversationId, messages.conversationId),
+          eq(conversationMembers.accountId, viewer),
+        ),
+      )
+      .where(
+        and(
+          inArray(messages.conversationId, due),
+          gt(messages.seq, conversationMembers.readSeq),
+          isNull(messages.deletedAt),
+          sql`${messages.authorId} is distinct from ${viewer}::uuid`,
+        ),
+      )
+      .groupBy(messages.conversationId);
+    return new Map(counts.map((c) => [c.id, c.n]));
+  };
+  const unreadIn = async (viewer: string, conversation: Conversation) => {
+    const [member] = await db
+      .select({ readSeq: conversationMembers.readSeq })
+      .from(conversationMembers)
+      .where(
+        and(
+          eq(conversationMembers.conversationId, conversation.id),
+          eq(conversationMembers.accountId, viewer),
+        ),
+      );
+    return (
+      (await unreadOf(viewer, [{ conversation, readSeq: member?.readSeq ?? 0 }])).get(conversation.id) ?? 0
+    );
+  };
+
+  /** Whose read receipts are on, of these people. */
+  const receiptsOn = async (ids: string[]) => {
+    if (!ids.length) return new Set<string>();
+    const rows = await db
+      .select({ id: profiles.accountId })
+      .from(profiles)
+      .where(and(inArray(profiles.accountId, ids), eq(profiles.readReceipts, true)));
+    return new Set(rows.map((r) => r.id));
+  };
+
   /** Conversations as the list and the thread show them, for one member. */
   const views = async (
-    rows: { conversation: Conversation; readSeq: number; muted?: boolean }[],
+    rows: { conversation: Conversation; readSeq: number; muted?: boolean; pinnedAt?: Date | null }[],
     viewer: string,
   ) => {
     if (!rows.length) return [];
     const ids = rows.map((r) => r.conversation.id);
     const members = await db
-      .select({ conversationId: conversationMembers.conversationId, id: conversationMembers.accountId })
+      .select({
+        conversationId: conversationMembers.conversationId,
+        id: conversationMembers.accountId,
+        readSeq: conversationMembers.readSeq,
+        deliveredSeq: conversationMembers.deliveredSeq,
+      })
       .from(conversationMembers)
       .where(inArray(conversationMembers.conversationId, ids));
     const cards = await who.cards(members.map((m) => m.id));
+    const others = [...new Set(members.map((m) => m.id).filter((id) => id !== viewer))];
+    const sharing = await receiptsOn([viewer, ...others]);
+    const blocked = await who.blockedAmong(viewer, others);
+    const directOthers = members
+      .filter(
+        (m) =>
+          m.id !== viewer &&
+          rows.some((r) => r.conversation.id === m.conversationId && r.conversation.kind === "direct"),
+      )
+      .map((m) => m.id);
+    const friends = await who.friendsAmong(viewer, [...new Set(directOthers)]);
+    const unread = await unreadOf(viewer, rows);
     const withLast = rows.filter((r) => r.conversation.lastSeq > 0);
     const last = withLast.length
       ? await db
@@ -153,8 +272,19 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
           )
       : [];
     const lastViews = new Map((await viewsFor(viewer, last)).map((v) => [v.conversationId, v]));
-    return rows.map(({ conversation: c, readSeq, muted }): ConversationView => {
+    return rows.map(({ conversation: c, readSeq, muted, pinnedAt }): ConversationView => {
       const lastMessage = lastViews.get(c.id);
+      const direct = c.kind === "direct";
+      const receipts = members
+        .filter((m) => m.conversationId === c.id && m.id !== viewer)
+        .map((m): ReceiptView => {
+          const related = !blocked.has(m.id) && (!direct || friends.has(m.id));
+          return {
+            userId: m.id,
+            readSeq: related && sharing.has(viewer) && sharing.has(m.id) ? m.readSeq : null,
+            deliveredSeq: related && direct ? m.deliveredSeq : null,
+          };
+        });
       return {
         id: c.id,
         kind: c.kind as ConversationView["kind"],
@@ -166,18 +296,23 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
           .filter((card) => card !== undefined),
         lastSeq: c.lastSeq,
         readSeq,
-        unread: Math.max(0, c.lastSeq - readSeq),
+        unread: unread.get(c.id) ?? 0,
         lastMessage: lastMessage ?? null,
         updatedAt: c.updatedAt.toISOString(),
         communityId: c.communityId,
         muted: muted ?? false,
+        pinned: Boolean(pinnedAt),
+        receipts,
       };
     });
   };
 
   const viewOne = async (me: string, conversationId: string) => {
     const { conversation, member } = await membership(conversationId, me);
-    const [view] = await views([{ conversation, readSeq: member.readSeq, muted: member.muted }], me);
+    const [view] = await views(
+      [{ conversation, readSeq: member.readSeq, muted: member.muted, pinnedAt: member.pinnedAt }],
+      me,
+    );
     return view as ConversationView;
   };
 
@@ -196,6 +331,33 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       throw new HttpError(403, ErrorCode.forbidden, "You can only message your friends");
   };
 
+  /** One of `me`'s devices got the messages up to `upTo`: kept, and in a direct conversation told
+   *  to the other person (never across a block). */
+  const delivered = async (conversation: Conversation, me: string, upTo: number) => {
+    const seq = Math.min(upTo, conversation.lastSeq);
+    const moved = await db
+      .update(conversationMembers)
+      .set({ deliveredSeq: seq })
+      .where(
+        and(
+          eq(conversationMembers.conversationId, conversation.id),
+          eq(conversationMembers.accountId, me),
+          lt(conversationMembers.deliveredSeq, seq),
+        ),
+      )
+      .returning({ id: conversationMembers.accountId });
+    if (!moved.length || conversation.kind !== "direct") return;
+    await tellDelivered(conversation, me, seq);
+  };
+  const tellDelivered = async (conversation: Conversation, me: string, seq: number) => {
+    const other = (await memberIds(conversation.id)).find((id) => id !== me);
+    if (other && (await who.friends(me, other)))
+      await publish(deps.valkey, other, {
+        type: "conversation.delivered",
+        data: { conversationId: conversation.id, userId: me, upToSeq: seq },
+      });
+  };
+
   app.get("/me/conversations", async (c) => {
     const me = c.get("userId");
     const before = c.req.query("before");
@@ -203,34 +365,56 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       .select({
         conversation: conversations,
         readSeq: conversationMembers.readSeq,
+        deliveredSeq: conversationMembers.deliveredSeq,
         muted: conversationMembers.muted,
+        pinnedAt: conversationMembers.pinnedAt,
       })
       .from(conversationMembers)
       .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
       .where(
         and(
           eq(conversationMembers.accountId, me),
+          // Pinned ones lead the first page; later pages are the rest by time.
           before && !Number.isNaN(Date.parse(before))
-            ? lt(conversations.updatedAt, new Date(before))
+            ? and(lt(conversations.updatedAt, new Date(before)), isNull(conversationMembers.pinnedAt))
             : undefined,
         ),
       )
-      .orderBy(desc(conversations.updatedAt))
+      .orderBy(sql`${conversationMembers.pinnedAt} is null`, desc(conversations.updatedAt))
       .limit(50);
+    // The list carries each one's newest message: it reached this device.
+    for (const row of rows)
+      if (row.conversation.lastSeq > row.deliveredSeq)
+        await delivered(row.conversation, me, row.conversation.lastSeq);
     return c.json({ conversations: await views(rows, me) });
   });
 
   /** The header's badge: conversations with something unread, and how many messages. */
   app.get("/me/conversations/unread", async (c) => {
     const me = c.get("userId");
+    // The others' messages after one's read mark that are still there; unsent ones do not count.
     const [row] = await db
       .select({
-        conversations: sql<number>`count(*) filter (where ${conversations.lastSeq} > ${conversationMembers.readSeq})::int`,
-        messages: sql<number>`coalesce(sum(greatest(${conversations.lastSeq} - ${conversationMembers.readSeq}, 0)), 0)::int`,
+        conversations: sql<number>`count(distinct ${messages.conversationId})::int`,
+        messages: sql<number>`count(*)::int`,
       })
       .from(conversationMembers)
       .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-      .where(eq(conversationMembers.accountId, me));
+      .innerJoin(
+        messages,
+        and(
+          eq(messages.conversationId, conversationMembers.conversationId),
+          gt(messages.seq, conversationMembers.readSeq),
+        ),
+      )
+      .where(
+        and(
+          eq(conversationMembers.accountId, me),
+          gt(conversations.lastSeq, conversationMembers.readSeq),
+          isNull(messages.deletedAt),
+          sql`${messages.authorId} is distinct from ${me}::uuid`,
+        ),
+      );
     return c.json({ conversations: row?.conversations ?? 0, messages: row?.messages ?? 0 });
   });
 
@@ -383,7 +567,10 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         .orderBy(asc(messages.seq))
         .limit(limit + 1);
       const more = rows.length > limit;
-      return c.json({ messages: await viewsFor(me, rows.slice(0, limit)), more });
+      const page = rows.slice(0, limit);
+      const newest = page.at(-1);
+      if (newest) await delivered(conversation, me, newest.seq);
+      return c.json({ messages: await viewsFor(me, page), more });
     }
     const seq = before === undefined ? undefined : Seq.safeParse(before);
     if (seq && !seq.success) throw new HttpError(400, ErrorCode.badRequest, "before: a message seq");
@@ -394,7 +581,10 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       .orderBy(desc(messages.seq))
       .limit(limit + 1);
     const more = rows.length > limit;
-    return c.json({ messages: await viewsFor(me, rows.slice(0, limit).reverse()), more });
+    const page = rows.slice(0, limit).reverse();
+    const newest = page.at(-1);
+    if (newest) await delivered(conversation, me, newest.seq);
+    return c.json({ messages: await viewsFor(me, page), more });
   });
 
   app.post("/conversations/:id/messages", async (c) => {
@@ -455,7 +645,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         if (!message) throw new Resent();
         await tx
           .update(conversationMembers)
-          .set({ readSeq: bumped.seq })
+          .set({ readSeq: bumped.seq, deliveredSeq: bumped.seq })
           .where(
             and(
               eq(conversationMembers.conversationId, conversation.id),
@@ -520,14 +710,28 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const { conversation } = await membership(c.req.param("id"), me);
     const message = await own(conversation.id, me, c.req.param("seq"));
     const { text } = await body(c, MessageEdit);
+    await limit("messageChange", me);
     if (Date.now() - message.createdAt.getTime() > editWindowMs)
       throw new HttpError(403, ErrorCode.forbidden, "A message can be edited for 15 minutes");
+    const tooMany = () =>
+      new HttpError(409, ErrorCode.editLimit, `A message can be edited ${maxMessageEdits} times`, {
+        max: maxMessageEdits,
+      });
+    if (message.editCount >= maxMessageEdits) throw tooMany();
     allowedText(text);
     const [updated] = await db
       .update(messages)
-      .set({ text, editedAt: new Date() })
-      .where(and(eq(messages.conversationId, conversation.id), eq(messages.seq, message.seq)))
+      .set({ text, editedAt: new Date(), editCount: sql`${messages.editCount} + 1` })
+      .where(
+        and(
+          eq(messages.conversationId, conversation.id),
+          eq(messages.seq, message.seq),
+          isNull(messages.deletedAt),
+          lt(messages.editCount, maxMessageEdits),
+        ),
+      )
       .returning();
+    if (!updated) throw tooMany();
     await tellMessage(await memberIds(conversation.id), "message.updated", updated as Message);
     return c.json(await viewFor(me, updated as Message));
   });
@@ -536,12 +740,18 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const me = c.get("userId");
     const { conversation } = await membership(c.req.param("id"), me);
     const message = await own(conversation.id, me, c.req.param("seq"));
-    // Emptied at once: the text is gone, only the place in the thread stays.
+    await limit("messageChange", me);
+    // Unsent, at any time: emptied at once (text, media, reactions), only its place stays.
     const [deleted] = await db
       .update(messages)
       .set({ text: null, attachments: [], deletedAt: new Date() })
       .where(and(eq(messages.conversationId, conversation.id), eq(messages.seq, message.seq)))
       .returning();
+    await db
+      .delete(messageReactions)
+      .where(
+        and(eq(messageReactions.conversationId, conversation.id), eq(messageReactions.seq, message.seq)),
+      );
     await tell(await memberIds(conversation.id), {
       type: "message.deleted",
       data: messageView(deleted as Message),
@@ -549,6 +759,115 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     // Its media goes with it, unless it is pinned or in another message.
     await mediaOf.releaseFrom(message);
     return c.body(null, 204);
+  });
+
+  /** A message still there (not unsent), by its seq. */
+  const live = async (conversationId: string, rawSeq: string) => {
+    const seq = Seq.safeParse(rawSeq);
+    if (!seq.success) throw new HttpError(404, ErrorCode.notFound, "No such message");
+    const [message] = await db
+      .select()
+      .from(messages)
+      .where(and(eq(messages.conversationId, conversationId), eq(messages.seq, seq.data)));
+    if (!message || message.deletedAt) throw new HttpError(404, ErrorCode.notFound, "No such message");
+    return message;
+  };
+  const reactionName = (raw: string) => {
+    const name = MessageReactionName.safeParse(raw);
+    if (!name.success)
+      throw new HttpError(400, ErrorCode.badRequest, `reaction: one of ${reactionNames.join(", ")}`);
+    return name.data;
+  };
+  /** A message's reactions now, told to every member when they changed. */
+  const reactionsChanged = async (conversationId: string, seq: number, changed: boolean) => {
+    const rows = await db
+      .select({ reaction: messageReactions.reaction, accountId: messageReactions.accountId })
+      .from(messageReactions)
+      .where(and(eq(messageReactions.conversationId, conversationId), eq(messageReactions.seq, seq)))
+      .orderBy(asc(messageReactions.createdAt));
+    const data = { conversationId, seq, reactions: reactionViews(rows) };
+    if (changed) await tell(await memberIds(conversationId), { type: "message.reactions", data });
+    return data;
+  };
+
+  /** A reaction is writing: refused while muted, across a block, or where a child's family rules
+   *  do not allow messages. */
+  app.put("/conversations/:id/messages/:seq/reactions/:reaction", async (c) => {
+    const me = c.get("userId");
+    const { conversation } = await membership(c.req.param("id"), me);
+    const reaction = reactionName(c.req.param("reaction"));
+    await assertNotMuted(deps.db, me);
+    const message = await live(conversation.id, c.req.param("seq"));
+    await limit("messageChange", me);
+    const members = await memberIds(conversation.id);
+    if (conversation.kind === "direct") {
+      const other = members.find((id) => id !== me);
+      if (!other || !(await who.friends(me, other)))
+        throw new HttpError(403, ErrorCode.forbidden, "You can only message your friends");
+    }
+    await family.mayMessage(me, members);
+    const added = await db
+      .insert(messageReactions)
+      .values({ conversationId: conversation.id, seq: message.seq, accountId: me, reaction })
+      .onConflictDoNothing()
+      .returning();
+    return c.json(await reactionsChanged(conversation.id, message.seq, added.length > 0));
+  });
+
+  /** Taking one's reaction back is always allowed. */
+  app.delete("/conversations/:id/messages/:seq/reactions/:reaction", async (c) => {
+    const me = c.get("userId");
+    const { conversation } = await membership(c.req.param("id"), me);
+    const reaction = reactionName(c.req.param("reaction"));
+    const message = await live(conversation.id, c.req.param("seq"));
+    await limit("messageChange", me);
+    const removed = await db
+      .delete(messageReactions)
+      .where(
+        and(
+          eq(messageReactions.conversationId, conversation.id),
+          eq(messageReactions.seq, message.seq),
+          eq(messageReactions.accountId, me),
+          eq(messageReactions.reaction, reaction),
+        ),
+      )
+      .returning();
+    return c.json(await reactionsChanged(conversation.id, message.seq, removed.length > 0));
+  });
+
+  /** A device got messages over the gateway; fetching them says so by itself. */
+  app.post("/conversations/:id/delivered", async (c) => {
+    const me = c.get("userId");
+    const { conversation } = await membership(c.req.param("id"), me);
+    const { upToSeq } = await body(c, DeliveredUpTo);
+    await delivered(conversation, me, upToSeq);
+    return c.body(null, 204);
+  });
+
+  /** Pinned to the top of one's own list, at most five. */
+  app.put("/conversations/:id/pin", async (c) => {
+    const me = c.get("userId");
+    const { conversation, member } = await membership(c.req.param("id"), me);
+    const { pinned } = await body(c, PinSet);
+    if (pinned && !member.pinnedAt) {
+      const [row] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(conversationMembers)
+        .where(and(eq(conversationMembers.accountId, me), isNotNull(conversationMembers.pinnedAt)));
+      if ((row?.n ?? 0) >= maxPinnedConversations)
+        throw new HttpError(409, ErrorCode.full, `At most ${maxPinnedConversations} pinned conversations`, {
+          max: maxPinnedConversations,
+        });
+    }
+    if (pinned !== Boolean(member.pinnedAt))
+      await db
+        .update(conversationMembers)
+        .set({ pinnedAt: pinned ? new Date() : null })
+        .where(
+          and(eq(conversationMembers.conversationId, conversation.id), eq(conversationMembers.accountId, me)),
+        );
+    await tell([me], { type: "conversation.updated", data: { conversationId: conversation.id } });
+    return c.json(await viewOne(me, conversation.id));
   });
 
   /** Muted: no notifications for it (unread counts still show). A community's chat starts muted. */
@@ -563,6 +882,8 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         and(eq(conversationMembers.conversationId, conversation.id), eq(conversationMembers.accountId, me)),
       );
     if (muted) await notes.settle(me, "message", conversation.id);
+    // The person's other devices follow.
+    await tell([me], { type: "conversation.updated", data: { conversationId: conversation.id } });
     return c.json(await viewOne(me, conversation.id));
   });
 
@@ -571,9 +892,16 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const { conversation } = await membership(c.req.param("id"), me);
     const { upToSeq } = await body(c, ReadUpTo);
     const upTo = Math.min(upToSeq, conversation.lastSeq);
+    const [before] = await db
+      .select({ deliveredSeq: conversationMembers.deliveredSeq })
+      .from(conversationMembers)
+      .where(
+        and(eq(conversationMembers.conversationId, conversation.id), eq(conversationMembers.accountId, me)),
+      );
+    // Read means delivered too.
     const moved = await db
       .update(conversationMembers)
-      .set({ readSeq: upTo })
+      .set({ readSeq: upTo, deliveredSeq: sql`greatest(${conversationMembers.deliveredSeq}, ${upTo})` })
       .where(
         and(
           eq(conversationMembers.conversationId, conversation.id),
@@ -582,11 +910,26 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         ),
       )
       .returning();
-    if (moved.length)
-      await tell(await memberIds(conversation.id), {
+    if (moved.length) {
+      const data = { conversationId: conversation.id, userId: me, upToSeq: upTo };
+      // One's own devices hear it with what is left unread; the others only while both share read
+      // receipts and neither blocked the other.
+      await tell([me], {
         type: "conversation.read",
-        data: { conversationId: conversation.id, userId: me, upToSeq: upTo },
+        data: { ...data, unread: await unreadIn(me, conversation) },
       });
+      const others = (await memberIds(conversation.id)).filter((id) => id !== me);
+      const sharing = await receiptsOn([me, ...others]);
+      const blocked = await who.blockedAmong(me, others);
+      const friends = conversation.kind === "direct" ? await who.friendsAmong(me, others) : null;
+      const told = others.filter(
+        (id) => sharing.has(me) && sharing.has(id) && !blocked.has(id) && (!friends || friends.has(id)),
+      );
+      await tell(told, { type: "conversation.read", data });
+      // Read receipts off: the sender still learns it was delivered.
+      if (conversation.kind === "direct" && !told.length && (before?.deliveredSeq ?? 0) < upTo)
+        await tellDelivered(conversation, me, upTo);
+    }
     if (upTo >= conversation.lastSeq) await notes.settle(me, "message", conversation.id);
     return c.body(null, 204);
   });

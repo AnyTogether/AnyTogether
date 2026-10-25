@@ -279,6 +279,36 @@ describe("media in messages", () => {
     expect(left).toEqual([pinned.body.media.id]);
   });
 
+  it("unsent, give their bytes back to the sender's quota", async () => {
+    const utku = await h.user("utku@example.com");
+    const ayse = await h.user("ayse@example.com");
+    await befriend(utku, ayse);
+    const chat = await direct(utku, ayse);
+    const kept = await uploadMedia(utku, "image", await png(40, 40));
+    const photo = await uploadMedia(utku, "image", await png(90, 90));
+    const sent = await sendMessage(utku, chat, {
+      text: "look",
+      attachments: [{ mediaId: photo.body.media.id }],
+    });
+    const usage = async () =>
+      (await h.call("GET", `${v1}/me/storage`, undefined, utku.token)).body.usage.used as number;
+    const before = await usage();
+    expect(before).toBeGreaterThan(kept.body.media.size);
+    const unsent = await h.call(
+      "DELETE",
+      `${v1}/conversations/${chat}/messages/${sent.body.seq}`,
+      undefined,
+      utku.token,
+    );
+    expect(unsent.status).toBe(204);
+    expect(await usage()).toBe(before - photo.body.media.size);
+    expect((await thread(ayse, chat))[0]).toMatchObject({
+      text: null,
+      attachments: [],
+      deletedAt: expect.any(String),
+    });
+  });
+
   it("show as removed once their owner deletes them", async () => {
     const utku = await h.user("utku@example.com");
     const ayse = await h.user("ayse@example.com");

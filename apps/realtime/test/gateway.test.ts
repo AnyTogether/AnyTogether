@@ -142,6 +142,43 @@ describe("the gateway", () => {
     other.socket.close();
   });
 
+  it("brings reactions, delivered and read marks to every device of the user, and back after a reconnect", async () => {
+    const laptop = await signedIn("u1", "s1");
+    const phone = await signedIn("u1", "s2");
+    const reactions = {
+      conversationId: "c1",
+      seq: 4,
+      reactions: [{ reaction: "gg", count: 1, userIds: ["u2"] }],
+    };
+    const seen = await publish("u1", { type: "message.reactions", data: reactions });
+    await publish("u1", {
+      type: "conversation.read",
+      data: { conversationId: "c1", userId: "u1", upToSeq: 4, unread: 0 },
+    });
+    for (const device of [laptop, phone]) {
+      expect(await device.waitFor((frame) => frame.type === "message.reactions")).toMatchObject({
+        data: reactions,
+      });
+      expect(await device.waitFor((frame) => frame.type === "conversation.read")).toMatchObject({
+        data: { upToSeq: 4, unread: 0 },
+      });
+    }
+    phone.socket.close();
+    await phone.closed;
+    await publish("u1", {
+      type: "conversation.delivered",
+      data: { conversationId: "c1", userId: "u2", upToSeq: 5 },
+    });
+    const back = await signedIn("u1", "s2", seen);
+    await back.waitFor((frame) => frame.type === "conversation.delivered");
+    expect(back.frames.filter((frame) => frame.op === "event").map((frame) => frame.type)).toEqual([
+      "conversation.read",
+      "conversation.delivered",
+    ]);
+    laptop.socket.close();
+    back.socket.close();
+  });
+
   it("closes the signed-out session's socket and keeps the others", async () => {
     const mac = await signedIn("u1", "mac");
     const phone = await signedIn("u1", "phone");

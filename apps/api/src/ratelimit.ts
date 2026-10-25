@@ -38,6 +38,8 @@ export const defaultLimits = {
   /** Messages sent by one account: a minute's burst, and a day's. */
   message: { max: 30, seconds: 60 },
   messageDay: { max: 1000, seconds: 86_400 },
+  /** Edits, unsends and reactions by one account. */
+  messageChange: { max: 60, seconds: 60 },
   /** Calls started (rung or joined) by one account. */
   call: { max: 60, seconds: 3600 },
   /** Game sessions opened by one account. */

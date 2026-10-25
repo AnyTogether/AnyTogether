@@ -5,6 +5,7 @@ import {
   PresenceModeUpdate,
   PrivacyUpdate,
   ProfileUpdate,
+  ReadReceiptsSet,
   friendsKey,
   handleCooldownDays,
   handleSkeleton,
@@ -78,6 +79,7 @@ export function profileRoutes(deps: Deps) {
         showcase: profile.showcase,
         rememberMet: profile.rememberMet,
         appearOffline: profile.appearOffline,
+        readReceipts: profile.readReceipts,
       },
       // What the account may not do now (a mute; a banned account has no session), and its
       // newest appeal.
@@ -185,6 +187,16 @@ export function profileRoutes(deps: Deps) {
     );
     await publish(deps.valkey, userId, { type: "presence.mode", data: { appearOffline } });
     return c.json({ appearOffline });
+  });
+
+  /** Read receipts on or off: off, nobody sees how far this person has read and they see nobody's
+   *  (delivered marks and their own unread counts stay). Their other devices hear the change. */
+  app.patch("/me/read-receipts", async (c) => {
+    const userId = c.get("userId");
+    const { readReceipts } = await body(c, ReadReceiptsSet);
+    await db.update(profiles).set({ readReceipts }).where(eq(profiles.accountId, userId));
+    await publish(deps.valkey, userId, { type: "messages.settings", data: { readReceipts } });
+    return c.json({ readReceipts });
   });
 
   return app;
