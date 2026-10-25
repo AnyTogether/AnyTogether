@@ -155,6 +155,9 @@ export const profiles = pgTable(
     /** Appear offline: signed in and working, but friends and everyone else see the account as
      *  offline (with privacy's presence "nobody", the gateway keeps its presence to itself). */
     appearOffline: boolean().notNull().default(false),
+    /** Read receipts: others in a conversation see how far this person has read, and this person
+     *  sees theirs. Off hides both ways; delivered marks and one's own unread counts stay. */
+    readReceipts: boolean().notNull().default(true),
   },
   (table) => [
     check("bio_length", sql`length(${table.bio}) <= 160`),
@@ -599,7 +602,12 @@ export const conversationMembers = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     readSeq: bigint({ mode: "number" }).notNull().default(0),
+    /** The newest message one of this member's devices has fetched or acknowledged; never below
+     *  read_seq once read. Shown to the other person of a direct conversation as "delivered". */
+    deliveredSeq: bigint({ mode: "number" }).notNull().default(0),
     muted: boolean().notNull().default(false),
+    /** Pinned to the top of this member's list (at most five); null when not pinned. */
+    pinnedAt: timestamp({ withTimezone: true }),
     joinedAt: now(),
   },
   (table) => [primaryKey({ columns: [table.conversationId, table.accountId] }), index().on(table.accountId)],
@@ -622,12 +630,38 @@ export const messages = pgTable(
     attachments: jsonb().notNull().default([]),
     replyTo: bigint({ mode: "number" }),
     editedAt: timestamp({ withTimezone: true }),
+    /** How many times its author edited it (at most maxMessageEdits). */
+    editCount: integer().notNull().default(0),
     deletedAt: timestamp({ withTimezone: true }),
     createdAt: now(),
   },
   (table) => [
     primaryKey({ columns: [table.conversationId, table.seq] }),
     check("text_length", sql`length(${table.text}) <= 4000`),
+  ],
+);
+
+/** One of the fixed reactions (see messageReactions) per person per message, toggled; several
+ *  different ones per person are fine. Gone with the message's unsend or removal. */
+export const messageReactions = pgTable(
+  "message_reactions",
+  {
+    conversationId: uuid().notNull(),
+    seq: bigint({ mode: "number" }).notNull(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    reaction: text().notNull(),
+    createdAt: now(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.conversationId, table.seq, table.accountId, table.reaction] }),
+    foreignKey({
+      columns: [table.conversationId, table.seq],
+      foreignColumns: [messages.conversationId, messages.seq],
+    }).onDelete("cascade"),
+    index().on(table.accountId),
+    check("reaction", sql`${table.reaction} in ('like', 'love', 'laugh', 'wow', 'sad', 'fire', 'gg')`),
   ],
 );
 
