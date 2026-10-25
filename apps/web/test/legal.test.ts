@@ -33,6 +33,40 @@ describe("the privacy notice and the terms", () => {
     }
   });
 
+  it("keep the same number of paragraphs, list items and rows in both languages", () => {
+    for (const key of ["privacy", "terms"] as const) {
+      const counts = (lang: "en" | "tr") =>
+        legalStrings(lang)[key].sections.map((s) => s.blocks.map((b) => texts(b).length));
+      expect(counts("tr")).toEqual(counts("en"));
+    }
+  });
+
+  it("cover what the service does now", () => {
+    const privacy = JSON.stringify(legalStrings("en").privacy);
+    for (const feature of [
+      "Recently played with",
+      "Communities and events",
+      "join code",
+      "Appear offline",
+      "Discord link",
+      "game session",
+      "backed up every night",
+      "14 days",
+      "Google Fonts",
+      "relay",
+    ])
+      expect(privacy).toContain(feature);
+    const gizlilik = JSON.stringify(legalStrings("tr").privacy);
+    for (const feature of [
+      "Son oynadıkların",
+      "Topluluklar ve etkinlikler",
+      "katılma kod",
+      "Çevrimdışı görün",
+      "her gece yedeklenir",
+    ])
+      expect(gizlilik).toContain(feature);
+  });
+
   it("link only to this site, https pages and their own sections", () => {
     for (const lang of ["en", "tr"] as const)
       for (const doc of Object.values(legalStrings(lang))) {

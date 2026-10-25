@@ -62,8 +62,8 @@ const privacyEn: LegalDoc = {
     title: "The short version",
     points: [
       "No ads, no analytics, no trackers, and nothing is sold. The website sets only the cookies it needs to keep you signed in and remember your language.",
-      "We keep what the features need: your account and profile, your friends, what you write and send, your play time and trophies, and the files you upload.",
-      "You choose who sees your games, trophies, friends, online status and gallery. Out of the box they are for friends only.",
+      "We keep what the features need: your account and profile, your friends, what you write and send, your play time and trophies, the communities you join, and the files you upload.",
+      "You choose who sees your games, trophies, friends, online status and gallery, and you can appear offline. Out of the box they are for friends only.",
       "Download everything, or delete your account, in [Settings](/settings#data). A deleted account is gone for good 14 days later.",
     ],
   },
@@ -75,7 +75,7 @@ const privacyEn: LegalDoc = {
       blocks: [
         "anytogether.kodla.agency is run by the maintainer of the open source AnyTogether project, Utku Halis (kodla.agency). The maintainer decides what this server keeps and is responsible for it.",
         "AnyTogether is open source: anyone can run their own server, and the AnyPS5 apps can sign in to one. A server at another address is run by its own operator, who decides how it handles data. This notice does not cover it.",
-        "The AnyPS5 apps (the Mac launcher, the Windows and Linux launcher, and AnyPS5 Remote on your phone) use this same server when you sign in to AnyTogether in them, so this notice covers what they send here too. What the apps keep on your own computer or phone stays there.",
+        "The AnyPS5 apps (the Mac launcher, the Windows and Linux launcher, and AnyPS5 Remote on your phone) use this same server when you sign in to AnyTogether in them, so this notice covers what they send here too. What the apps keep on your own computer or phone stays there, such as the log of a game's online calls that the Mac launcher writes on your Mac when you turn on Online play: it is never sent here.",
       ],
     },
     {
@@ -91,11 +91,15 @@ const privacyEn: LegalDoc = {
             ],
             [
               "Profile",
-              "Your handle (an old one is held for you for 30 days after a change), display name, avatar, bio, country, the languages you play in, and your privacy and notification settings. An uploaded avatar is turned into a small JPEG without its metadata.",
+              "Your handle (an old one is held for you for 30 days after a change), display name, avatar, bio, country, the languages you play in, a cover and an accent colour, the trophies and games you pin to your showcase, your trophy level (worked out from your trophy points), and your privacy, notification and Appear offline settings. An uploaded avatar is turned into a small JPEG without its metadata.",
             ],
             [
               "Friends",
-              "Your friends and friend requests, the people you block, and your reactions to friends' activity.",
+              "Your friends and friend requests, the people you block, and your reactions to friends' activity. And, so you can find them again, who you were with in a party, a share play, an online game or a looking-for-group game, with the game and when (Recently played with). This is on until you turn it off on the [Recently played with](/players) page, which also deletes the list, and each person is forgotten 90 days after you last played together.",
+            ],
+            [
+              "Online status",
+              "While an app or the site is open: which of your devices are online and what you are playing, kept in memory and gone about two minutes after a device's last sign of life, and when each device was last used. With Appear offline everyone sees you as offline, but the server still knows you are connected, so messages and calls reach you.",
             ],
             [
               "Messages",
@@ -103,11 +107,11 @@ const privacyEn: LegalDoc = {
             ],
             [
               "Parties, calls and share play",
-              "Which party you are in, invites and requests to join, and when calls start and end. The sound of a call and the picture of a share play go straight between the people in it (or through this server's relay when a direct connection is impossible) and are never recorded.",
+              "Which party you are in, invites and requests to join, a party's Discord link if its members add one, join codes (who made one, for what, and when it stops working: after 24 hours unless chosen otherwise, 72 at most), and calls: who called whom, and when the call started, was answered and ended. The sound of a call and the picture of a share play go straight between the people in it (or through this server's relay when a direct connection is impossible) and are never recorded.",
             ],
             [
               "Games",
-              "What the AnyPS5 launchers report: your play sessions (the game, when it started and ended, whether it closed normally), your library and play time, the trophies you earn and when, and your computers (a random ID, the platform, a name and a model). Your activity feed and the leaderboards are made from these.",
+              "What the AnyPS5 launchers report: your play sessions (the game, when it started and ended, whether it closed normally), your library and play time, the trophies you earn and when, and your computers (a random ID, the platform, a name and a model). When you play online or join a friend's game: the game session (the game and its version, the AnyPS5 version, who is in it, and what the game shares with the other players). Your activity feed and the leaderboards are made from these.",
             ],
             [
               "Cloud saves and media",
@@ -116,6 +120,10 @@ const privacyEn: LegalDoc = {
             [
               "What you share",
               "Themes you share in the Theme Hub, compatibility reports (the game, platform, versions, your machine and operating system, the frame rate and your note) and looking-for-group posts.",
+            ],
+            [
+              "Communities and events",
+              "The communities you make or join and your role in them, invites, the members a community's moderators remove or ban (with the reason they give), the community's chat (kept like other messages), and the events you plan or say you are going to.",
             ],
             [
               "Families",
@@ -135,7 +143,7 @@ const privacyEn: LegalDoc = {
             ],
             [
               "Your IP address",
-              "Used to count requests against abuse limits, for example sign-in attempts. These counters are kept in memory under the address and run out with their limit, within a day. AnyTogether's own code does not write IP addresses, or anything you write, to its logs.",
+              "Used to count requests against abuse limits, for example sign-in attempts. These counters are kept in memory under the address and run out with their limit, within a day. When a call or a share play goes through this server's relay, the relay sees your IP address and writes the connection, with your account's ID, to its own log. AnyTogether's own code does not write IP addresses, or anything you write, to its logs.",
             ],
           ],
         },
@@ -147,11 +155,12 @@ const privacyEn: LegalDoc = {
       blocks: [
         {
           list: [
-            "Anyone, signed in or not: your profile card (handle, display name, avatar, bio, country), the themes you share and your looking-for-group posts. Compatibility reports are shown without your name.",
-            "Your friends, everyone, or nobody, as you choose in [Settings → Privacy](/settings#privacy): your games and play time, trophies, friends list, online status and the game you are playing, and your gallery. Out of the box these are for friends only, and others can find you by search. Leaderboards and player suggestions follow the same settings.",
-            "The members of a conversation see its messages; the people in a party or a call see who else is there.",
-            "In a call or a share play the others' devices connect to yours, so they can learn your IP address, as in any peer-to-peer call.",
-            "Moderators see what is reported to them and the restrictions and appeals they handle. Whoever runs the server can technically reach everything on it, messages included: they are not end-to-end encrypted.",
+            "Anyone, signed in or not: your profile card (handle, display name, avatar, bio, country, cover and accent colour, and the Steam or Discord badges you have not hidden), the themes you share and your looking-for-group posts. Compatibility reports are shown without your name. Profile pages ask search engines not to list them. Whoever has a join code you made sees your profile card, the game and how many are in the party.",
+            "Your friends, everyone, or nobody, as you choose in [Settings → Privacy](/settings#privacy): your games and play time, trophies (with your trophy level, and comparing trophies with you), friends list, online status and the game you are playing, and your gallery. Out of the box these are for friends only, and others can find you by search. Your showcase, leaderboards and player suggestions follow the same settings.",
+            "The members of a conversation see its messages; the people in a party or a call see who else is there, and only a party's members see its Discord link. Only you see your Recently played with list; the people on it see you on theirs.",
+            "Anyone signed in sees a public community, its members (with their role and when they joined) and who is going to its events; an invite-only community is seen only by its members.",
+            "In a call, a share play or an online game the others' devices connect to yours, so they can learn your IP address, as in any peer-to-peer connection.",
+            "Moderators see what is reported to them and the restrictions and appeals they handle; a community's moderators see its members and can remove or ban them from it. Whoever runs the server can technically reach everything on it, messages included: they are not end-to-end encrypted.",
             "Parents and a family's manager see what [Children and families](#children) describes.",
           ],
         },
@@ -167,9 +176,10 @@ const privacyEn: LegalDoc = {
             "Mail: sign-in codes and the other mails below go out through a mail delivery service, which handles your address and the mail.",
             "Browser notifications, when you turn them on: your browser maker's push service (for example Google, Apple or Mozilla) delivers them. What they say is encrypted for your browser.",
             "Steam and Discord, only when you link them or sign in with them: you sign in on their site and they tell this server who you are. The same for Google and Apple, where this server offers them.",
-            "An avatar taken from Discord, Google or Apple loads from that service.",
+            "An avatar taken from Discord, Google or Apple loads from that service. Some games' icons, and profile covers made from them, load from the site that keeps the icon (only sites this server allows), which then sees your IP address.",
+            "To draw the picture shown when someone shares a link to a profile, this server asks Google Fonts for the letters it needs. That request contains the profile's name, handle and bio, which are public anyway, but nothing about who is looking.",
             "Downloads lead to GitHub, where AnyPS5 is released. This site reads the list of releases from GitHub itself, so visiting tells GitHub nothing until you download.",
-            "There are no analytics, advertising or social media scripts on this site, and its fonts are served by this site itself.",
+            "There are no analytics, advertising or social media scripts on this site, and the fonts your browser loads come from this site itself.",
           ],
         },
       ],
@@ -195,7 +205,7 @@ const privacyEn: LegalDoc = {
             ],
           },
         },
-        "Your browser also keeps your voice chat choice (push to talk or open mic) in its local storage. When you are signed in, the site adds a small service worker that shows notifications and a page saying you are offline when there is no connection. It stores only that page, never your data.",
+        "Your browser also keeps your voice chat choice (push to talk or open mic) in its local storage. When you are signed in, the site adds a small service worker that shows notifications and a page saying you are offline when there is no connection. It stores only that page, never your data. Installing the site as an app (Add to Home Screen) stores nothing more.",
       ],
     },
     {
@@ -234,12 +244,13 @@ const privacyEn: LegalDoc = {
       blocks: [
         {
           list: [
-            "Your account and everything in it: until you delete the account. Deleting hides your profile and signs out every device at once, and 14 days later everything is deleted for good (signing in during those days cancels it). Your messages are emptied, so the others' conversations keep their order.",
+            "Your account and everything in it: until you delete the account. Deleting hides your profile and signs out every device at once, and 14 days later everything is deleted for good (signing in during those days cancels it). Your messages are emptied, so the others' conversations keep their order. A community you own passes to one of its moderators or members (or ends when no one is left), and its name and description stay; events you planned stay without your name; you disappear from everyone's Recently played with.",
             "A few things outlast an account, without its name: compatibility reports, the games a launcher was first to add to the catalogue, and reports the account sent. A report about a message keeps its copy of that message. A ban on an email address keeps only a hash of the address, so it can still be enforced, and the moderation log keeps the account's ID.",
-            "Sign-in codes: deleted 30 days after they expire. Notifications: read ones after 90 days, all after 180 days. A sign-in on a device ends after 90 days without use. Old handles: 30 days.",
+            "Sign-in codes: deleted 30 days after they expire. Notifications: read ones after 90 days, all after 180 days. Recently played with: 90 days after you last played together. A sign-in on a device ends after 90 days without use (the record of it stays with your account). An old handle is held for you for 30 days (the list of your past handles stays with your account).",
             "Cloud saves: the newest three versions of each slot, until you delete them. Photos and clips nobody sent or pinned: deleted after a day, as are unfinished uploads.",
-            "Looking-for-group posts close within a day; abuse counters run out within a day.",
-            "If the server's operator keeps backups, deleted data can remain in them until those backups are deleted too.",
+            "Looking-for-group posts leave the board within a day (the post stays with your account); join codes stop working when they run out; abuse counters run out within a day. Push notification addresses go when you turn notifications off, sign out of that browser, or the push service says it is gone.",
+            "With no shorter limit, these stay until your account is deleted: call records, parties and their Discord links, game sessions, join codes, and community events, invites and bans (or until the community is deleted). Reports, restrictions, appeals and the moderation log have no set end.",
+            "This server's database and files are backed up every night, and each backup is deleted after 14 days. What you delete, or a deleted account, can remain in a backup until that backup is deleted. If backups are also kept with an outside storage provider, they will be encrypted before they leave this server, follow the same 14 days, and the provider will be named here.",
           ],
         },
       ],
@@ -252,9 +263,9 @@ const privacyEn: LegalDoc = {
         {
           list: [
             "choose who sees what;",
-            "download everything this server holds about your account as one file, with links to your saves and media;",
+            "download what this server holds about your account as one file (your account, profile, friends, messages, games, communities, Recently played with and more), with links to your saves and media. A few records are not in it yet: calls, parties, game sessions, and the themes and compatibility reports you shared; ask for them under [Contact](#contact);",
             "delete your account;",
-            "see and sign out your devices, remove passkeys, unlink Steam or Discord, and turn notifications and mails off.",
+            "see and sign out your devices, remove passkeys, unlink Steam or Discord, appear offline, turn Recently played with off, and turn notifications and mails off.",
           ],
         },
         "Depending on where you live, laws such as the EU's GDPR or Turkey's KVKK give you more rights: to access, correct, delete or move your data, to object to or restrict how it is used, and to complain to your data protection authority. For anything Settings does not cover, see [Contact](#contact).",
@@ -266,6 +277,7 @@ const privacyEn: LegalDoc = {
       blocks: [
         'Families are opt-in. A manager makes a family and brings people in: parents, other adults and children. A child account that a manager makes waits for the child\'s own confirmation, and anyone added to a family they do not know can leave it with "This is not my family".',
         "Parents choose what a child may do: play time, age ratings, who may message, call or send friend requests. They answer the child's requests (more time, a new friend, a game), see the child's play time, the games they play and the friends they add, and can get a weekly summary. They do not see the child's messages.",
+        "Parents also choose whether a child may use communities and their events (off at first). Recently played with is on for children as for everyone, and a child can turn it off; parents do not see that list or the child's communities.",
         "If you are under the age at which your country lets you use online services on your own, use AnyTogether only with a parent's permission, ideally in a family.",
       ],
     },
@@ -313,7 +325,7 @@ const termsEn: LegalDoc = {
       id: "service",
       title: "The service",
       blocks: [
-        "AnyTogether is the online part of AnyPS5: accounts, friends, messages, parties and voice, share play, trophies and leaderboards, cloud saves, the Theme Hub and the compatibility list. anytogether.kodla.agency is run by the maintainer of the open source AnyTogether project. It costs nothing and shows no ads.",
+        "AnyTogether is the online part of AnyPS5: accounts, friends, messages, parties and voice, share play, trophies and leaderboards, communities and events, cloud saves, the Theme Hub and the compatibility list. anytogether.kodla.agency is run by the maintainer of the open source AnyTogether project. It costs nothing and shows no ads.",
         "AnyPS5 and AnyTogether have nothing to do with Sony Interactive Entertainment. PlayStation, PS5 and DualSense are Sony's trademarks.",
       ],
     },
@@ -348,7 +360,7 @@ const termsEn: LegalDoc = {
             "post someone else's private information.",
           ],
         },
-        "Using AnyTogether to break the law is against these terms too.",
+        "Using AnyTogether to break the law is against these terms too. If you run a community or plan an event, keep it within these rules as well.",
       ],
     },
     {
@@ -356,6 +368,7 @@ const termsEn: LegalDoc = {
       title: "Your games",
       blocks: [
         "AnyPS5 runs games you own, from dumps of your own copies. Nothing here offers game files, firmware or keys, and you may not use AnyTogether to get or spread them.",
+        "Online play in the AnyPS5 launcher is experimental: it may not work with a game, or may stop working, and in an online game the other players' computers connect to yours.",
       ],
     },
     {
@@ -363,15 +376,16 @@ const termsEn: LegalDoc = {
       title: "What you share",
       blocks: [
         "What you write and upload stays yours. You let this server store it, change its format where needed (for example re-encoding photos) and show it to the people you chose, for as long as it is here. Themes you share in the Theme Hub can be downloaded by anyone and used in their launcher. Compatibility reports stay on the list, without your name, after you delete your account.",
-        "Only share what you have the right to share, and remember that what others can see, they can also save.",
+        "Only share what you have the right to share, and remember that what others can see, they can also save. Give a join code only to people you want in: whoever has it sees your profile card and can ask to join, until it runs out or you make a new one.",
       ],
     },
     {
       id: "moderation",
       title: "Moderation and appeals",
       blocks: [
-        "Anyone can report a person, a message, a photo or clip, a theme or a post. Moderators look at reports and can dismiss them, warn, hide content, mute an account (it can sign in but not write to others), or ban an account or an email address, for a while or until lifted. You are told what a restriction is, why, and until when, on the site and in the apps.",
+        "Anyone can report a person, a message, a photo or clip, a theme, a post, a community or an event. Moderators look at reports and can dismiss them, warn, hide content, mute an account (it can sign in but not write to others), or ban an account or an email address, for a while or until lifted. You are told what a restriction is, why, and until when, on the site and in the apps.",
         "If you think a decision is wrong, appeal it from the page that explains it ([/restricted](/restricted)). One appeal can be open at a time, and a moderator answers it.",
+        "A community's owner and moderators can remove or ban members from that community. That is their decision about their community, not a restriction on your account, and the site's moderators can remove a community or an event that breaks these terms.",
       ],
     },
     {
@@ -433,8 +447,8 @@ const privacyTr: LegalDoc = {
     title: "Kısaca",
     points: [
       "Reklam, analiz aracı, takipçi yok; hiçbir şey satılmaz. Site yalnızca giriş yapmış kalman ve dilini hatırlaması için gereken çerezleri kullanır.",
-      "Yalnızca özelliklerin gerektirdiğini saklarız: hesabın ve profilin, arkadaşların, yazıp gönderdiklerin, oyun süren ve kupaların, yüklediğin dosyalar.",
-      "Oyunlarını, kupalarını, arkadaşlarını, çevrimiçi durumunu ve galerini kimin göreceğini sen seçersin. Başta hepsi yalnızca arkadaşlarına açıktır.",
+      "Yalnızca özelliklerin gerektirdiğini saklarız: hesabın ve profilin, arkadaşların, yazıp gönderdiklerin, oyun süren ve kupaların, katıldığın topluluklar, yüklediğin dosyalar.",
+      "Oyunlarını, kupalarını, arkadaşlarını, çevrimiçi durumunu ve galerini kimin göreceğini sen seçersin; istersen çevrimdışı görünebilirsin. Başta hepsi yalnızca arkadaşlarına açıktır.",
       "Her şeyi [Ayarlar](/settings#data)'dan indirebilir ya da hesabını oradan silebilirsin. Silinen hesap 14 gün sonra tamamen gider.",
     ],
   },
@@ -446,7 +460,7 @@ const privacyTr: LegalDoc = {
       blocks: [
         "anytogether.kodla.agency'yi açık kaynak AnyTogether projesinin geliştiricisi Utku Halis (kodla.agency) çalıştırır. Bu sunucunun neleri sakladığına o karar verir ve bundan o sorumludur.",
         "AnyTogether açık kaynaktır: herkes kendi sunucusunu kurabilir ve AnyPS5 uygulamaları böyle bir sunucuya da bağlanabilir. Başka bir adresteki sunucuyu kendi işletmecisi çalıştırır ve verileri nasıl işleyeceğine o karar verir. Bu bildirim o sunucuları kapsamaz.",
-        "AnyPS5 uygulamaları (Mac başlatıcısı, Windows ve Linux başlatıcısı, telefondaki AnyPS5 Remote) içlerinde AnyTogether'a giriş yaptığında bu sunucuyu kullanır; bu yüzden bu bildirim onların buraya gönderdiklerini de kapsar. Uygulamaların kendi bilgisayarında ya da telefonunda tuttukları orada kalır.",
+        "AnyPS5 uygulamaları (Mac başlatıcısı, Windows ve Linux başlatıcısı, telefondaki AnyPS5 Remote) içlerinde AnyTogether'a giriş yaptığında bu sunucuyu kullanır; bu yüzden bu bildirim onların buraya gönderdiklerini de kapsar. Uygulamaların kendi bilgisayarında ya da telefonunda tuttukları orada kalır; örneğin Online oyunu açtığında Mac başlatıcısının Mac'inde tuttuğu, bir oyunun online çağrılarının kaydı: buraya asla gönderilmez.",
       ],
     },
     {
@@ -462,11 +476,15 @@ const privacyTr: LegalDoc = {
             ],
             [
               "Profil",
-              "Kullanıcı adın (değiştirdiğinde eskisi 30 gün senin için ayrılır), görünen adın, avatarın, biyografin, ülken, oynadığın diller, gizlilik ve bildirim ayarların. Yüklediğin avatar, üst verisi atılmış küçük bir JPEG'e dönüştürülür.",
+              "Kullanıcı adın (değiştirdiğinde eskisi 30 gün senin için ayrılır), görünen adın, avatarın, biyografin, ülken, oynadığın diller, kapak görselin ve vurgu rengin, vitrinine iliştirdiğin kupalar ve oyunlar, kupa puanlarından hesaplanan kupa seviyen, gizlilik, bildirim ve Çevrimdışı görün ayarların. Yüklediğin avatar, üst verisi atılmış küçük bir JPEG'e dönüştürülür.",
             ],
             [
               "Arkadaşlar",
-              "Arkadaşların ve arkadaşlık istekleri, engellediğin kişiler, arkadaşlarının etkinliklerine verdiğin tepkiler.",
+              "Arkadaşların ve arkadaşlık istekleri, engellediğin kişiler, arkadaşlarının etkinliklerine verdiğin tepkiler. Bir de, onları yeniden bulabilmen için, bir partide, birlikte oynamada, online bir oyunda ya da oyuncu arama ilanıyla girilen bir oyunda kimlerle olduğun, hangi oyunda ve ne zaman (Son oynadıkların). Bu, [Son oynadıkların](/players) sayfasından kapatana kadar açıktır; kapatmak listeyi de siler. Her kişi, onunla son oynadığından 90 gün sonra unutulur.",
+            ],
+            [
+              "Çevrimiçi durum",
+              "Bir uygulama ya da site açıkken: hangi cihazlarının çevrimiçi olduğu ve ne oynadığın; bellekte tutulur ve bir cihazdan son haber alındıktan yaklaşık iki dakika sonra silinir. Bir de her cihazın en son ne zaman kullanıldığı. Çevrimdışı görün açıkken herkes seni çevrimdışı görür, ama mesajlar ve aramalar sana ulaşsın diye sunucu bağlı olduğunu bilmeye devam eder.",
             ],
             [
               "Mesajlar",
@@ -474,11 +492,11 @@ const privacyTr: LegalDoc = {
             ],
             [
               "Partiler, aramalar ve birlikte oynama",
-              "Hangi partide olduğun, davetler ve katılma istekleri, aramaların ne zaman başlayıp bittiği. Aramanın sesi ve birlikte oynamanın görüntüsü içindeki kişiler arasında doğrudan gider (doğrudan bağlantı kurulamazsa bu sunucunun aktarıcısından geçer) ve asla kaydedilmez.",
+              "Hangi partide olduğun, davetler ve katılma istekleri, üyeleri eklerse partinin Discord bağlantısı, katılma kodları (kimin açtığı, ne için ve ne zaman geçersiz olacağı: başka seçilmezse 24 saat sonra, en fazla 72 saat) ve aramalar: kimin kimi aradığı, aramanın ne zaman başladığı, yanıtlandığı ve bittiği. Aramanın sesi ve birlikte oynamanın görüntüsü içindeki kişiler arasında doğrudan gider (doğrudan bağlantı kurulamazsa bu sunucunun aktarıcısından geçer) ve asla kaydedilmez.",
             ],
             [
               "Oyunlar",
-              "AnyPS5 başlatıcılarının bildirdikleri: oyun oturumların (oyun, ne zaman başlayıp bittiği, düzgün kapanıp kapanmadığı), kitaplığın ve oyun süren, kazandığın kupalar ve ne zaman kazandığın, bilgisayarların (rastgele bir kimlik, platform, ad ve model). Etkinlik akışın ve liderlik tabloları bunlardan oluşur.",
+              "AnyPS5 başlatıcılarının bildirdikleri: oyun oturumların (oyun, ne zaman başlayıp bittiği, düzgün kapanıp kapanmadığı), kitaplığın ve oyun süren, kazandığın kupalar ve ne zaman kazandığın, bilgisayarların (rastgele bir kimlik, platform, ad ve model). Online oynadığında ya da bir arkadaşının oyununa katıldığında: oyun oturumu (oyun ve sürümü, AnyPS5 sürümü, içinde kimlerin olduğu ve oyunun diğer oyuncularla paylaştıkları). Etkinlik akışın ve liderlik tabloları bunlardan oluşur.",
             ],
             [
               "Bulut kayıtları ve medya",
@@ -487,6 +505,10 @@ const privacyTr: LegalDoc = {
             [
               "Paylaştıkların",
               "Tema Merkezi'nde paylaştığın temalar, uyumluluk raporları (oyun, platform, sürümler, makinen ve işletim sistemin, kare hızı ve notun) ve oyuncu arama ilanların.",
+            ],
+            [
+              "Topluluklar ve etkinlikler",
+              "Kurduğun ya da katıldığın topluluklar ve içlerindeki rolün, davetler, bir topluluğun moderatörlerinin çıkardığı ya da yasakladığı üyeler (verdikleri gerekçeyle), topluluğun sohbeti (diğer mesajlar gibi tutulur), planladığın ya da katılacağını söylediğin etkinlikler.",
             ],
             [
               "Aileler",
@@ -506,7 +528,7 @@ const privacyTr: LegalDoc = {
             ],
             [
               "IP adresin",
-              "Kötüye kullanım sınırlarına karşı istekleri saymak için kullanılır, örneğin giriş denemeleri. Bu sayaçlar adresle birlikte bellekte tutulur ve sınırlarıyla birlikte, en geç bir gün içinde silinir. AnyTogether'ın kendi kodu IP adreslerini ya da yazdıklarını kayıtlarına yazmaz.",
+              "Kötüye kullanım sınırlarına karşı istekleri saymak için kullanılır, örneğin giriş denemeleri. Bu sayaçlar adresle birlikte bellekte tutulur ve sınırlarıyla birlikte, en geç bir gün içinde silinir. Bir arama ya da birlikte oynama bu sunucunun aktarıcısından geçtiğinde aktarıcı IP adresini görür ve bağlantıyı hesabının kimliğiyle birlikte kendi kaydına yazar. AnyTogether'ın kendi kodu IP adreslerini ya da yazdıklarını kayıtlarına yazmaz.",
             ],
           ],
         },
@@ -518,11 +540,12 @@ const privacyTr: LegalDoc = {
       blocks: [
         {
           list: [
-            "Giriş yapmış olsun olmasın herkes: profil kartın (kullanıcı adı, görünen ad, avatar, biyografi, ülke), paylaştığın temalar ve oyuncu arama ilanların. Uyumluluk raporları adın olmadan gösterilir.",
-            "[Ayarlar → Gizlilik](/settings#privacy)'te seçtiğine göre arkadaşların, herkes ya da hiç kimse: oyunların ve oyun süren, kupaların, arkadaş listen, çevrimiçi durumun ve oynadığın oyun, galerin. Başta bunlar yalnızca arkadaşlarına açıktır ve başkaları seni aramada bulabilir. Liderlik tabloları ve oyuncu önerileri de aynı ayarlara uyar.",
-            "Bir konuşmanın üyeleri onun mesajlarını görür; bir partideki ya da aramadaki kişiler orada başka kimlerin olduğunu görür.",
-            "Bir aramada ya da birlikte oynamada diğerlerinin cihazları seninkine bağlanır; bu yüzden her eşler arası aramada olduğu gibi IP adresini öğrenebilirler.",
-            "Moderatörler kendilerine raporlananları ve ele aldıkları kısıtlama ve itirazları görür. Sunucuyu çalıştıran kişi teknik olarak oradaki her şeye, mesajlar dahil, erişebilir: mesajlar uçtan uca şifreli değildir.",
+            "Giriş yapmış olsun olmasın herkes: profil kartın (kullanıcı adı, görünen ad, avatar, biyografi, ülke, kapak ve vurgu rengi, gizlemediğin Steam ya da Discord rozetleri), paylaştığın temalar ve oyuncu arama ilanların. Uyumluluk raporları adın olmadan gösterilir. Profil sayfaları arama motorlarından kendilerini listelememelerini ister. Açtığın bir katılma kodu kimdeyse profil kartını, oyunu ve partide kaç kişi olduğunu görür.",
+            "[Ayarlar → Gizlilik](/settings#privacy)'te seçtiğine göre arkadaşların, herkes ya da hiç kimse: oyunların ve oyun süren, kupaların (kupa seviyen ve seninle kupa karşılaştırma dahil), arkadaş listen, çevrimiçi durumun ve oynadığın oyun, galerin. Başta bunlar yalnızca arkadaşlarına açıktır ve başkaları seni aramada bulabilir. Vitrinin, liderlik tabloları ve oyuncu önerileri de aynı ayarlara uyar.",
+            "Bir konuşmanın üyeleri onun mesajlarını görür; bir partideki ya da aramadaki kişiler orada başka kimlerin olduğunu görür ve partinin Discord bağlantısını yalnızca üyeleri görür. Son oynadıkların listeni yalnızca sen görürsün; listendeki kişiler de seni kendi listelerinde görür.",
+            "Herkese açık bir topluluğu, üyelerini (rolleri ve ne zaman katıldıklarıyla) ve etkinliklerine kimlerin geleceğini giriş yapmış herkes görür; yalnızca davetle girilen bir topluluğu yalnızca üyeleri görür.",
+            "Bir aramada, birlikte oynamada ya da online bir oyunda diğerlerinin cihazları seninkine bağlanır; bu yüzden her eşler arası bağlantıda olduğu gibi IP adresini öğrenebilirler.",
+            "Moderatörler kendilerine raporlananları ve ele aldıkları kısıtlama ve itirazları görür; bir topluluğun moderatörleri onun üyelerini görür ve onları topluluktan çıkarabilir ya da yasaklayabilir. Sunucuyu çalıştıran kişi teknik olarak oradaki her şeye, mesajlar dahil, erişebilir: mesajlar uçtan uca şifreli değildir.",
             "Ebeveynler ve ailenin yöneticisi [Çocuklar ve aileler](#children) bölümünde anlatılanları görür.",
           ],
         },
@@ -538,9 +561,10 @@ const privacyTr: LegalDoc = {
             "E-posta: giriş kodları ve aşağıdaki diğer e-postalar bir e-posta gönderim servisiyle gider; bu servis adresini ve e-postayı işler.",
             "Tarayıcı bildirimleri, açarsan: tarayıcının yapımcısının anlık bildirim servisi (örneğin Google, Apple ya da Mozilla) iletir. İçerikleri tarayıcın için şifrelenir.",
             "Steam ve Discord, yalnızca bağladığında ya da onlarla giriş yaptığında: onların sitesinde giriş yaparsın ve bu sunucuya kim olduğunu söylerler. Bu sunucu sunuyorsa Google ve Apple için de aynısı geçerli.",
-            "Discord, Google ya da Apple'dan gelen bir avatar o servisten yüklenir.",
+            "Discord, Google ya da Apple'dan gelen bir avatar o servisten yüklenir. Bazı oyunların simgeleri ve onlardan yapılan profil kapakları, simgeyi barındıran siteden (yalnızca bu sunucunun izin verdiği sitelerden) yüklenir; o site de IP adresini görür.",
+            "Bir profilin bağlantısı paylaşıldığında görünen resmi çizmek için bu sunucu gereken harfleri Google Fonts'tan ister. Bu istekte profilin adı, kullanıcı adı ve biyografisi bulunur (bunlar zaten herkese açıktır), ama kimin baktığına dair hiçbir şey yoktur.",
             "İndirme bağlantıları AnyPS5'in yayımlandığı GitHub'a gider. Bu site sürüm listesini GitHub'dan kendisi okur; yani indirene kadar ziyaretin GitHub'a bir şey söylemez.",
-            "Bu sitede analiz, reklam ya da sosyal medya betiği yoktur; yazı tipleri de sitenin kendisinden gelir.",
+            "Bu sitede analiz, reklam ya da sosyal medya betiği yoktur; tarayıcının yüklediği yazı tipleri de sitenin kendisinden gelir.",
           ],
         },
       ],
@@ -562,7 +586,7 @@ const privacyTr: LegalDoc = {
             ],
           },
         },
-        "Tarayıcın ayrıca sesli sohbet seçimini (bas-konuş ya da açık mikrofon) kendi yerel deposunda tutar. Giriş yaptığında site küçük bir service worker ekler: bildirimleri gösterir ve bağlantı yokken çevrimdışı olduğunu söyleyen bir sayfa açar. Yalnızca o sayfayı saklar, asla verilerini değil.",
+        "Tarayıcın ayrıca sesli sohbet seçimini (bas-konuş ya da açık mikrofon) kendi yerel deposunda tutar. Giriş yaptığında site küçük bir service worker ekler: bildirimleri gösterir ve bağlantı yokken çevrimdışı olduğunu söyleyen bir sayfa açar. Yalnızca o sayfayı saklar, asla verilerini değil. Siteyi uygulama olarak yüklemek (Ana Ekrana Ekle) başka bir şey saklamaz.",
       ],
     },
     {
@@ -601,12 +625,13 @@ const privacyTr: LegalDoc = {
       blocks: [
         {
           list: [
-            "Hesabın ve içindeki her şey: hesabı silene kadar. Silmek profilini hemen gizler ve tüm cihazlardan çıkış yapar; 14 gün sonra her şey kalıcı olarak silinir (bu sürede giriş yapmak silmeyi iptal eder). Mesajların boşaltılır; böylece diğerlerinin konuşmaları sırasını korur.",
+            "Hesabın ve içindeki her şey: hesabı silene kadar. Silmek profilini hemen gizler ve tüm cihazlardan çıkış yapar; 14 gün sonra her şey kalıcı olarak silinir (bu sürede giriş yapmak silmeyi iptal eder). Mesajların boşaltılır; böylece diğerlerinin konuşmaları sırasını korur. Sahibi olduğun bir topluluk moderatörlerinden ya da üyelerinden birine geçer (kimse kalmadıysa sona erer), adı ve açıklaması kalır; planladığın etkinlikler adın olmadan kalır; herkesin Son oynadıkların listesinden çıkarsın.",
             "Birkaç şey hesaptan sonra da adı olmadan kalır: uyumluluk raporları, bir başlatıcının kataloğa ilk eklediği oyunlar ve hesabın gönderdiği raporlar. Bir mesaj hakkındaki rapor o mesajın kopyasını tutar. Bir e-posta adresine konan yasak, uygulanmaya devam edebilmesi için adresin yalnızca özetini tutar; moderasyon kaydı da hesabın kimliğini tutar.",
-            "Giriş kodları: süreleri dolduktan 30 gün sonra silinir. Bildirimler: okunanlar 90 gün, hepsi 180 gün sonra. Bir cihazdaki giriş 90 gün kullanılmazsa sona erer. Eski kullanıcı adları: 30 gün.",
+            "Giriş kodları: süreleri dolduktan 30 gün sonra silinir. Bildirimler: okunanlar 90 gün, hepsi 180 gün sonra. Son oynadıkların: birlikte son oynadığınızdan 90 gün sonra. Bir cihazdaki giriş 90 gün kullanılmazsa sona erer (kaydı hesabında kalır). Eski bir kullanıcı adı 30 gün senin için ayrılır (eski kullanıcı adlarının listesi hesabında kalır).",
             "Bulut kayıtları: her yuvanın en yeni üç sürümü, sen silene kadar. Kimseye gönderilmemiş ya da sabitlenmemiş fotoğraf ve klipler bir gün sonra silinir; yarım kalan yüklemeler de.",
-            "Oyuncu arama ilanları bir gün içinde kapanır; kötüye kullanım sayaçları bir gün içinde silinir.",
-            "Sunucunun işletmecisi yedek alıyorsa silinen veriler o yedekler de silinene kadar onlarda kalabilir.",
+            "Oyuncu arama ilanları bir gün içinde panodan kalkar (ilan hesabında kalır); katılma kodları süreleri dolunca çalışmaz; kötüye kullanım sayaçları bir gün içinde silinir. Anlık bildirim adresleri, bildirimleri kapattığında, o tarayıcıda çıkış yaptığında ya da bildirim servisi adresin artık olmadığını söylediğinde silinir.",
+            "Daha kısa bir sınırı olmayanlar hesabın silinene kadar kalır: arama kayıtları, partiler ve Discord bağlantıları, oyun oturumları, katılma kodları, topluluk etkinlikleri, davetleri ve yasakları (ya da topluluk silinene kadar). Raporların, kısıtlamaların, itirazların ve moderasyon kaydının belirli bir bitiş süresi yoktur.",
+            "Bu sunucunun veritabanı ve dosyaları her gece yedeklenir ve her yedek 14 gün sonra silinir. Sildiğin şeyler ya da silinen bir hesap, o yedek silinene kadar onda kalabilir. Yedekler bir gün dışarıdaki bir depolama sağlayıcısında da tutulursa bu sunucudan çıkmadan önce şifrelenecek, aynı 14 güne uyacak ve sağlayıcının adı burada yazılacak.",
           ],
         },
       ],
@@ -619,9 +644,9 @@ const privacyTr: LegalDoc = {
         {
           list: [
             "kimin neyi göreceğini seçmek;",
-            "bu sunucunun hesabın hakkında tuttuğu her şeyi, kayıtlarına ve medyana bağlantılarla birlikte tek bir dosya olarak indirmek;",
+            "bu sunucunun hesabın hakkında tuttuklarını (hesabın, profilin, arkadaşların, mesajların, oyunların, toplulukların, Son oynadıkların ve dahası), kayıtlarına ve medyana bağlantılarla birlikte tek bir dosya olarak indirmek. Birkaç kayıt henüz bu dosyada yok: aramalar, partiler, oyun oturumları, paylaştığın temalar ve uyumluluk raporları; bunları [İletişim](#contact) yoluyla iste;",
             "hesabını silmek;",
-            "cihazlarını görüp çıkış yaptırmak, geçiş anahtarlarını kaldırmak, Steam ya da Discord bağlantısını kesmek, bildirimleri ve e-postaları kapatmak.",
+            "cihazlarını görüp çıkış yaptırmak, geçiş anahtarlarını kaldırmak, Steam ya da Discord bağlantısını kesmek, çevrimdışı görünmek, Son oynadıkların'ı kapatmak, bildirimleri ve e-postaları kapatmak.",
           ],
         },
         "Nerede yaşadığına göre Türkiye'de KVKK ya da AB'de GDPR gibi yasalar sana başka haklar da tanır: verilerine erişmek, düzeltmek, silmek ya da taşımak, işlenmesine itiraz etmek ya da kısıtlamak ve veri koruma kurumuna şikâyette bulunmak. Ayarların karşılamadığı her şey için [İletişim](#contact) bölümüne bak.",
@@ -633,6 +658,7 @@ const privacyTr: LegalDoc = {
       blocks: [
         'Aileler isteğe bağlıdır. Bir yönetici aile kurar ve içine ebeveynleri, diğer yetişkinleri ve çocukları alır. Yöneticinin açtığı çocuk hesabı çocuğun kendi onayını bekler; tanımadığı bir aileye eklenen herkes "Bu benim ailem değil" diyerek aileden çıkabilir.',
         "Ebeveynler bir çocuğun neler yapabileceğini seçer: oyun süresi, yaş sınırları, kimlerin mesaj atabileceği, arayabileceği ya da arkadaşlık isteği gönderebileceği. Çocuğun isteklerini (daha fazla süre, yeni bir arkadaş, bir oyun) yanıtlar, çocuğun oyun süresini, oynadığı oyunları ve eklediği arkadaşları görür ve haftalık özet alabilirler. Çocuğun mesajlarını görmezler.",
+        "Ebeveynler bir çocuğun toplulukları ve etkinliklerini kullanıp kullanamayacağını da seçer (başta kapalıdır). Son oynadıkların herkes gibi çocuklar için de açıktır ve çocuk onu kapatabilir; ebeveynler bu listeyi ve çocuğun topluluklarını görmez.",
         "Ülkenin, çevrimiçi hizmetleri tek başına kullanmak için belirlediği yaşın altındaysan AnyTogether'ı yalnızca bir ebeveynin izniyle, tercihen bir aile içinde kullan.",
       ],
     },
@@ -680,7 +706,7 @@ const termsTr: LegalDoc = {
       id: "service",
       title: "Hizmet",
       blocks: [
-        "AnyTogether, AnyPS5'in online tarafıdır: hesaplar, arkadaşlar, mesajlar, partiler ve sesli sohbet, birlikte oynama, kupalar ve liderlik tabloları, bulut kayıtları, Tema Merkezi ve uyumluluk listesi. anytogether.kodla.agency'yi açık kaynak AnyTogether projesinin geliştiricisi çalıştırır. Ücretsizdir ve reklam göstermez.",
+        "AnyTogether, AnyPS5'in online tarafıdır: hesaplar, arkadaşlar, mesajlar, partiler ve sesli sohbet, birlikte oynama, kupalar ve liderlik tabloları, topluluklar ve etkinlikler, bulut kayıtları, Tema Merkezi ve uyumluluk listesi. anytogether.kodla.agency'yi açık kaynak AnyTogether projesinin geliştiricisi çalıştırır. Ücretsizdir ve reklam göstermez.",
         "AnyPS5 ve AnyTogether'ın Sony Interactive Entertainment ile bir ilgisi yoktur. PlayStation, PS5 ve DualSense Sony'nin markalarıdır.",
       ],
     },
@@ -715,7 +741,7 @@ const termsTr: LegalDoc = {
             "başkasının özel bilgilerini paylaşma.",
           ],
         },
-        "AnyTogether'ı yasalara aykırı bir şey için kullanmak da bu koşullara aykırıdır.",
+        "AnyTogether'ı yasalara aykırı bir şey için kullanmak da bu koşullara aykırıdır. Bir topluluk yönetiyor ya da bir etkinlik planlıyorsan onu da bu kurallar içinde tut.",
       ],
     },
     {
@@ -723,6 +749,7 @@ const termsTr: LegalDoc = {
       title: "Oyunların",
       blocks: [
         "AnyPS5 sahip olduğun oyunları, kendi kopyalarının dökümlerinden çalıştırır. Burada hiçbir yerde oyun dosyası, firmware ya da anahtar sunulmaz; AnyTogether'ı bunları edinmek ya da yaymak için kullanamazsın.",
+        "AnyPS5 başlatıcısındaki Online oyun deneyseldir: bir oyunla çalışmayabilir ya da çalışmayı bırakabilir; online bir oyunda diğer oyuncuların bilgisayarları seninkine bağlanır.",
       ],
     },
     {
@@ -730,15 +757,16 @@ const termsTr: LegalDoc = {
       title: "Paylaştıkların",
       blocks: [
         "Yazdıkların ve yüklediklerin senin olarak kalır. Burada durdukları sürece bu sunucunun onları saklamasına, gerektiğinde biçimini değiştirmesine (örneğin fotoğrafları yeniden kodlamak) ve seçtiğin kişilere göstermesine izin verirsin. Tema Merkezi'nde paylaştığın temaları herkes indirip kendi başlatıcısında kullanabilir. Uyumluluk raporları hesabını sildikten sonra da adın olmadan listede kalır.",
-        "Yalnızca paylaşma hakkın olanı paylaş ve başkalarının görebildiğini kaydedebileceğini de unutma.",
+        "Yalnızca paylaşma hakkın olanı paylaş ve başkalarının görebildiğini kaydedebileceğini de unutma. Katılma kodunu yalnızca aralarında görmek istediğin kişilere ver: kod kimdeyse, süresi dolana ya da sen yenisini açana kadar profil kartını görür ve katılmak isteyebilir.",
       ],
     },
     {
       id: "moderation",
       title: "Moderasyon ve itiraz",
       blocks: [
-        "Herkes bir kişiyi, mesajı, fotoğraf ya da klibi, temayı ya da ilanı raporlayabilir. Moderatörler raporlara bakar; raporu kapatabilir, uyarabilir, içeriği gizleyebilir, bir hesabı susturabilir (giriş yapabilir ama başkalarına yazamaz) ya da bir hesabı veya e-posta adresini bir süreliğine ya da kaldırılana kadar yasaklayabilir. Kısıtlamanın ne olduğu, nedeni ve ne zamana kadar sürdüğü sitede ve uygulamalarda sana söylenir.",
+        "Herkes bir kişiyi, mesajı, fotoğraf ya da klibi, temayı, ilanı, topluluğu ya da etkinliği raporlayabilir. Moderatörler raporlara bakar; raporu kapatabilir, uyarabilir, içeriği gizleyebilir, bir hesabı susturabilir (giriş yapabilir ama başkalarına yazamaz) ya da bir hesabı veya e-posta adresini bir süreliğine ya da kaldırılana kadar yasaklayabilir. Kısıtlamanın ne olduğu, nedeni ve ne zamana kadar sürdüğü sitede ve uygulamalarda sana söylenir.",
         "Bir kararın yanlış olduğunu düşünüyorsan onu açıklayan sayfadan ([/restricted](/restricted)) itiraz et. Aynı anda bir itiraz açık olabilir ve bir moderatör onu yanıtlar.",
+        "Bir topluluğun sahibi ve moderatörleri üyeleri o topluluktan çıkarabilir ya da yasaklayabilir. Bu, onların kendi toplulukları hakkındaki kararıdır, hesabına konan bir kısıtlama değildir; sitenin moderatörleri de bu koşulları çiğneyen bir topluluğu ya da etkinliği kaldırabilir.",
       ],
     },
     {
