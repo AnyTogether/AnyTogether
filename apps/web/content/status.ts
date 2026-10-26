@@ -215,6 +215,7 @@ export const statusCards: StatusCard[] = [
     id: "profiles",
     column: "progress",
     platforms: desk,
+    ships: { project: "macos", version: "0.2.24" },
     en: {
       t: "Profiles",
       d: "An offline or online choice on the first start, several profiles on one launcher, and Who's playing?",
@@ -267,7 +268,7 @@ export const statusCards: StatusCard[] = [
   // Planned.
   {
     id: "assist",
-    column: "planned",
+    column: "progress",
     platforms: desk,
     en: { t: "Assist mode", d: "A second pad, or a friend, helps player 1 in the same seat." },
     tr: {
@@ -277,7 +278,7 @@ export const statusCards: StatusCard[] = [
   },
   {
     id: "gyro",
-    column: "planned",
+    column: "progress",
     platforms: ["mac", "windows", "linux", "iphone", "android"],
     en: {
       t: "Gyro aiming for every game",
@@ -290,7 +291,7 @@ export const statusCards: StatusCard[] = [
   },
   {
     id: "phone-typing",
-    column: "planned",
+    column: "progress",
     platforms: phone,
     en: {
       t: "Type on your phone",

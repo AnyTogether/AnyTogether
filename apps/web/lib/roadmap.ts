@@ -407,15 +407,16 @@ export const roadmap: RoadmapItem[] = [
   },
   {
     id: "windows-pad",
-    status: "next",
+    status: "done",
     areas: ["pc", "phone", "engine"],
+    shipped: "AnyPS5-ARM 0.2.22 · AnyPS5 Desktop 0.1.8",
     en: {
       t: "The phone controller in Windows games",
-      d: "AnyPS5 Remote already pairs with AnyPS5 Desktop; playing with it needs the engine built from AnyPS5-ARM for Windows.",
+      d: "AnyPS5 Remote plays Windows games with AnyPS5 Desktop, through the engine's Winsock bridge (AnyPS5-ARM 0.2.22, Desktop 0.1.8).",
     },
     tr: {
       t: "Windows oyunlarında telefon kumandası",
-      d: "AnyPS5 Remote, AnyPS5 Desktop ile zaten eşleşiyor; onunla oynamak için Windows'a AnyPS5-ARM'dan derlenmiş motor gerekiyor.",
+      d: "AnyPS5 Remote, motorun Winsock köprüsüyle AnyPS5 Desktop'ta Windows oyunlarını oynatıyor (AnyPS5-ARM 0.2.22, Desktop 0.1.8).",
     },
   },
   {
