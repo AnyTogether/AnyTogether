@@ -748,7 +748,7 @@ export const joinCodes = pgTable(
   "join_codes",
   {
     code: text().primaryKey(),
-    /** party | share_play */
+    /** party | share_play | game_session */
     kind: text().notNull(),
     targetId: uuid().notNull(),
     createdBy: uuid()
@@ -759,7 +759,7 @@ export const joinCodes = pgTable(
     revokedAt: timestamp({ withTimezone: true }),
   },
   (table) => [
-    check("join_code_kind", sql`${table.kind} in ('party', 'share_play')`),
+    check("join_code_kind", sql`${table.kind} in ('party', 'share_play', 'game_session')`),
     index("join_codes_target").on(table.kind, table.targetId).where(sql`${table.revokedAt} is null`),
   ],
 );
@@ -784,8 +784,8 @@ export const calls = pgTable(
   ],
 );
 
-/** A game a launcher hosts for friends to join; one open session per host. What `properties`
- *  holds is up to the launchers. */
+/** A game a launcher hosts for friends to join; one open session per host, one Play Together
+ *  (lan) session per party. What `properties` holds is up to the launchers. */
 export const gameSessions = pgTable(
   "game_sessions",
   {
@@ -793,11 +793,17 @@ export const gameSessions = pgTable(
     hostId: uuid()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
+    /** online | lan (Play Together: the party's, ends with its host) | local (one screen) */
+    kind: text().notNull().default("online"),
+    /** The party a lan session belongs to. */
+    partyId: uuid().references(() => parties.id, { onDelete: "set null" }),
     titleId: text()
       .notNull()
       .references(() => games.titleId),
     gameVersion: text().notNull(),
     engineBuild: text().notNull(),
+    /** exact | major | any: how far a joiner's game version may be from the host's. */
+    versionRule: text().notNull().default("exact"),
     capacity: integer().notNull(),
     joinable: boolean().notNull().default(true),
     properties: jsonb().$type<Record<string, unknown>>().notNull().default({}),
@@ -806,7 +812,12 @@ export const gameSessions = pgTable(
   },
   (table) => [
     uniqueIndex("one_open_session_per_host").on(table.hostId).where(sql`${table.endedAt} is null`),
+    uniqueIndex("one_lan_session_per_party")
+      .on(table.partyId)
+      .where(sql`${table.endedAt} is null and ${table.kind} = 'lan'`),
     check("capacity", sql`${table.capacity} between 2 and 16`),
+    check("game_session_kind", sql`${table.kind} in ('online', 'lan', 'local')`),
+    check("game_session_version_rule", sql`${table.versionRule} in ('exact', 'major', 'any')`),
   ],
 );
 
