@@ -66,8 +66,6 @@ const DESK_WEB: SpecPlatform[] = ["mac", "windows", "linux", "web"];
 const EXP = { exp: true } as const;
 const MAC_0_2_23 = { next: { project: "macos", version: "0.2.23" } } as const;
 const MAC_AFTER_0_2_23 = { next: { project: "macos", version: "0.2.24" } } as const;
-/** In the Mac launcher's and the phone's next release, and AnyPS5 Desktop's. */
-const MAC_0_2_25 = { next: { project: "macos", version: "0.2.25" } } as const;
 
 const s = (p: SpecPlatform[], en: Pair, tr: Pair, extra: { exp?: true; next?: NextRelease } = {}): Spec => ({
   p,
@@ -1913,7 +1911,7 @@ export const sections: SpecSection[] = [
             ],
           ),
           s(
-            ["mac", "web"],
+            WEB,
             [
               "Public profile switch",
               "Off for new accounts: people who are not friends, and link previews, get only your name and picture.",
@@ -1922,7 +1920,6 @@ export const sections: SpecSection[] = [
               "Herkese açık profil anahtarı",
               "Yeni hesaplarda kapalı: arkadaşın olmayanlar ve bağlantı önizlemeleri yalnızca adını ve resmini görür.",
             ],
-            { next: { project: "macos", version: "0.2.25", on: ["mac"] } },
           ),
           s(
             EVERY,
@@ -2078,7 +2075,7 @@ export const sections: SpecSection[] = [
             ],
           ),
           s(
-            EVERY,
+            WEB,
             [
               "Noise suppression switch",
               "Turn the microphone's noise suppression off or on in the middle of a call, without reconnecting.",
@@ -2087,25 +2084,6 @@ export const sections: SpecSection[] = [
               "Gürültü engelleme anahtarı",
               "Mikrofonun gürültü engellemesini aramanın ortasında, yeniden bağlanmadan kapat ya da aç.",
             ],
-            {
-              next: {
-                project: "macos",
-                version: "0.2.25",
-                on: ["mac", "windows", "linux", "iphone", "android"],
-              },
-            },
-          ),
-          s(
-            DESK,
-            [
-              "NAT type",
-              "Test Connection says open, moderate or strict (NAT Type 1, 2 or 3), from AnyTogether's own STUN and relay.",
-            ],
-            [
-              "NAT türü",
-              "Bağlantıyı Sına açık, orta ya da katı der (NAT Türü 1, 2 ya da 3); AnyTogether'ın kendi STUN'u ve aktarıcısıyla.",
-            ],
-            MAC_0_2_25,
           ),
           s(
             DESK,

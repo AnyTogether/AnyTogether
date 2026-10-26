@@ -82,7 +82,7 @@ off-site backups (S3, Google Drive, SFTP and more). See
 ## Credits
 
 - Play Together's per-title version rule with an explicit "Try anyway" override, and retiring old launchers with `client_too_old`, follow ideas AnyPlay shipped first in [anyplaynet/cloud](https://github.com/anyplaynet/cloud) (AGPL-3.0). The code here is written independently.
-- The noise suppression switch in voice, the public profile switch and the compatibility list's filters and sort follow ideas AnyPlay shipped first ([anyplaynet/network](https://github.com/anyplaynet/network), MIT/Apache-2.0; [anyplaynet/cloud](https://github.com/anyplaynet/cloud), AGPL-3.0; [anyplaynet/web](https://github.com/anyplaynet/web), AGPL-3.0). The code here is written independently.
+- The noise suppression switch in website voice, the public profile switch and the compatibility list's filters and sort follow ideas AnyPlay shipped first ([anyplaynet/network](https://github.com/anyplaynet/network), MIT/Apache-2.0; [anyplaynet/cloud](https://github.com/anyplaynet/cloud), AGPL-3.0; [anyplaynet/web](https://github.com/anyplaynet/web), AGPL-3.0). The code here is written independently.
 
 ## License
 
