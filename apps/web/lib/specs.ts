@@ -66,6 +66,8 @@ const DESK_WEB: SpecPlatform[] = ["mac", "windows", "linux", "web"];
 const EXP = { exp: true } as const;
 const MAC_0_2_23 = { next: { project: "macos", version: "0.2.23" } } as const;
 const MAC_AFTER_0_2_23 = { next: { project: "macos", version: "0.2.24" } } as const;
+/** In the Mac launcher's and the phone's next release, and AnyPS5 Desktop's. */
+const MAC_0_2_25 = { next: { project: "macos", version: "0.2.25" } } as const;
 
 const s = (p: SpecPlatform[], en: Pair, tr: Pair, extra: { exp?: true; next?: NextRelease } = {}): Spec => ({
   p,
@@ -1911,6 +1913,18 @@ export const sections: SpecSection[] = [
             ],
           ),
           s(
+            ["mac", "web"],
+            [
+              "Public profile switch",
+              "Off for new accounts: people who are not friends, and link previews, get only your name and picture.",
+            ],
+            [
+              "Herkese açık profil anahtarı",
+              "Yeni hesaplarda kapalı: arkadaşın olmayanlar ve bağlantı önizlemeleri yalnızca adını ve resmini görür.",
+            ],
+            { next: { project: "macos", version: "0.2.25", on: ["mac"] } },
+          ),
+          s(
             EVERY,
             [
               "Privacy per part",
@@ -2062,6 +2076,36 @@ export const sections: SpecSection[] = [
               "Ses",
               "Oyuncudan oyuncuya doğrudan, yalnızca gerekince aktarıcıyla; sessize al, sağırlaştır, kimin konuştuğunu gör.",
             ],
+          ),
+          s(
+            EVERY,
+            [
+              "Noise suppression switch",
+              "Turn the microphone's noise suppression off or on in the middle of a call, without reconnecting.",
+            ],
+            [
+              "Gürültü engelleme anahtarı",
+              "Mikrofonun gürültü engellemesini aramanın ortasında, yeniden bağlanmadan kapat ya da aç.",
+            ],
+            {
+              next: {
+                project: "macos",
+                version: "0.2.25",
+                on: ["mac", "windows", "linux", "iphone", "android"],
+              },
+            },
+          ),
+          s(
+            DESK,
+            [
+              "NAT type",
+              "Test Connection says open, moderate or strict (NAT Type 1, 2 or 3), from AnyTogether's own STUN and relay.",
+            ],
+            [
+              "NAT türü",
+              "Bağlantıyı Sına açık, orta ya da katı der (NAT Türü 1, 2 ya da 3); AnyTogether'ın kendi STUN'u ve aktarıcısıyla.",
+            ],
+            MAC_0_2_25,
           ),
           s(
             DESK,
@@ -2316,11 +2360,11 @@ export const sections: SpecSection[] = [
             ["mac", "web"],
             [
               "Compatibility list",
-              "How far each game gets on each platform, from one-tap “How did it run?” reports on the newest launcher.",
+              "How far each game gets on each platform, from one-tap “How did it run?” reports on the newest launcher; filtered by platform, status and online play, sorted by name, status or the latest report.",
             ],
             [
               "Uyumluluk listesi",
-              "Her oyunun her platformda nereye kadar gittiği; en yeni launcher'dan tek dokunuşla “Nasıl çalıştı?” raporları.",
+              "Her oyunun her platformda nereye kadar gittiği; en yeni launcher'dan tek dokunuşla “Nasıl çalıştı?” raporları; platforma, duruma ve çevrimiçi oyuna göre süzülür, ada, duruma ya da son rapora göre sıralanır.",
             ],
           ),
         ],

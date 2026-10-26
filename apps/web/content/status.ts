@@ -34,6 +34,34 @@ const all: SpecPlatform[] = ["mac", "windows", "linux", "iphone", "android", "we
 export const statusCards: StatusCard[] = [
   // Done, newest first.
   {
+    id: "public-profile",
+    column: "done",
+    platforms: ["web"],
+    release: "Website",
+    en: {
+      t: "Public profile switch",
+      d: "Off for new accounts: people who are not friends see only the name and picture, link previews too. Each part of a profile has its own link, with the games played on it.",
+    },
+    tr: {
+      t: "Herkese açık profil anahtarı",
+      d: "Yeni hesaplarda kapalı: arkadaş olmayanlar, bağlantı önizlemeleri dahil, yalnızca adı ve resmi görür. Profilin her bölümünün kendi bağlantısı var, oynanan oyunlar da üstünde.",
+    },
+  },
+  {
+    id: "compat-filters",
+    column: "done",
+    platforms: ["web"],
+    release: "Website",
+    en: {
+      t: "Compatibility filters",
+      d: "Filter the list by platform, status and online play, and sort it by name, status or the latest report; the address keeps it all.",
+    },
+    tr: {
+      t: "Uyumluluk süzgeçleri",
+      d: "Listeyi platforma, duruma ve çevrimiçi oyuna göre süz; ada, duruma ya da son rapora göre sırala; adres hepsini tutar.",
+    },
+  },
+  {
     id: "captures",
     column: "done",
     platforms: ["web"],
@@ -278,6 +306,34 @@ export const statusCards: StatusCard[] = [
     tr: {
       t: "Oyun Ön Ayarları",
       d: "Zorluk, ters kamera, altyazılar, ses dili ve performans modu; her oyun için bir kez ayarlanır.",
+    },
+  },
+  {
+    id: "noise-suppression",
+    column: "progress",
+    platforms: all,
+    ships: { project: "macos", version: "0.2.25" },
+    en: {
+      t: "Noise suppression switch",
+      d: "Turn the microphone's noise suppression off or on in the middle of a call, without reconnecting; already on the website.",
+    },
+    tr: {
+      t: "Gürültü engelleme anahtarı",
+      d: "Mikrofonun gürültü engellemesini aramanın ortasında, yeniden bağlanmadan kapat ya da aç; web sitesinde şimdiden var.",
+    },
+  },
+  {
+    id: "nat-type",
+    column: "progress",
+    platforms: desk,
+    ships: { project: "macos", version: "0.2.25" },
+    en: {
+      t: "NAT type in Test Connection",
+      d: "Open, moderate or strict, as a PS5 says it, from AnyTogether's own STUN and relay; Windows and Linux in AnyPS5 Desktop 0.1.11.",
+    },
+    tr: {
+      t: "Bağlantı testinde NAT türü",
+      d: "Açık, orta ya da katı, bir PS5'in söylediği gibi; AnyTogether'ın kendi STUN'u ve aktarıcısıyla. Windows ve Linux'ta AnyPS5 Desktop 0.1.11'de.",
     },
   },
   {
