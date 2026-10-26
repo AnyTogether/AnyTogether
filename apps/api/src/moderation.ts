@@ -33,6 +33,7 @@ import { publish } from "./events.js";
 import { body } from "./http.js";
 import { mediaService } from "./media.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { areFriends } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
 import { reviewIfReported } from "./themes.js";
 import { type TokenSigner, appealLifetime, hash } from "./tokens.js";
@@ -495,6 +496,21 @@ export function reportRoutes(deps: Deps) {
             startsAt: event.startsAt,
           }
         : { authorId, name: community.name, description: community.description, titleId: community.titleId };
+    }
+    // Someone's friends-only name and picture: only an accepted friend sees them, so only a
+    // friend can report them; what they were is kept with the report.
+    if (input.targetKind === "private_profile") {
+      if (input.targetId === me) throw new HttpError(400, ErrorCode.badRequest, "That is yours");
+      const [found] = /^[0-9a-f-]{36}$/i.test(input.targetId)
+        ? await deps.db.select().from(profiles).where(eq(profiles.accountId, input.targetId))
+        : [];
+      if (!found || !(await areFriends(deps.db, me, found.accountId)))
+        throw new HttpError(404, ErrorCode.notFound, "No such user");
+      snapshot = {
+        authorId: found.accountId,
+        privateName: found.privateName,
+        privateAvatar: found.privateAvatar,
+      };
     }
     // One open report per person and target: a second one adds nothing for the moderators.
     const [made] = await deps.db

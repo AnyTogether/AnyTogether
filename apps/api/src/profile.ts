@@ -27,6 +27,7 @@ import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { assertNotMuted, restrictionsOf } from "./moderation.js";
 import { type ProfileRow, handleProblem, skeletonClash } from "./people.js";
+import { identityOf } from "./privateIdentity.js";
 import { rateLimiter } from "./ratelimit.js";
 import { lookOf } from "./showcase.js";
 
@@ -59,6 +60,8 @@ export function profileRoutes(deps: Deps) {
     handleChangeAt: nextHandleChange(profile),
     privacy: privacyOf(profile.privacy),
     trophyLevel: trophyLevelOf(profile.trophyPoints),
+    // The owner always sees their own friends-only name and picture.
+    ...identityOf(deps, profile),
   });
   const load = async (userId: string) => {
     const [profile] = await db.select().from(profiles).where(eq(profiles.accountId, userId));
@@ -90,13 +93,19 @@ export function profileRoutes(deps: Deps) {
   app.patch("/me/profile", async (c) => {
     const userId = c.get("userId");
     const input = await body(c, ProfileUpdate);
-    if (input.displayName !== undefined || input.bio) await assertNotMuted(db, userId);
-    if ((input.displayName && hasLink(input.displayName)) || (input.bio && hasLink(input.bio)))
+    // Clearing is always allowed; writing a name or bio is not while muted.
+    if (input.displayName !== undefined || input.bio || input.privateName) await assertNotMuted(db, userId);
+    if (
+      (input.displayName && hasLink(input.displayName)) ||
+      (input.bio && hasLink(input.bio)) ||
+      (input.privateName && hasLink(input.privateName))
+    )
       throw new HttpError(400, ErrorCode.linksNotAllowed, "Names and bios cannot carry links");
     const changes = {
       ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
       ...(input.bio !== undefined ? { bio: input.bio || null } : {}),
       ...(input.country !== undefined ? { country: input.country } : {}),
+      ...(input.privateName !== undefined ? { privateName: input.privateName || null } : {}),
     };
     if (Object.keys(changes).length)
       await db.update(profiles).set(changes).where(eq(profiles.accountId, userId));

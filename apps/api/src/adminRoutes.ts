@@ -2,7 +2,6 @@ import {
   accounts,
   appeals,
   auditLog,
-  avatars,
   bans,
   communities,
   communityEvents,
@@ -30,6 +29,7 @@ import { Hono, type MiddlewareHandler } from "hono";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
 import type { Deps } from "./app.js";
+import { resetAvatar } from "./avatars.js";
 import { backupReport } from "./backups.js";
 import { cancelEvent, deleteCommunity } from "./communities.js";
 import { HttpError } from "./errors.js";
@@ -52,6 +52,7 @@ import {
 } from "./moderation.js";
 import type { Notifier } from "./notifications.js";
 import { people } from "./people.js";
+import { signedAvatarLink } from "./privateIdentity.js";
 import { readAll } from "./storage.js";
 import { setThemeStatus, settleThemeReports, stillKey, themeFiles } from "./themes.js";
 
@@ -291,6 +292,27 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
                 removed: !standing.has(r.targetId),
               }
             : null,
+        // A friend's report of the friends-only name and picture: what they were when reported
+        // (the picture through a link that works for an hour), and whether they still are. The
+        // person cards below stay public-only.
+        privateProfile:
+          r.targetKind === "private_profile"
+            ? (() => {
+                const kept = (r.snapshot ?? {}) as {
+                  privateName?: string | null;
+                  privateAvatar?: string | null;
+                };
+                return {
+                  name: kept.privateName ?? null,
+                  avatar: kept.privateAvatar
+                    ? signedAvatarLink(deps, kept.privateAvatar, Math.floor(Date.now() / 1000) + 3600)
+                    : null,
+                  current:
+                    (subject?.profile?.privateName ?? null) === (kept.privateName ?? null) &&
+                    (subject?.profile?.privateAvatar ?? null) === (kept.privateAvatar ?? null),
+                };
+              })()
+            : null,
         reporter: reporter ? personView(reporter) : null,
         target: subject ? personView(subject) : null,
         timesReported: totals.get(r.targetId) ?? 1,
@@ -404,9 +426,19 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
         break;
       }
       case "reset_avatar": {
-        await db.update(profiles).set({ avatarUrl: null }).where(eq(profiles.accountId, subject));
-        await db.delete(avatars).where(eq(avatars.accountId, subject));
+        // The public picture only: the friends-only one has its own reset.
+        await resetAvatar(db, subject, false);
         await audit(c, "profile.avatar_reset", subject, { report: report.id });
+        break;
+      }
+      case "reset_private_avatar": {
+        await resetAvatar(db, subject, true);
+        await audit(c, "profile.private_avatar_reset", subject, { report: report.id });
+        break;
+      }
+      case "reset_private_name": {
+        await db.update(profiles).set({ privateName: null }).where(eq(profiles.accountId, subject));
+        await audit(c, "profile.private_name_reset", subject, { report: report.id });
         break;
       }
       case "remove_post": {
@@ -712,7 +744,7 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
     const [against] = await db
       .select({ n: count() })
       .from(reports)
-      .where(or(and(eq(reports.targetKind, "user"), eq(reports.targetId, id))));
+      .where(and(inArray(reports.targetKind, ["user", "private_profile"]), eq(reports.targetId, id)));
     const [made] = await db.select({ n: count() }).from(reports).where(eq(reports.reporterId, id));
     return c.json({
       user: {

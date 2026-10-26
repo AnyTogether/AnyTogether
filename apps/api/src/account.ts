@@ -93,7 +93,9 @@ export async function exportAccount(
 ) {
   const [account] = await db.select().from(accounts).where(eq(accounts.id, accountId));
   const [profile] = await db.select().from(profiles).where(eq(profiles.accountId, accountId));
-  const [avatar] = await db.select().from(avatars).where(eq(avatars.accountId, accountId));
+  const pictures = await db.select().from(avatars).where(eq(avatars.accountId, accountId));
+  const avatar = pictures.find((p) => !p.private);
+  const privateAvatar = pictures.find((p) => p.private);
   const pairs = await db
     .select()
     .from(friendships)
@@ -133,6 +135,9 @@ export async function exportAccount(
       bio: profile.bio,
       country: profile.country,
       avatarUrl: profile.avatarUrl,
+      // The account's own friends-only name (its picture is privateAvatar below); friends' private
+      // fields are theirs and are never in this file.
+      privateName: profile.privateName,
       privacy: privacyOf(profile.privacy),
       notificationSettings: notificationSettingsOf(profile.notificationSettings),
       trophyPoints: profile.trophyPoints,
@@ -165,6 +170,9 @@ export async function exportAccount(
       ({ accountId: _, ...rsvp }) => rsvp,
     ),
     avatar: avatar ? `data:image/jpeg;base64,${Buffer.from(avatar.bytes).toString("base64")}` : null,
+    privateAvatar: privateAvatar
+      ? `data:image/jpeg;base64,${Buffer.from(privateAvatar.bytes).toString("base64")}`
+      : null,
     connections: (await db.select().from(connections).where(eq(connections.accountId, accountId))).map(
       (row) => ({
         provider: row.provider,

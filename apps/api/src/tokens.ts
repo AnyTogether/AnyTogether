@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { type KeyLike, SignJWT, exportJWK, generateKeyPair, importPKCS8, jwtVerify } from "jose";
 
 export const accessLifetime = 15 * 60;
@@ -22,11 +22,24 @@ export async function createTokenSigner(privateKeyPem: string | undefined, issue
   } else {
     ({ privateKey, publicKey } = await generateKeyPair("EdDSA", { crv: "Ed25519" }));
   }
+  /** Signs links that run out (friends-only pictures): from the token key, so every API instance
+   *  and every restart agrees; without a key, one per run like the tokens. */
+  const linkKey = privateKeyPem
+    ? createHash("sha256").update("anytogether links\n").update(privateKeyPem).digest()
+    : randomBytes(32);
+  const linkSignature = (text: string) => createHmac("sha256", linkKey).update(text).digest("base64url");
   const audience = "anytogether";
   /** Appeal tokens: what a banned account gets from a sign-in that proved who it is, good only for
    *  reading its restrictions and appealing (GET /me/restrictions, /me/appeals), for an hour. */
   const appealAudience = "anytogether-appeal";
   return {
+    /** A signature for `text` (a path and an expiry), checked with checkLink. */
+    signLink: linkSignature,
+    checkLink: (text: string, signature: string) => {
+      const given = Buffer.from(signature, "utf8");
+      const expected = Buffer.from(linkSignature(text), "utf8");
+      return given.length === expected.length && timingSafeEqual(given, expected);
+    },
     publicJwk: async () => ({ ...(await exportJWK(publicKey)), alg: "EdDSA", use: "sig", kid: "1" }),
     sign: (claims: AccessClaims) =>
       new SignJWT({ sid: claims.sessionId })

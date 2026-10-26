@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
-import { avatars, profiles } from "@anytogether/db";
+import { type Database, avatars, profiles } from "@anytogether/db";
 import { ErrorCode } from "@anytogether/shared";
 import { and, eq, ne } from "drizzle-orm";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import sharp from "sharp";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { checkAvatarLink, privateAvatarLink } from "./privateIdentity.js";
 import { rateLimiter } from "./ratelimit.js";
 
 export const avatarMaxBytes = 5 * 1024 * 1024;
@@ -84,66 +85,113 @@ const cropParam = (value: string | undefined) => {
   return parsed;
 };
 
-/** Avatars: PUT a picture (the body itself), DELETE it, and GET them by hash for anyone. */
+/** Avatars: PUT a picture (the body itself), DELETE it, and GET them by hash for anyone. The
+ *  friends-only picture (PUT/DELETE /me/avatar/private) goes through the same checks and the same
+ *  re-encoding, and opens only through a signed link (see privateIdentity.ts). */
 export function avatarRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   const limit = rateLimiter(deps.valkey, deps.limits);
   const urlOf = (hash: string) => new URL(`/api/v1/avatars/${hash}.jpg`, deps.publicUrl).toString();
+  const maxSize = bodyLimit({
+    maxSize: avatarMaxBytes,
+    onError: () => {
+      throw new HttpError(413, ErrorCode.payloadTooLarge, "An avatar is at most 5 MB");
+    },
+  });
 
-  app.get("/avatars/:file{[0-9a-f]{32}\\.jpg}", async (c) => {
-    const hash = c.req.param("file").slice(0, 32);
+  const serve = async (c: Context, hash: string, kept: boolean, cacheControl: string) => {
     const etag = `"${hash}"`;
-    const cache = { "cache-control": "public, max-age=31536000, immutable", etag };
+    const cache = { "cache-control": cacheControl, etag };
     if (c.req.header("if-none-match") === etag) return c.body(null, 304, cache);
-    const [row] = await deps.db.select({ bytes: avatars.bytes }).from(avatars).where(eq(avatars.hash, hash));
+    const [row] = await deps.db
+      .select({ bytes: avatars.bytes })
+      .from(avatars)
+      .where(and(eq(avatars.hash, hash), eq(avatars.private, kept)));
     if (!row) throw new HttpError(404, ErrorCode.notFound, "No such avatar");
     return c.body(new Uint8Array(row.bytes), 200, {
       ...cache,
       "content-type": "image/jpeg",
       "x-content-type-options": "nosniff",
     });
+  };
+
+  app.get("/avatars/:file{[0-9a-f]{32}\\.jpg}", (c) =>
+    serve(c, c.req.param("file").slice(0, 32), false, "public, max-age=31536000, immutable"),
+  );
+
+  /** A friends-only picture, for whoever holds a link that is genuine and still working. */
+  app.get("/avatars/private/:file{[0-9a-f]{32}\\.jpg}", async (c) => {
+    const hash = c.req.param("file").slice(0, 32);
+    const query = { e: c.req.query("e"), s: c.req.query("s") };
+    const check = checkAvatarLink(deps, hash, query);
+    if (check === "invalid") throw new HttpError(403, ErrorCode.linkExpired, "This link is not valid");
+    if (check === "expired") throw new HttpError(410, ErrorCode.linkExpired, "This link has expired");
+    const left = Math.max(0, Number(query.e) - Math.floor(Date.now() / 1000));
+    return serve(c, hash, true, `private, max-age=${left}`);
   });
 
-  app.put(
-    "/me/avatar",
-    requireUser(deps),
-    bodyLimit({
-      maxSize: avatarMaxBytes,
-      onError: () => {
-        throw new HttpError(413, ErrorCode.payloadTooLarge, "An avatar is at most 5 MB");
-      },
-    }),
-    async (c) => {
-      const me = c.get("userId");
-      await limit("avatar", me);
-      const left = cropParam(c.req.query("left"));
-      const top = cropParam(c.req.query("top"));
-      const size = cropParam(c.req.query("size"));
-      const crop =
-        left !== undefined && top !== undefined && size !== undefined ? { left, top, size } : undefined;
-      const picture = await makeAvatar(new Uint8Array(await c.req.arrayBuffer()), crop);
-      // The account is part of the hash, so two people with the same picture never share a row.
-      const hash = createHash("sha256").update(me).update(picture).digest("hex").slice(0, 32);
-      await deps.db.transaction(async (tx) => {
-        await tx.insert(avatars).values({ hash, accountId: me, bytes: picture }).onConflictDoNothing();
-        await tx
-          .update(profiles)
-          .set({ avatarUrl: urlOf(hash) })
-          .where(eq(profiles.accountId, me));
-        await tx.delete(avatars).where(and(eq(avatars.accountId, me), ne(avatars.hash, hash)));
-      });
-      return c.json({ avatar: urlOf(hash) });
-    },
+  /** Checks and re-encodes the picture in the body, keeps it, and makes it the account's public or
+   *  private one; the one it replaces is deleted. */
+  const upload = async (c: Context<{ Variables: AuthVariables }>, kept: boolean) => {
+    const me = c.get("userId");
+    await limit("avatar", me);
+    const left = cropParam(c.req.query("left"));
+    const top = cropParam(c.req.query("top"));
+    const size = cropParam(c.req.query("size"));
+    const crop =
+      left !== undefined && top !== undefined && size !== undefined ? { left, top, size } : undefined;
+    const picture = await makeAvatar(new Uint8Array(await c.req.arrayBuffer()), crop);
+    // The account is part of the hash, so two people with the same picture never share a row; so
+    // is which of the two it is, so the same picture can be both.
+    const hash = createHash("sha256")
+      .update(me)
+      .update(kept ? "private" : "")
+      .update(picture)
+      .digest("hex")
+      .slice(0, 32);
+    await deps.db.transaction(async (tx) => {
+      await tx
+        .insert(avatars)
+        .values({ hash, accountId: me, bytes: picture, private: kept })
+        .onConflictDoNothing();
+      await tx
+        .update(profiles)
+        .set(kept ? { privateAvatar: hash } : { avatarUrl: urlOf(hash) })
+        .where(eq(profiles.accountId, me));
+      await tx
+        .delete(avatars)
+        .where(and(eq(avatars.accountId, me), eq(avatars.private, kept), ne(avatars.hash, hash)));
+    });
+    return hash;
+  };
+
+  /** Clears the account's public or private picture. */
+  const clear = (me: string, kept: boolean) => deps.db.transaction((tx) => resetAvatar(tx, me, kept));
+
+  app.put("/me/avatar", requireUser(deps), maxSize, async (c) =>
+    c.json({ avatar: urlOf(await upload(c, false)) }),
+  );
+  app.put("/me/avatar/private", requireUser(deps), maxSize, async (c) =>
+    c.json({ privateAvatar: privateAvatarLink(deps, await upload(c, true)) }),
   );
 
   app.delete("/me/avatar", requireUser(deps), async (c) => {
-    const me = c.get("userId");
-    await deps.db.transaction(async (tx) => {
-      await tx.update(profiles).set({ avatarUrl: null }).where(eq(profiles.accountId, me));
-      await tx.delete(avatars).where(eq(avatars.accountId, me));
-    });
+    await clear(c.get("userId"), false);
+    return c.body(null, 204);
+  });
+  app.delete("/me/avatar/private", requireUser(deps), async (c) => {
+    await clear(c.get("userId"), true);
     return c.body(null, 204);
   });
 
   return app;
+}
+
+/** Clears an account's public or private picture (a moderator's reset). */
+export async function resetAvatar(db: Pick<Database, "update" | "delete">, accountId: string, kept: boolean) {
+  await db
+    .update(profiles)
+    .set(kept ? { privateAvatar: null } : { avatarUrl: null })
+    .where(eq(profiles.accountId, accountId));
+  await db.delete(avatars).where(and(eq(avatars.accountId, accountId), eq(avatars.private, kept)));
 }

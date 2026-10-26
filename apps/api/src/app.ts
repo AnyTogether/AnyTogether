@@ -34,6 +34,7 @@ import type { AuthVariables } from "./middleware.js";
 import { reportRoutes } from "./moderation.js";
 import { type PushSender, notificationRoutes, notifier } from "./notifications.js";
 import { partyRoutes, partyService } from "./parties.js";
+import { revealMiddleware, revealedPaths } from "./privateIdentity.js";
 import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
 import { publicProfileRoutes } from "./publicProfiles.js";
@@ -129,6 +130,9 @@ export function createApp(deps: Deps) {
       ? next()
       : capped(c, next),
   );
+  // Friends-only names and pictures, added for the signed-in reader to the answers listed there.
+  const revealing = revealMiddleware(deps);
+  for (const path of revealedPaths) v1.use(path, revealing);
   v1.route("/auth", authRoutes(deps));
   v1.route("/auth", passkeyRoutes(deps));
 
