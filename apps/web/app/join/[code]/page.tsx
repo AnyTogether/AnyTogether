@@ -10,6 +10,13 @@ import Link from "next/link";
 
 type Params = { params: Promise<{ code: string }> };
 
+const titleOf = (kind: JoinCodeView["kind"], texts: Awaited<ReturnType<typeof strings>>) =>
+  kind === "party"
+    ? texts.joinPartyTitle
+    : kind === "game_session"
+      ? texts.joinGameTitle
+      : texts.joinShareTitle;
+
 async function load(raw: string) {
   const code = normalizeJoinCode(decodeURIComponent(raw));
   if (!isJoinCode(code)) return { code, view: null };
@@ -20,9 +27,7 @@ async function load(raw: string) {
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const [texts, { view }] = await Promise.all([strings(), load((await params).code)]);
   const name = view?.host?.displayName ?? "AnyTogether";
-  const title = view
-    ? fill(view.kind === "party" ? texts.joinPartyTitle : texts.joinShareTitle, { name })
-    : texts.joinGoneTitle;
+  const title = view ? fill(titleOf(view.kind, texts), { name }) : texts.joinGoneTitle;
   return { title: `${title} · AnyTogether`, robots: { index: false, follow: false } };
 }
 
@@ -56,9 +61,7 @@ export default async function JoinPage({ params }: Params) {
   const goLabel = view.kind === "party" ? texts.joinOpenParty : texts.joinOpenWatch;
   return (
     <section className="narrow join-page">
-      <h2 className="in d1">
-        {fill(view.kind === "party" ? texts.joinPartyTitle : texts.joinShareTitle, { name })}
-      </h2>
+      <h2 className="in d1">{fill(titleOf(view.kind, texts), { name })}</h2>
       <p className="lead in d2">{fill(texts.joinHow, { name })}</p>
       <div className="card join-card in d3">
         {view.host && (
@@ -85,6 +88,20 @@ export default async function JoinPage({ params }: Params) {
             <Link className="primary" href={`/login?next=${encodeURIComponent(`/join/${code}`)}`}>
               {texts.joinSignIn}
             </Link>
+          ) : view.kind === "game_session" ? (
+            // A Play Together game: the code lets its holder in; the launcher joins the game.
+            view.state === "member" || view.state === "invited" ? (
+              <span>{texts.togetherCodeIn}</span>
+            ) : (
+              <JoinAsk
+                texts={ui(texts)}
+                code={view.code}
+                host={name}
+                asked={false}
+                label={texts.togetherCodeAsk}
+                done={texts.togetherCodeIn}
+              />
+            )
           ) : view.state === "member" ? (
             <>
               <span>{texts.joinIn}</span>

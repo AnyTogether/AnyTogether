@@ -11,11 +11,17 @@ export function JoinAsk({
   code,
   host,
   asked: askedBefore,
+  label,
+  done,
 }: {
   texts: UiStrings;
   code: string;
   host: string;
   asked: boolean;
+  /** The button and what it says afterwards, when they differ from asking (a game's code lets
+   *  its holder in at once). */
+  label?: string;
+  done?: string;
 }) {
   const [asked, setAsked] = useState(askedBefore);
   const [busy, setBusy] = useState(false);
@@ -43,11 +49,11 @@ export function JoinAsk({
     );
   }
 
-  if (asked) return <span aria-live="polite">{fill(texts.joinAsked, { name: host })}</span>;
+  if (asked) return <span aria-live="polite">{done ?? fill(texts.joinAsked, { name: host })}</span>;
   return (
     <>
       <button type="button" className="primary" disabled={busy} onClick={ask}>
-        {texts.joinAsk}
+        {label ?? texts.joinAsk}
       </button>
       {error && <p className="notice error">{error}</p>}
     </>

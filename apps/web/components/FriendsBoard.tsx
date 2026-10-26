@@ -18,6 +18,7 @@ import {
 } from "@/lib/people";
 import type { ShareInvite } from "@/lib/share";
 import { social } from "@/lib/social";
+import { playingTogether } from "@/lib/together";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
@@ -402,6 +403,22 @@ function Status({ friend, now, texts }: { friend: Friend; now: number; texts: Ui
           {after}
         </span>{" "}
         <span className="time">· {fill(texts.shareSeats, { n: share.viewers, max: share.maxViewers })}</span>
+      </span>
+    );
+  }
+  // In a Play Together game: "Playing PPSA17221 together (2/4)".
+  const together = playingTogether(friend.presence, texts, new Map());
+  if (together) {
+    const time = playedFor(since, now, texts);
+    return (
+      <span className="status playing together">
+        <span className="what">{together}</span>
+        {time && (
+          <>
+            {" "}
+            <span className="time">· {time}</span>
+          </>
+        )}
       </span>
     );
   }

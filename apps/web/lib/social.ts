@@ -1,5 +1,6 @@
 import type { Person } from "@/lib/people";
 import type { Attachment, MediaKind } from "@/lib/storage";
+import type { PartyTogether } from "@/lib/together";
 
 /** Messages, parties and calls as the API shows them (the website keeps its own copy of the shapes). */
 export interface Message {
@@ -74,6 +75,8 @@ export interface Party {
   members: PartyMember[];
   invited: Person[];
   call: { id: string; in: string[]; muted?: string[]; deafened?: string[] } | null;
+  /** The party's Play Together game while one runs (older API answers lack it). */
+  together?: PartyTogether | null;
   /** Listed in public, and how (older API answers lack it). */
   public?: { join: "request" | "open"; titleId: string | null; language: string | null } | null;
   /** Who asked to join, from the public list or with the code (members only). */
@@ -88,7 +91,7 @@ export interface Party {
 /** What a join code opens, as GET /join/{code} says. */
 export interface JoinCodeView {
   code: string;
-  kind: "party" | "share_play";
+  kind: "party" | "share_play" | "game_session";
   id: string;
   host: { userId?: string; handle: string; displayName: string; avatar: string | null } | null;
   game: {

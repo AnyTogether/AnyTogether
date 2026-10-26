@@ -13,6 +13,7 @@ import { shareEn, shareTr } from "./i18n-share";
 import { socialEn, socialTr } from "./i18n-social";
 import { storageEn, storageTr } from "./i18n-storage";
 import { themesEn, themesTr } from "./i18n-themes";
+import { togetherEn, togetherTr } from "./i18n-together";
 
 export const languages = ["en", "tr"] as const;
 export type Language = (typeof languages)[number];
@@ -447,7 +448,8 @@ export type Strings = typeof en &
   typeof legalUiEn &
   typeof psnEn &
   typeof presenceEn &
-  typeof chatEn;
+  typeof chatEn &
+  typeof togetherEn;
 /** What client components get: the same texts (kept as its own name for them). */
 export type UiStrings = Strings;
 export const ui = (texts: Strings): UiStrings => texts;
@@ -476,6 +478,7 @@ export async function strings(): Promise<Strings> {
         ...psnTr,
         ...presenceTr,
         ...chatTr,
+        ...togetherTr,
       }
     : {
         ...en,
@@ -493,5 +496,6 @@ export async function strings(): Promise<Strings> {
         ...psnEn,
         ...presenceEn,
         ...chatEn,
+        ...togetherEn,
       };
 }

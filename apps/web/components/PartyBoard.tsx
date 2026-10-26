@@ -18,6 +18,7 @@ import {
   normalizeJoinCode,
   social,
 } from "@/lib/social";
+import { isTogetherEvent, togetherCard } from "@/lib/together";
 import {
   type MicState,
   VoiceMesh,
@@ -182,6 +183,8 @@ export function PartyBoard({
 
   useLiveEvents((event) => {
     const data = event.data;
+    // The party's Play Together game started, someone joined or left, or it ended.
+    if (isTogetherEvent(event.type)) return reload();
     switch (event.type) {
       case "party.member_left":
         if (data.userId === me && data.reason === "kicked") {
@@ -483,6 +486,8 @@ export function PartyBoard({
         </div>
 
         {notice && <p className={`notice ${notice.kind}`}>{notice.text}</p>}
+
+        <TogetherCard party={party} me={me ?? ""} games={games} texts={texts} />
 
         <PartyListing party={party} leader={leader} games={games} texts={texts} onChange={reload} />
 
@@ -803,6 +808,65 @@ function JoinCodeCard({
         </button>
       )}
       {error && <p className="notice error">{error}</p>}
+    </div>
+  );
+}
+
+/** The party's Play Together game while one runs: who started what, who is in the game and who
+ *  is not yet. Joining happens in the launcher, which checks the game and its version. */
+function TogetherCard({
+  party,
+  me,
+  games,
+  texts,
+}: {
+  party: Party;
+  me: string;
+  games: { titleId: string; name: string }[];
+  texts: UiStrings;
+}) {
+  if (!party.together) return null;
+  const card = togetherCard(
+    party.together,
+    party.members,
+    me,
+    texts,
+    new Map(games.map((g) => [g.titleId, g.name])),
+  );
+  return (
+    <div className="card together live" aria-live="polite">
+      <div className="together-head">
+        <span className="together-pulse" aria-hidden="true" />
+        <h3 className="sub">{texts.togetherTitle}</h3>
+        <span className="count">{card.places}</span>
+      </div>
+      <p className="together-heading">{card.heading}</p>
+      <p className="together-meta">{card.version}</p>
+      <ul className="people together-players">
+        {card.players.map((player) => (
+          <li key={player.userId} className="person">
+            <Avatar person={player} presence="in_game" />
+            <span className="lines">
+              <span className="name">{player.displayName}</span>
+              <span className="meta">
+                {player.userId === party.together?.hostId ? texts.togetherHost : texts.togetherInGame}
+              </span>
+            </span>
+          </li>
+        ))}
+        {card.waiting.map((member) => (
+          <li key={member.userId} className="person waiting">
+            <Avatar person={member} />
+            <span className="lines">
+              <span className="name">{member.displayName}</span>
+              <span className="meta">{texts.togetherNotYet}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="hint">
+        {card.host ? texts.togetherHostHint : card.playing ? "" : texts.togetherJoinHint}
+      </p>
     </div>
   );
 }

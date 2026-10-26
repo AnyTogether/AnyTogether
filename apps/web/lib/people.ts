@@ -1,5 +1,6 @@
 import type { AccentName, CoverView, LevelBadgeData, TrophyLevel } from "@/lib/psn";
 import type { ConnectionBadge } from "./connections";
+import type { GamePresence } from "./together";
 
 /** People as the API shows them (no tokens or emails ever reach these). */
 export interface Person {
@@ -24,6 +25,8 @@ export interface Presence {
     viewers: number;
     maxViewers: number;
   };
+  /** The game session they host or, for Play Together, play in (older API answers lack it). */
+  game?: GamePresence;
 }
 
 export interface Friend extends Person {
