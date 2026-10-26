@@ -20,7 +20,7 @@ export interface RoadmapItem {
 export const statuses: Status[] = ["done", "progress", "next", "later"];
 
 /** When the list was last checked against the plan and the releases. */
-export const updated = "2026-10-25";
+export const updated = "2026-10-26";
 
 export const planDocs = {
   en: "https://github.com/utkuhalis/AnyPS5-ARM/blob/anytogether/docs/en/10-roadmap.md",
@@ -29,6 +29,90 @@ export const planDocs = {
 
 export const roadmap: RoadmapItem[] = [
   // Done, newest first.
+  {
+    id: "controllers",
+    status: "done",
+    areas: ["mac", "pc"],
+    shipped: "AnyPS5-ARM 0.2.21 · AnyPS5 Desktop 0.1.7",
+    en: {
+      t: "Controllers",
+      d: "DualSense, DualShock 4, Xbox, Switch Pro and more over USB or Bluetooth (the DualShock 3 over USB on the Mac), with a screen that tests them and a troubleshooter.",
+    },
+    tr: {
+      t: "Kumandalar",
+      d: "DualSense, DualShock 4, Xbox, Switch Pro ve daha fazlası USB ya da Bluetooth ile (Mac'te DualShock 3 de USB ile); onları deneyen bir ekran ve bir sorun giderici.",
+    },
+  },
+  {
+    id: "steam",
+    status: "done",
+    areas: ["mac", "pc"],
+    shipped: "AnyPS5-ARM 0.2.21 · AnyPS5 Desktop 0.1.7",
+    en: {
+      t: "Add to Steam",
+      d: "AnyPS5 and each unlocked game in your Steam library with their own art, starting straight into the game; on the Steam Deck too.",
+    },
+    tr: {
+      t: "Steam'e Ekle",
+      d: "AnyPS5 ve kilidi açılmış her oyun kendi görselleriyle Steam kütüphanende, doğrudan oyunu açarak; Steam Deck'te de.",
+    },
+  },
+  {
+    id: "prepare",
+    status: "done",
+    areas: ["mac", "pc"],
+    shipped: "AnyPS5-ARM 0.2.21 · AnyPS5 Desktop 0.1.7",
+    en: {
+      t: "New games ready by themselves",
+      d: "A game copied into the games folder shows up by itself and is prepared in the background, after a check that the drive has room.",
+    },
+    tr: {
+      t: "Kendiliğinden hazır yeni oyunlar",
+      d: "Oyunlar klasörüne kopyalanan oyun kendiliğinden görünür ve diskte yer olduğuna bakıldıktan sonra arka planda hazırlanır.",
+    },
+  },
+  {
+    id: "messages-more",
+    status: "done",
+    areas: ["mac", "pc", "phone", "online"],
+    shipped: "AnyPS5-ARM 0.2.21 · AnyPS5 Remote 1.16",
+    en: {
+      t: "Richer messages",
+      d: "Photos, clips and voice notes, replies, reactions, edits, unsend, read receipts and pinned chats.",
+    },
+    tr: {
+      t: "Daha zengin mesajlar",
+      d: "Fotoğraflar, klipler ve sesli notlar; yanıtlar, tepkiler, düzenleme, geri alma, okundu bilgisi ve sabitlenmiş sohbetler.",
+    },
+  },
+  {
+    id: "glass",
+    status: "done",
+    areas: ["mac", "pc"],
+    shipped: "AnyPS5-ARM 0.2.20 · AnyPS5 Desktop 0.1.6",
+    en: {
+      t: "Glass theme",
+      d: "A see-through launcher window: the wallpaper glows through frosted panes (Liquid Glass on macOS 26, Acrylic on Windows).",
+    },
+    tr: {
+      t: "Glass teması",
+      d: "Saydam bir launcher penceresi: duvar kâğıdı buzlu camların ardından parlar (macOS 26'da Liquid Glass, Windows'ta Acrylic).",
+    },
+  },
+  {
+    id: "find-in-apps",
+    status: "done",
+    areas: ["mac", "phone"],
+    shipped: "AnyPS5-ARM 0.2.16 · AnyPS5 Remote 1.12",
+    en: {
+      t: "Finding players in the apps",
+      d: "The looking-for-group board, public parties and game hubs in the Mac launcher and on the phone, not only on the web.",
+    },
+    tr: {
+      t: "Uygulamalarda oyuncu bulma",
+      d: "Grup arayan ilanları, herkese açık partiler ve oyun sayfaları yalnızca web'de değil, Mac launcher'ında ve telefonda da.",
+    },
+  },
   {
     id: "share-play",
     status: "done",
@@ -244,14 +328,27 @@ export const roadmap: RoadmapItem[] = [
   {
     id: "online-play",
     status: "progress",
-    areas: ["engine", "mac", "online"],
+    areas: ["engine", "mac", "pc", "online"],
     en: {
       t: "Online play through the engine bridge",
-      d: "Each player runs their own copy and the games play together through AnyTogether, never through Sony. The bridge and the server side are built; it needs games that play online to test with.",
+      d: "Each player runs their own copy and the games play together through AnyTogether, never through Sony. Experimental in the launchers since AnyPS5-ARM 0.2.19: Human Fall Flat lists and joins public lobbies, and no game plays a whole session yet.",
     },
     tr: {
       t: "Motor köprüsüyle çevrimiçi oyun",
-      d: "Her oyuncu kendi kopyasını çalıştırır, oyunlar Sony üzerinden değil AnyTogether üzerinden birlikte oynar. Köprü ve sunucu tarafı hazır; denemek için çevrimiçi oynanan oyunlar gerekiyor.",
+      d: "Her oyuncu kendi kopyasını çalıştırır, oyunlar Sony üzerinden değil AnyTogether üzerinden birlikte oynar. AnyPS5-ARM 0.2.19'dan beri launcher'larda deneysel: Human Fall Flat herkese açık lobileri listeleyip katılabiliyor; henüz hiçbir oyun baştan sona bir oturum oynamıyor.",
+    },
+  },
+  {
+    id: "play-together",
+    status: "progress",
+    areas: ["mac", "pc", "online"],
+    en: {
+      t: "Play Together",
+      d: "Start a game from the party and everyone in it joins its LAN mode over the internet, after a check that they have the same game and version. The server and the party pages are live; the launchers' side is coming.",
+    },
+    tr: {
+      t: "Birlikte Oyna",
+      d: "Partiden bir oyun başlat; partideki herkes, aynı oyun ve sürüm kendisinde var mı diye bakıldıktan sonra oyunun LAN moduna internet üzerinden katılır. Sunucu ve parti sayfaları hazır; launcher tarafı geliyor.",
     },
   },
   {
@@ -350,29 +447,16 @@ export const roadmap: RoadmapItem[] = [
 
   // Later
   {
-    id: "find-in-apps",
-    status: "later",
-    areas: ["mac", "pc", "phone"],
-    en: {
-      t: "Finding players in the apps",
-      d: "The looking-for-group board and public parties in the launchers and on the phone, not only on the web.",
-    },
-    tr: {
-      t: "Uygulamalarda oyuncu bulma",
-      d: "Grup arayan ilanları ve herkese açık partiler yalnızca web'de değil, launcher'larda ve telefonda da.",
-    },
-  },
-  {
-    id: "messages-more",
+    id: "party-chat",
     status: "later",
     areas: ["online"],
     en: {
-      t: "Richer messages and party chat",
-      d: "Pictures, clips and reactions in messages, and a text chat beside a party's voice.",
+      t: "Party chat",
+      d: "A text chat beside a party's voice, in the launchers, on the phone and on the web.",
     },
     tr: {
-      t: "Daha zengin mesajlar ve parti sohbeti",
-      d: "Mesajlarda resimler, klipler ve tepkiler; bir partinin sesinin yanında yazılı sohbet.",
+      t: "Parti sohbeti",
+      d: "Bir partinin sesinin yanında yazılı sohbet; launcher'larda, telefonda ve web'de.",
     },
   },
   {
