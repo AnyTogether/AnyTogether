@@ -833,6 +833,10 @@ export const gameSessionPlayers = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" })
       .unique(),
     joinedAt: now(),
+    /** The player's own game version when they joined (null for rows from before it was kept). */
+    gameVersion: text(),
+    /** They joined although the game version did not fit the session's rule ("Try anyway"). */
+    versionOverride: boolean().notNull().default(false),
   },
   (table) => [primaryKey({ columns: [table.sessionId, table.accountId] })],
 );
