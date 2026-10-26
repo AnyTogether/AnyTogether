@@ -91,7 +91,7 @@ const privacyEn: LegalDoc = {
             ],
             [
               "Profile",
-              "Your handle (an old one is held for you for 30 days after a change), display name, avatar, bio, country, the languages you play in, a cover and an accent colour, the trophies and games you pin to your showcase, your trophy level (worked out from your trophy points), and your privacy, notification and Appear offline settings. An uploaded avatar is turned into a small JPEG without its metadata.",
+              "Your handle (an old one is held for you for 30 days after a change), display name, avatar, bio, country, the languages you play in, a cover and an accent colour, the trophies and games you pin to your showcase, your trophy level (worked out from your trophy points), your privacy, notification and Appear offline settings, and, if you set them, a private name and a private picture for your friends. An uploaded avatar or private picture is turned into a small JPEG without its metadata.",
             ],
             [
               "Friends",
@@ -139,7 +139,7 @@ const privacyEn: LegalDoc = {
             ],
             [
               "Moderation",
-              "Reports you send and reports about you (a reported message is copied for the moderators as it was), warnings, mutes and bans with their reasons, appeals and their answers, and a log of what moderators and the system did.",
+              "Reports you send and reports about you (a reported message, or a reported private name and picture, is copied for the moderators as it was), warnings, mutes and bans with their reasons, appeals and their answers, and a log of what moderators and the system did.",
             ],
             [
               "Your IP address",
@@ -157,6 +157,7 @@ const privacyEn: LegalDoc = {
           list: [
             "Anyone, signed in or not: your profile card (handle, display name, avatar, bio, country, cover and accent colour, and the Steam or Discord badges you have not hidden), the themes you share and your looking-for-group posts. Compatibility reports are shown without your name. Profile pages ask search engines not to list them. Whoever has a join code you made sees your profile card, the game and how many are in the party.",
             "Your friends, everyone, or nobody, as you choose in [Settings → Privacy](/settings#privacy): your games and play time, trophies (with your trophy level, and comparing trophies with you), friends list, online status and the game you are playing, and your gallery. Out of the box these are for friends only, and others can find you by search. Your showcase, leaderboards and player suggestions follow the same settings.",
+            "Only you and your accepted friends: your private name and private picture, set in [Settings → Friends only](/settings#private). Your handle is your public ID; these are not. They are never shown in search (nor searched by), on your public profile or link previews, to people you only share a party, a conversation, a game or a community with, to anyone you blocked or who blocked you, or in moderators' lists. When a friendship ends they stop being shown; a link to the private picture a former friend already had stops working within 12 hours. A friend can report them: the moderators then see them as they were, and can clear them.",
             "The members of a conversation see its messages and their reactions, with who reacted; in a direct conversation the other person sees when a message reached one of your devices. With read receipts on (the default, in [Settings → Privacy](/settings#privacy)) the members also see how far you have read; turn them off and they do not, and you do not see theirs. The people in a party or a call see who else is there, and only a party's members see its Discord link. Only you see your Recently played with list; the people on it see you on theirs.",
             "Anyone signed in sees a public community, its members (with their role and when they joined) and who is going to its events; an invite-only community is seen only by its members.",
             "In a call, a share play or an online game the others' devices connect to yours, so they can learn your IP address, as in any peer-to-peer connection.",
@@ -476,7 +477,7 @@ const privacyTr: LegalDoc = {
             ],
             [
               "Profil",
-              "Kullanıcı adın (değiştirdiğinde eskisi 30 gün senin için ayrılır), görünen adın, avatarın, biyografin, ülken, oynadığın diller, kapak görselin ve vurgu rengin, vitrinine iliştirdiğin kupalar ve oyunlar, kupa puanlarından hesaplanan kupa seviyen, gizlilik, bildirim ve Çevrimdışı görün ayarların. Yüklediğin avatar, üst verisi atılmış küçük bir JPEG'e dönüştürülür.",
+              "Kullanıcı adın (değiştirdiğinde eskisi 30 gün senin için ayrılır), görünen adın, avatarın, biyografin, ülken, oynadığın diller, kapak görselin ve vurgu rengin, vitrinine iliştirdiğin kupalar ve oyunlar, kupa puanlarından hesaplanan kupa seviyen, gizlilik, bildirim ve Çevrimdışı görün ayarların ve belirlediysen arkadaşların için gizli bir isim ve gizli bir resim. Yüklediğin avatar ya da gizli resim, üst verisi atılmış küçük bir JPEG'e dönüştürülür.",
             ],
             [
               "Arkadaşlar",
@@ -524,7 +525,7 @@ const privacyTr: LegalDoc = {
             ],
             [
               "Moderasyon",
-              "Gönderdiğin ve senin hakkında gönderilen raporlar (raporlanan mesaj, moderatörler için olduğu gibi kopyalanır), uyarılar, susturmalar ve yasaklar gerekçeleriyle, itirazlar ve yanıtları, moderatörlerin ve sistemin yaptıklarının kaydı.",
+              "Gönderdiğin ve senin hakkında gönderilen raporlar (raporlanan mesaj ya da raporlanan gizli isim ve resim, moderatörler için olduğu gibi kopyalanır), uyarılar, susturmalar ve yasaklar gerekçeleriyle, itirazlar ve yanıtları, moderatörlerin ve sistemin yaptıklarının kaydı.",
             ],
             [
               "IP adresin",
@@ -542,6 +543,7 @@ const privacyTr: LegalDoc = {
           list: [
             "Giriş yapmış olsun olmasın herkes: profil kartın (kullanıcı adı, görünen ad, avatar, biyografi, ülke, kapak ve vurgu rengi, gizlemediğin Steam ya da Discord rozetleri), paylaştığın temalar ve oyuncu arama ilanların. Uyumluluk raporları adın olmadan gösterilir. Profil sayfaları arama motorlarından kendilerini listelememelerini ister. Açtığın bir katılma kodu kimdeyse profil kartını, oyunu ve partide kaç kişi olduğunu görür.",
             "[Ayarlar → Gizlilik](/settings#privacy)'te seçtiğine göre arkadaşların, herkes ya da hiç kimse: oyunların ve oyun süren, kupaların (kupa seviyen ve seninle kupa karşılaştırma dahil), arkadaş listen, çevrimiçi durumun ve oynadığın oyun, galerin. Başta bunlar yalnızca arkadaşlarına açıktır ve başkaları seni aramada bulabilir. Vitrinin, liderlik tabloları ve oyuncu önerileri de aynı ayarlara uyar.",
+            "Yalnızca sen ve kabul ettiğin arkadaşların: [Ayarlar → Yalnız arkadaşlar](/settings#private)'da belirlediğin gizli ismin ve gizli resmin. Kullanıcı adın herkese açık kimliğindir; bunlar değildir. Aramada asla görünmez (aramada kullanılmaz), herkese açık profilinde ya da bağlantı önizlemelerinde, yalnızca aynı partide, konuşmada, oyunda ya da toplulukta olduğun kişilerde, engellediğin ya da seni engelleyen kişilerde ve moderatörlerin listelerinde gösterilmez. Arkadaşlık bitince gösterilmez olur; eski bir arkadaşın elindeki gizli resim bağlantısı en geç 12 saat içinde çalışmaz olur. Bir arkadaşın bunları bildirebilir: moderatörler o zaman onları bildirildikleri haliyle görür ve temizleyebilir.",
             "Bir konuşmanın üyeleri onun mesajlarını ve tepkilerini, kimin tepki verdiğiyle birlikte görür; birebir konuşmada karşındaki kişi bir mesajın cihazlarından birine ulaştığını görür. Okundu bilgisi açıkken (varsayılan; [Ayarlar → Gizlilik](/settings#privacy)) üyeler nereye kadar okuduğunu da görür; kapatırsan görmezler, sen de onlarınkini görmezsin. Bir partideki ya da aramadaki kişiler orada başka kimlerin olduğunu görür ve partinin Discord bağlantısını yalnızca üyeleri görür. Son oynadıkların listeni yalnızca sen görürsün; listendeki kişiler de seni kendi listelerinde görür.",
             "Herkese açık bir topluluğu, üyelerini (rolleri ve ne zaman katıldıklarıyla) ve etkinliklerine kimlerin geleceğini giriş yapmış herkes görür; yalnızca davetle girilen bir topluluğu yalnızca üyeleri görür.",
             "Bir aramada, birlikte oynamada ya da online bir oyunda diğerlerinin cihazları seninkine bağlanır; bu yüzden her eşler arası bağlantıda olduğu gibi IP adresini öğrenebilirler.",

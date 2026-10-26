@@ -48,6 +48,8 @@ describe("the privacy notice and the terms", () => {
       "Communities and events",
       "join code",
       "Appear offline",
+      "private name",
+      "private picture",
       "Discord link",
       "game session",
       "backed up every night",
