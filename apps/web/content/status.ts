@@ -229,6 +229,7 @@ export const statusCards: StatusCard[] = [
     id: "dlc",
     column: "progress",
     platforms: desk,
+    ships: { project: "macos", version: "0.2.24" },
     en: {
       t: "DLC and game updates",
       d: "A game's update and add-ons from your own dumps, placed beside the game and started with it.",
@@ -242,6 +243,7 @@ export const statusCards: StatusCard[] = [
     id: "presets",
     column: "progress",
     platforms: desk,
+    ships: { project: "macos", version: "0.2.24" },
     en: {
       t: "Game Presets",
       d: "Difficulty, inverted camera, subtitles, audio language and performance mode, set once for every game.",
