@@ -1888,6 +1888,58 @@
   color: var(--mute);
 }
 
+/* The launcher's newest */
+.launcher-head {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 24px clamp(32px, 5vw, 72px);
+  align-items: end;
+}
+.launcher-head .s-lead {
+  margin: 0;
+}
+.launcher-facts {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px 32px;
+}
+.launcher-facts div {
+  padding-top: 18px;
+  border-top: 1px solid var(--rule-2);
+}
+.launcher-facts dt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  font-family: var(--font-head);
+  font-stretch: 108%;
+  font-size: 19px;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+}
+.launcher-facts dd {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--mute);
+  overflow-wrap: break-word;
+}
+@media (max-width: 960px) {
+  .launcher-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .launcher-facts {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .launcher-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Themes and frame generation */
 .landing .l-duo {
   grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);

@@ -219,6 +219,30 @@ export function Landing({
         </p>
       </section>
 
+      <section className="l-sec l-launcher" aria-labelledby="launcher-title">
+        <div className="launcher-head" data-reveal>
+          <h2 className="h-section" id="launcher-title">
+            {l.launcher.title}
+          </h2>
+          <p className="s-lead">{l.launcher.lead}</p>
+        </div>
+        <dl className="launcher-facts" data-reveal>
+          {l.launcher.cards.map((card) => (
+            <div key={card.title}>
+              <dt>
+                {card.title}
+                {card.tag && (
+                  <span className={`chip-tag ${card.tag === "soon" ? "preview" : "experimental"}`}>
+                    {card.tag === "soon" ? s.soon : s.experimental}
+                  </span>
+                )}
+              </dt>
+              <dd>{card.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
       <section className="l-sec l-social">
         <div className="social-head" data-reveal>
           <h2 className="h-section">{l.social.title}</h2>

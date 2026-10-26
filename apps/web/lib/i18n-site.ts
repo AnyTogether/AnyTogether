@@ -59,6 +59,7 @@ const en = {
   copied: "Copied",
   preview: "Early preview",
   experimental: "Experimental",
+  soon: "Coming soon",
   demoPeople: "People in the pictures are made up.",
   landing: {
     title: "AnyPS5 and AnyTogether: your PS5 games on Mac, PC and with friends",
@@ -174,6 +175,45 @@ const en = {
       padAlt: "The phone pad: both sticks, the D-pad, the face buttons, L1, L2, R1, R2 and the touchpad",
       liveAlt: "Silksong played with the phone, the pad shown in the corner",
     },
+    launcher: {
+      kicker: "The launcher",
+      title: "Plays the way you do.",
+      lead: "New in the Mac launcher and in AnyPS5 Desktop for Windows and Linux.",
+      cards: [
+        {
+          title: "Any controller",
+          detail:
+            "DualSense, DualShock 4, Xbox, Switch Pro and more, over USB or Bluetooth, and the DualShock 3 over USB on the Mac. Settings → Controllers tests the buttons, sticks, vibration and light bar, and a troubleshooter says what is wrong.",
+        },
+        {
+          title: "Play from Steam",
+          detail:
+            "Add to Steam puts AnyPS5 in your Steam library, and every unlocked game with its own art, starting straight into it. On the Steam Deck too.",
+        },
+        {
+          title: "Glass",
+          detail:
+            "A see-through theme: your wallpaper glows through frosted panes. Liquid Glass on macOS 26, Acrylic on Windows, blurred on KDE Plasma.",
+        },
+        {
+          title: "Ready when you are",
+          detail:
+            "Copy a game into the games folder: it shows up by itself and is prepared in the background, once the drive is checked for room.",
+        },
+        {
+          title: "Online play",
+          detail:
+            "Each player runs their own copy and the games reach each other through AnyTogether, never Sony. Human Fall Flat already lists and joins public lobbies; no game plays a whole session yet.",
+          tag: "experimental",
+        },
+        {
+          title: "Play Together",
+          detail:
+            "Start a game from your party and everyone in it joins its LAN mode over the internet, once AnyPS5 has checked they have the same game and version.",
+          tag: "soon",
+        },
+      ] as { title: string; detail: string; tag?: "experimental" | "soon" }[],
+    },
     social: {
       kicker: "Friends",
       title: "Everyone you play with, one button away.",
@@ -183,7 +223,10 @@ const en = {
           "Friends and presence",
           "See who is online and what they play. When their game is joinable, start the same one and join them.",
         ],
-        ["Messages", "Chats and group chats with typing and unread counts, on every screen."],
+        [
+          "Messages",
+          "Replies, reactions, edits and read receipts, photos, clips and voice notes, and the chats that matter pinned on top. On every screen.",
+        ],
         [
           "Parties and voice",
           "Up to eight together. Voice goes from player to player, through a relay only when it must. Push-to-talk on ⌥V works over the game.",
@@ -366,6 +409,7 @@ const tr: SiteStrings = {
   copied: "Kopyalandı",
   preview: "Erken sürüm",
   experimental: "Deneysel",
+  soon: "Yakında",
   demoPeople: "Görsellerdeki kişiler hayalidir.",
   landing: {
     title: "AnyPS5 ve AnyTogether: PS5 oyunların Mac'te, PC'de ve arkadaşlarınla",
@@ -483,6 +527,45 @@ const tr: SiteStrings = {
       padAlt: "Telefon kumandası: iki analog, yön tuşları, ana tuşlar, L1, L2, R1, R2 ve touchpad",
       liveAlt: "Silksong telefonla oynanıyor, kumanda köşede",
     },
+    launcher: {
+      kicker: "Launcher",
+      title: "Senin gibi oynar.",
+      lead: "Mac launcher'ında ve Windows ile Linux için AnyPS5 Desktop'ta yeni olanlar.",
+      cards: [
+        {
+          title: "Her kumanda",
+          detail:
+            "DualSense, DualShock 4, Xbox, Switch Pro ve daha fazlası, USB ya da Bluetooth ile; Mac'te DualShock 3 de USB ile. Ayarlar → Kumandalar düğmeleri, çubukları, titreşimi ve ışık çubuğunu dener; sorun giderici neyin yanlış olduğunu söyler.",
+        },
+        {
+          title: "Steam'den oyna",
+          detail:
+            "Steam'e Ekle, AnyPS5'i Steam kütüphanene koyar; kilidi açılmış her oyunu da kendi görselleriyle, doğrudan oyunu açan bir girdi olarak. Steam Deck'te de.",
+        },
+        {
+          title: "Glass",
+          detail:
+            "Saydam bir tema: duvar kâğıdın buzlu camların ardından parlar. macOS 26'da Liquid Glass, Windows'ta Acrylic, KDE Plasma'da bulanık.",
+        },
+        {
+          title: "Hazır bekler",
+          detail:
+            "Oyunlar klasörüne bir oyun kopyala: kendiliğinden görünür ve diskte yer olduğuna bakıldıktan sonra arka planda hazırlanır.",
+        },
+        {
+          title: "Çevrim içi oyun",
+          detail:
+            "Her oyuncu kendi kopyasını çalıştırır; oyunlar birbirine Sony üzerinden değil, AnyTogether üzerinden ulaşır. Human Fall Flat herkese açık lobileri listeleyip katılabiliyor; henüz hiçbir oyun baştan sona bir oturum oynamıyor.",
+          tag: "experimental",
+        },
+        {
+          title: "Birlikte Oyna",
+          detail:
+            "Partinden bir oyun başlat; partideki herkes, aynı oyun ve sürüm kendisinde var mı diye bakıldıktan sonra oyunun LAN moduna internet üzerinden katılır.",
+          tag: "soon",
+        },
+      ],
+    },
     social: {
       kicker: "Arkadaşlar",
       title: "Birlikte oynadığın herkes, bir tuş uzağında.",
@@ -492,7 +575,10 @@ const tr: SiteStrings = {
           "Arkadaşlar ve durum",
           "Kim çevrimiçi, ne oynuyor gör. Oyunu katılınabilir olduğunda aynı oyunu aç ve yanına git.",
         ],
-        ["Mesajlar", "Yazıyor göstergesi ve okunmamış sayısıyla birebir ve grup sohbetleri, her ekranda."],
+        [
+          "Mesajlar",
+          "Yanıtlar, tepkiler, düzenlemeler ve okundu bilgisi; fotoğraflar, klipler ve sesli notlar; önemli sohbetler en üstte sabit. Her ekranda.",
+        ],
         [
           "Parti ve ses",
           "Sekiz kişiye kadar. Ses oyuncudan oyuncuya gider, yalnızca gerektiğinde relay üzerinden. ⌥V ile bas-konuş oyunun üstünde de çalışır.",
