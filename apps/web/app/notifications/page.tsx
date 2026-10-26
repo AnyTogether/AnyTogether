@@ -2,10 +2,11 @@ import { NotificationList } from "@/components/NotificationList";
 import { strings, ui } from "@/lib/i18n";
 import type { NoticePage } from "@/lib/notify";
 import { apiJson, currentUser } from "@/lib/session";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Notifications · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.notifications);
 
 /** Everything the bell counts: requests, invites, missed calls, messages while away, warnings. */
 export default async function Notifications() {

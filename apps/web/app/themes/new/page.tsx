@@ -1,11 +1,12 @@
 import { ThemeShare } from "@/components/ThemeShare";
 import { strings, ui } from "@/lib/i18n";
 import { currentUser } from "@/lib/session";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Share a theme · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.shareTheme);
 
 /** Sharing a theme exported from the launcher's Theme Studio. */
 export default async function NewTheme() {

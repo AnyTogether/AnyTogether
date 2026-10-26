@@ -1,15 +1,16 @@
 import { ThemeTile } from "@/components/ThemeTile";
 import { wide } from "@/components/site/fonts";
 import { strings } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/product-page";
 import { currentUser, publicJson } from "@/lib/session";
 import { type ThemePage, type ThemeSort, themeSorts } from "@/lib/themes";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = {
-  title: "Themes · AnyTogether",
-  description: "Themes for the AnyPS5 launcher, made in its Theme Studio and shared by players.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const texts = await strings();
+  return pageMetadata(`${texts.themes} · AnyTogether`, texts.themesLead, "/themes");
+}
 
 type Search = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);

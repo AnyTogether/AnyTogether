@@ -7,11 +7,12 @@ import { localName, totalTime } from "@/lib/games";
 import { type Strings, strings } from "@/lib/i18n";
 import { fill } from "@/lib/people";
 import { apiJson, currentUser } from "@/lib/session";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Leaderboards · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.leaderboards);
 
 type Search = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 const boards: GameBoard[] = ["points", "time", "completion"];

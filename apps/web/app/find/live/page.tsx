@@ -3,10 +3,11 @@ import { FindTabs, PartyRow, ShareRow } from "@/components/DiscoverCards";
 import type { PublicParty, PublicShare } from "@/lib/discover";
 import { strings, ui } from "@/lib/i18n";
 import { apiJson, currentUser } from "@/lib/session";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Parties & live · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.tabLive);
 
 /** Share plays under Live now, and the parties and share plays their hosts listed in public. */
 export default async function FindLive() {

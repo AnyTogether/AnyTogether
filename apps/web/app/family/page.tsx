@@ -14,8 +14,9 @@ import { apiJson, currentUser } from "@/lib/session";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import "../family.css";
+import { titled } from "@/lib/titles";
 
-export const metadata: Metadata = { title: "Family · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.family);
 
 /** The family: for parents its members, each child's limits, requests and play; for a child their
  *  own settings, today's time and their requests; for anyone else the way in. */

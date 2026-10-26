@@ -11,10 +11,11 @@ import {
 } from "@/lib/admin";
 import { strings, ui } from "@/lib/i18n";
 import { apiJson, currentUser } from "@/lib/session";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Admin · AnyTogether", robots: { index: false } };
+export const generateMetadata = () => titled((t) => t.admin, { robots: { index: false } });
 
 /** The moderators' page. Only an admin sees it; everyone else gets "not found". The API checks the
  *  role again on every call it makes, so the page itself grants nothing. */

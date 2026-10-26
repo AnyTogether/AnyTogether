@@ -3,11 +3,12 @@ import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
 import { type Restriction, type Restrictions, appealCookie, longDate } from "@/lib/restrictions";
 import { api, restrictionToken } from "@/lib/session";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "Account restrictions · AnyTogether", robots: { index: false } };
+export const generateMetadata = () => titled((t) => t.restrictedTitle, { robots: { index: false } });
 
 function Mark({ kind }: { kind: Restriction["kind"] }) {
   return (

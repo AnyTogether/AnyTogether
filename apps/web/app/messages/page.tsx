@@ -4,10 +4,11 @@ import { type Friend, isUserId } from "@/lib/people";
 import { apiJson, currentUser, publicJson } from "@/lib/session";
 import type { Conversation } from "@/lib/social";
 import type { StorageInfo } from "@/lib/storage";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Messages · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.messages);
 
 export default async function Messages({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
   const [texts, user, { c }] = await Promise.all([strings(), currentUser(), searchParams]);

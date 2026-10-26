@@ -2,11 +2,12 @@ import { ThemeTile } from "@/components/ThemeTile";
 import { strings } from "@/lib/i18n";
 import { apiJson, currentUser } from "@/lib/session";
 import type { ThemeDetail } from "@/lib/themes";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "My themes · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.myThemes);
 
 /** The themes you shared, in every state: published, in review or hidden. */
 export default async function MyThemes() {

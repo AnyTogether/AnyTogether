@@ -12,7 +12,7 @@ import Link from "next/link";
 
 export async function generateMetadata(): Promise<Metadata> {
   const l = siteStrings(await language()).landing;
-  return pageMetadata(l.title, l.description);
+  return pageMetadata(l.title, l.description, "/");
 }
 
 /** Signed in: the friends' feed. Signed out: the AnyPS5 family and what it does. */

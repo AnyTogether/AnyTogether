@@ -12,11 +12,12 @@ import {
 import { type LibraryGame, localName } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
 import { apiJson, currentUser } from "@/lib/session";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Find players · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.findPlayers);
 
 type Search = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);

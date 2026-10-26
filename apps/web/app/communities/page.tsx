@@ -6,11 +6,12 @@ import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
 import { type CommunityCard, type CommunityInvite, type PlannedEvent, gameOptions } from "@/lib/psn";
 import { apiJson, currentUser } from "@/lib/session";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Communities · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.communities);
 
 type Search = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 

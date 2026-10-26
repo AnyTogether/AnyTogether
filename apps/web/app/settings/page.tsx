@@ -26,10 +26,11 @@ import type { NoticeSetup } from "@/lib/notify";
 import { type Own, type SignedIn, fill, privacySectionsWithGallery } from "@/lib/people";
 import { apiJson, currentUser } from "@/lib/session";
 import type { StorageOverview } from "@/lib/storage";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Settings · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.settings);
 
 /** The signed-in user's settings: profile, privacy, notifications, passkeys, signed-in devices, their data,
  *  deletion. */

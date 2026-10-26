@@ -11,14 +11,15 @@ import {
 import { localName } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
+import { pageMetadata } from "@/lib/product-page";
 import { currentUser, publicJson } from "@/lib/session";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = {
-  title: "Compatibility · AnyTogether",
-  description: "How far each PS5 game gets in AnyPS5 on macOS, Windows and Linux, as players report it.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const texts = await strings();
+  return pageMetadata(`${texts.compatibility} · AnyTogether`, texts.compatLead, "/compatibility");
+}
 
 type Search = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);

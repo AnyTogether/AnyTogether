@@ -3,11 +3,12 @@ import { EventDays } from "@/components/Events";
 import { strings, ui } from "@/lib/i18n";
 import type { PlannedEvent } from "@/lib/psn";
 import { apiJson, currentUser } from "@/lib/session";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Events · AnyTogether" };
+export const generateMetadata = () => titled((t) => t.events);
 
 /** What is coming up in the reader's communities and what they said they would go to, by day in
  *  their own time zone. */

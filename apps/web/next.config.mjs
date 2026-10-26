@@ -33,9 +33,7 @@ export default {
       // seeking); production's proxy leaves video and audio types alone.
       {
         source: "/media/:file([^/]+\\.(?:webm|mp4))",
-        headers: [
-          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-        ],
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
     ];
   },
