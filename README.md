@@ -81,7 +81,7 @@ off-site backups (S3, Google Drive, SFTP and more). See
 
 ## Credits
 
-- Play Together's per-title version rule with an explicit "Try anyway" override, and retiring old launchers with `client_too_old`, follow ideas AnyPlay shipped first in [anyplaynet/cloud](https://github.com/anyplaynet/cloud) (MIT/Apache-2.0). The code here is written independently.
+- Play Together's per-title version rule with an explicit "Try anyway" override, and retiring old launchers with `client_too_old`, follow ideas AnyPlay shipped first in [anyplaynet/cloud](https://github.com/anyplaynet/cloud) (AGPL-3.0). The code here is written independently.
 
 ## License
 
