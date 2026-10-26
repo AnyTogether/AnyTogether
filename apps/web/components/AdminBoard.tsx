@@ -80,6 +80,8 @@ type Action =
   | "remove_message"
   | "reset_avatar"
   | "reset_bio"
+  | "reset_private_name"
+  | "reset_private_avatar"
   | "remove_post"
   | "hide_theme"
   | "publish_theme"
@@ -341,6 +343,16 @@ function ReportItem({
     },
     { key: "reset_avatar", label: texts.acResetAvatar, show: Boolean(report.target?.avatar) },
     { key: "reset_bio", label: texts.acResetBio, show: Boolean(report.target?.bio) },
+    {
+      key: "reset_private_name",
+      label: texts.acResetPrivateName,
+      show: report.targetKind === "private_profile" && Boolean(report.privateProfile?.name),
+    },
+    {
+      key: "reset_private_avatar",
+      label: texts.acResetPrivateAvatar,
+      show: report.targetKind === "private_profile" && Boolean(report.privateProfile?.avatar),
+    },
   ];
   const kindLabel =
     report.targetKind === "message"
@@ -355,7 +367,9 @@ function ReportItem({
               ? texts.kindCommunity
               : report.targetKind === "event"
                 ? texts.kindEvent
-                : texts.kindUser;
+                : report.targetKind === "private_profile"
+                  ? texts.kindPrivateProfile
+                  : texts.kindUser;
   // Putting a theme back is not a punishment: it is confirmed like a warning.
   const gentle = action === "warn" || action === "publish_theme";
   const statusLabel =
@@ -402,6 +416,20 @@ function ReportItem({
       )}
       {report.theme && <ReportedTheme theme={report.theme} texts={texts} />}
       {report.media && <ReportedMedia media={report.media} texts={texts} />}
+      {report.privateProfile && (
+        <figure className="said private-said">
+          <figcaption className="meta">
+            {texts.privateSnapshot}
+            {!report.privateProfile.current && <span className="flair">{texts.privateChanged}</span>}
+          </figcaption>
+          <div className="private-evidence">
+            {report.privateProfile.avatar && (
+              <img src={report.privateProfile.avatar} alt="" width={72} height={72} loading="lazy" />
+            )}
+            <blockquote>{report.privateProfile.name ?? "…"}</blockquote>
+          </div>
+        </figure>
+      )}
       {report.community && (
         <figure className="said">
           <figcaption className="meta">

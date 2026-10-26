@@ -6,7 +6,7 @@ import { PartyListing } from "@/components/Discover";
 import { useLive, useLiveEvents } from "@/components/Live";
 import { Menu } from "@/components/MessagesBoard";
 import type { UiStrings } from "@/lib/i18n";
-import { type Friend, type Person, byPresence, fill } from "@/lib/people";
+import { type Friend, type Person, byPresence, fill, shownName } from "@/lib/people";
 import {
   type CallJoin,
   type Party,
@@ -535,8 +535,9 @@ export function PartyBoard({
                   </span>
                   <span className="lines">
                     <span className="name">
-                      {member.displayName}
+                      {shownName(member)}
                       {self && <span className="handle"> ({texts.you})</span>}
+                      {!self && member.privateName && <span className="handle"> @{member.handle}</span>}
                     </span>
                     <span className="meta member-meta">
                       {party.leaderId === member.userId && <span className="crown">{texts.leader}</span>}
@@ -869,7 +870,10 @@ function TogetherCard({
           <li key={player.userId} className="person">
             <Avatar person={player} presence="in_game" />
             <span className="lines">
-              <span className="name">{player.displayName}</span>
+              <span className="name">
+                {shownName(player)}
+                {player.privateName && <span className="handle"> @{player.handle}</span>}
+              </span>
               <span className="meta">{card.roleOf(player.userId)}</span>
             </span>
           </li>
@@ -878,7 +882,10 @@ function TogetherCard({
           <li key={member.userId} className="person waiting">
             <Avatar person={member} />
             <span className="lines">
-              <span className="name">{member.displayName}</span>
+              <span className="name">
+                {shownName(member)}
+                {member.privateName && <span className="handle"> @{member.handle}</span>}
+              </span>
               <span className="meta">{texts.togetherNotYet}</span>
             </span>
           </li>

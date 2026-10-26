@@ -18,7 +18,7 @@ export interface AdminReport {
   status: "open" | "actioned" | "dismissed";
   reason: string;
   note: string | null;
-  targetKind: "user" | "message" | "theme" | "lfg" | "media" | "community" | "event";
+  targetKind: "user" | "message" | "theme" | "lfg" | "media" | "community" | "event" | "private_profile";
   targetId: string;
   message: { text: string | null; sentAt: string | null; removed: boolean } | null;
   /** A reported looking-for-group post, as it was when reported. */
@@ -52,6 +52,9 @@ export interface AdminReport {
     description: string | null;
     removed: boolean;
   } | null;
+  /** A friend's report of the friends-only name and picture: what they were when reported (the
+   *  picture through a link for an hour), and whether they still are (older API answers lack it). */
+  privateProfile?: { name: string | null; avatar: string | null; current: boolean } | null;
   reporter: AdminPerson | null;
   target: AdminPerson | null;
   timesReported: number;

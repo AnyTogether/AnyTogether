@@ -1,13 +1,14 @@
-import { type Person, type PresenceState, initialOf } from "@/lib/people";
+import { type Person, type PresenceState, initialOf, shownAvatar, shownName } from "@/lib/people";
 import type { CSSProperties } from "react";
 
-/** A person's picture, or the first letter of their name on the brand gradient; a presence dot if given. */
+/** A person's picture, or the first letter of their name on the brand gradient; a presence dot if
+ *  given. A friend's friends-only picture and name come first when the API gave them. */
 export function Avatar({
   person,
   size = 40,
   presence,
 }: {
-  person: Pick<Person, "handle" | "displayName" | "avatar">;
+  person: Pick<Person, "handle" | "displayName" | "avatar" | "privateName" | "privateAvatar">;
   size?: number;
   presence?: PresenceState;
 }) {
@@ -17,10 +18,10 @@ export function Avatar({
   const style = { "--size": `${size}px`, "--turn": `${hash % 360}deg` } as CSSProperties;
   return (
     <span className="avatar" style={style}>
-      {person.avatar ? (
-        <img src={person.avatar} alt="" width={size} height={size} loading="lazy" />
+      {shownAvatar(person) ? (
+        <img src={shownAvatar(person) ?? ""} alt="" width={size} height={size} loading="lazy" />
       ) : (
-        <span aria-hidden="true">{initialOf(person.displayName || person.handle)}</span>
+        <span aria-hidden="true">{initialOf(shownName(person) || person.handle)}</span>
       )}
       {presence && <i className={`presence is-${presence}`} />}
     </span>

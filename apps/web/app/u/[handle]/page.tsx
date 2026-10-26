@@ -19,7 +19,7 @@ import {
   trophyText,
 } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
-import { fill } from "@/lib/people";
+import { fill, shownName } from "@/lib/people";
 import type { Person, Profile, PublicProfile } from "@/lib/people";
 import { type LevelBadgeData, type Showcase, accents, localArt } from "@/lib/psn";
 import { api, currentUser, publicJson } from "@/lib/session";
@@ -148,13 +148,34 @@ export default async function UserProfile({ params }: Params) {
           style={cover ? { backgroundImage: `url("${cover}")` } : undefined}
           aria-hidden="true"
         />
-        {!self && user && <ProfileMenu person={profile} texts={ui(texts)} />}
+        {!self && user && (
+          <ProfileMenu
+            person={profile}
+            texts={ui(texts)}
+            // A friend may report what only friends see.
+            {...(profile.privateName || profile.privateAvatar
+              ? {
+                  privateReport: {
+                    label: texts.reportPrivate,
+                    title: fill(texts.reportPrivateTitle, { name: profile.displayName }),
+                    lead: texts.reportPrivateLead,
+                  },
+                }
+              : {})}
+          />
+        )}
         <Avatar
           person={profile}
           size={96}
           presence={presence && presence.state !== "offline" ? presence.state : undefined}
         />
-        <h2 className="in d2">{profile.displayName}</h2>
+        <h2 className="in d2">{shownName(profile)}</h2>
+        {profile.privateName && profile.privateName !== profile.displayName && (
+          <p className="private-line in d2">
+            <span className="flair">{texts.friendsOnlyTag}</span>
+            <span>{fill(texts.publicNameIs, { name: profile.displayName })}</span>
+          </p>
+        )}
         <p className="handle in d2">
           @{profile.handle}
           {profile.country && (

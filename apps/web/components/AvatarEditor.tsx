@@ -11,14 +11,20 @@ const maxZoom = 4;
 type Picked = { file: File; url: string; width: number; height: number };
 
 /** The avatar: pick a PNG or JPEG, drag and zoom it under a round mask, and upload the square
- *  under the mask (the server cuts it out of the original, so nothing is lost to a canvas). */
+ *  under the mask (the server cuts it out of the original, so nothing is lost to a canvas). The
+ *  public picture by default; with kind "private", the friends-only one (same checks). */
 export function AvatarEditor({
   person,
   texts,
+  kind = "public",
+  hint,
 }: {
-  person: { handle: string; displayName: string; avatar: string | null };
+  person: { handle: string; displayName: string; avatar: string | null; privateAvatar?: string | null };
   texts: UiStrings;
+  kind?: "public" | "private";
+  hint?: string;
 }) {
+  const path = kind === "private" ? "/me/avatar/private" : "/me/avatar";
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const stage = useRef<HTMLButtonElement>(null);
@@ -29,7 +35,7 @@ export function AvatarEditor({
   const [side, setSide] = useState(240);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [avatar, setAvatar] = useState(person.avatar);
+  const [avatar, setAvatar] = useState(kind === "private" ? (person.privateAvatar ?? null) : person.avatar);
 
   useEffect(() => () => (picked ? URL.revokeObjectURL(picked.url) : undefined), [picked]);
   useEffect(() => {
@@ -109,14 +115,19 @@ export function AvatarEditor({
     const query = `left=${fit(left, picked.width)}&top=${fit(top, picked.height)}&size=${size}`;
     setBusy(true);
     setError(null);
-    const response = await fetch(`/me/avatar?${query}`, {
+    const response = await fetch(`${path}?${query}`, {
       method: "PUT",
       headers: { "content-type": picked.file.type },
       body: picked.file,
     }).catch(() => undefined);
     setBusy(false);
-    const result = (await response?.json().catch(() => ({}))) as { avatar?: string; code?: string };
-    if (!response?.ok || !result.avatar) {
+    const result = (await response?.json().catch(() => ({}))) as {
+      avatar?: string;
+      privateAvatar?: string;
+      code?: string;
+    };
+    const uploaded = kind === "private" ? result.privateAvatar : result.avatar;
+    if (!response?.ok || !uploaded) {
       setError(
         result.code === "payload_too_large"
           ? texts.avatarTooBig
@@ -130,14 +141,14 @@ export function AvatarEditor({
       );
       return;
     }
-    setAvatar(result.avatar);
+    setAvatar(uploaded);
     setPicked(null);
     router.refresh();
   }
 
   async function remove() {
     setBusy(true);
-    const response = await fetch("/me/avatar", { method: "DELETE" }).catch(() => undefined);
+    const response = await fetch(path, { method: "DELETE" }).catch(() => undefined);
     setBusy(false);
     if (!response?.ok) return setError(texts.failed);
     setAvatar(null);
@@ -227,7 +238,8 @@ export function AvatarEditor({
         </div>
       ) : (
         <div className="current">
-          <Avatar person={{ ...person, avatar }} size={72} />
+          {/* Only the picture this editor is for, never the other one. */}
+          <Avatar person={{ handle: person.handle, displayName: person.displayName, avatar }} size={72} />
           <div className="lines">
             <div className="row start">
               <button type="button" className="pill" disabled={busy} onClick={() => input.current?.click()}>
@@ -239,7 +251,7 @@ export function AvatarEditor({
                 </button>
               )}
             </div>
-            <span className="meta">{texts.avatarHint}</span>
+            <span className="meta">{hint ?? texts.avatarHint}</span>
           </div>
         </div>
       )}

@@ -18,14 +18,14 @@ const reasons = [
 /** What a report is about: a person (by default), a theme or a looking-for-group post, with its own
  *  words for the menu item, the sheet's title and its lead. */
 type Target = {
-  kind?: "user" | "theme" | "lfg" | "media" | "community" | "event";
+  kind?: "user" | "theme" | "lfg" | "media" | "community" | "event" | "private_profile";
   lead?: string;
   label?: string;
   title?: string;
 };
 
-/** The ⋯ on someone's profile card (or a theme's page); for now it holds "Report", which opens the
- *  report sheet. */
+/** The ⋯ on someone's profile card (or a theme's page); it holds "Report", which opens the
+ *  report sheet, and for a friend with a private name or picture, a report of those. */
 export function ProfileMenu({
   person,
   texts,
@@ -33,13 +33,16 @@ export function ProfileMenu({
   lead,
   label,
   title,
+  privateReport,
 }: {
   person: { userId: string; displayName: string };
   texts: UiStrings;
+  privateReport?: { label: string; title: string; lead: string };
 } & Target) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  const privateDialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -86,9 +89,32 @@ export function ProfileMenu({
           >
             {label ?? texts.report}
           </button>
+          {privateReport && (
+            <button
+              type="button"
+              role="menuitem"
+              className="danger"
+              onClick={() => {
+                setOpen(false);
+                privateDialog.current?.showModal();
+              }}
+            >
+              {privateReport.label}
+            </button>
+          )}
         </div>
       )}
       <ReportSheet dialog={dialog} person={person} texts={texts} kind={kind} lead={lead} title={title} />
+      {privateReport && (
+        <ReportSheet
+          dialog={privateDialog}
+          person={person}
+          texts={texts}
+          kind="private_profile"
+          lead={privateReport.lead}
+          title={privateReport.title}
+        />
+      )}
     </div>
   );
 }

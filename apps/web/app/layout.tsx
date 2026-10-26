@@ -146,7 +146,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               />
               <Link href={`/u/${user.profile.handle}`} className="tag nav me" aria-label={texts.myProfile}>
                 <span className="me-avatar">
-                  <Avatar person={{ ...user.profile, avatar: user.profile.avatar ?? null }} size={20} />
+                  <Avatar
+                    person={{
+                      handle: user.profile.handle,
+                      displayName: user.profile.displayName,
+                      avatar: user.profile.avatar ?? null,
+                    }}
+                    size={20}
+                  />
                   <AppearingOfflineMark
                     initial={user.profile.appearOffline === true}
                     label={texts.appearingOffline}

@@ -14,6 +14,7 @@ import {
   fill,
   isUserId,
   playedFor,
+  shownName,
   withPresence,
 } from "@/lib/people";
 import type { ShareInvite } from "@/lib/share";
@@ -381,7 +382,7 @@ function Who({
       <Avatar person={person} presence={presence?.presence.state} />
       <span className="lines">
         <span className="name">
-          {person.displayName}
+          {shownName(person)}
           {badge}
           {children && <span className="handle"> @{person.handle}</span>}
         </span>

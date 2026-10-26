@@ -6,6 +6,7 @@ import { LegalLinks } from "@/components/LegalLinks";
 import { LookSettings } from "@/components/LookSettings";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
+import { PrivateIdentity } from "@/components/PrivateIdentity";
 import { PushSwitch } from "@/components/PushSwitch";
 import {
   DeleteAccount,
@@ -74,6 +75,7 @@ export default async function Settings({
       : null;
   const sections = [
     ["profile", texts.sectionProfile],
+    ["private", texts.sectionPrivate],
     ["look", texts.sectionLook],
     ["privacy", texts.sectionPrivacy],
     ["connections", texts.sectionConnections],
@@ -108,11 +110,16 @@ export default async function Settings({
       <div className="in d3">
         <article className="card" id="profile">
           <h3 className="sub">{texts.sectionProfile}</h3>
-          <AvatarEditor person={me.profile} texts={t} />
+          <AvatarEditor person={me.profile} texts={t} hint={texts.publicPictureHint} />
           <hr />
           <HandleForm own={me} texts={t} />
           <hr />
           <ProfileForm own={me} texts={t} options={countryOptions(texts.language)} />
+        </article>
+
+        <article className="card" id="private">
+          <h3 className="sub">{texts.sectionPrivate}</h3>
+          <PrivateIdentity own={me} texts={t} />
         </article>
 
         <article className="card" id="look">

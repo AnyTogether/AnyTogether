@@ -8,7 +8,20 @@ export interface Person {
   handle: string;
   displayName: string;
   avatar: string | null;
+  /** Friends-only: in the answer only when the reader is this person or their accepted friend
+   *  (then a value or null). Everyone else gets neither key. */
+  privateName?: string | null;
+  /** A signed link that runs out in 6 to 12 hours; read it again rather than keep it. */
+  privateAvatar?: string | null;
 }
+
+/** The name to show a reader: the friends-only one when they were given it, else the public one.
+ *  The handle is always shown next to it. */
+export const shownName = (person: Pick<Person, "displayName" | "privateName">) =>
+  person.privateName || person.displayName;
+/** The picture to show: the friends-only one when given, else the public one. */
+export const shownAvatar = (person: Pick<Person, "avatar" | "privateAvatar">) =>
+  person.privateAvatar || person.avatar;
 
 export type PresenceState = "online" | "away" | "in_game" | "offline";
 
@@ -114,6 +127,9 @@ export interface Own {
     rememberMet?: boolean;
     appearOffline?: boolean;
     readReceipts?: boolean;
+    /** The friends-only name and picture (older API answers lack them). */
+    privateName?: string | null;
+    privateAvatar?: string | null;
   };
 }
 
