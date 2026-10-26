@@ -23,6 +23,9 @@ export const notificationKinds = [
   "family_alert",
   "family_summary",
   "appeal",
+  "post_like",
+  "post_comment",
+  "comment_reply",
 ] as const;
 export type NotificationKind = (typeof notificationKinds)[number];
 export const optionalNotificationKinds = notificationKinds.filter(
@@ -50,7 +53,10 @@ export interface NotificationView {
    *  titleId}; family_summary: {familyId, from, until, children: [{userId, displayName, seconds,
    *  games: [{titleId, name, seconds}], friendsAdded}]}; level_up: {level, tier, frame};
    *  community_invite: {communityId, name, icon}; event_reminder: {eventId, communityId, title,
-   *  startsAt, titleId, gameNames}; event_started: the same and {link: {kind, id}}. */
+   *  startsAt, titleId, gameNames}; event_started: the same and {link: {kind, id}};
+   *  post_like: {postId, count (everyone else who likes it now)}; post_comment: {postId, text,
+   *  count}; comment_reply: {postId, commentId, text, count}. The latest liker or commenter is the
+   *  actor; subjectId is the post (the comment answered, for a reply). */
   data: Record<string, unknown>;
   read: boolean;
   createdAt: string;
@@ -88,6 +94,9 @@ export const defaultNotificationSettings: NotificationSettings = {
   community_invite: true,
   event_reminder: true,
   event_started: true,
+  post_like: true,
+  post_comment: true,
+  comment_reply: true,
   digest: false,
   familyMail: false,
 };

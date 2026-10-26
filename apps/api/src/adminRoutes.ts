@@ -10,6 +10,9 @@ import {
   media,
   messageReactions,
   messages,
+  postComments,
+  postMedia,
+  posts,
   profiles,
   reports,
   sessions,
@@ -22,6 +25,7 @@ import {
   ReportVerdict,
   ThemeModeration,
   type ThemeStatus,
+  friendsKey,
   themeStatuses,
 } from "@anytogether/shared";
 import { and, count, desc, eq, inArray, isNull, lt, or } from "drizzle-orm";
@@ -207,6 +211,34 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
           ).map((e) => e.id)
         : []),
     ]);
+    // Capture posts (removed or deleted ones say so) with their media, and comments still there.
+    const captureIds = rows.filter((r) => r.targetKind === "post" && isId(r.targetId)).map((r) => r.targetId);
+    const captureRows = new Map(
+      captureIds.length
+        ? (await db.select().from(posts).where(inArray(posts.id, captureIds))).map((p) => [p.id, p])
+        : [],
+    );
+    const captureMedia = captureIds.length
+      ? await db
+          .select({ postId: postMedia.postId, row: media })
+          .from(postMedia)
+          .innerJoin(media, eq(media.id, postMedia.mediaId))
+          .where(inArray(postMedia.postId, captureIds))
+          .orderBy(postMedia.position)
+      : [];
+    const commentIds = rows
+      .filter((r) => r.targetKind === "comment" && isId(r.targetId))
+      .map((r) => r.targetId);
+    const standingComments = new Set(
+      commentIds.length
+        ? (
+            await db
+              .select({ id: postComments.id })
+              .from(postComments)
+              .where(inArray(postComments.id, commentIds))
+          ).map((c) => c.id)
+        : [],
+    );
     const removed = new Set(
       messageIds.length
         ? (
@@ -282,6 +314,38 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
                 });
                 return { id: row.id, kind: row.kind, status: row.status, view };
               })()
+            : null,
+        // A capture post: what it said when reported, whether it still stands, and its media
+        // through links made as for the owner (an hour), so hidden media still shows here.
+        capture:
+          r.targetKind === "post"
+            ? (() => {
+                const kept = (r.snapshot ?? {}) as { caption?: string | null; titleId?: string | null };
+                const row = captureRows.get(r.targetId);
+                const files = deps.files;
+                return {
+                  caption: kept.caption ?? null,
+                  titleId: kept.titleId ?? null,
+                  postedAt: snapshot?.createdAt ?? null,
+                  removed: !row || row.status === "removed",
+                  media: files
+                    ? captureMedia
+                        .filter((m) => m.postId === r.targetId)
+                        .map((m) =>
+                          mediaOf.view(files, m.row, { owner: true, expires: files.now() + 3600_000 }),
+                        )
+                    : [],
+                };
+              })()
+            : null,
+        comment:
+          r.targetKind === "comment"
+            ? {
+                text: snapshot?.text ?? null,
+                postId: (r.snapshot as { postId?: string } | null)?.postId ?? null,
+                sentAt: snapshot?.createdAt ?? null,
+                removed: !standingComments.has(r.targetId),
+              }
             : null,
         community:
           r.targetKind === "community" || r.targetKind === "event"
@@ -442,11 +506,30 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
         break;
       }
       case "remove_post": {
+        if (report.targetKind === "post") {
+          const [removed] = await db
+            .update(posts)
+            .set({ status: "removed" })
+            .where(and(eq(posts.id, report.targetId), eq(posts.status, "active")))
+            .returning();
+          if (removed)
+            for (const friend of await valkey.smembers(friendsKey(removed.authorId)))
+              await publish(valkey, friend, { type: "post.removed", data: { postId: removed.id } });
+          await audit(c, "post.removed", report.targetId, { author: subject, report: report.id });
+          break;
+        }
         if (report.targetKind !== "lfg")
           throw new HttpError(400, ErrorCode.badRequest, "Only a reported post can be removed");
         const [post] = await db.select().from(lfgPosts).where(eq(lfgPosts.id, report.targetId));
         if (post) await board.close(post, "removed");
         await audit(c, "lfg.removed", report.targetId, { author: subject, report: report.id });
+        break;
+      }
+      case "remove_comment": {
+        if (report.targetKind !== "comment")
+          throw new HttpError(400, ErrorCode.badRequest, "Only a reported comment can be removed");
+        if (isId(report.targetId)) await db.delete(postComments).where(eq(postComments.id, report.targetId));
+        await audit(c, "comment.removed", report.targetId, { author: subject, report: report.id });
         break;
       }
       case "hide_media":

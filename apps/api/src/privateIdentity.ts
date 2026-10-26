@@ -121,7 +121,7 @@ export async function reveal<T>(
 
 /** The answers that carry private fields for their reader, and nothing else: friends, profiles
  *  opened signed in, parties, conversations and their messages, Play Together and other game
- *  sessions, communities, the feed and notifications. Public pages, showcases, discovery,
+ *  sessions, communities, the feed, capture posts and notifications. Public pages, showcases, discovery,
  *  leaderboards, admin pages, the export and realtime events never do. Keep this list and
  *  docs/private-identity.md in step. */
 export const revealedPaths = [
@@ -147,6 +147,11 @@ export const revealedPaths = [
   "/me/communities",
   "/me/feed",
   "/me/notifications",
+  "/me/captures",
+  "/posts/:id",
+  "/posts/:id/*",
+  "/users/:handle/posts",
+  "/games/:titleId/posts",
 ] as const;
 
 /** Adds the private fields to a signed-in reader's JSON answer (see reveal). A signed-out request

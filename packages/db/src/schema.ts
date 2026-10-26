@@ -898,7 +898,7 @@ export const notifications = pgTable(
       .where(sql`${table.readAt} is null`),
     check(
       "notification_kind",
-      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning', 'family_invite', 'family_request', 'family_answer', 'family_alert', 'family_summary', 'appeal', 'level_up', 'community_invite', 'event_reminder', 'event_started')`,
+      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning', 'family_invite', 'family_request', 'family_answer', 'family_alert', 'family_summary', 'appeal', 'level_up', 'community_invite', 'event_reminder', 'event_started', 'post_like', 'post_comment', 'comment_reply')`,
     ),
   ],
 );
@@ -1569,5 +1569,94 @@ export const eventRsvps = pgTable(
     primaryKey({ columns: [table.eventId, table.accountId] }),
     index().on(table.accountId),
     check("rsvp_status", sql`${table.status} in ('going', 'maybe')`),
+  ],
+);
+
+/** Captures: a post of one to four pictures or one clip from the author's media, with a caption,
+ *  a game and who may see it. */
+export const posts = pgTable(
+  "posts",
+  {
+    /** UUIDv7, so the newest has the largest ID; feeds page by it. */
+    id: uuid().primaryKey(),
+    authorId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    caption: text(),
+    /** The game it is from; not tied to the games table (a launcher may know a game first). */
+    titleId: text(),
+    /** friends | public */
+    visibility: text().notNull().default("friends"),
+    commentsOff: boolean().notNull().default(false),
+    /** web | launcher | phone */
+    source: text(),
+    /** active | removed (by a moderator: gone from every feed but kept for the report). */
+    status: text().notNull().default("active"),
+    editedAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+  },
+  (table) => [
+    index("posts_by_author").on(table.authorId, table.id.desc()),
+    index("posts_by_game").on(table.titleId, table.id.desc()),
+    check("post_visibility", sql`${table.visibility} in ('friends', 'public')`),
+    check("post_status", sql`${table.status} in ('active', 'removed')`),
+    check("post_source", sql`${table.source} in ('web', 'launcher', 'phone')`),
+    check("post_caption", sql`length(${table.caption}) <= 500`),
+  ],
+);
+
+/** The pictures or clip of a post, in order. Deleting the media takes it out of the post. */
+export const postMedia = pgTable(
+  "post_media",
+  {
+    postId: uuid()
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    mediaId: uuid()
+      .notNull()
+      .references(() => media.id, { onDelete: "cascade" }),
+    position: integer().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.postId, table.position] }),
+    index().on(table.mediaId),
+    check("post_media_position", sql`${table.position} between 0 and 3`),
+  ],
+);
+
+export const postLikes = pgTable(
+  "post_likes",
+  {
+    postId: uuid()
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    createdAt: now(),
+  },
+  (table) => [primaryKey({ columns: [table.postId, table.accountId] }), index().on(table.accountId)],
+);
+
+/** Comments on a post, and replies to them (one level: a reply's parent is a top-level comment). */
+export const postComments = pgTable(
+  "post_comments",
+  {
+    /** UUIDv7: the newest has the largest ID. */
+    id: uuid().primaryKey(),
+    postId: uuid()
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    authorId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    parentId: uuid().references((): AnyPgColumn => postComments.id, { onDelete: "cascade" }),
+    text: text().notNull(),
+    createdAt: now(),
+  },
+  (table) => [
+    index("post_comments_by_post").on(table.postId, table.parentId, table.id),
+    index().on(table.authorId),
+    check("post_comment_text", sql`length(${table.text}) between 1 and 500`),
   ],
 );

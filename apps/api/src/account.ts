@@ -62,6 +62,7 @@ import { body } from "./http.js";
 import { MailError } from "./mailCheck.js";
 import { mediaService } from "./media.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { postsExport } from "./posts.js";
 import { rateLimiter } from "./ratelimit.js";
 import { revoke } from "./sessions.js";
 import { hash } from "./tokens.js";
@@ -369,6 +370,8 @@ export async function exportAccount(
       .select({ action: auditLog.action, target: auditLog.target, createdAt: auditLog.createdAt })
       .from(auditLog)
       .where(or(eq(auditLog.actorId, accountId), eq(auditLog.target, accountId))),
+    // Capture posts, comments and likes: the account's own; others' posts are never in it.
+    ...(await postsExport(db, accountId)),
     storage: storage ? await storage() : null,
   };
 }

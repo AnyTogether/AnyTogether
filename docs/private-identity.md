@@ -37,6 +37,8 @@ Only these answers carry them (the server list is `revealedPaths` in
   included)
 - `/communities`, `/communities/{id}` and its members, events and actions; `GET /me/communities`
 - `GET /me/feed`, `GET /me/notifications`
+- capture posts: `GET /me/captures`, `/posts/{id}` and its likes, comments and actions,
+  `GET /users/{handle}/posts`, `GET /games/{titleId}/posts`
 
 Inside those answers only the cards of the reader and the reader's friends get them: a stranger in
 the same party, conversation, game or community never does.

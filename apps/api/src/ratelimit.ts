@@ -90,6 +90,10 @@ export const defaultLimits = {
   /** Events planned by one account, and going or maybe on them. */
   event: { max: 20, seconds: 86_400 },
   rsvp: { max: 300, seconds: 3600 },
+  /** Capture posts made by one account, likes and unlikes, and comments. */
+  post: { max: 30, seconds: 86_400 },
+  postLike: { max: 300, seconds: 3600 },
+  postComment: { max: 120, seconds: 3600 },
 };
 export type Limits = { [name in keyof typeof defaultLimits]: { max: number; seconds: number } };
 

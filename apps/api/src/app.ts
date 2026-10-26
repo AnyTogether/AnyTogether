@@ -34,6 +34,7 @@ import type { AuthVariables } from "./middleware.js";
 import { reportRoutes } from "./moderation.js";
 import { type PushSender, notificationRoutes, notifier } from "./notifications.js";
 import { partyRoutes, partyService } from "./parties.js";
+import { postRoutes } from "./posts.js";
 import { revealMiddleware, revealedPaths } from "./privateIdentity.js";
 import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
@@ -171,6 +172,7 @@ export function createApp(deps: Deps) {
   v1.route("/", showcaseRoutes(deps));
   v1.route("/", metRoutes(deps));
   v1.route("/", feedRoutes(deps));
+  v1.route("/", postRoutes(deps, notes, media));
   v1.route("/", leaderboardRoutes(deps));
   v1.route("/", reportRoutes(deps));
   v1.route("/", messageRoutes(deps, notes));

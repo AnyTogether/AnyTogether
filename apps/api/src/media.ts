@@ -1,5 +1,5 @@
 import { open, readFile, rm, writeFile } from "node:fs/promises";
-import { conversationMembers, media, messages, profiles, storedFiles } from "@anytogether/db";
+import { conversationMembers, media, messages, postMedia, profiles, storedFiles } from "@anytogether/db";
 import {
   type AttachmentView,
   ErrorCode,
@@ -23,6 +23,7 @@ import { BadMedia, readClip, readVoice, sniff } from "./mediaCheck.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { assertNotMuted } from "./moderation.js";
 import { canSee, findProfile, people, relationOf } from "./people.js";
+import { seesPost, seesStrangers } from "./postAccess.js";
 import { rateLimiter } from "./ratelimit.js";
 import { slotViews } from "./saves.js";
 
@@ -180,31 +181,43 @@ export function mediaService(deps: Deps) {
     });
   }
 
-  /** After a message with media was deleted: its media goes too, unless it is pinned or still in
-   *  another message. */
-  async function releaseFrom(message: typeof messages.$inferSelect) {
+  /** The owner's media nothing uses any more goes: not pinned, in no message and in no post. */
+  async function releaseUnused(accountId: string, ids: string[]) {
     const f = deps.files;
-    const ids = (message.attachments as { mediaId: string }[]).map((a) => a.mediaId);
-    if (!f || !ids.length || !message.authorId) return;
-    for (const id of ids) {
+    if (!f || !ids.length) return;
+    for (const id of new Set(ids)) {
       const [row] = await db
         .select()
         .from(media)
-        .where(and(eq(media.id, id), eq(media.accountId, message.authorId)));
+        .where(and(eq(media.id, id), eq(media.accountId, accountId)));
       if (!row || row.galleryPosition !== null) continue;
       const [elsewhere] = await db
         .select({ id: messages.id })
         .from(messages)
         .where(
           and(
-            eq(messages.authorId, message.authorId),
+            eq(messages.authorId, accountId),
             isNull(messages.deletedAt),
             sql`${messages.attachments} @> ${JSON.stringify([{ mediaId: id }])}::jsonb`,
           ),
         )
         .limit(1);
-      if (!elsewhere) await remove(f, row);
+      if (elsewhere) continue;
+      const [posted] = await db
+        .select({ id: postMedia.postId })
+        .from(postMedia)
+        .where(eq(postMedia.mediaId, id))
+        .limit(1);
+      if (!posted) await remove(f, row);
     }
+  }
+
+  /** After a message with media was deleted: its media goes too, unless it is pinned, still in
+   *  another message or in a post. */
+  async function releaseFrom(message: typeof messages.$inferSelect) {
+    const ids = (message.attachments as { mediaId: string }[]).map((a) => a.mediaId);
+    if (!message.authorId) return;
+    await releaseUnused(message.authorId, ids);
   }
 
   /** Whether `viewer` can see this media now: its owner, a member of a conversation it was sent
@@ -231,6 +244,11 @@ export function mediaService(deps: Deps) {
       )
       .limit(1);
     if (sent) return true;
+    // In a post the viewer may see.
+    const [posted] = await db.execute<{ id: string }>(sql`select p.id from post_media pm
+      join posts p on p.id = pm.post_id
+      where pm.media_id = ${row.id}::uuid and ${seesPost(viewer, await seesStrangers(db, viewer))} limit 1`);
+    if (posted) return true;
     if (row.galleryPosition === null) return false;
     const [profile] = await db
       .select({ privacy: profiles.privacy })
@@ -256,7 +274,7 @@ export function mediaService(deps: Deps) {
     };
   }
 
-  return { view, attachmentsFor, attachable, remove, releaseFrom, canView, find, exportFor };
+  return { view, attachmentsFor, attachable, remove, releaseFrom, releaseUnused, canView, find, exportFor };
 }
 
 export type MediaService = ReturnType<typeof mediaService>;

@@ -81,6 +81,8 @@ export const ErrorCode = {
   badMedia: "bad_media",
   /** A signed file link whose time is over or whose signature is wrong: ask for a new one. */
   linkExpired: "link_expired",
+  /** The post's author turned comments off. */
+  commentsOff: "comments_off",
   internal: "internal",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

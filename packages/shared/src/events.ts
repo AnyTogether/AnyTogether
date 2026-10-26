@@ -8,6 +8,7 @@ import type { MessageEvent } from "./messages.js";
 import type { Restriction, RestrictionKind } from "./moderation.js";
 import type { NotificationEvent } from "./notifications.js";
 import type { PartyEvent, PartyPresence } from "./parties.js";
+import type { PostEvent } from "./posts.js";
 import type { SharePlayEvent, SharePresence } from "./sharePlays.js";
 
 /** What the realtime gateway pushes; the API publishes them for each recipient. */
@@ -68,6 +69,7 @@ export type GatewayEvent =
   | GameSessionEvent
   | SharePlayEvent
   | FeedEvent
+  | PostEvent
   | NotificationEvent
   | DiscoverEvent
   /** The family changed for this person (limits, a role, joined or left): fetch

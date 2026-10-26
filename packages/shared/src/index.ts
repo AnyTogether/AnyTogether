@@ -24,3 +24,4 @@ export * from "./showcase.js";
 export * from "./met.js";
 export * from "./communities.js";
 export * from "./backup.js";
+export * from "./posts.js";

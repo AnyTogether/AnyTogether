@@ -9,6 +9,7 @@ import {
   conversationMembers,
   lfgPosts,
   messages,
+  postMedia,
   profiles,
   reports,
   themes,
@@ -34,6 +35,7 @@ import { body } from "./http.js";
 import { mediaService } from "./media.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { areFriends } from "./people.js";
+import { visibleComment, visiblePost } from "./postAccess.js";
 import { rateLimiter } from "./ratelimit.js";
 import { reviewIfReported } from "./themes.js";
 import { type TokenSigner, appealLifetime, hash } from "./tokens.js";
@@ -496,6 +498,37 @@ export function reportRoutes(deps: Deps) {
             startsAt: event.startsAt,
           }
         : { authorId, name: community.name, description: community.description, titleId: community.titleId };
+    }
+    // A capture post, or a comment on one: anyone who can see it but its author; what it said
+    // (and which media it showed) is kept.
+    if (input.targetKind === "post") {
+      const found = await visiblePost(deps.db, me, input.targetId);
+      if (!found) throw new HttpError(404, ErrorCode.notFound, "No such post");
+      if (found.authorId === me) throw new HttpError(400, ErrorCode.badRequest, "That is yours");
+      const shown = await deps.db
+        .select({ id: postMedia.mediaId })
+        .from(postMedia)
+        .where(eq(postMedia.postId, found.id))
+        .orderBy(postMedia.position);
+      snapshot = {
+        authorId: found.authorId,
+        caption: found.caption,
+        titleId: found.titleId,
+        visibility: found.visibility,
+        media: shown.map((m) => m.id),
+        createdAt: found.createdAt,
+      };
+    }
+    if (input.targetKind === "comment") {
+      const found = await visibleComment(deps.db, me, input.targetId);
+      if (!found) throw new HttpError(404, ErrorCode.notFound, "No such comment");
+      if (found.comment.authorId === me) throw new HttpError(400, ErrorCode.badRequest, "That is yours");
+      snapshot = {
+        authorId: found.comment.authorId,
+        postId: found.post.id,
+        text: found.comment.text,
+        createdAt: found.comment.createdAt,
+      };
     }
     // Someone's friends-only name and picture: only an accepted friend sees them, so only a
     // friend can report them; what they were is kept with the report.

@@ -12,6 +12,8 @@ export const reportTargets = [
   "community",
   "event",
   "private_profile",
+  "post",
+  "comment",
 ] as const;
 export const reportReasons = [
   "spam",
@@ -28,7 +30,8 @@ export type ReportReason = (typeof reportReasons)[number];
 export const ReportCreate = z.object({
   targetKind: z.enum(reportTargets),
   /** For a user, their user ID; for a message, a theme, a looking-for-group post, a piece of
-   *  media (a photo, clip or voice note), a community or an event, its ID. */
+   *  media (a photo, clip or voice note), a community, an event, a capture post or a comment on
+   *  one, its ID. */
   targetId: z.string().min(1).max(100),
   reason: z.enum(reportReasons),
   note: z.string().trim().max(500).optional(),
@@ -46,8 +49,11 @@ export const reportActions = [
   /** Clears the friends-only name or picture of the person a report is about. */
   "reset_private_name",
   "reset_private_avatar",
-  /** Takes a reported looking-for-group post off the board. */
+  /** Takes a reported looking-for-group post off the board, or a reported capture post off
+   *  every feed. */
   "remove_post",
+  /** Deletes a reported comment on a capture post (and its replies). */
+  "remove_comment",
   /** Takes a reported theme off the Hub. */
   "hide_theme",
   /** Puts a reported theme (held for review) back on the Hub: its open reports are dismissed. */

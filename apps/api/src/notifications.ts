@@ -97,6 +97,12 @@ const pushTexts = {
     family_summary: ["AnyTogether", "Your family's week of play is ready."],
     appeal_accepted: ["AnyTogether", "Your appeal was accepted. {reply}"],
     appeal_declined: ["AnyTogether", "Your appeal was declined. {reply}"],
+    post_like: ["{name}", "liked your capture."],
+    post_likes: ["{name}", "and {others} others liked your capture."],
+    post_comment: ["{name}", "commented: {text}"],
+    post_comments: ["{name}", "{n} new comments on your capture · {text}"],
+    comment_reply: ["{name}", "replied to your comment: {text}"],
+    comment_replies: ["{name}", "{n} new replies to your comment · {text}"],
   },
   tr: {
     friend_request: ["{name}", "arkadaşın olmak istiyor."],
@@ -130,6 +136,12 @@ const pushTexts = {
     family_summary: ["AnyTogether", "Ailenin oyun haftası hazır."],
     appeal_accepted: ["AnyTogether", "İtirazın kabul edildi. {reply}"],
     appeal_declined: ["AnyTogether", "İtirazın reddedildi. {reply}"],
+    post_like: ["{name}", "paylaşımını beğendi."],
+    post_likes: ["{name}", "ve {others} kişi daha paylaşımını beğendi."],
+    post_comment: ["{name}", "yorum yaptı: {text}"],
+    post_comments: ["{name}", "Paylaşımına {n} yeni yorum · {text}"],
+    comment_reply: ["{name}", "yorumunu yanıtladı: {text}"],
+    comment_replies: ["{name}", "Yorumuna {n} yeni yanıt · {text}"],
   },
 } as const;
 
@@ -158,6 +170,12 @@ export function notificationPath(n: Pick<NotificationView, "kind" | "subjectId" 
       return "/family";
     case "appeal":
       return "/restricted";
+    case "post_like":
+    case "post_comment":
+    case "comment_reply": {
+      const postId = (n.data as { postId?: string }).postId;
+      return postId ? `/p/${postId}` : "/notifications";
+    }
     case "lfg_accepted": {
       const invite = (n.data as { invite?: { kind?: string; id?: string } | null }).invite;
       return invite?.kind === "share_play" && invite.id ? `/watch/${invite.id}` : "/party";
@@ -205,9 +223,15 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
         ? "messages"
         : n.kind === "lfg_request" && count > 1
           ? "lfg_requests"
-          : n.kind === "family_request" || n.kind === "family_answer" || n.kind === "family_alert"
-            ? "family_summary"
-            : n.kind
+          : n.kind === "post_like" && count > 1
+            ? "post_likes"
+            : n.kind === "post_comment" && count > 1
+              ? "post_comments"
+              : n.kind === "comment_reply" && count > 1
+                ? "comment_replies"
+                : n.kind === "family_request" || n.kind === "family_answer" || n.kind === "family_alert"
+                  ? "family_summary"
+                  : n.kind
   ) as keyof typeof texts;
   const name =
     n.kind === "message" && data.group
@@ -319,7 +343,13 @@ export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
     const online = await hasLiveSocket(valkey, accountId);
     if (input.kind === "message" && online) return null;
     const data = input.data ?? {};
-    const gathers = input.kind === "message" || input.kind === "lfg_request";
+    // Messages, people asking in on a post, and comments and replies gather into one unread
+    // notification, counting how many came; a like says how many like the post now.
+    const gathers =
+      input.kind === "message" ||
+      input.kind === "lfg_request" ||
+      input.kind === "post_comment" ||
+      input.kind === "comment_reply";
     const [row] = await db
       .insert(notifications)
       .values({

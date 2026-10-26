@@ -11,6 +11,7 @@ import {
   friendships,
   games,
   playSessions,
+  posts,
   profiles,
 } from "@anytogether/db";
 import {
@@ -218,6 +219,11 @@ async function enforceStored(deps: Pick<Deps, "db" | "valkey">, userId: string, 
   };
   if (Object.keys(changes).length)
     await deps.db.update(profiles).set(changes).where(eq(profiles.accountId, userId));
+  // A child's capture posts are for friends only.
+  await deps.db
+    .update(posts)
+    .set({ visibility: "friends" })
+    .where(and(eq(posts.authorId, userId), eq(posts.visibility, "public")));
   await presenceShownChanged(
     deps,
     userId,
