@@ -41,6 +41,8 @@ On a phone:
 - `deploy/`: Docker Compose for running your own AnyTogether ([docs/self-hosting.md](docs/self-hosting.md))
 - [docs/cloud-storage.md](docs/cloud-storage.md): the API for cloud saves and media (off until the
   server has a folder or a bucket for them)
+- [docs/private-identity.md](docs/private-identity.md): the public ID and the friends-only name and
+  picture, and when the API returns them
 
 ## Clients
 
