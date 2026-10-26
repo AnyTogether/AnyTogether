@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/Avatar";
+import { CaptureGrid } from "@/components/Captures";
 import { CommunityRow } from "@/components/Communities";
 import { CompatVerdict } from "@/components/CompatVerdict";
 import { LfgComposer, RefreshOn } from "@/components/Discover";
@@ -10,6 +11,7 @@ import type { Board } from "@/lib/feed";
 import { localName } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
 import { fill, playedFor } from "@/lib/people";
+import type { PostPage } from "@/lib/posts";
 import { apiJson, currentUser, publicJson } from "@/lib/session";
 import type { ThemePage } from "@/lib/themes";
 import type { Metadata } from "next";
@@ -37,11 +39,12 @@ export default async function GameHub({ params }: Params) {
   if (!id) notFound();
   const [texts, user] = await Promise.all([strings(), currentUser()]);
   if (!user) redirect(`/login?next=/games/${id}`);
-  const [hub, board, compat, discovery] = await Promise.all([
+  const [hub, board, compat, discovery, captures] = await Promise.all([
     apiJson<Hub>(`/games/${id}/hub`),
     apiJson<Board>(`/games/${id}/leaderboard?by=points&scope=global&limit=5`),
     publicJson<CompatGame>(`/compat/${id}`),
     apiJson<Discovery>("/me/discovery"),
+    apiJson<PostPage>(`/games/${id}/posts?limit=12`),
   ]);
   if (!hub.body) notFound();
   const { game, playing, lfg, parties, sharePlays, recentPlayers, players } = hub.body;
@@ -125,6 +128,26 @@ export default async function GameHub({ params }: Params) {
               </div>
             )}
           </div>
+
+          {captures.body && (
+            <article className="card cap-game-card">
+              <div className="card-head">
+                <h3 className="sub">
+                  {texts.capGameSection}{" "}
+                  {captures.body.items.length > 0 && <span className="n">{captures.body.items.length}</span>}
+                </h3>
+                <Link href="/captures" className="quiet-link">
+                  {texts.capShare}
+                </Link>
+              </div>
+              <CaptureGrid
+                texts={t}
+                initial={captures.body}
+                source={{ kind: "game", titleId: id }}
+                empty={<p className="empty">{texts.capEmptyGame}</p>}
+              />
+            </article>
+          )}
 
           <article className="card">
             <h3 className="sub">

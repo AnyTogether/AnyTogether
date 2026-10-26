@@ -34,6 +34,20 @@ const all: SpecPlatform[] = ["mac", "windows", "linux", "iphone", "android", "we
 export const statusCards: StatusCard[] = [
   // Done, newest first.
   {
+    id: "captures",
+    column: "done",
+    platforms: ["web"],
+    release: "Website",
+    en: {
+      t: "Captures",
+      d: "Screenshots and clips as posts, for friends or everyone, with likes, comments and replies; on profiles and game pages.",
+    },
+    tr: {
+      t: "Çekimler",
+      d: "Ekran görüntüleri ve klipler paylaşım olarak, arkadaşlara ya da herkese; beğeniler, yorumlar ve yanıtlarla; profillerde ve oyun sayfalarında.",
+    },
+  },
+  {
     id: "desktop-couch",
     column: "done",
     platforms: pc,
@@ -169,6 +183,19 @@ export const statusCards: StatusCard[] = [
   },
 
   // In progress.
+  {
+    id: "captures-apps",
+    column: "progress",
+    platforms: [...desk, ...phone],
+    en: {
+      t: "Captures in the launchers and the phone",
+      d: "Share to AnyTogether from the gallery with a pad, and a Captures feed to like and comment in.",
+    },
+    tr: {
+      t: "Launcher'larda ve telefonda Çekimler",
+      d: "Galeriden kumandayla AnyTogether'a paylaş; beğenip yorum yapılan bir Çekimler akışı.",
+    },
+  },
   {
     id: "mac-couch",
     column: "progress",

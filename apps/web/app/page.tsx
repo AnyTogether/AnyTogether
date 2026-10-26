@@ -38,6 +38,7 @@ async function Feed({ texts }: { texts: Strings }) {
         <Link href="/" aria-current="page">
           {texts.home}
         </Link>
+        <Link href="/captures">{texts.captures}</Link>
         <Link href="/leaderboards">{texts.leaderboards}</Link>
       </nav>
       {mine?.rank && board.body && board.body.total > 1 ? (

@@ -2013,6 +2013,17 @@ export const sections: SpecSection[] = [
             ],
           ),
           s(
+            WEB,
+            [
+              "Captures",
+              "Share up to four screenshots or a minute-long clip with a caption and the game, for friends or everyone; likes, comments with replies, and a feed of friends' and teammates' captures.",
+            ],
+            [
+              "Çekimler",
+              "En çok dört ekran görüntüsünü ya da bir dakikalık bir klibi açıklama ve oyunla, arkadaşlara ya da herkese paylaş; beğeniler, yanıtlı yorumlar ve arkadaşlarının ve takım arkadaşlarının çekimlerinden bir akış.",
+            ],
+          ),
+          s(
             MAC_PHONE_WEB,
             [
               "Notifications",

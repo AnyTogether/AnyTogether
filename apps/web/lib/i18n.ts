@@ -8,6 +8,7 @@ import { feedEn, feedTr } from "./i18n-feed";
 import { identityEn, identityTr } from "./i18n-identity";
 import { legalUiEn, legalUiTr } from "./i18n-legal";
 import { notifyEn, notifyTr } from "./i18n-notify";
+import { postsEn, postsTr } from "./i18n-posts";
 import { presenceEn, presenceTr } from "./i18n-presence";
 import { psnEn, psnTr } from "./i18n-psn";
 import { shareEn, shareTr } from "./i18n-share";
@@ -451,7 +452,8 @@ export type Strings = typeof en &
   typeof presenceEn &
   typeof chatEn &
   typeof togetherEn &
-  typeof identityEn;
+  typeof identityEn &
+  typeof postsEn;
 /** What client components get: the same texts (kept as its own name for them). */
 export type UiStrings = Strings;
 export const ui = (texts: Strings): UiStrings => texts;
@@ -482,6 +484,7 @@ export async function strings(): Promise<Strings> {
         ...chatTr,
         ...togetherTr,
         ...identityTr,
+        ...postsTr,
       }
     : {
         ...en,
@@ -501,5 +504,6 @@ export async function strings(): Promise<Strings> {
         ...chatEn,
         ...togetherEn,
         ...identityEn,
+        ...postsEn,
       };
 }

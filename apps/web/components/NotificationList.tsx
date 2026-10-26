@@ -81,6 +81,10 @@ function Mark({ kind }: { kind: Notice["kind"] }) {
           <>
             <path d="M4 11.5L12 5l8 6.5V20h-5.5v-5h-5v5H4z" />
           </>
+        ) : kind === "post_like" ? (
+          <path d="M12 20.5s-7.5-4.4-7.5-10.1A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 7.5 2.8c0 5.7-7.5 10.1-7.5 10.1z" />
+        ) : kind === "post_comment" || kind === "comment_reply" ? (
+          <path d="M4.5 12a7.5 7.5 0 1 1 3.6 6.4L4 19.5l1.1-3.9A7.5 7.5 0 0 1 4.5 12z" />
         ) : kind === "missed_call" ? (
           <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 6 6L15 14l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2zM15 3l6 6M21 3l-6 6" />
         ) : (
@@ -198,6 +202,20 @@ function Item({
         event: <b>{notice.data.title ?? ""}</b>,
       });
       detail = notice.data.community ?? null;
+      break;
+    case "post_like":
+      line = rich(count > 2 ? texts.n_post_likes : count === 2 ? texts.n_post_likes_two : texts.n_post_like, {
+        name,
+        others: count - 1,
+      });
+      break;
+    case "post_comment":
+      line = rich(count > 1 ? texts.n_post_comments : texts.n_post_comment, { name, n: count });
+      detail = notice.data.text ?? null;
+      break;
+    case "comment_reply":
+      line = rich(count > 1 ? texts.n_comment_replies : texts.n_comment_reply, { name, n: count });
+      detail = notice.data.text ?? null;
       break;
     case "warning":
       line = texts.n_warning;

@@ -22,7 +22,10 @@ export interface Notice {
     | "level_up"
     | "community_invite"
     | "event_reminder"
-    | "event_started";
+    | "event_started"
+    | "post_like"
+    | "post_comment"
+    | "comment_reply";
   actor: Person | null;
   subjectId: string;
   data: {
@@ -55,6 +58,8 @@ export interface Notice {
     eventId?: string;
     startsAt?: string;
     link?: { kind: "party" | "share_play"; id: string } | null;
+    /** comment_reply: the comment answered. */
+    commentId?: string;
   };
   read: boolean;
   createdAt: string;
@@ -86,6 +91,9 @@ export const noticeKinds = [
   "community_invite",
   "event_reminder",
   "event_started",
+  "post_like",
+  "post_comment",
+  "comment_reply",
 ] as const;
 export type NoticeKind = (typeof noticeKinds)[number];
 /** familyMail: the weekly family summary by mail (older servers leave it out). */
@@ -134,6 +142,10 @@ export function noticeHref(notice: Notice) {
         : notice.data.link
           ? "/party"
           : `/events/${notice.subjectId}`;
+    case "post_like":
+    case "post_comment":
+    case "comment_reply":
+      return notice.data.postId ? `/p/${notice.data.postId}` : null;
     default:
       return null;
   }

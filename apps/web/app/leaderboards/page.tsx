@@ -63,6 +63,7 @@ export default async function Leaderboards({ searchParams }: Search) {
       <p className="lead in d2">{texts.boardsLead}</p>
       <nav className="switch in d2" aria-label={texts.leaderboards}>
         <Link href="/">{texts.home}</Link>
+        <Link href="/captures">{texts.captures}</Link>
         <Link href="/leaderboards" aria-current="page">
           {texts.leaderboards}
         </Link>

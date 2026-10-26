@@ -118,6 +118,10 @@ const privacyEn: LegalDoc = {
               "The save archives your launcher uploads (the newest three versions of each slot) and the photos, clips and voice notes you post, up to 100 MB per account on this server. Photos are re-encoded without their metadata; clips and voice notes are kept as sent.",
             ],
             [
+              "Captures",
+              "The screenshots and clips you post as captures, with their caption (and when you last edited it), the game, where you posted from and who may see them (your friends, or everyone signed in), the likes you give and get, and the comments and replies you write. Pictures are re-encoded without their metadata, like every photo.",
+            ],
+            [
               "What you share",
               "Themes you share in the Theme Hub, compatibility reports (the game, platform, versions, your machine and operating system, the frame rate and your note) and looking-for-group posts.",
             ],
@@ -161,6 +165,7 @@ const privacyEn: LegalDoc = {
             "The members of a conversation see its messages and their reactions, with who reacted; in a direct conversation the other person sees when a message reached one of your devices. With read receipts on (the default, in [Settings → Privacy](/settings#privacy)) the members also see how far you have read; turn them off and they do not, and you do not see theirs. The people in a party or a call see who else is there, and only a party's members see its Discord link. Only you see your Recently played with list; the people on it see you on theirs.",
             "Anyone signed in sees a public community, its members (with their role and when they joined) and who is going to its events; an invite-only community is seen only by its members.",
             "In a call, a share play or an online game the others' devices connect to yours, so they can learn your IP address, as in any peer-to-peer connection.",
+            "Your captures: a Friends post is seen only by you and your friends; a Public one by anyone signed in, on your profile, the game's page and in the Captures feed of people who played with you. They are never on your signed-out profile or in link previews. Whoever can see a post sees its comments and the number of likes; the list of who liked it shows its author everyone, and others only their friends and people whose search setting is everyone. No one you blocked, or who blocked you, sees your posts, likes or comments, and you do not see theirs. A child's posts are for friends only.",
             "Moderators see what is reported to them and the restrictions and appeals they handle; a community's moderators see its members and can remove or ban them from it. Whoever runs the server can technically reach everything on it, messages included: they are not end-to-end encrypted.",
             "Parents and a family's manager see what [Children and families](#children) describes.",
           ],
@@ -248,7 +253,7 @@ const privacyEn: LegalDoc = {
             "Your account and everything in it: until you delete the account. Deleting hides your profile and signs out every device at once, and 14 days later everything is deleted for good (signing in during those days cancels it). Your messages are emptied, so the others' conversations keep their order. A community you own passes to one of its moderators or members (or ends when no one is left), and its name and description stay; events you planned stay without your name; you disappear from everyone's Recently played with.",
             "A few things outlast an account, without its name: compatibility reports, the games a launcher was first to add to the catalogue, and reports the account sent. A report about a message keeps its copy of that message. A ban on an email address keeps only a hash of the address, so it can still be enforced, and the moderation log keeps the account's ID.",
             "Sign-in codes: deleted 30 days after they expire. Notifications: read ones after 90 days, all after 180 days. Recently played with: 90 days after you last played together. A sign-in on a device ends after 90 days without use (the record of it stays with your account). An old handle is held for you for 30 days (the list of your past handles stays with your account).",
-            "Cloud saves: the newest three versions of each slot, until you delete them. Photos and clips nobody sent or pinned: deleted after a day, as are unfinished uploads.",
+            "Cloud saves: the newest three versions of each slot, until you delete them. Photos and clips nobody sent, pinned or posted: deleted after a day, as are unfinished uploads. Captures, their likes and comments: until you delete them or the account; deleting a post takes its likes and comments with it, and its media unless something else uses it. A moderator may remove a reported post or comment.",
             "Looking-for-group posts leave the board within a day (the post stays with your account); join codes stop working when they run out; abuse counters run out within a day. Push notification addresses go when you turn notifications off, sign out of that browser, or the push service says it is gone.",
             "With no shorter limit, these stay until your account is deleted: call records, parties and their Discord links, game sessions, join codes, and community events, invites and bans (or until the community is deleted). Reports, restrictions, appeals and the moderation log have no set end.",
             "This server's database and files are backed up every night, and each backup is deleted after 14 days. What you delete, or a deleted account, can remain in a backup until that backup is deleted. If backups are also kept with an outside storage provider, they will be encrypted before they leave this server, follow the same 14 days, and the provider will be named here.",
@@ -264,7 +269,7 @@ const privacyEn: LegalDoc = {
         {
           list: [
             "choose who sees what;",
-            "download what this server holds about your account as one file (your account, profile, friends, messages, games, communities, Recently played with and more), with links to your saves and media. A few records are not in it yet: calls, parties, game sessions, and the themes and compatibility reports you shared; ask for them under [Contact](#contact);",
+            "download what this server holds about your account as one file (your account, profile, friends, messages, games, communities, captures with your comments and likes, Recently played with and more), with links to your saves and media. A few records are not in it yet: calls, parties, game sessions, and the themes and compatibility reports you shared; ask for them under [Contact](#contact);",
             "delete your account;",
             "see and sign out your devices, remove passkeys, unlink Steam or Discord, appear offline, turn Recently played with off, and turn notifications and mails off.",
           ],
@@ -504,6 +509,10 @@ const privacyTr: LegalDoc = {
               "Başlatıcının yüklediği kayıt arşivleri (her yuvanın en yeni üç sürümü) ve paylaştığın fotoğraflar, klipler ve sesli notlar; bu sunucuda hesap başına 100 MB'a kadar. Fotoğraflar üst verisi atılarak yeniden kodlanır; klipler ve sesli notlar gönderildiği gibi tutulur.",
             ],
             [
+              "Çekimler",
+              "Çekim olarak paylaştığın ekran görüntüleri ve klipler; açıklamaları (ve en son ne zaman düzenlediğin), oyun, nereden paylaştığın ve kimlerin görebileceği (arkadaşların ya da giriş yapan herkes); verdiğin ve aldığın beğeniler, yazdığın yorumlar ve yanıtlar. Fotoğraflar, her fotoğraf gibi, meta verileri olmadan yeniden kodlanır.",
+            ],
+            [
               "Paylaştıkların",
               "Tema Merkezi'nde paylaştığın temalar, uyumluluk raporları (oyun, platform, sürümler, makinen ve işletim sistemin, kare hızı ve notun) ve oyuncu arama ilanların.",
             ],
@@ -547,6 +556,7 @@ const privacyTr: LegalDoc = {
             "Bir konuşmanın üyeleri onun mesajlarını ve tepkilerini, kimin tepki verdiğiyle birlikte görür; birebir konuşmada karşındaki kişi bir mesajın cihazlarından birine ulaştığını görür. Okundu bilgisi açıkken (varsayılan; [Ayarlar → Gizlilik](/settings#privacy)) üyeler nereye kadar okuduğunu da görür; kapatırsan görmezler, sen de onlarınkini görmezsin. Bir partideki ya da aramadaki kişiler orada başka kimlerin olduğunu görür ve partinin Discord bağlantısını yalnızca üyeleri görür. Son oynadıkların listeni yalnızca sen görürsün; listendeki kişiler de seni kendi listelerinde görür.",
             "Herkese açık bir topluluğu, üyelerini (rolleri ve ne zaman katıldıklarıyla) ve etkinliklerine kimlerin geleceğini giriş yapmış herkes görür; yalnızca davetle girilen bir topluluğu yalnızca üyeleri görür.",
             "Bir aramada, birlikte oynamada ya da online bir oyunda diğerlerinin cihazları seninkine bağlanır; bu yüzden her eşler arası bağlantıda olduğu gibi IP adresini öğrenebilirler.",
+            "Çekimlerin: Arkadaşlar paylaşımını yalnızca sen ve arkadaşların görür; Herkese açık olanı giriş yapan herkes profilinde, oyunun sayfasında ve seninle oynamış kişilerin Çekimler akışında görür. Giriş yapılmadan açılan profilinde ve bağlantı önizlemelerinde asla yer almazlar. Bir paylaşımı görebilen, yorumlarını ve beğeni sayısını da görür; beğenenler listesi paylaşımın sahibine herkesi, başkalarına yalnızca kendi arkadaşlarını ve arama ayarı herkes olan kişileri gösterir. Engellediğin ya da seni engelleyen hiç kimse paylaşımlarını, beğenilerini ve yorumlarını görmez; sen de onlarınkini görmezsin. Bir çocuğun paylaşımları yalnızca arkadaşlarına açıktır.",
             "Moderatörler kendilerine raporlananları ve ele aldıkları kısıtlama ve itirazları görür; bir topluluğun moderatörleri onun üyelerini görür ve onları topluluktan çıkarabilir ya da yasaklayabilir. Sunucuyu çalıştıran kişi teknik olarak oradaki her şeye, mesajlar dahil, erişebilir: mesajlar uçtan uca şifreli değildir.",
             "Ebeveynler ve ailenin yöneticisi [Çocuklar ve aileler](#children) bölümünde anlatılanları görür.",
           ],
@@ -630,7 +640,7 @@ const privacyTr: LegalDoc = {
             "Hesabın ve içindeki her şey: hesabı silene kadar. Silmek profilini hemen gizler ve tüm cihazlardan çıkış yapar; 14 gün sonra her şey kalıcı olarak silinir (bu sürede giriş yapmak silmeyi iptal eder). Mesajların boşaltılır; böylece diğerlerinin konuşmaları sırasını korur. Sahibi olduğun bir topluluk moderatörlerinden ya da üyelerinden birine geçer (kimse kalmadıysa sona erer), adı ve açıklaması kalır; planladığın etkinlikler adın olmadan kalır; herkesin Son oynadıkların listesinden çıkarsın.",
             "Birkaç şey hesaptan sonra da adı olmadan kalır: uyumluluk raporları, bir başlatıcının kataloğa ilk eklediği oyunlar ve hesabın gönderdiği raporlar. Bir mesaj hakkındaki rapor o mesajın kopyasını tutar. Bir e-posta adresine konan yasak, uygulanmaya devam edebilmesi için adresin yalnızca özetini tutar; moderasyon kaydı da hesabın kimliğini tutar.",
             "Giriş kodları: süreleri dolduktan 30 gün sonra silinir. Bildirimler: okunanlar 90 gün, hepsi 180 gün sonra. Son oynadıkların: birlikte son oynadığınızdan 90 gün sonra. Bir cihazdaki giriş 90 gün kullanılmazsa sona erer (kaydı hesabında kalır). Eski bir kullanıcı adı 30 gün senin için ayrılır (eski kullanıcı adlarının listesi hesabında kalır).",
-            "Bulut kayıtları: her yuvanın en yeni üç sürümü, sen silene kadar. Kimseye gönderilmemiş ya da sabitlenmemiş fotoğraf ve klipler bir gün sonra silinir; yarım kalan yüklemeler de.",
+            "Bulut kayıtları: her yuvanın en yeni üç sürümü, sen silene kadar. Kimseye gönderilmemiş, sabitlenmemiş ya da paylaşılmamış fotoğraf ve klipler bir gün sonra silinir; yarım kalan yüklemeler de. Çekimler, beğenileri ve yorumları: sen ya da hesabın silinene kadar; bir paylaşımı silmek beğenilerini ve yorumlarını, başka bir yerde kullanılmıyorsa medyasını da götürür. Bir moderatör raporlanan bir paylaşımı ya da yorumu kaldırabilir.",
             "Oyuncu arama ilanları bir gün içinde panodan kalkar (ilan hesabında kalır); katılma kodları süreleri dolunca çalışmaz; kötüye kullanım sayaçları bir gün içinde silinir. Anlık bildirim adresleri, bildirimleri kapattığında, o tarayıcıda çıkış yaptığında ya da bildirim servisi adresin artık olmadığını söylediğinde silinir.",
             "Daha kısa bir sınırı olmayanlar hesabın silinene kadar kalır: arama kayıtları, partiler ve Discord bağlantıları, oyun oturumları, katılma kodları, topluluk etkinlikleri, davetleri ve yasakları (ya da topluluk silinene kadar). Raporların, kısıtlamaların, itirazların ve moderasyon kaydının belirli bir bitiş süresi yoktur.",
             "Bu sunucunun veritabanı ve dosyaları her gece yedeklenir ve her yedek 14 gün sonra silinir. Sildiğin şeyler ya da silinen bir hesap, o yedek silinene kadar onda kalabilir. Yedekler bir gün dışarıdaki bir depolama sağlayıcısında da tutulursa bu sunucudan çıkmadan önce şifrelenecek, aynı 14 güne uyacak ve sağlayıcının adı burada yazılacak.",
@@ -646,7 +656,7 @@ const privacyTr: LegalDoc = {
         {
           list: [
             "kimin neyi göreceğini seçmek;",
-            "bu sunucunun hesabın hakkında tuttuklarını (hesabın, profilin, arkadaşların, mesajların, oyunların, toplulukların, Son oynadıkların ve dahası), kayıtlarına ve medyana bağlantılarla birlikte tek bir dosya olarak indirmek. Birkaç kayıt henüz bu dosyada yok: aramalar, partiler, oyun oturumları, paylaştığın temalar ve uyumluluk raporları; bunları [İletişim](#contact) yoluyla iste;",
+            "bu sunucunun hesabın hakkında tuttuklarını (hesabın, profilin, arkadaşların, mesajların, oyunların, toplulukların, yorum ve beğenilerinle çekimlerin, Son oynadıkların ve dahası), kayıtlarına ve medyana bağlantılarla birlikte tek bir dosya olarak indirmek. Birkaç kayıt henüz bu dosyada yok: aramalar, partiler, oyun oturumları, paylaştığın temalar ve uyumluluk raporları; bunları [İletişim](#contact) yoluyla iste;",
             "hesabını silmek;",
             "cihazlarını görüp çıkış yaptırmak, geçiş anahtarlarını kaldırmak, Steam ya da Discord bağlantısını kesmek, çevrimdışı görünmek, Son oynadıkların'ı kapatmak, bildirimleri ve e-postaları kapatmak.",
           ],

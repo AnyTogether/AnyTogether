@@ -18,7 +18,17 @@ export interface AdminReport {
   status: "open" | "actioned" | "dismissed";
   reason: string;
   note: string | null;
-  targetKind: "user" | "message" | "theme" | "lfg" | "media" | "community" | "event" | "private_profile";
+  targetKind:
+    | "user"
+    | "message"
+    | "theme"
+    | "lfg"
+    | "media"
+    | "community"
+    | "event"
+    | "private_profile"
+    | "post"
+    | "comment";
   targetId: string;
   message: { text: string | null; sentAt: string | null; removed: boolean } | null;
   /** A reported looking-for-group post, as it was when reported. */
@@ -55,6 +65,17 @@ export interface AdminReport {
   /** A friend's report of the friends-only name and picture: what they were when reported (the
    *  picture through a link for an hour), and whether they still are (older API answers lack it). */
   privateProfile?: { name: string | null; avatar: string | null; current: boolean } | null;
+  /** A reported capture post: its caption when reported, whether it is removed now, and its media
+   *  through links for an hour (older API answers lack it). */
+  capture?: {
+    caption: string | null;
+    titleId: string | null;
+    postedAt: string | null;
+    removed: boolean;
+    media: MediaItem[];
+  } | null;
+  /** A reported comment on a capture: what it said, and whether it is gone now. */
+  comment?: { text: string | null; postId: string | null; sentAt: string | null; removed: boolean } | null;
   reporter: AdminPerson | null;
   target: AdminPerson | null;
   timesReported: number;

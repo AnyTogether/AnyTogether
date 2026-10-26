@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/Avatar";
+import { CaptureGrid } from "@/components/Captures";
 import { FeedList } from "@/components/FeedList";
 import { FriendAction } from "@/components/FriendAction";
 import { Gallery } from "@/components/Gallery";
@@ -21,6 +22,7 @@ import {
 import { strings, ui } from "@/lib/i18n";
 import { fill, shownName } from "@/lib/people";
 import type { Person, Profile, PublicProfile } from "@/lib/people";
+import type { PostPage } from "@/lib/posts";
 import { type LevelBadgeData, type Showcase, accents, localArt } from "@/lib/psn";
 import { api, currentUser, publicJson } from "@/lib/session";
 import type { MediaItem, StorageInfo } from "@/lib/storage";
@@ -51,6 +53,8 @@ async function load(handle: string) {
     part.status === 403 || part.status === 401 ? null : (part.body ?? fallback);
   // The gallery only where the server keeps files; private (or signed out) comes back as null.
   const gallery = storage.body?.enabled ? await publicJson<{ items: MediaItem[] }>(`${path}/gallery`) : null;
+  // Captures are for the signed in: what this reader may see of them (none signed out).
+  const posts = storage.body?.enabled ? await publicJson<PostPage>(`${path}/posts?limit=12`) : null;
   return {
     profile: profile.body,
     games: shown(library, { games: [] })?.games ?? null,
@@ -65,6 +69,7 @@ async function load(handle: string) {
         }
       : null,
     showcase: showcase.body ?? { trophies: null, games: null },
+    posts: posts?.body ?? null,
   };
 }
 
@@ -116,7 +121,7 @@ export default async function UserProfile({ params }: Params) {
   const [texts, user] = await Promise.all([strings(), currentUser()]);
   const loaded = await load(handle);
   if (!loaded) notFound();
-  const { profile, games, trophies, friends, activity, gallery, showcase } = loaded;
+  const { profile, games, trophies, friends, activity, gallery, showcase, posts } = loaded;
   // An old handle still finds the person for 30 days; the address shows the new one.
   if (profile.handle.toLowerCase() !== handle) redirect(`/u/${profile.handle}`);
   const { language } = texts;
@@ -305,6 +310,33 @@ export default async function UserProfile({ params }: Params) {
               texts={ui(texts)}
             />
           )}
+        </article>
+      )}
+
+      {user && posts && (posts.items.length > 0 || self) && (
+        <article className="card cap-profile in d3">
+          <div className="card-head">
+            <h3 className="sub">
+              {texts.captures}{" "}
+              {posts.items.length > 0 && (
+                <span className="n">
+                  {posts.items.length}
+                  {posts.next ? "+" : ""}
+                </span>
+              )}
+            </h3>
+            {self && (
+              <Link href="/captures" className="quiet-link">
+                {texts.capShare}
+              </Link>
+            )}
+          </div>
+          <CaptureGrid
+            texts={ui(texts)}
+            initial={posts}
+            source={{ kind: "user", handle: profile.handle }}
+            empty={<p className="empty">{self ? texts.capEmptyMine : fill(texts.capEmptyProfile, name)}</p>}
+          />
         </article>
       )}
 

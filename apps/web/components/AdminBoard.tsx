@@ -89,7 +89,8 @@ type Action =
   | "delete_media"
   | "mute"
   | "remove_community"
-  | "remove_event";
+  | "remove_event"
+  | "remove_comment";
 const durations: { days: number | null; key: "days1" | "days7" | "days30" | "forGood" }[] = [
   { days: 1, key: "days1" },
   { days: 7, key: "days7" },
@@ -303,6 +304,18 @@ function ReportItem({
       danger: true,
     },
     {
+      key: "remove_post",
+      label: texts.acRemoveCapture,
+      show: report.targetKind === "post" && Boolean(report.capture) && !report.capture?.removed,
+      danger: true,
+    },
+    {
+      key: "remove_comment",
+      label: texts.acRemoveComment,
+      show: report.targetKind === "comment" && Boolean(report.comment) && !report.comment?.removed,
+      danger: true,
+    },
+    {
       key: "hide_theme",
       label: texts.acHideTheme,
       show:
@@ -369,7 +382,11 @@ function ReportItem({
                 ? texts.kindEvent
                 : report.targetKind === "private_profile"
                   ? texts.kindPrivateProfile
-                  : texts.kindUser;
+                  : report.targetKind === "post"
+                    ? texts.kindCapture
+                    : report.targetKind === "comment"
+                      ? texts.kindComment
+                      : texts.kindUser;
   // Putting a theme back is not a punishment: it is confirmed like a warning.
   const gentle = action === "warn" || action === "publish_theme";
   const statusLabel =
@@ -412,6 +429,37 @@ function ReportItem({
             {report.post.removed && <span className="flair banned-flag">{texts.postRemoved}</span>}
           </figcaption>
           <blockquote>{report.post.note ?? "…"}</blockquote>
+        </figure>
+      )}
+      {report.capture && (
+        <figure className="said">
+          <figcaption className="meta">
+            {texts.captureText}
+            {report.capture.titleId && <span className="flair">{report.capture.titleId}</span>}
+            {report.capture.removed && <span className="flair banned-flag">{texts.captureRemoved}</span>}
+          </figcaption>
+          {report.capture.caption && <blockquote>{report.capture.caption}</blockquote>}
+          {report.capture.media.length > 0 && (
+            <div className="reported-captures">
+              {report.capture.media.map((m) =>
+                m.kind === "clip" ? (
+                  // biome-ignore lint/a11y/useMediaCaption: players' own clips have no captions
+                  <video key={m.id} src={m.url} poster={m.poster ?? undefined} controls preload="metadata" />
+                ) : (
+                  <img key={m.id} src={m.thumb ?? m.url} alt="" loading="lazy" />
+                ),
+              )}
+            </div>
+          )}
+        </figure>
+      )}
+      {report.comment && (
+        <figure className="said">
+          <figcaption className="meta">
+            {texts.commentText}
+            {report.comment.removed && <span className="flair banned-flag">{texts.captureRemoved}</span>}
+          </figcaption>
+          <blockquote>{report.comment.text ?? "…"}</blockquote>
         </figure>
       )}
       {report.theme && <ReportedTheme theme={report.theme} texts={texts} />}

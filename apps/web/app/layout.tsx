@@ -30,6 +30,7 @@ import "./discover.css";
 import "./site.css";
 import "./pages.css";
 import "./storage.css";
+import "./captures.css";
 import "./account.css";
 import "./night.css";
 import "./legal.css";

@@ -99,6 +99,7 @@ const pushTexts = {
     appeal_declined: ["AnyTogether", "Your appeal was declined. {reply}"],
     post_like: ["{name}", "liked your capture."],
     post_likes: ["{name}", "and {others} others liked your capture."],
+    post_likes_two: ["{name}", "and one other liked your capture."],
     post_comment: ["{name}", "commented: {text}"],
     post_comments: ["{name}", "{n} new comments on your capture · {text}"],
     comment_reply: ["{name}", "replied to your comment: {text}"],
@@ -136,10 +137,11 @@ const pushTexts = {
     family_summary: ["AnyTogether", "Ailenin oyun haftası hazır."],
     appeal_accepted: ["AnyTogether", "İtirazın kabul edildi. {reply}"],
     appeal_declined: ["AnyTogether", "İtirazın reddedildi. {reply}"],
-    post_like: ["{name}", "paylaşımını beğendi."],
-    post_likes: ["{name}", "ve {others} kişi daha paylaşımını beğendi."],
+    post_like: ["{name}", "çekimini beğendi."],
+    post_likes: ["{name}", "ve {others} kişi daha çekimini beğendi."],
+    post_likes_two: ["{name}", "ve bir kişi daha çekimini beğendi."],
     post_comment: ["{name}", "yorum yaptı: {text}"],
-    post_comments: ["{name}", "Paylaşımına {n} yeni yorum · {text}"],
+    post_comments: ["{name}", "Çekimine {n} yeni yorum · {text}"],
     comment_reply: ["{name}", "yorumunu yanıtladı: {text}"],
     comment_replies: ["{name}", "Yorumuna {n} yeni yanıt · {text}"],
   },
@@ -223,15 +225,17 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
         ? "messages"
         : n.kind === "lfg_request" && count > 1
           ? "lfg_requests"
-          : n.kind === "post_like" && count > 1
+          : n.kind === "post_like" && count > 2
             ? "post_likes"
-            : n.kind === "post_comment" && count > 1
-              ? "post_comments"
-              : n.kind === "comment_reply" && count > 1
-                ? "comment_replies"
-                : n.kind === "family_request" || n.kind === "family_answer" || n.kind === "family_alert"
-                  ? "family_summary"
-                  : n.kind
+            : n.kind === "post_like" && count === 2
+              ? "post_likes_two"
+              : n.kind === "post_comment" && count > 1
+                ? "post_comments"
+                : n.kind === "comment_reply" && count > 1
+                  ? "comment_replies"
+                  : n.kind === "family_request" || n.kind === "family_answer" || n.kind === "family_alert"
+                    ? "family_summary"
+                    : n.kind
   ) as keyof typeof texts;
   const name =
     n.kind === "message" && data.group

@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
 import { recordMeeting } from "../src/met.js";
 import { mute } from "../src/moderation.js";
+import { notificationPath, pushPayload } from "../src/notifications.js";
 import { type StorageOptions, harness } from "./harness.js";
 import { mp4, oggOpus, png } from "./mediaFixtures.js";
 
@@ -386,6 +387,25 @@ describe("likes", () => {
       { postId: made.id, likes: 1, comments: 1 },
     ]);
     author.stop();
+  });
+});
+
+describe("push texts", () => {
+  it("say how many liked, in both languages, and open the post", () => {
+    const like = (count: number) => ({
+      id: "n",
+      kind: "post_like" as const,
+      actor: { userId: "u", handle: "ayse", displayName: "Ayşe", avatar: null },
+      subjectId: "p",
+      data: { postId: "p", count },
+      read: false,
+      createdAt: "",
+      updatedAt: "",
+    });
+    expect(pushPayload(like(1), "en", 1).body).toBe("liked your capture.");
+    expect(pushPayload(like(2), "en", 1).body).toBe("and one other liked your capture.");
+    expect(pushPayload(like(4), "tr", 1).body).toBe("ve 3 kişi daha çekimini beğendi.");
+    expect(notificationPath(like(1))).toBe("/p/p");
   });
 });
 
