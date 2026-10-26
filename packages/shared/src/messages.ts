@@ -120,6 +120,9 @@ export interface MemberView {
   handle: string;
   displayName: string;
   avatar: string | null;
+  /** Only for the person and their accepted friends (see PrivateIdentity); left out otherwise. */
+  privateName?: string | null;
+  privateAvatar?: string | null;
 }
 
 export interface ConversationView {

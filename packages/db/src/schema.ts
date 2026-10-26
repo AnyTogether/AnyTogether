@@ -124,6 +124,12 @@ export const profiles = pgTable(
     bio: text(),
     country: text(),
     avatarUrl: text(),
+    /** Seen only by the account and its accepted friends (a real name, say); never in search, public
+     *  pages, admin lists or realtime events. */
+    privateName: text(),
+    /** The hash of the friends-only picture (an `avatars` row with `private` set), shown through
+     *  signed links that run out; null when there is none. */
+    privateAvatar: text(),
     privacy: jsonb().notNull().default({}),
     /** Which notifications to get, each kind on or off, and the mail digest (see
      *  notificationSettingsOf); only what was changed is stored. */
@@ -220,6 +226,8 @@ export const avatars = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     bytes: bytea().notNull(),
+    /** The friends-only picture: never served at the public avatar address. */
+    private: boolean().notNull().default(false),
     createdAt: now(),
   },
   (table) => [index().on(table.accountId)],

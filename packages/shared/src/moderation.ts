@@ -1,7 +1,18 @@
 import { z } from "zod";
 
 /** What can be reported; activities join this list when they exist. */
-export const reportTargets = ["user", "message", "theme", "lfg", "media", "community", "event"] as const;
+/** private_profile: someone's friends-only name and picture, reported by one of their friends (the
+ *  target ID is the person's user ID). */
+export const reportTargets = [
+  "user",
+  "message",
+  "theme",
+  "lfg",
+  "media",
+  "community",
+  "event",
+  "private_profile",
+] as const;
 export const reportReasons = [
   "spam",
   "harassment",
@@ -32,6 +43,9 @@ export const reportActions = [
   "remove_message",
   "reset_avatar",
   "reset_bio",
+  /** Clears the friends-only name or picture of the person a report is about. */
+  "reset_private_name",
+  "reset_private_avatar",
   /** Takes a reported looking-for-group post off the board. */
   "remove_post",
   /** Takes a reported theme off the Hub. */

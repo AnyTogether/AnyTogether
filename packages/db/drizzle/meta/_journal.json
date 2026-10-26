@@ -148,6 +148,13 @@
       "when": 1792990457241,
       "tag": "0020_join_version_override",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793006785680,
+      "tag": "0021_private_identity",
+      "breakpoints": true
     }
   ]
 }

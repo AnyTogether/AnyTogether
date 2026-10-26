@@ -252,12 +252,30 @@ export const Country = z
   .toUpperCase()
   .refine((value) => countrySet.has(value), "a country code like TR or DE");
 
-/** PATCH /me/profile: only what is sent changes; null (or an empty bio) clears. */
+/** A private name (a real name, say): up to 40 characters, seen only by the person and their
+ *  accepted friends. An empty one clears it. */
+export const PrivateName = z
+  .string()
+  .transform((value) => value.replace(invisible, "").replace(/\s+/g, " ").trim())
+  .pipe(z.string().max(40, "at most 40 characters"));
+
+/** PATCH /me/profile: only what is sent changes; null (or an empty bio or private name) clears. */
 export const ProfileUpdate = z.object({
   displayName: DisplayName.optional(),
   bio: Bio.nullable().optional(),
   country: Country.nullable().optional(),
+  privateName: PrivateName.nullable().optional(),
 });
+
+/** The friends-only identity next to the public handle, display name and avatar. Both keys are in
+ *  an answer only when the reader is the person or an accepted friend (no block either way), and
+ *  only in the answers listed in docs/private-identity.md; then each is a value or null (not set).
+ *  For anyone else, in public answers, admin lists and realtime events, the keys are left out.
+ *  privateAvatar is a signed link that runs out (6 to 12 hours): read it again rather than keep it. */
+export interface PrivateIdentity {
+  privateName: string | null;
+  privateAvatar: string | null;
+}
 
 export const HandleChange = z.object({ handle: Handle });
 
