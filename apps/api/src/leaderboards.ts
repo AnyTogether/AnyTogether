@@ -6,7 +6,6 @@ import {
   type LeaderboardEntry,
   type LeaderboardScope,
   TitleId,
-  defaultPrivacy,
   friendsBoardSeconds,
   gameBoards,
   globalBoardSeconds,
@@ -20,7 +19,7 @@ import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { levelsFor } from "./level.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
-import { people } from "./people.js";
+import { people, sectionSetting } from "./people.js";
 
 type Section = "library" | "trophies";
 type Row = { id: string; value: number };
@@ -37,8 +36,7 @@ interface Board {
   value: SQL;
 }
 
-const setting = (section: Section) =>
-  sql.raw(`coalesce(p.privacy->>'${section}', '${defaultPrivacy[section]}')`);
+const setting = (section: Section) => sectionSetting("p", section);
 
 const gameValue: Record<GameBoard, SQL> = {
   points: sql`l.points`,

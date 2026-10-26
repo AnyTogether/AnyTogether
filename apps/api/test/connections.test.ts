@@ -63,7 +63,7 @@ const steamAnswer = (state: string, overrides: Record<string, string> = {}) => (
 describe("Steam", () => {
   it("links with OpenID 2.0, shows a badge, hides and unlinks", async () => {
     const steam = fakeSteam();
-    h = await harness({ steam: { apiKey: "test-key", fetch: steam.fetcher } });
+    h = await harness({ publicProfiles: true, steam: { apiKey: "test-key", fetch: steam.fetcher } });
     const utku = await h.user("utku@example.com");
     const ayse = await h.user("ayse@example.com");
 

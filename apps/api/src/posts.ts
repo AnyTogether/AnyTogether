@@ -18,7 +18,7 @@ import {
   friendsKey,
   mediaLimits,
   postLimits,
-  privacyOf,
+  shownPrivacy,
 } from "@anytogether/shared";
 import { type SQL, and, eq, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -324,13 +324,13 @@ export function postRoutes(deps: Deps, notes: Notifier, mediaOf: MediaService) {
         },
       );
     const [profile] = await db
-      .select({ privacy: profiles.privacy })
+      .select({ privacy: profiles.privacy, publicProfile: profiles.publicProfile })
       .from(profiles)
       .where(eq(profiles.accountId, me));
     const child = Boolean(await family.rulesOf(me));
     const visibility: PostVisibility = child
       ? "friends"
-      : (input.visibility ?? defaultPostVisibility(privacyOf(profile?.privacy)));
+      : (input.visibility ?? defaultPostVisibility(shownPrivacy(profile?.privacy, profile?.publicProfile)));
     const id = uuidv7();
     await db.transaction(async (tx) => {
       await tx.insert(posts).values({

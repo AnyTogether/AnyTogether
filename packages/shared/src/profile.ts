@@ -310,6 +310,24 @@ export function privacyOf(stored: unknown): Privacy {
   return result;
 }
 
+/** The public profile switch (PATCH /me/public-profile; docs/public-profile.md). Off, which is
+ *  where a new account starts, someone who is neither the person nor an accepted friend (signed
+ *  out, or signed in) sees only the minimal card: handle, display name and picture. Every part set
+ *  to "everyone" is then shown as if set to "friends", in every answer (the profile and its parts,
+ *  discovery, leaderboards, levels in lists, the feed). Being found by name ("search") is not part
+ *  of the profile and stays as set. On, the settings stand as stored. */
+export const PublicProfileSet = z.object({ publicProfile: z.boolean() });
+
+/** The privacy settings as strangers meet them: the stored ones over the defaults, and with the
+ *  public profile switch off (or unknown), no part but "search" open to everyone. */
+export function shownPrivacy(stored: unknown, publicProfile: boolean | null | undefined): Privacy {
+  const privacy = privacyOf(stored);
+  if (publicProfile === true) return privacy;
+  for (const section of privacySections)
+    if (section !== "search" && privacy[section] === "everyone") privacy[section] = "friends";
+  return privacy;
+}
+
 /** PATCH /me/privacy: only the sections sent change. */
 export const PrivacyUpdate = z.object(
   Object.fromEntries(privacySections.map((section) => [section, VisibilityValue.optional()])) as Record<

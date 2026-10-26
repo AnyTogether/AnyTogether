@@ -5,6 +5,7 @@ import {
   levelBadge,
   levelOf,
   privacyOf,
+  shownPrivacy,
   trophyLevelOf,
 } from "@anytogether/shared";
 import { eq, inArray, sql } from "drizzle-orm";
@@ -58,7 +59,12 @@ export async function levelsFor(db: Database, viewer: string, ids: string[]) {
   const result = new Map<string, LevelBadge>();
   if (!unique.length) return result;
   const rows = await db
-    .select({ id: profiles.accountId, level: profiles.trophyLevel, privacy: profiles.privacy })
+    .select({
+      id: profiles.accountId,
+      level: profiles.trophyLevel,
+      privacy: profiles.privacy,
+      publicProfile: profiles.publicProfile,
+    })
     .from(profiles)
     .where(inArray(profiles.accountId, unique));
   const friends = await people(db).friendsAmong(
@@ -67,7 +73,8 @@ export async function levelsFor(db: Database, viewer: string, ids: string[]) {
   );
   for (const row of rows) {
     const relation = row.id === viewer ? "me" : friends.has(row.id) ? "friend" : "other";
-    if (canSee(privacyOf(row.privacy).trophies, relation)) result.set(row.id, levelBadge(row.level));
+    if (canSee(shownPrivacy(row.privacy, row.publicProfile).trophies, relation))
+      result.set(row.id, levelBadge(row.level));
   }
   return result;
 }

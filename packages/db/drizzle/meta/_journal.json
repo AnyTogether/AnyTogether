@@ -162,6 +162,20 @@
       "when": 1793027996746,
       "tag": "0022_capture_posts",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793034663581,
+      "tag": "0023_public_profile",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793035249499,
+      "tag": "0024_compat_online",
+      "breakpoints": true
     }
   ]
 }

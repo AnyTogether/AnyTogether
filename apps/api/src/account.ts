@@ -140,6 +140,7 @@ export async function exportAccount(
       // fields are theirs and are never in this file.
       privateName: profile.privateName,
       privacy: privacyOf(profile.privacy),
+      publicProfile: profile.publicProfile,
       notificationSettings: notificationSettingsOf(profile.notificationSettings),
       trophyPoints: profile.trophyPoints,
       trophyLevel: profile.trophyLevel,

@@ -28,7 +28,7 @@ const ids = (list: { user: { userId: string } }[]) => list.map((p) => p.user.use
 
 describe("discovery", () => {
   it("follows the library until chosen: on with a public library, off without, and either way by choice", async () => {
-    h = await harness();
+    h = await harness({ publicProfiles: true });
     const mira = await h.user("mira@example.com");
     expect((await h.call("GET", `${v1}/me/discovery`, undefined, mira.token)).body).toEqual({
       discoverable: false,
@@ -53,7 +53,7 @@ describe("discovery", () => {
   });
 
   it("players of a game: public libraries only, most recently played first, minus the hidden and blocked", async () => {
-    h = await harness();
+    h = await harness({ publicProfiles: true });
     const me = await h.user("me@example.com");
     const kenji = await h.user("kenji@example.com");
     const sol = await h.user("sol@example.com");
@@ -98,7 +98,7 @@ describe("discovery", () => {
   });
 
   it("suggests friends of friends, people playing the same games and speaking the language", async () => {
-    h = await harness();
+    h = await harness({ publicProfiles: true });
     const me = await h.user("me@example.com");
     const friend = await h.user("friend@example.com");
     const fof = await h.user("fof@example.com");
@@ -158,7 +158,7 @@ describe("discovery", () => {
   });
 
   it("a game's hub: who plays it now in public, open posts, public parties and share plays", async () => {
-    h = await harness({ limits: { lfgPostNew: { max: 10, seconds: 86_400 } } });
+    h = await harness({ publicProfiles: true, limits: { lfgPostNew: { max: 10, seconds: 86_400 } } });
     const me = await h.user("me@example.com");
     const kenji = await h.user("kenji@example.com");
     const shy = await h.user("shy@example.com");

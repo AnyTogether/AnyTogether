@@ -11,7 +11,7 @@ import {
   playingKey,
   presenceHiddenKey,
   presenceKey,
-  privacyOf,
+  shownPrivacy,
 } from "@anytogether/shared";
 import { count, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -22,20 +22,19 @@ import { body } from "./http.js";
 import type { LfgRoutes } from "./lfg.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import type { PartyService } from "./parties.js";
-import { type ProfileRow, noBlockBetween } from "./people.js";
+import { type ProfileRow, noBlockBetween, sectionSetting } from "./people.js";
 import { rateLimiter } from "./ratelimit.js";
 import type { SharePlayService } from "./sharePlays.js";
 
+/** SQL: the library of `p` is open to everyone (and the public profile switch is on). */
+const libraryPublicSql = sql`${sectionSetting("p", "library")} = 'everyone'`;
 /** SQL: whether the profile `p` shows in discovery: what they chose, else on while their library is
  *  public. */
-const discoverableSql = sql.raw(
-  "coalesce(p.discoverable, coalesce(p.privacy->>'library', 'friends') = 'everyone')",
-);
-const libraryPublicSql = sql.raw("coalesce(p.privacy->>'library', 'friends') = 'everyone'");
+const discoverableSql = sql`coalesce(p.discoverable, ${libraryPublicSql})`;
 
 /** Whether a profile shows in discovery (see discoverableSql). */
-export const discoverable = (profile: Pick<ProfileRow, "discoverable" | "privacy">) =>
-  profile.discoverable ?? privacyOf(profile.privacy).library === "everyone";
+export const discoverable = (profile: Pick<ProfileRow, "discoverable" | "privacy" | "publicProfile">) =>
+  profile.discoverable ?? shownPrivacy(profile.privacy, profile.publicProfile).library === "everyone";
 
 type Friendship = "none" | "friends" | "pending_out" | "pending_in";
 
@@ -128,8 +127,8 @@ export function discoverRoutes(
   }
 
   /** Presence of people who show it to everyone and do not appear offline. */
-  async function publicPresence(rows: { account_id: string; privacy: unknown }[]) {
-    const shown = rows.filter((r) => privacyOf(r.privacy).presence === "everyone");
+  async function publicPresence(rows: { account_id: string; privacy: unknown; public_profile: boolean }[]) {
+    const shown = rows.filter((r) => shownPrivacy(r.privacy, r.public_profile).presence === "everyone");
     const kept = shown.length
       ? await valkey.mget(
           ...shown.flatMap((r) => [presenceKey(r.account_id), presenceHiddenKey(r.account_id)]),
@@ -151,6 +150,7 @@ export function discoverRoutes(
     display_name: string;
     avatar_url: string | null;
     privacy: unknown;
+    public_profile: boolean;
   };
 
   async function cards(
@@ -173,7 +173,7 @@ export function discoverRoutes(
   /** People who play a game and show their library to everyone, the most recently played first. */
   async function playersOf(me: string, titleId: string, max = 30) {
     const rows = await db.execute<PersonRow & { last_played_at: Date | null }>(sql`
-      select p.account_id, p.handle, p.display_name, p.avatar_url, p.privacy, l.last_played_at
+      select p.account_id, p.handle, p.display_name, p.avatar_url, p.privacy, p.public_profile, l.last_played_at
       from library l
       join profiles p on p.account_id = l.account_id
       join accounts a on a.id = l.account_id and a.status = 'active'
@@ -295,7 +295,7 @@ export function discoverRoutes(
       .slice(0, 20);
     if (!top.length) return c.json({ suggestions: [] });
     const rows = await db.execute<PersonRow>(sql`
-      select account_id, handle, display_name, avatar_url, privacy from profiles
+      select account_id, handle, display_name, avatar_url, privacy, public_profile from profiles
       where account_id in ${top.map(([id]) => id)}`);
     const byId = new Map([...rows].map((r) => [r.account_id, r]));
     const ordered = top.flatMap(([id]) => (byId.has(id) ? [byId.get(id) as PersonRow] : []));
@@ -324,10 +324,10 @@ export function discoverRoutes(
     });
     if (!playing.size) return { total: 0, people: [] };
     const rows = await db.execute<PersonRow>(sql`
-      select p.account_id, p.handle, p.display_name, p.avatar_url, p.privacy from profiles p
+      select p.account_id, p.handle, p.display_name, p.avatar_url, p.privacy, p.public_profile from profiles p
       join accounts a on a.id = p.account_id and a.status = 'active'
       where p.account_id in ${[...playing.keys()]}
-        and coalesce(p.privacy->>'presence', 'friends') = 'everyone'
+        and ${sectionSetting("p", "presence")} = 'everyone'
         and not p.appear_offline
         and ${noBlockBetween(me, sql`p.account_id`)}`);
     const people = [...rows]

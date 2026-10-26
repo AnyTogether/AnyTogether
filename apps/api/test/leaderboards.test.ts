@@ -5,7 +5,7 @@ import { harness } from "./harness.js";
 
 let h: Awaited<ReturnType<typeof harness>>;
 beforeEach(async () => {
-  h = await harness();
+  h = await harness({ publicProfiles: true });
 });
 afterEach(async () => {
   await h.close();

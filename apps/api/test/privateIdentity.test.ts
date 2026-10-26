@@ -167,6 +167,7 @@ describe("private name and picture: friends see them", () => {
     expect(miraIn(found.body.users, mira)).toMatchObject({ privateName: secretName });
     // Hub's friends list, read by Fen: Mira is Fen's friend, so Fen sees her private name there.
     await h.call("PATCH", `${v1}/me/privacy`, { friends: "everyone" }, hub.token);
+    await h.call("PATCH", `${v1}/me/public-profile`, { publicProfile: true }, hub.token);
     const theirs = await h.call("GET", `${v1}/users/${hub.handle}/friends`, undefined, fen.token);
     expect(miraIn(theirs.body.friends, mira)).toMatchObject({ privateName: secretName });
     // A friend without a private name shows both as null.
@@ -203,6 +204,7 @@ describe("private name and picture: never for anyone else", () => {
   it("public profiles, signed in or not, and their showcase and activity", async () => {
     const { mira, sam, leaks } = await scene();
     await h.call("PATCH", `${v1}/me/privacy`, { library: "everyone", trophies: "everyone" }, mira.token);
+    await h.call("PATCH", `${v1}/me/public-profile`, { publicProfile: true }, mira.token);
     for (const token of [sam.token, undefined]) {
       for (const path of ["", "/showcase", "/activity", "/library", "/trophies"]) {
         const answer = await h.call("GET", `${v1}/users/${mira.handle}${path}`, undefined, token);
@@ -309,6 +311,7 @@ describe("private name and picture: never for anyone else", () => {
   it("feeds, discovery and leaderboards", async () => {
     const { mira, sam, leaks } = await scene();
     await h.call("PATCH", `${v1}/me/privacy`, { library: "everyone", trophies: "everyone" }, mira.token);
+    await h.call("PATCH", `${v1}/me/public-profile`, { publicProfile: true }, mira.token);
     // Mira plays and earns a trophy, so she is in the lists and her activity has something.
     await h.call("PUT", `${v1}/games/${game}`, { names: { en: "Stray" } }, mira.token);
     await h.call(

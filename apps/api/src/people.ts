@@ -1,13 +1,15 @@
 import { type Database, accounts, blocks, friendships, handleHistory, profiles } from "@anytogether/db";
 import {
   type MemberView,
+  type PrivacySection,
   type Visibility,
+  defaultPrivacy,
   handleHoldDays,
   handleSkeleton,
   isReservedHandle,
   looksReserved,
 } from "@anytogether/shared";
-import { and, eq, gt, inArray, ne, or, sql } from "drizzle-orm";
+import { type SQL, and, eq, gt, inArray, ne, or, sql } from "drizzle-orm";
 
 type Querier = Pick<Database, "select">;
 export type ProfileRow = typeof profiles.$inferSelect;
@@ -143,6 +145,18 @@ export async function relationOf(db: Querier, viewer: string, owner: string): Pr
 
 export const canSee = (visibility: Visibility, relation: Relation) =>
   relation === "me" || visibility === "everyone" || (visibility === "friends" && relation === "friend");
+
+/** SQL: who may see `section` of the profile `alias` ("p", "fp"), as strangers meet it: the stored
+ *  setting over the default, and "friends" for "everyone" while the public profile switch is off
+ *  (shownPrivacy). Being found by name is not capped. */
+export function sectionSetting(alias: string, section: PrivacySection): SQL {
+  if (!/^[a-z_]+$/.test(alias)) throw new Error("alias");
+  const stored = `coalesce(${alias}.privacy->>'${section}', '${defaultPrivacy[section]}')`;
+  if (section === "search") return sql.raw(stored);
+  return sql.raw(
+    `(case when ${stored} = 'everyone' and not ${alias}.public_profile then 'friends' else ${stored} end)`,
+  );
+}
 
 /** Who may reach whom, and how people are shown, for messages, parties, calls and game sessions. */
 export function people(db: Database) {

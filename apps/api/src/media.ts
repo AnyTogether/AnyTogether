@@ -8,7 +8,7 @@ import {
   type MediaView,
   mediaKinds,
   mediaLimits,
-  privacyOf,
+  shownPrivacy,
 } from "@anytogether/shared";
 import { and, desc, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -251,10 +251,13 @@ export function mediaService(deps: Deps) {
     if (posted) return true;
     if (row.galleryPosition === null) return false;
     const [profile] = await db
-      .select({ privacy: profiles.privacy })
+      .select({ privacy: profiles.privacy, publicProfile: profiles.publicProfile })
       .from(profiles)
       .where(eq(profiles.accountId, row.accountId));
-    return canSee(privacyOf(profile?.privacy).gallery, await relationOf(db, viewer, row.accountId));
+    return canSee(
+      shownPrivacy(profile?.privacy, profile?.publicProfile).gallery,
+      await relationOf(db, viewer, row.accountId),
+    );
   }
 
   const find = async (q: Querier, id: string) =>
@@ -588,7 +591,7 @@ export function mediaRoutes(deps: Deps, service: MediaService) {
     const f = deps.files;
     if (!f) return c.json({ enabled: false, items: [] });
     const relation = await relationOf(db, me, profile.accountId);
-    if (!canSee(privacyOf(profile.privacy).gallery, relation))
+    if (!canSee(shownPrivacy(profile.privacy, profile.publicProfile).gallery, relation))
       throw new HttpError(403, ErrorCode.forbidden, "This gallery is private");
     return c.json({ items: await galleryOf(f, profile.accountId, relation === "me") });
   });
@@ -614,10 +617,10 @@ export function mediaRoutes(deps: Deps, service: MediaService) {
     let open_ = false;
     if (!owner && row.galleryPosition !== null && row.status === "active") {
       const [profile] = await db
-        .select({ privacy: profiles.privacy })
+        .select({ privacy: profiles.privacy, publicProfile: profiles.publicProfile })
         .from(profiles)
         .where(eq(profiles.accountId, row.accountId));
-      open_ = privacyOf(profile?.privacy).gallery === "everyone";
+      open_ = shownPrivacy(profile?.privacy, profile?.publicProfile).gallery === "everyone";
     }
     return f.serve(c, row.accountId, sha, {
       size: Number(stored.size),

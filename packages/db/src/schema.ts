@@ -164,6 +164,11 @@ export const profiles = pgTable(
     /** Read receipts: others in a conversation see how far this person has read, and this person
      *  sees theirs. Off hides both ways; delivered marks and one's own unread counts stay. */
     readReceipts: boolean().notNull().default(true),
+    /** The public profile switch: off, strangers (signed out, or not an accepted friend) see only
+     *  the minimal card, and no part of the profile is open to everyone (shownPrivacy). New
+     *  accounts start off; migration 0023 turned it on for the accounts that already showed
+     *  something to everyone (docs/public-profile.md). */
+    publicProfile: boolean().notNull().default(false),
   },
   (table) => [
     check("bio_length", sql`length(${table.bio}) <= 160`),
@@ -1013,6 +1018,8 @@ export const compatReports = pgTable(
     machine: text(),
     os: text(),
     fpsAvg: real(),
+    /** works | broken: online play with others, when it was tried. */
+    online: text(),
     note: text(),
     createdAt: now(),
   },
@@ -1022,6 +1029,7 @@ export const compatReports = pgTable(
     check("compat_platform", sql`${table.platform} in ('macos', 'windows', 'linux')`),
     check("compat_status", sql`${table.status} in ('nothing', 'boots', 'menus', 'ingame', 'playable')`),
     check("compat_note", sql`length(${table.note}) <= 500`),
+    check("compat_online", sql`${table.online} in ('works', 'broken')`),
   ],
 );
 
@@ -1038,6 +1046,8 @@ export const compatSummaries = pgTable(
     version: text().notNull(),
     testedAt: timestamp({ withTimezone: true }).notNull(),
     reports: integer().notNull(),
+    /** works | broken, what most said about online play; null when nobody tried it. */
+    online: text(),
   },
   (table) => [
     primaryKey({ columns: [table.titleId, table.platform] }),

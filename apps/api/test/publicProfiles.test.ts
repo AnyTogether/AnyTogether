@@ -5,7 +5,7 @@ import { harness } from "./harness.js";
 
 let h: Awaited<ReturnType<typeof harness>>;
 beforeEach(async () => {
-  h = await harness();
+  h = await harness({ publicProfiles: true });
 });
 afterEach(async () => {
   await h.close();
@@ -157,7 +157,7 @@ describe("public profiles", () => {
 
   it("leaves signed-in reads as they were, hides banned accounts and limits each address", async () => {
     await h.close();
-    h = await harness({ limits: { publicProfile: { max: 3, seconds: 60 } } });
+    h = await harness({ publicProfiles: true, limits: { publicProfile: { max: 3, seconds: 60 } } });
     const utku = await h.user("utku@example.com");
     const ayse = await h.user("ayse@example.com");
     const seen = await h.call("GET", `${v1}/users/utku`, undefined, ayse.token);

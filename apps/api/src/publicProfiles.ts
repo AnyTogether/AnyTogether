@@ -1,12 +1,13 @@
-import { ErrorCode, type PrivacySection, TitleId, privacyOf, trophyLevelOf } from "@anytogether/shared";
-import type { Context, Next } from "hono";
+import { ErrorCode, type PrivacySection, TitleId, shownPrivacy, trophyLevelOf } from "@anytogether/shared";
+import type { Context, MiddlewareHandler, Next } from "hono";
 import { Hono } from "hono";
 import type { Deps } from "./app.js";
 import { connectionBadges } from "./connections.js";
 import { HttpError } from "./errors.js";
 import { page, paging, readActivities } from "./feed.js";
 import { libraryOf, trophiesOf, trophyCountsOf } from "./games.js";
-import { findProfile } from "./people.js";
+import type { AuthVariables } from "./middleware.js";
+import { type ProfileRow, areFriends, findProfile } from "./people.js";
 import { clientIp, rateLimiter } from "./ratelimit.js";
 import { lookOf, showcaseOf } from "./showcase.js";
 
@@ -45,10 +46,11 @@ export function publicProfileRoutes(deps: Deps) {
     if (!profile) throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
     return profile;
   };
-  const open = (privacy: unknown, section: PrivacySection) => privacyOf(privacy)[section] === "everyone";
+  const open = (profile: ProfileRow, section: PrivacySection) =>
+    shownPrivacy(profile.privacy, profile.publicProfile)[section] === "everyone";
   const opened = async (c: Context, section: (typeof sections)[number]) => {
     const profile = await owner(c);
-    if (profile && !open(profile.privacy, section))
+    if (profile && !open(profile, section))
       throw new HttpError(403, ErrorCode.forbidden, "This is private", { section });
     return profile;
   };
@@ -57,8 +59,8 @@ export function publicProfileRoutes(deps: Deps) {
     const profile = await owner(c);
     if (!profile) return next();
     const visible = {
-      library: open(profile.privacy, "library"),
-      trophies: open(profile.privacy, "trophies"),
+      library: open(profile, "library"),
+      trophies: open(profile, "trophies"),
       friends: false,
       presence: false,
     };
@@ -70,6 +72,7 @@ export function publicProfileRoutes(deps: Deps) {
       country: profile.country,
       friendship: "none",
       signedIn: false,
+      publicProfile: profile.publicProfile,
       visible,
       connections: await connectionBadges(deps.db, profile.accountId),
       ...(visible.trophies ? { trophyCounts: await trophyCountsOf(deps.db, profile.accountId) } : {}),
@@ -114,4 +117,66 @@ export function publicProfileRoutes(deps: Deps) {
   });
 
   return app;
+}
+
+/** The keys of a profile answer a stranger still gets with the public profile off: who it is, and
+ *  how they stand with the reader (to send a friend request). */
+const minimalKeys = ["userId", "handle", "displayName", "avatar", "friendship", "signedIn"] as const;
+
+/** The minimal card in place of a profile answer: the same keys as ever (launchers decode them),
+ *  with everything past the name and picture empty. */
+export function minimalCard(answer: Record<string, unknown>) {
+  const kept: Record<string, unknown> = {};
+  for (const key of minimalKeys) if (key in answer) kept[key] = answer[key];
+  return {
+    ...kept,
+    bio: null,
+    country: null,
+    publicProfile: false,
+    visible: { library: false, trophies: false, friends: false, presence: false },
+    connections: [],
+    trophyLevel: null,
+    cover: null,
+    accent: null,
+  };
+}
+
+/** The public profile switch, for every profile answer at once: GET /users/:handle and everything
+ *  under it (library, trophies, friends, activity, showcase, gallery, posts, trophy comparison,
+ *  and whatever comes later), signed out or signed in. While the person has it off, a reader who
+ *  is neither them nor an accepted friend gets the minimal card for the profile and 403
+ *  (`section: "profile"`) for its parts. Mounted once on /users/:handle/* (which takes the card
+ *  too) before the routes; it looks at their answer, so a 404 (no such handle, a block either way)
+ *  stays exactly what it was. */
+export function profileGate(
+  deps: Pick<Deps, "db">,
+): MiddlewareHandler<{ Variables: Partial<AuthVariables> }> {
+  return async (c, next) => {
+    await next();
+    if (c.req.method !== "GET" || !c.res.ok) return;
+    const handle = c.req.param("handle") ?? "";
+    if (!handle || handle === "search") return;
+    const profile = await findProfile(deps.db, handle);
+    if (!profile || profile.publicProfile) return;
+    const viewer = c.get("userId");
+    if (viewer && (viewer === profile.accountId || (await areFriends(deps.db, viewer, profile.accountId))))
+      return;
+    const headers = new Headers(c.res.headers);
+    headers.delete("content-length");
+    headers.set("cache-control", "private, no-store");
+    // /api/v1/users/<handle> is the card; anything after the handle is a part of the profile.
+    const segments = c.req.path.split("/").filter(Boolean);
+    const isCard = segments.length === segments.lastIndexOf("users") + 2;
+    if (isCard && c.res.headers.get("content-type")?.startsWith("application/json")) {
+      const answer = (await c.res.clone().json()) as Record<string, unknown>;
+      c.res = new Response(JSON.stringify(minimalCard(answer)), { status: 200, headers });
+      return;
+    }
+    // The code stays "forbidden" for the launchers that know it; `section` says why.
+    const refusal = new HttpError(403, ErrorCode.forbidden, "This profile is private", {
+      section: "profile",
+    });
+    headers.set("content-type", "application/problem+json");
+    c.res = new Response(JSON.stringify(refusal.toProblem()), { status: 403, headers });
+  };
 }

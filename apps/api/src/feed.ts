@@ -90,7 +90,8 @@ export async function readActivities(
       ? sql`${actorSetting} <> 'nobody'`
       : scope.relation === "me"
         ? sql`true`
-        : sql`${actorSetting} = 'everyone'`;
+        : // Open to everyone only while the public profile switch is on (shownPrivacy).
+          sql`${actorSetting} = 'everyone' and ${profiles.publicProfile}`;
   const where = and(
     "feed" in scope ? sql`${activities.actorId} in ${friends}` : eq(activities.actorId, scope.owner),
     options.before ? sql`${activities.id} < ${options.before}::uuid` : undefined,
@@ -102,7 +103,7 @@ export async function readActivities(
       and exists (select 1 from accounts sa where sa.id = ${activities.subjectId} and sa.status = 'active')
       and not exists (select 1 from blocks b where (b.blocker = ${viewer}::uuid and b.blocked = ${activities.subjectId})
         or (b.blocker = ${activities.subjectId} and b.blocked = ${viewer}::uuid))
-      and (${activities.actorId} = ${viewer}::uuid or ${subjectSetting} = 'everyone'
+      and (${activities.actorId} = ${viewer}::uuid or (${subjectSetting} = 'everyone' and ${sp.publicProfile})
         or (${subjectSetting} = 'friends' and ${activities.subjectId} in ${friends}))
       ${
         // A friend befriending another friend: one item, not one from each side.

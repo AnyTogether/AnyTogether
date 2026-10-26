@@ -378,6 +378,10 @@ describe("the gallery", () => {
     const privateLink = (await gallery(friend)).body.items[1].url;
     expect((await fetchLink(privateLink)).headers.get("cache-control")).toMatch(/^private/);
     await h.call("PATCH", `${v1}/me/privacy`, { gallery: "everyone" }, utku.token);
+    // Everyone is everyone only while the profile is public; the files stay privately cached.
+    expect((await gallery(stranger)).status).toBe(403);
+    expect((await fetchLink(privateLink)).headers.get("cache-control")).toMatch(/^private/);
+    await h.call("PATCH", `${v1}/me/public-profile`, { publicProfile: true }, utku.token);
     const open = await gallery(stranger);
     expect(open.body.items).toHaveLength(2);
     expect((await fetchLink(open.body.items[1].url)).headers.get("cache-control")).toMatch(

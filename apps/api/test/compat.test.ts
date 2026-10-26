@@ -165,4 +165,89 @@ describe("compatibility", () => {
     });
     expect((await t.call("GET", `${v1}/compat/PPSA00000`)).status).toBe(404);
   });
+
+  it("sorts by name, by status (best first) or by the latest report, and says so", async () => {
+    h = await harness();
+    const t = h;
+    const utku = await t.user("utku@example.com");
+    // Reported in this order: Zeta (menus), alpha (playable), Mid (boots, then ingame on Windows).
+    await t.call(
+      "POST",
+      `${v1}/compat/reports`,
+      report({ titleId: "PPSA00003", name: "Zeta", status: "menus" }),
+      utku.token,
+    );
+    await t.call("POST", `${v1}/compat/reports`, report({ titleId: "PPSA00001", name: "alpha" }), utku.token);
+    await t.call(
+      "POST",
+      `${v1}/compat/reports`,
+      report({ titleId: "PPSA00002", name: "Mid", status: "boots" }),
+      utku.token,
+    );
+    await t.call(
+      "POST",
+      `${v1}/compat/reports`,
+      report({ titleId: "PPSA00002", name: "Mid", status: "ingame", platform: "windows" }),
+      utku.token,
+    );
+    const ids = async (query: string) =>
+      (await t.call("GET", `${v1}/compat?${query}`)).body.games.map((g: { titleId: string }) => g.titleId);
+    expect(await ids("")).toEqual(["PPSA00002", "PPSA00001", "PPSA00003"]);
+    expect(await ids("sort=updated")).toEqual(["PPSA00002", "PPSA00001", "PPSA00003"]);
+    expect(await ids("sort=name")).toEqual(["PPSA00001", "PPSA00002", "PPSA00003"]);
+    // A game's best platform counts: Mid is in game on Windows, so above Zeta's menus.
+    expect(await ids("sort=status")).toEqual(["PPSA00001", "PPSA00002", "PPSA00003"]);
+    // With a platform, that platform's verdict: on macOS Mid only boots.
+    expect(await ids("sort=status&platform=macos")).toEqual(["PPSA00001", "PPSA00003", "PPSA00002"]);
+    expect((await t.call("GET", `${v1}/compat?sort=name&limit=2`)).body).toMatchObject({
+      next: "2",
+      sort: "name",
+    });
+    expect(await ids("sort=name&limit=2&cursor=2")).toEqual(["PPSA00003"]);
+    expect((await t.call("GET", `${v1}/compat?sort=random`)).status).toBe(400);
+  });
+
+  it("takes whether online play works, sums it up per platform and filters on it", async () => {
+    h = await harness();
+    const t = h;
+    const utku = await t.user("utku@example.com");
+    const ayse = await t.user("ayse@example.com");
+    const can = await t.user("can@example.com");
+    expect(
+      (await t.call("POST", `${v1}/compat/reports`, report({ online: "sometimes" }), utku.token)).status,
+    ).toBe(400);
+    const first = await t.call("POST", `${v1}/compat/reports`, report({ online: "works" }), utku.token);
+    expect(first.body.summary).toMatchObject({ online: "works" });
+    // Two of three say it is broken: most of them win; a report without it does not count.
+    await t.call("POST", `${v1}/compat/reports`, report({ online: "broken" }), ayse.token);
+    const third = await t.call("POST", `${v1}/compat/reports`, report({ online: "broken" }), can.token);
+    expect(third.body.summary).toMatchObject({ online: "broken" });
+    await t.call("POST", `${v1}/compat/reports`, report(), can.token);
+    expect((await t.call("GET", `${v1}/compat/PPSA01234`)).body.platforms.macos.online).toBe("broken");
+    // A tie goes to works, like a status tie goes to the better one.
+    await t.call("POST", `${v1}/compat/reports`, report({ online: "works" }), ayse.token);
+    expect((await t.call("GET", `${v1}/compat/PPSA01234`)).body.platforms.macos.online).toBe("works");
+    const reports = (await t.call("GET", `${v1}/compat/PPSA01234`)).body.reports as {
+      online: string | null;
+    }[];
+    expect(reports.map((r) => r.online)).toContain(null);
+
+    // Another game nobody played online, and one where it works on Linux only.
+    await t.call("POST", `${v1}/compat/reports`, report({ titleId: "PPSA00002", name: "Solo" }), utku.token);
+    await t.call(
+      "POST",
+      `${v1}/compat/reports`,
+      report({ titleId: "PPSA00003", name: "Linux party", platform: "linux", online: "works" }),
+      utku.token,
+    );
+    const ids = async (query: string) =>
+      (await t.call("GET", `${v1}/compat?${query}&sort=name`)).body.games.map(
+        (g: { titleId: string }) => g.titleId,
+      );
+    expect(await ids("online=works")).toEqual(["PPSA01234", "PPSA00003"]);
+    expect(await ids("online=works&platform=linux")).toEqual(["PPSA00003"]);
+    expect(await ids("online=works&platform=macos")).toEqual(["PPSA01234"]);
+    expect((await t.call("GET", `${v1}/compat?online=works&platform=macos`)).body.total).toBe(1);
+    expect((await t.call("GET", `${v1}/compat?online=maybe`)).status).toBe(400);
+  });
 });

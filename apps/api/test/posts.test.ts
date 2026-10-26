@@ -132,6 +132,9 @@ describe("making posts", () => {
     await start();
     const utku = await h.user("utku@example.com");
     await h.call("PATCH", `${v1}/me/privacy`, { gallery: "everyone" }, utku.token);
+    // A gallery open to everyone is only open while the profile is public.
+    expect((await share(utku)).visibility).toBe("friends");
+    await h.call("PATCH", `${v1}/me/public-profile`, { publicProfile: true }, utku.token);
     expect((await share(utku)).visibility).toBe("public");
     expect((await share(utku, { visibility: "friends" })).visibility).toBe("friends");
   });
@@ -206,6 +209,8 @@ describe("who sees a post", () => {
     const ayse = await h.user("ayse@example.com");
     const stranger = await h.user("stranger@example.com");
     await befriend(utku, ayse);
+    // Public, so strangers may open the profile's posts at all: the post's own audience decides.
+    await h.call("PATCH", `${v1}/me/public-profile`, { publicProfile: true }, utku.token);
     await h.call("PUT", `${v1}/games/${game}`, { names: { en: "Cat Quest III" } }, utku.token);
     const made = await share(utku, { titleId: game, caption: "secret base" });
 
@@ -250,6 +255,9 @@ describe("who sees a post", () => {
     const stranger = await h.user("stranger@example.com");
     const made = await share(utku, { visibility: "public", titleId: game });
     expect((await get(stranger, `/posts/${made.id}`)).status).toBe(200);
+    // On a profile that is not public, a stranger gets no list of its posts.
+    expect((await get(stranger, `/users/${utku.handle}/posts`)).status).toBe(403);
+    await h.call("PATCH", `${v1}/me/public-profile`, { publicProfile: true }, utku.token);
     expect(ids((await get(stranger, `/users/${utku.handle}/posts`)).body)).toEqual([made.id]);
     expect(ids((await get(stranger, `/games/${game}/posts`)).body)).toEqual([made.id]);
     // Not in their Captures feed: they are neither friends nor played together.

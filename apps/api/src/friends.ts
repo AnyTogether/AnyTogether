@@ -1,5 +1,5 @@
 import { accounts, blocks, friendships, profiles } from "@anytogether/db";
-import { ErrorCode, friendsKey, presenceKey, privacyOf, trophyLevelOf } from "@anytogether/shared";
+import { ErrorCode, friendsKey, presenceKey, shownPrivacy, trophyLevelOf } from "@anytogether/shared";
 import { and, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -72,7 +72,7 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
     return new Map(
       people.map((p, index) => [
         p.accountId,
-        kept[index] && !p.appearOffline && canSee(privacyOf(p.privacy).presence, relation)
+        kept[index] && !p.appearOffline && canSee(shownPrivacy(p.privacy, p.publicProfile).presence, relation)
           ? JSON.parse(kept[index] as string)
           : offline,
       ]),
@@ -277,8 +277,9 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
               ? "pending_out"
               : "pending_in";
     const relation = friendship === "me" ? "me" : friendship === "friends" ? "friend" : "other";
-    const privacy = privacyOf(profile.privacy);
-    // Which parts the asker may open; the card itself is shown to anyone not blocked.
+    const privacy = shownPrivacy(profile.privacy, profile.publicProfile);
+    // Which parts the asker may open; the card itself is shown to anyone not blocked (with the
+    // public profile off, a stranger gets the minimal card: profileGate).
     const visible = {
       library: canSee(privacy.library, relation),
       trophies: canSee(privacy.trophies, relation),
@@ -290,6 +291,7 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
       bio: profile.bio,
       country: profile.country,
       friendship,
+      publicProfile: profile.publicProfile,
       visible,
       connections: await connectionBadges(deps.db, profile.accountId),
       trophyLevel: visible.trophies ? trophyLevelOf(profile.trophyPoints) : null,
@@ -306,7 +308,7 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
     if (!profile || (await blocked(me, profile.accountId)))
       throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
     const relation = await relationOf(deps.db, me, profile.accountId);
-    if (!canSee(privacyOf(profile.privacy).friends, relation))
+    if (!canSee(shownPrivacy(profile.privacy, profile.publicProfile).friends, relation))
       throw new HttpError(403, ErrorCode.forbidden, "This friends list is private", { section: "friends" });
     const ids = await friendIds(profile.accountId);
     // Nobody the asker blocked, or who blocked the asker, shows up in someone else's list.

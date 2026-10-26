@@ -4,7 +4,7 @@ import { harness } from "./harness.js";
 
 let h: Awaited<ReturnType<typeof harness>>;
 beforeEach(async () => {
-  h = await harness({ gameIconHosts: ["image.api.playstation.com"] });
+  h = await harness({ publicProfiles: true, gameIconHosts: ["image.api.playstation.com"] });
 });
 afterEach(async () => {
   await h.close();

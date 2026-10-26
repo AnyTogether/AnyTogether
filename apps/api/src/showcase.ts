@@ -25,8 +25,8 @@ import {
   accentNames,
   coverPresets,
   levelBadge,
-  privacyOf,
   rarityLabel,
+  shownPrivacy,
 } from "@anytogether/shared";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -71,7 +71,7 @@ export async function showcaseOf(
   relation: "me" | "friend" | "other",
 ) {
   const stored = (owner.showcase ?? {}) as ShowcaseStored;
-  const privacy = privacyOf(owner.privacy);
+  const privacy = shownPrivacy(owner.privacy, owner.publicProfile);
   const trophiesShown = canSee(privacy.trophies, relation);
   const libraryShown = canSee(privacy.library, relation);
   const view: ShowcaseView = { trophies: null, games: null };
@@ -259,7 +259,7 @@ export function showcaseRoutes(deps: Deps) {
   const comparable = async (me: string, handle: string) => {
     const found = await person(me, handle);
     if (found.relation === "me") throw new HttpError(400, ErrorCode.badRequest, "That is you");
-    if (!canSee(privacyOf(found.profile.privacy).trophies, found.relation))
+    if (!canSee(shownPrivacy(found.profile.privacy, found.profile.publicProfile).trophies, found.relation))
       throw new HttpError(403, ErrorCode.forbidden, "This is private", { section: "trophies" });
     return found.profile;
   };

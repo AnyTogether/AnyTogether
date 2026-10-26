@@ -30,8 +30,12 @@ export type StorageOptions = { dir: string; store?: FileStore } & Partial<
   Omit<FileServiceOptions, "db" | "store" | "publicUrl">
 >;
 
-export async function harness(overrides: Partial<Deps> & { storage?: StorageOptions } = {}) {
-  const { storage, ...rest } = overrides;
+/** `publicProfiles`: every user made with `user()` turns the public profile switch on, for the
+ *  tests of what "everyone" shows (a new account starts off; publicProfileSwitch.test.ts). */
+export async function harness(
+  overrides: Partial<Deps> & { storage?: StorageOptions; publicProfiles?: boolean } = {},
+) {
+  const { storage, publicProfiles, ...rest } = overrides;
   const { db, client } = connect(testDatabaseUrl, 4);
   await client`truncate accounts, sign_in_requests, audit_log, friendships, blocks, devices, games, play_sessions, library, trophy_sets, trophies, earned_trophies, reports, bans, blobs cascade`;
   const valkey = new Redis(process.env.TEST_VALKEY_URL ?? "redis://127.0.0.1:63799/1");
@@ -111,8 +115,10 @@ export async function harness(overrides: Partial<Deps> & { storage?: StorageOpti
       undefined,
       client,
     );
+    const token = signedIn.body.accessToken as string;
+    if (publicProfiles) await call("PATCH", "/api/v1/me/public-profile", { publicProfile: true }, token);
     return {
-      token: signedIn.body.accessToken as string,
+      token,
       id: signedIn.body.user.id as string,
       handle: signedIn.body.user.handle as string,
     };

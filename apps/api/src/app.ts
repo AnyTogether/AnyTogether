@@ -38,7 +38,7 @@ import { postRoutes } from "./posts.js";
 import { revealMiddleware, revealedPaths } from "./privateIdentity.js";
 import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
-import { publicProfileRoutes } from "./publicProfiles.js";
+import { profileGate, publicProfileRoutes } from "./publicProfiles.js";
 import { type ClientIpHeader, type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
 import { releaseRoutes } from "./releases.js";
@@ -131,6 +131,9 @@ export function createApp(deps: Deps) {
       ? next()
       : capped(c, next),
   );
+  // The public profile switch over every profile answer, signed out and signed in (outermost, so
+  // it has the last word).
+  v1.use("/users/:handle/*", profileGate(deps));
   // Friends-only names and pictures, added for the signed-in reader to the answers listed there.
   const revealing = revealMiddleware(deps);
   for (const path of revealedPaths) v1.use(path, revealing);

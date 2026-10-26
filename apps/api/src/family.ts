@@ -206,6 +206,12 @@ export async function mayShow(deps: Pick<Deps, "db">, userId: string, privacy: P
     throw restricted("profile_visibility", "Your family settings keep your profile more private");
 }
 
+/** A child's profile is never public: a parent's limit is friends at most. */
+export async function mayGoPublic(deps: Pick<Deps, "db">, userId: string) {
+  if ((await childRulesOf(deps.db, [userId])).get(userId))
+    throw restricted("profile_visibility", "Your family settings keep your profile more private");
+}
+
 /** Applies a child's limits to what is stored: privacy no looser, and out of discovery if it is
  *  off. */
 async function enforceStored(deps: Pick<Deps, "db" | "valkey">, userId: string, rules: FamilyRestrictions) {
@@ -216,6 +222,7 @@ async function enforceStored(deps: Pick<Deps, "db" | "valkey">, userId: string, 
   const changes = {
     ...(JSON.stringify(privacy) !== JSON.stringify(before) ? { privacy } : {}),
     ...(!rules.discovery && profile.discoverable !== false ? { discoverable: false } : {}),
+    ...(profile.publicProfile ? { publicProfile: false } : {}),
   };
   if (Object.keys(changes).length)
     await deps.db.update(profiles).set(changes).where(eq(profiles.accountId, userId));

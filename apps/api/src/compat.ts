@@ -1,6 +1,7 @@
 import { type Database, compatReports, compatSummaries, games } from "@anytogether/db";
 import {
   type CompatGame,
+  type CompatOnline,
   type CompatPlatform,
   CompatReport,
   type CompatReportView,
@@ -9,7 +10,9 @@ import {
   ErrorCode,
   TitleId,
   compareVersions,
+  compatOnline,
   compatPageSize,
+  compatSorts,
   compatStatuses,
   maxCompatPage,
   platforms,
@@ -57,6 +60,16 @@ export async function refreshSummary(db: Database, titleId: string, platform: Co
   const [status] = [...votes.entries()].sort((a, b) => b[1] - a[1] || rank(b[0]) - rank(a[0]))[0] ?? [
     "nothing",
   ];
+  // Online play: each person's latest report that says, on any version; a tie goes to works.
+  const said = new Set<string>();
+  const online = { works: 0, broken: 0 };
+  for (const row of rows) {
+    if (row.online !== "works" && row.online !== "broken") continue;
+    const who = row.accountId ?? row.id;
+    if (said.has(who)) continue;
+    said.add(who);
+    online[row.online] += 1;
+  }
   const summary = {
     titleId,
     platform,
@@ -64,13 +77,20 @@ export async function refreshSummary(db: Database, titleId: string, platform: Co
     version: newest,
     testedAt: rows[0]?.createdAt ?? new Date(),
     reports: rows.length,
+    online: (said.size ? (online.works >= online.broken ? "works" : "broken") : null) as CompatOnline | null,
   };
   await db
     .insert(compatSummaries)
     .values(summary)
     .onConflictDoUpdate({
       target: [compatSummaries.titleId, compatSummaries.platform],
-      set: { status, version: newest, testedAt: summary.testedAt, reports: summary.reports },
+      set: {
+        status,
+        version: newest,
+        testedAt: summary.testedAt,
+        reports: summary.reports,
+        online: summary.online,
+      },
     });
   return summary;
 }
@@ -80,6 +100,7 @@ const summaryOf = (row: typeof compatSummaries.$inferSelect): CompatSummary => (
   version: row.version,
   testedAt: row.testedAt.toISOString(),
   reports: row.reports,
+  online: row.online === "works" || row.online === "broken" ? row.online : null,
 });
 
 /** The compatibility list: verdicts per game and platform for anyone, reports from the
@@ -117,15 +138,23 @@ export function compatRoutes(deps: Deps) {
     const q = (c.req.query("q") ?? "").trim().slice(0, 80);
     const platform = c.req.query("platform");
     const status = c.req.query("status");
+    const online = c.req.query("online");
+    const sort = c.req.query("sort") || "updated";
     if (platform && !(platforms as readonly string[]).includes(platform))
       throw new HttpError(400, ErrorCode.badRequest, `platform: one of ${platforms.join(", ")}`);
     if (status && !(compatStatuses as readonly string[]).includes(status))
       throw new HttpError(400, ErrorCode.badRequest, `status: one of ${compatStatuses.join(", ")}`);
+    if (online && !(compatOnline as readonly string[]).includes(online))
+      throw new HttpError(400, ErrorCode.badRequest, `online: one of ${compatOnline.join(", ")}`);
+    if (!(compatSorts as readonly string[]).includes(sort))
+      throw new HttpError(400, ErrorCode.badRequest, `sort: one of ${compatSorts.join(", ")}`);
     const size = Math.min(Math.max(Number(c.req.query("limit")) || compatPageSize, 1), maxCompatPage);
     const offset = Math.min(Math.max(Number(c.req.query("cursor")) || 0, 0), 100_000);
     const reported: SQL[] = [eq(compatSummaries.titleId, games.titleId)];
     if (platform) reported.push(eq(compatSummaries.platform, platform));
     if (status) reported.push(eq(compatSummaries.status, status));
+    // The filters hold on one platform together: "online works on Linux", not on any two.
+    if (online) reported.push(eq(compatSummaries.online, online));
     const where: SQL[] = [
       exists(
         db
@@ -138,12 +167,23 @@ export function compatRoutes(deps: Deps) {
       const term = `%${escapeLike(q)}%`;
       where.push(or(ilike(games.titleId, term), sql`${games.names}::text ilike ${term}`) as SQL);
     }
-    const latest = sql`(select max(s.tested_at) from compat_summaries s where s.title_id = ${games.titleId})`;
+    const onPlatform = platform ? sql`and s.platform = ${platform}` : sql``;
+    const latest = sql`(select max(s.tested_at) from compat_summaries s where s.title_id = ${games.titleId} ${onPlatform})`;
+    // Best status first: the game's best verdict (on the platform asked for, if any).
+    const best = sql`(select max(array_position(array['nothing','boots','menus','ingame','playable']::text[], s.status))
+      from compat_summaries s where s.title_id = ${games.titleId} ${onPlatform})`;
+    const name = sql`lower(coalesce(${games.names}->>'en', (select v from jsonb_each_text(${games.names}) as n(k, v) order by k limit 1), ${games.titleId}))`;
+    const order =
+      sort === "name"
+        ? [name, games.titleId]
+        : sort === "status"
+          ? [sql`${best} desc nulls last`, desc(latest), games.titleId]
+          : [desc(latest), games.titleId];
     const rows = await db
       .select()
       .from(games)
       .where(and(...where))
-      .orderBy(desc(latest), games.titleId)
+      .orderBy(...order)
       .limit(size + 1)
       .offset(offset);
     const [total] = await db
@@ -154,6 +194,7 @@ export function compatRoutes(deps: Deps) {
     return c.json({
       games: await withSummaries(rows.slice(0, size)),
       total: total?.n ?? 0,
+      sort,
       next: rows.length > size ? String(offset + size) : null,
     });
   });
@@ -181,6 +222,7 @@ export function compatRoutes(deps: Deps) {
       machine: r.machine,
       os: r.os,
       fpsAvg: r.fpsAvg === null ? null : Math.round(r.fpsAvg * 10) / 10,
+      online: r.online === "works" || r.online === "broken" ? r.online : null,
       note: r.note,
       createdAt: r.createdAt.toISOString(),
       mine: Boolean(me && r.accountId === me),
@@ -218,6 +260,7 @@ export function compatRoutes(deps: Deps) {
         machine: input.machine || null,
         os: input.os || null,
         fpsAvg: input.fpsAvg ?? null,
+        online: input.online ?? null,
         note: input.note || null,
       })
       .returning({ id: compatReports.id });

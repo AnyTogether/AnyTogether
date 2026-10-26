@@ -8,6 +8,14 @@ export const compatStatuses = ["nothing", "boots", "menus", "ingame", "playable"
 export type CompatStatus = (typeof compatStatuses)[number];
 export type CompatPlatform = (typeof platforms)[number];
 
+/** Whether the game's own online play worked through the launchers, as the reporter saw it. */
+export const compatOnline = ["works", "broken"] as const;
+export type CompatOnline = (typeof compatOnline)[number];
+
+/** How the list is ordered: the latest report first (the default), by name, or best status first. */
+export const compatSorts = ["updated", "name", "status"] as const;
+export type CompatSort = (typeof compatSorts)[number];
+
 export const compatPageSize = 30;
 export const maxCompatPage = 100;
 
@@ -38,6 +46,8 @@ export const CompatReport = z.object({
   /** The OS and its version: "macOS 26.1". */
   os: Line(60).optional(),
   fpsAvg: z.number().min(0).max(1000).optional(),
+  /** Online play with others, if it was tried. */
+  online: z.enum(compatOnline).optional(),
   /** The game's own version, if the launcher knows it. */
   gameVersion: z.string().trim().max(20).optional(),
   note: z
@@ -55,6 +65,9 @@ export interface CompatSummary {
   version: string;
   testedAt: string;
   reports: number;
+  /** What most reporters said about online play (each person's latest that says), a tie going
+   *  to works; null when nobody tried it on this platform. */
+  online: CompatOnline | null;
 }
 
 export interface CompatGame {
@@ -75,6 +88,7 @@ export interface CompatReportView {
   machine: string | null;
   os: string | null;
   fpsAvg: number | null;
+  online: CompatOnline | null;
   note: string | null;
   createdAt: string;
   mine: boolean;

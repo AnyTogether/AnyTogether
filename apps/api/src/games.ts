@@ -26,6 +26,7 @@ import {
   friendsKey,
   privacyOf,
   rarityLabel,
+  shownPrivacy,
   trophyPoints,
 } from "@anytogether/shared";
 import { type SQL, and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
@@ -151,7 +152,12 @@ export function gameRoutes(deps: Deps, notes?: Notifier) {
     if (await blockedBetween(db, me, profile.accountId))
       throw new HttpError(404, ErrorCode.notFound, "No one with that handle");
     // The code stays "forbidden" for the launchers that know it; `section` says which part is private.
-    if (!canSee(privacyOf(profile.privacy)[section], await relationOf(db, me, profile.accountId)))
+    if (
+      !canSee(
+        shownPrivacy(profile.privacy, profile.publicProfile)[section],
+        await relationOf(db, me, profile.accountId),
+      )
+    )
       throw new HttpError(403, ErrorCode.forbidden, "This is private", { section });
     return profile;
   };
@@ -546,7 +552,7 @@ export function gameRoutes(deps: Deps, notes?: Notifier) {
   return app;
 }
 
-type Owner = Pick<ProfileRow, "accountId" | "privacy">;
+type Owner = Pick<ProfileRow, "accountId" | "privacy" | "publicProfile">;
 
 /** Someone's library as `me` sees it (null: signed out, who sees what is open to everyone); the
  *  caller has checked that the library itself may be seen. */
@@ -554,7 +560,7 @@ export async function libraryOf(db: Database, me: string | null, owner: Owner) {
   const self = owner.accountId === me;
   // Trophy counts in the library follow the trophies setting, not the library's.
   const trophiesShown = canSee(
-    privacyOf(owner.privacy).trophies,
+    shownPrivacy(owner.privacy, owner.publicProfile).trophies,
     me ? await relationOf(db, me, owner.accountId) : "other",
   );
   const rows = await db
