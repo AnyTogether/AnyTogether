@@ -14,6 +14,10 @@ export interface Entry {
   anchor: string;
 }
 
+/** A nightly build of main ("0.2.20-arm-nightly.20261025.3"). */
+export const isNightly = (release: Release) =>
+  /nightly/i.test(release.version) || /nightly/i.test(release.tag);
+
 /** The ?project= of the page's address, when it names one. */
 export function pickProject(value: string | string[] | undefined): Project | null {
   const one = Array.isArray(value) ? value[0] : value;
@@ -27,7 +31,8 @@ export function changelogEntries(
   const entries: Entry[] = [];
   for (const project of projects) {
     if (only && project !== only) continue;
-    const releases = history?.[project] ?? [];
+    // Nightly builds of main are for the Nightly update channel, not the changelog.
+    const releases = (history?.[project] ?? []).filter((r) => !isNightly(r));
     const newest = releases.find((r) => !r.prerelease);
     for (const release of releases)
       entries.push({

@@ -44,4 +44,15 @@ describe("the changelog", () => {
     expect(pickProject("<script>")).toBeNull();
     expect(pickProject(undefined)).toBeNull();
   });
+  it("leaves the nightly builds out", () => {
+    const nightly = release(
+      "utkuhalis/AnyPS5-ARM",
+      "0.2.16-arm-nightly.20261025.1",
+      "2026-10-25T20:00:00Z",
+      true,
+    );
+    const entries = changelogEntries({ ...history, macos: [nightly, ...history.macos] });
+    expect(entries.map((e) => e.release.version)).not.toContain(nightly.version);
+    expect(entries.find((e) => e.project === "macos")?.release.version).toBe("0.2.15");
+  });
 });

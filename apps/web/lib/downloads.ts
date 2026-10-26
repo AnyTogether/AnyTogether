@@ -34,6 +34,18 @@ export const repos = {
   together: "utkuhalis/AnyTogether",
 } as const;
 
+/** The phone app's own version, which AnyPS5-ARM's release notes name ("**Phone controller
+ *  1.16.0:**", "phone 1.16.0"); null when they do not. The APK and IPA ride on the Mac release, so
+ *  its version would be the wrong one to show beside them. */
+export function phoneVersion(release: { notes?: string } | null | undefined): string | null {
+  const match = release?.notes?.match(
+    /\b(?:phone(?: controller| app)?|AnyPS5 Remote)\*{0,2}\s+v?(\d+\.\d+(?:\.\d+)?)\b/i,
+  );
+  return match?.[1] ?? null;
+}
+
+const isPhone = (platform: Platform) => platform === "iphone" || platform === "android";
+
 /** GitHub's link to a file of a repository's latest release, by its unchanging name. */
 const latest = (repo: string, name: string) => `https://github.com/${repo}/releases/latest/download/${name}`;
 
@@ -125,7 +137,7 @@ export function pickDownload(platform: Platform, releases: Releases | null): Pic
       kind: rule.kind,
       url: asset.url,
       size: asset.size || null,
-      version: release.version,
+      version: isPhone(platform) ? phoneVersion(release) : release.version,
       page: release.url,
     };
   const fallbackKind = rule.fallback.endsWith(".zip")
@@ -294,7 +306,7 @@ export function downloadGroups(
         size: asset.size || null,
         sha256: asset.sha256,
         date: asset.updatedAt || release.publishedAt,
-        version: release.version,
+        version: where && isPhone(where.platform) ? phoneVersion(release) : release.version,
         repo: release.repo,
       });
     }

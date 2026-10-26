@@ -5,6 +5,7 @@ import {
   detectPlatform,
   downloadGroups,
   filesFor,
+  phoneVersion,
   pickDownload,
   statsWorthShowing,
 } from "../lib/downloads";
@@ -109,6 +110,26 @@ describe("the download button", () => {
     });
     expect(pickDownload("android", releases).url).toBe("https://github.com/x/AnyPS5-Remote.apk");
     expect(pickDownload("iphone", releases).url).toBe("https://github.com/x/AnyPS5-Remote.ipa");
+  });
+
+  it("shows the phone app's own version beside the APK and IPA, never the Mac release's", () => {
+    const withNotes: Releases = {
+      ...releases,
+      macos: releases.macos && {
+        ...releases.macos,
+        notes: "## What's new\n\n- **Phone controller 1.16.0:** reactions in Messages.",
+      },
+    };
+    expect(pickDownload("android", withNotes).version).toBe("1.16.0");
+    expect(pickDownload("iphone", withNotes).version).toBe("1.16.0");
+    expect(pickDownload("mac", withNotes).version).toBe("0.2.15");
+    // Notes that do not name it: no version rather than the wrong one.
+    expect(pickDownload("android", releases).version).toBeNull();
+    const apk = downloadGroups(withNotes, null).groups.find((g) => g.platform === "android")?.files[0];
+    expect(apk?.version).toBe("1.16.0");
+    expect(phoneVersion({ notes: "Release 0.2.21 and phone 1.16.0" })).toBe("1.16.0");
+    expect(phoneVersion({ notes: "AnyPS5 Remote 1.12 is out" })).toBe("1.12");
+    expect(phoneVersion({ notes: "Nothing about it" })).toBeNull();
   });
 
   it("falls back to GitHub's latest-release links when the releases are not known", () => {
