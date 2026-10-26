@@ -78,6 +78,8 @@ export function PartyBoard({
   const [friends, setFriends] = useState(initialFriends);
   const [notice, setNotice] = useState<{ kind: "error" | "success"; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  /** Leaving asks first: the party may be invite only, and voice ends for the one leaving. */
+  const [leaving, setLeaving] = useState(false);
   const [privacy, setPrivacy] = useState<"invite" | "friends">("invite");
 
   // Voice
@@ -585,17 +587,37 @@ export function PartyBoard({
             })}
           </ul>
           <div className="party-foot">
-            <button
-              type="button"
-              className="pill danger"
-              disabled={busy !== null}
-              onClick={async () => {
-                stopVoice(true);
-                await act("leave", `parties/${party.id}/leave`);
-              }}
-            >
-              {texts.leaveParty}
-            </button>
+            {leaving ? (
+              <div className="confirm" role="alertdialog" aria-label={texts.leaveParty}>
+                <p>{texts.confirmLeaveParty}</p>
+                <div className="row">
+                  <button type="button" className="pill" onClick={() => setLeaving(false)}>
+                    {texts.keep}
+                  </button>
+                  <button
+                    type="button"
+                    className="pill danger"
+                    disabled={busy !== null}
+                    onClick={async () => {
+                      setLeaving(false);
+                      stopVoice(true);
+                      await act("leave", `parties/${party.id}/leave`);
+                    }}
+                  >
+                    {texts.leaveParty}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="pill danger"
+                disabled={busy !== null}
+                onClick={() => setLeaving(true)}
+              >
+                {texts.leaveParty}
+              </button>
+            )}
           </div>
         </div>
 
@@ -848,9 +870,7 @@ function TogetherCard({
             <Avatar person={player} presence="in_game" />
             <span className="lines">
               <span className="name">{player.displayName}</span>
-              <span className="meta">
-                {player.userId === party.together?.hostId ? texts.togetherHost : texts.togetherInGame}
-              </span>
+              <span className="meta">{card.roleOf(player.userId)}</span>
             </span>
           </li>
         ))}
@@ -864,6 +884,7 @@ function TogetherCard({
           </li>
         ))}
       </ul>
+      {card.triedAnyway && <p className="hint">{texts.togetherTriedAnywayHint}</p>}
       <p className="hint">
         {card.host ? texts.togetherHostHint : card.playing ? "" : texts.togetherJoinHint}
       </p>

@@ -111,7 +111,7 @@ const privacyEn: LegalDoc = {
             ],
             [
               "Games",
-              "What the AnyPS5 launchers report: your play sessions (the game, when it started and ended, whether it closed normally), your library and play time, the trophies you earn and when, and your computers (a random ID, the platform, a name and a model). When you play online, play together with your party or join a friend's game: the game session (the game and its version, the AnyPS5 version, the party it belongs to, who is in it, and what the game shares with the other players). Your activity feed and the leaderboards are made from these.",
+              "What the AnyPS5 launchers report: your play sessions (the game, when it started and ended, whether it closed normally), your library and play time, the trophies you earn and when, and your computers (a random ID, the platform, a name and a model). When you play online, play together with your party or join a friend's game: the game session (the game and its version, the AnyPS5 version, the party it belongs to, who is in it, each player's game version and whether they chose to try anyway with a version that did not fit, and what the game shares with the other players). Your activity feed and the leaderboards are made from these.",
             ],
             [
               "Cloud saves and media",
@@ -496,7 +496,7 @@ const privacyTr: LegalDoc = {
             ],
             [
               "Oyunlar",
-              "AnyPS5 başlatıcılarının bildirdikleri: oyun oturumların (oyun, ne zaman başlayıp bittiği, düzgün kapanıp kapanmadığı), kitaplığın ve oyun süren, kazandığın kupalar ve ne zaman kazandığın, bilgisayarların (rastgele bir kimlik, platform, ad ve model). Online oynadığında, partinle birlikte oynadığında ya da bir arkadaşının oyununa katıldığında: oyun oturumu (oyun ve sürümü, AnyPS5 sürümü, ait olduğu parti, içinde kimlerin olduğu ve oyunun diğer oyuncularla paylaştıkları). Etkinlik akışın ve liderlik tabloları bunlardan oluşur.",
+              "AnyPS5 başlatıcılarının bildirdikleri: oyun oturumların (oyun, ne zaman başlayıp bittiği, düzgün kapanıp kapanmadığı), kitaplığın ve oyun süren, kazandığın kupalar ve ne zaman kazandığın, bilgisayarların (rastgele bir kimlik, platform, ad ve model). Online oynadığında, partinle birlikte oynadığında ya da bir arkadaşının oyununa katıldığında: oyun oturumu (oyun ve sürümü, AnyPS5 sürümü, ait olduğu parti, içinde kimlerin olduğu, her oyuncunun oyun sürümü ve uymayan bir sürümle yine de denemeyi seçip seçmediği ve oyunun diğer oyuncularla paylaştıkları). Etkinlik akışın ve liderlik tabloları bunlardan oluşur.",
             ],
             [
               "Bulut kayıtları ve medya",

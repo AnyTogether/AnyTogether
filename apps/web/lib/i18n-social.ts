@@ -51,6 +51,8 @@ export const socialEn = {
   kick: "Remove from party",
   confirmKick: "Remove {name} from the party?",
   leaveParty: "Leave party",
+  confirmLeaveParty:
+    "Leave the party? Voice ends for you, and an invite-only party takes a new invite to get back in.",
   inviteFriends: "Invite friends",
   invite: "Invite",
   invited: "Invited",
@@ -194,6 +196,8 @@ export const socialTr: typeof socialEn = {
   kick: "Partiden çıkar",
   confirmKick: "{name} partiden çıkarılsın mı?",
   leaveParty: "Partiden ayrıl",
+  confirmLeaveParty:
+    "Partiden ayrılınsın mı? Sesli sohbet senin için biter; yalnızca davetle girilen partiye dönmek için yeni davet gerekir.",
   inviteFriends: "Arkadaş davet et",
   invite: "Davet et",
   invited: "Davet edildi",

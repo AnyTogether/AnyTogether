@@ -63,6 +63,33 @@ describe("Play Together on the website", () => {
     expect(togetherCard(together, members, "c", togetherTr, names).heading).toBe("Mira, Minecraft başlattı");
   });
 
+  it("marks a player who tried anyway with a game version that did not fit", () => {
+    const members = [
+      { userId: "h", handle: "mira", displayName: "Mira", avatar: null, joinedAt: "" },
+      { userId: "b", handle: "bora", displayName: "Bora", avatar: null, joinedAt: "" },
+    ];
+    const together = {
+      sessionId: "s1",
+      hostId: "h",
+      titleId: "PPSA17221",
+      gameVersion: "01.044.000",
+      engineBuild: "0.2.21-4194",
+      versionRule: "exact" as const,
+      players: ["h", "b"],
+      versionOverrides: ["b"],
+      capacity: 4,
+      startedAt: "2026-10-26T00:00:00.000Z",
+    };
+    const card = togetherCard(together, members, "h", togetherEn, names);
+    expect(card.players.map((p) => card.roleOf(p.userId))).toEqual(["Host", "In the game · tried anyway"]);
+    expect(togetherCard(together, members, "h", togetherTr, names).roleOf("b")).toBe(
+      "Oyunda · yine de denedi",
+    );
+    // A server from before the override answers without the list.
+    const { versionOverrides: _, ...older } = together;
+    expect(togetherCard(older, members, "h", togetherEn, names).roleOf("b")).toBe("In the game");
+  });
+
   it("knows which live events change the party's Play Together game", () => {
     expect(isTogetherEvent("game_session.started")).toBe(true);
     expect(isTogetherEvent("game_session.member_joined")).toBe(true);

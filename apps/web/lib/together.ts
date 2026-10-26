@@ -21,6 +21,9 @@ export interface PartyTogether {
   engineBuild: string;
   versionRule: "exact" | "major" | "any";
   players: string[];
+  /** Players who joined with a game version that did not fit, by trying anyway (absent from
+   *  servers before it). */
+  versionOverrides?: string[];
   capacity: number;
   startedAt: string;
 }
@@ -55,7 +58,15 @@ export function togetherCard(
   const host = byId.get(together.hostId);
   const game = names.get(together.titleId) ?? together.titleId;
   const inGame = new Set(together.players);
+  const overridden = new Set(together.versionOverrides ?? []);
+  /** "Host", "In the game", and "· tried anyway" for a player on a version that did not fit. */
+  const roleOf = (userId: string) => {
+    const role = userId === together.hostId ? texts.togetherHost : texts.togetherInGame;
+    return overridden.has(userId) ? fill(texts.togetherTriedAnyway, { role }) : role;
+  };
   return {
+    roleOf,
+    triedAnyway: overridden.size > 0,
     heading: fill(texts.togetherStarted, { name: host?.displayName ?? "?", game }),
     game,
     places: `${together.players.length}/${together.capacity}`,

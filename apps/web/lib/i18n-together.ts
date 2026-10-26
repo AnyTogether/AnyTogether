@@ -7,6 +7,9 @@ export const togetherEn = {
   togetherHost: "Host",
   togetherInGame: "In the game",
   togetherNotYet: "Not in yet",
+  togetherTriedAnyway: "{role} · tried anyway",
+  togetherTriedAnywayHint:
+    "Someone with another game version chose to try anyway. If the game misbehaves, everyone should use the same version.",
   togetherJoinHint:
     "Join from AnyPS5 on your Mac or PC: it checks you have the same game and version, then starts it with online play on.",
   togetherHostHint: "It ends for everyone when you quit the game.",
@@ -23,6 +26,9 @@ export const togetherTr: typeof togetherEn = {
   togetherHost: "Kurucu",
   togetherInGame: "Oyunda",
   togetherNotYet: "Henüz girmedi",
+  togetherTriedAnyway: "{role} · yine de denedi",
+  togetherTriedAnywayHint:
+    "Oyunun başka bir sürümüne sahip biri yine de denemeyi seçti. Oyun sorun çıkarırsa herkes aynı sürümü kullanmalı.",
   togetherJoinHint:
     "Mac'inde ya da PC'nde AnyPS5'ten katıl: aynı oyun ve sürüm sende var mı bakar, sonra çevrim içi oyunu açıp oyunu başlatır.",
   togetherHostHint: "Oyundan çıktığında herkes için biter.",
