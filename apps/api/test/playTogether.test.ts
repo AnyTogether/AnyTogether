@@ -166,6 +166,52 @@ describe("play together", () => {
     });
   });
 
+  it("a game version refusal can be overridden (Try anyway) and the override is recorded", async () => {
+    const host = await h.user("t1@example.com");
+    const member = await h.user("t2@example.com");
+    const late = await h.user("t3@example.com");
+    await party(host, member, late);
+    const { body } = await h.call("POST", "/api/v1/game-sessions", lan, host.token);
+    const path = `/api/v1/game-sessions/${body.id}/join`;
+
+    // The refusal says whether trying anyway is possible: a game version, not an engine build.
+    const refused = await h.call("POST", path, { ...same, gameVersion: "01.008.000" }, member.token);
+    expect(refused.body).toMatchObject({ reason: "game_version", overridable: true });
+    const engine = await h.call("POST", path, { ...same, engineBuild: "0.2.20-4100" }, member.token);
+    expect(engine.body).toMatchObject({ reason: "engine", overridable: false });
+
+    // The override never skips the engine build.
+    const engineAnyway = await h.call(
+      "POST",
+      path,
+      { gameVersion: "01.008.000", engineBuild: "0.2.20-4100", overrideVersion: true },
+      member.token,
+    );
+    expect(engineAnyway.status).toBe(409);
+    expect(engineAnyway.body).toMatchObject({ code: "version_mismatch", reason: "engine" });
+
+    const anyway = await h.call(
+      "POST",
+      path,
+      { ...same, gameVersion: "01.008.000", overrideVersion: true },
+      member.token,
+    );
+    expect(anyway.status).toBe(200);
+    const mine = anyway.body.members.find((m: { userId: string }) => m.userId === member.id);
+    expect(mine).toMatchObject({ gameVersion: "01.008.000", versionOverride: true });
+
+    // A join that fits records its version and no override; the host's own row has the session's.
+    const fits = await h.call("POST", path, { ...same, overrideVersion: true }, late.token);
+    expect(fits.status).toBe(200);
+    const byId = new Map((fits.body.members as { userId: string }[]).map((m) => [m.userId, m] as const));
+    expect(byId.get(late.id)).toMatchObject({ gameVersion: lan.gameVersion, versionOverride: false });
+    expect(byId.get(host.id)).toMatchObject({ gameVersion: lan.gameVersion, versionOverride: false });
+    expect(byId.get(member.id)).toMatchObject({ versionOverride: true });
+    // The party sees who plays on a version that tried anyway.
+    const seen = await h.call("GET", "/api/v1/me/party", undefined, host.token);
+    expect(seen.body.party.together.versionOverrides).toEqual([member.id]);
+  });
+
   it("a major version rule lets patches of the same major version play together", async () => {
     const host = await h.user("m1@example.com");
     const member = await h.user("m2@example.com");

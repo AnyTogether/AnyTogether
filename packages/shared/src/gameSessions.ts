@@ -47,6 +47,9 @@ export interface JoinRefusal {
   actual: string;
   /** Who is behind: the joiner (`you`) or the host. */
   update: "you" | "host";
+  /** The joiner may try anyway (join again with `overrideVersion`): only a game version
+   *  refusal, never a different engine build. */
+  overridable: boolean;
 }
 
 /** Null when the joiner's game version and engine build fit the session's. */
@@ -60,6 +63,7 @@ export function joinRefusal(
       expected: session.gameVersion,
       actual: joiner.gameVersion,
       update: compareVersions(joiner.gameVersion, session.gameVersion) < 0 ? "you" : "host",
+      overridable: true,
     };
   if (joiner.engineBuild !== session.engineBuild)
     return {
@@ -67,6 +71,7 @@ export function joinRefusal(
       expected: session.engineBuild,
       actual: joiner.engineBuild,
       update: compareVersions(joiner.engineBuild, session.engineBuild) < 0 ? "you" : "host",
+      overridable: false,
     };
   return null;
 }
@@ -97,7 +102,13 @@ export const GameSessionUpdate = z
   })
   .refine((value) => Object.keys(value).length > 0, "nothing to change");
 
-export const GameSessionJoin = z.object({ gameVersion: GameVersion, engineBuild: EngineBuild });
+/** `overrideVersion`: the player pressed "Try anyway" after a game version refusal; the version
+ *  check is skipped (and recorded), the engine build is still checked. */
+export const GameSessionJoin = z.object({
+  gameVersion: GameVersion,
+  engineBuild: EngineBuild,
+  overrideVersion: z.boolean().default(false),
+});
 
 /** A player's own properties in the session, replaced whole; opaque to the server and seen only by
  *  the session's players. */
@@ -117,6 +128,10 @@ export interface GameSessionMember {
   device: string | null;
   properties: Record<string, unknown>;
   joinedAt: string;
+  /** Their game version when they joined (null for players from before it was kept). */
+  gameVersion: string | null;
+  /** They joined with a game version that did not fit, by trying anyway. */
+  versionOverride: boolean;
   /** When the properties were last published; null before the first time. */
   updatedAt: string | null;
 }
@@ -166,6 +181,8 @@ export interface PartyTogether {
   versionRule: VersionRule;
   /** Who plays, the host first. */
   players: string[];
+  /** The players who joined with a game version that did not fit, by trying anyway. */
+  versionOverrides: string[];
   capacity: number;
   startedAt: string;
 }

@@ -252,7 +252,15 @@ describe("online play between players", () => {
     const { body: opened } = await h.call("POST", "/api/v1/game-sessions", game, host.token);
     const id = opened.id as string;
     expect(opened.members).toEqual([
-      { userId: host.id, device: null, properties: {}, joinedAt: expect.any(String), updatedAt: null },
+      {
+        userId: host.id,
+        device: null,
+        properties: {},
+        joinedAt: expect.any(String),
+        gameVersion: game.gameVersion,
+        versionOverride: false,
+        updatedAt: null,
+      },
     ]);
     expect(await h.valkey.smembers(`game-session:${id}:members`)).toEqual([host.id]);
     await h.call("POST", `/api/v1/game-sessions/${id}/join`, same, guest.token);

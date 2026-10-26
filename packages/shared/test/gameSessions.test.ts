@@ -26,10 +26,13 @@ describe("game session versions", () => {
       expected: "01.044.000",
       actual: "01.008.000",
       update: "you",
+      overridable: true,
     });
+    // Trying anyway is for a game version only: a different engine build cannot talk to the host's.
     expect(joinRefusal(session, { gameVersion: "01.044.000", engineBuild: "0.2.22-1" })).toMatchObject({
       reason: "engine",
       update: "host",
+      overridable: false,
     });
   });
 });

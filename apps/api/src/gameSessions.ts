@@ -135,7 +135,12 @@ export function gameSessionRoutes(deps: Deps, notes: Notifier, parties: PartySer
   /** Each player in join order with what they published. */
   const members = async (sessionId: string): Promise<GameSessionMember[]> => {
     const rows = await db
-      .select({ id: gameSessionPlayers.accountId, joinedAt: gameSessionPlayers.joinedAt })
+      .select({
+        id: gameSessionPlayers.accountId,
+        joinedAt: gameSessionPlayers.joinedAt,
+        gameVersion: gameSessionPlayers.gameVersion,
+        versionOverride: gameSessionPlayers.versionOverride,
+      })
       .from(gameSessionPlayers)
       .where(eq(gameSessionPlayers.sessionId, sessionId))
       .orderBy(asc(gameSessionPlayers.joinedAt));
@@ -150,6 +155,8 @@ export function gameSessionRoutes(deps: Deps, notes: Notifier, parties: PartySer
         device: own.device ?? null,
         properties: own.properties ?? {},
         joinedAt: row.joinedAt.toISOString(),
+        gameVersion: row.gameVersion,
+        versionOverride: row.versionOverride,
         updatedAt: own.updatedAt ?? null,
       };
     });
@@ -322,6 +329,15 @@ export function gameSessionRoutes(deps: Deps, notes: Notifier, parties: PartySer
       engineBuild: session.engineBuild,
       versionRule: session.versionRule as VersionRule,
       players: await playerIds(session.id),
+      versionOverrides: (
+        await db
+          .select({ id: gameSessionPlayers.accountId })
+          .from(gameSessionPlayers)
+          .where(
+            and(eq(gameSessionPlayers.sessionId, session.id), eq(gameSessionPlayers.versionOverride, true)),
+          )
+          .orderBy(asc(gameSessionPlayers.joinedAt))
+      ).map((p) => p.id),
       capacity: session.capacity,
       startedAt: session.createdAt.toISOString(),
     };
@@ -355,7 +371,9 @@ export function gameSessionRoutes(deps: Deps, notes: Notifier, parties: PartySer
           .insert(gameSessions)
           .values({ id: uuidv7(), hostId: me, ...input, partyId: party?.id ?? null })
           .returning();
-        await tx.insert(gameSessionPlayers).values({ sessionId: (made as Session).id, accountId: me });
+        await tx
+          .insert(gameSessionPlayers)
+          .values({ sessionId: (made as Session).id, accountId: me, gameVersion: input.gameVersion });
         return made as Session;
       });
     } catch (error) {
@@ -530,20 +548,23 @@ export function gameSessionRoutes(deps: Deps, notes: Notifier, parties: PartySer
 
   /** Accepting an invite, walking into a friend's joinable game, or joining the party's Play
    *  Together: the joiner gets the details. A different game version or engine build is refused
-   *  with the reason (`game_version` or `engine`), both versions, and who should update. */
+   *  with the reason (`game_version` or `engine`), both versions, who should update and whether
+   *  the joiner may try anyway. Trying anyway (`overrideVersion`) skips only the game version
+   *  check; the player's row records it. */
   app.post("/game-sessions/:id/join", async (c) => {
     const me = c.get("userId");
     const { session, players } = await visible(c.req.param("id"), me);
     if (players.includes(me)) return c.json(await view(session, players, true));
     const input = await body(c, GameSessionJoin);
-    const refusal = joinRefusal(
-      {
-        gameVersion: session.gameVersion,
-        engineBuild: session.engineBuild,
-        versionRule: session.versionRule as VersionRule,
-      },
-      input,
-    );
+    const rules = {
+      gameVersion: session.gameVersion,
+      engineBuild: session.engineBuild,
+      versionRule: session.versionRule as VersionRule,
+    };
+    let refusal = joinRefusal(rules, input);
+    const overridden = refusal?.reason === "game_version" && input.overrideVersion;
+    // Trying anyway passes the game version; the engine build must still be the same.
+    if (overridden) refusal = joinRefusal(rules, { ...input, gameVersion: session.gameVersion });
     if (refusal)
       throw new HttpError(
         409,
@@ -569,7 +590,12 @@ export function gameSessionRoutes(deps: Deps, notes: Notifier, parties: PartySer
         .from(gameSessionPlayers)
         .where(eq(gameSessionPlayers.sessionId, session.id));
       if (now.length >= locked.capacity) return "full" as const;
-      await tx.insert(gameSessionPlayers).values({ sessionId: session.id, accountId: me });
+      await tx.insert(gameSessionPlayers).values({
+        sessionId: session.id,
+        accountId: me,
+        gameVersion: input.gameVersion,
+        versionOverride: overridden,
+      });
       await tx
         .delete(gameSessionInvites)
         .where(and(eq(gameSessionInvites.sessionId, session.id), eq(gameSessionInvites.accountId, me)));
