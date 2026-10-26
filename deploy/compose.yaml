@@ -68,6 +68,8 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      MIN_LAUNCHER_VERSION: ${MIN_LAUNCHER_VERSION:-}
+      CLIENT_DOWNLOAD_URL: ${CLIENT_DOWNLOAD_URL:-}
       # Cloud saves and media: off until STORAGE_DIR (the files volume below: /data/files) or the
       # four S3_ settings are set in .env. See docs/self-hosting.md ("Cloud saves and media").
       STORAGE_DIR: ${STORAGE_DIR:-}

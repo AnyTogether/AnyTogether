@@ -102,9 +102,15 @@ export async function harness(overrides: Partial<Deps> & { storage?: StorageOpti
       ...(options.body ? { body: options.body as unknown as BodyInit } : {}),
     });
   /** A signed-in user: their access token, id and handle. */
-  const user = async (email: string) => {
-    await call("POST", "/api/v1/auth/email/start", { email });
-    const signedIn = await call("POST", "/api/v1/auth/email/verify", { email, code: mailer.lastCode(email) });
+  const user = async (email: string, client?: string) => {
+    await call("POST", "/api/v1/auth/email/start", { email }, undefined, client);
+    const signedIn = await call(
+      "POST",
+      "/api/v1/auth/email/verify",
+      { email, code: mailer.lastCode(email) },
+      undefined,
+      client,
+    );
     return {
       token: signedIn.body.accessToken as string,
       id: signedIn.body.user.id as string,

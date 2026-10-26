@@ -11,6 +11,7 @@ import { passkeyRoutes } from "./auth/passkeys.js";
 import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
 import { callRoutes } from "./calls.js";
+import { type ClientGate, clientGate } from "./clientGate.js";
 import { communityRoutes } from "./communities.js";
 import { compatRoutes } from "./compat.js";
 import { connectionRoutes } from "./connections.js";
@@ -83,6 +84,9 @@ export interface Deps {
   githubToken?: string;
   /** The backup service's status file, shown on the admin page; none when left out. */
   backupStatusFile?: string;
+  /** The oldest launcher and phone app versions answered (MIN_LAUNCHER_VERSION); none refused when
+   *  left out. */
+  clientGate?: ClientGate;
 }
 
 export function createApp(deps: Deps) {
@@ -108,6 +112,8 @@ export function createApp(deps: Deps) {
   const v1 = new Hono<{ Variables: AuthVariables }>();
   v1.get("/health", (c) => c.json({ ok: true }));
   v1.get("/.well-known/jwks.json", async (c) => c.json({ keys: [await deps.tokens.publicJwk()] }));
+  // Clients too old for the server get the update screen's answer before anything else.
+  v1.use("*", clientGate(deps.clientGate));
   // Health checks and the gateway's key fetches above; everything else counts per address.
   v1.use("*", perIp(deps, "ip"));
   // No request is read into memory past 8 MB (the biggest are trophy sets in many languages),

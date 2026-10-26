@@ -75,6 +75,7 @@ const app = createApp({
   push,
   githubToken: settings.githubToken,
   backupStatusFile: settings.backupStatusFile,
+  clientGate: settings.clientGate,
   ...(files ? { files } : {}),
   steam: { apiKey: settings.steamApiKey },
 });

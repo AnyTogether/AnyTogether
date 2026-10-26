@@ -15,6 +15,9 @@ export const ErrorCode = {
   versionMismatch: "version_mismatch",
   rateLimited: "rate_limited",
   upgradeRequired: "upgrade_required",
+  /** This launcher or phone app is older than the server still answers (MIN_LAUNCHER_VERSION):
+   *  status 426, with `client`, `current`, `minimum` and `downloadUrl`. Show an update screen. */
+  clientTooOld: "client_too_old",
   providerDisabled: "provider_disabled",
   providerRejected: "provider_rejected",
   codeInvalid: "code_invalid",

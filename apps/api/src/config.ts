@@ -1,4 +1,5 @@
 import { createRemoteJWKSet } from "jose";
+import { parseClientMinimums } from "./clientGate.js";
 import { defaultBlockedLinkDomains } from "./links.js";
 import type { ProviderConfig } from "./providers.js";
 import { type ClientIpHeader, clientIpHeaders } from "./ratelimit.js";
@@ -28,6 +29,7 @@ export function config(env = process.env) {
     },
     discord: { clientId: env.DISCORD_CLIENT_ID ?? "", clientSecret: env.DISCORD_CLIENT_SECRET ?? "", fetch },
   };
+  const publicUrl = env.PUBLIC_URL ?? "http://localhost:3000";
   const ipHeader = (env.CLIENT_IP_HEADER ?? "cf-connecting-ip").toLowerCase();
   if (!clientIpHeaders.includes(ipHeader as ClientIpHeader))
     throw new Error(`CLIENT_IP_HEADER must be one of ${clientIpHeaders.join(", ")}`);
@@ -36,7 +38,14 @@ export function config(env = process.env) {
     databaseUrl: env.DATABASE_URL ?? "postgres://anytogether:anytogether@127.0.0.1:54329/anytogether",
     valkeyUrl: env.VALKEY_URL ?? "redis://127.0.0.1:63799",
     jwtPrivateKey: env.JWT_PRIVATE_KEY?.replace(/\\n/g, "\n") || undefined,
-    publicUrl: env.PUBLIC_URL ?? "http://localhost:3000",
+    publicUrl,
+    /** Retiring old clients: MIN_LAUNCHER_VERSION ("macos=0.2.20,desktop=0.1.8,phone=1.16.0",
+     *  empty: off) and where a refused one is sent to update (CLIENT_DOWNLOAD_URL, the website's
+     *  downloads page by default). */
+    clientGate: {
+      minimums: parseClientMinimums(env.MIN_LAUNCHER_VERSION),
+      downloadUrl: env.CLIENT_DOWNLOAD_URL || `${publicUrl.replace(/\/+$/, "")}/download`,
+    },
     /** Passkeys belong to PUBLIC_URL's host name; this is the name their prompts show. */
     rpName: env.WEBAUTHN_RP_NAME || "AnyTogether",
     mail: {
