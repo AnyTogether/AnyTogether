@@ -339,6 +339,64 @@ export function ReadReceiptsForm({
   );
 }
 
+/** The public profile switch: off (where a new account starts), people who are not friends see the
+ *  minimal card and Everyone works like Friends; saved as soon as it moves. */
+export function PublicProfileForm({
+  publicProfile: initial,
+  texts,
+}: { publicProfile: boolean; texts: UiStrings }) {
+  const [on, setOn] = useState(initial);
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  useSaved(status, setStatus);
+
+  async function change(value: boolean) {
+    if (value === on) return;
+    setOn(value);
+    setStatus({ kind: "busy" });
+    const saved = await send("/me/public-profile", json("PATCH", { publicProfile: value }));
+    if (!saved.ok) {
+      setOn(!value);
+      return setStatus({
+        kind: "error",
+        text:
+          saved.body.code === "restricted_by_family"
+            ? texts.publicProfileFamily
+            : errorText(saved.body.code, texts),
+      });
+    }
+    setOn(saved.body.publicProfile === true);
+    setStatus({ kind: "saved" });
+  }
+
+  return (
+    <div className="privacy presence-mode" id="public-profile">
+      <fieldset className="privacy-row">
+        <legend>{texts.publicProfile}</legend>
+        <div className="segmented two" style={{ "--i": on ? 0 : 1 } as CSSProperties}>
+          <span className="thumb" aria-hidden="true" />
+          {([true, false] as const).map((choice) => (
+            <label key={String(choice)}>
+              <input
+                type="radio"
+                name="public-profile"
+                value={choice ? "on" : "off"}
+                checked={on === choice}
+                onChange={() => change(choice)}
+              />
+              <span>{choice ? texts.publicProfileOn : texts.publicProfileOff}</span>
+            </label>
+          ))}
+        </div>
+        <p className="meta hint-line">{texts.publicProfileHint}</p>
+        {!on && <p className="meta hint-line">{texts.publicProfileOffNote}</p>}
+      </fieldset>
+      <div className="save-row">
+        <StatusLine status={status} texts={texts} />
+      </div>
+    </div>
+  );
+}
+
 const choices: Visibility[] = ["everyone", "friends", "nobody"];
 
 /** One row per part of the profile, each a three-way switch, saved as soon as it moves. */

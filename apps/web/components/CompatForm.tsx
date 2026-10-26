@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  type CompatOnline,
   type CompatPlatform,
   type CompatStatus,
+  compatOnline,
   compatPlatforms as compatPlatformList,
   compatStatuses,
   platformNames,
@@ -32,6 +34,7 @@ export function CompatForm({
   const [machine, setMachine] = useState("");
   const [os, setOs] = useState("");
   const [fps, setFps] = useState("");
+  const [online, setOnline] = useState<CompatOnline | "">("");
   const [note, setNote] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +62,7 @@ export function CompatForm({
             ...(machine.trim() ? { machine: machine.trim() } : {}),
             ...(os.trim() ? { os: os.trim() } : {}),
             ...(fps.trim() && Number.isFinite(Number(fps)) ? { fpsAvg: Number(fps) } : {}),
+            ...(online ? { online } : {}),
             ...(note.trim() ? { note: note.trim() } : {}),
           }),
         }).catch(() => undefined);
@@ -67,6 +71,7 @@ export function CompatForm({
           setSentFor(titleId);
           setNote("");
           setStatus(null);
+          setOnline("");
           router.refresh();
           return;
         }
@@ -205,6 +210,31 @@ export function CompatForm({
           />
         </div>
       </div>
+      <fieldset className="field-group">
+        <legend>{texts.onlineQuestion}</legend>
+        <div
+          className="segmented"
+          style={{ "--i": (["", "works", "broken"] as const).indexOf(online) } as React.CSSProperties}
+        >
+          <span className="thumb" aria-hidden="true" />
+          {(["", ...compatOnline] as const).map((value) => (
+            <label key={value || "none"}>
+              <input
+                type="radio"
+                name="online"
+                value={value}
+                checked={online === value}
+                onChange={() => setOnline(value)}
+              />
+              {value === "works"
+                ? texts.onlineWorks
+                : value === "broken"
+                  ? texts.onlineBroken
+                  : texts.onlineNotTried}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <textarea
         rows={3}
         maxLength={500}

@@ -10,12 +10,14 @@ import { legalUiEn, legalUiTr } from "./i18n-legal";
 import { notifyEn, notifyTr } from "./i18n-notify";
 import { postsEn, postsTr } from "./i18n-posts";
 import { presenceEn, presenceTr } from "./i18n-presence";
+import { profileEn, profileTr } from "./i18n-profile";
 import { psnEn, psnTr } from "./i18n-psn";
 import { shareEn, shareTr } from "./i18n-share";
 import { socialEn, socialTr } from "./i18n-social";
 import { storageEn, storageTr } from "./i18n-storage";
 import { themesEn, themesTr } from "./i18n-themes";
 import { togetherEn, togetherTr } from "./i18n-together";
+import { voiceEn, voiceTr } from "./i18n-voice";
 
 export const languages = ["en", "tr"] as const;
 export type Language = (typeof languages)[number];
@@ -149,7 +151,7 @@ const en = {
   saved: "Saved",
   editProfile: "Edit profile",
   privacyLead:
-    "Your card (picture, name, handle, bio) is shown to anyone signed in. Choose who sees the rest; you always see all of it.",
+    "Your picture, name and handle are shown to anyone; your bio and the rest follow the public profile switch above. Choose who sees each part; you always see all of it.",
   privacy_library: "Games and play time",
   privacy_trophies: "Trophies",
   privacy_friends: "Friends list",
@@ -355,7 +357,7 @@ const tr: typeof en = {
   saved: "Kaydedildi",
   editProfile: "Profili düzenle",
   privacyLead:
-    "Kartın (resim, isim, kullanıcı adı, bio) giriş yapmış herkese görünür. Gerisini kimin göreceğini seç; sen hepsini her zaman görürsün.",
+    "Resmin, ismin ve kullanıcı adın herkese görünür; bion ve gerisi yukarıdaki herkese açık profil anahtarına uyar. Her bölümü kimin göreceğini seç; sen hepsini her zaman görürsün.",
   privacy_library: "Oyunlar ve oynama süresi",
   privacy_trophies: "Kupalar",
   privacy_friends: "Arkadaş listesi",
@@ -453,7 +455,9 @@ export type Strings = typeof en &
   typeof chatEn &
   typeof togetherEn &
   typeof identityEn &
-  typeof postsEn;
+  typeof postsEn &
+  typeof profileEn &
+  typeof voiceEn;
 /** What client components get: the same texts (kept as its own name for them). */
 export type UiStrings = Strings;
 export const ui = (texts: Strings): UiStrings => texts;
@@ -485,6 +489,8 @@ export async function strings(): Promise<Strings> {
         ...togetherTr,
         ...identityTr,
         ...postsTr,
+        ...profileTr,
+        ...voiceTr,
       }
     : {
         ...en,
@@ -505,5 +511,7 @@ export async function strings(): Promise<Strings> {
         ...togetherEn,
         ...identityEn,
         ...postsEn,
+        ...profileEn,
+        ...voiceEn,
       };
 }

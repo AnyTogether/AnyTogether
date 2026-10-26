@@ -3,9 +3,14 @@ import { CompatVerdict } from "@/components/CompatVerdict";
 import { wide } from "@/components/site/fonts";
 import {
   type CompatGame,
-  type CompatPlatform,
+  type CompatSort,
+  compatHref,
   compatPlatforms,
+  compatQuery,
+  compatSorts,
   compatStatuses,
+  compatView,
+  onlineWorks,
   platformNames,
 } from "@/lib/compat";
 import { localName } from "@/lib/games";
@@ -22,19 +27,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 type Search = { searchParams: Promise<Record<string, string | string[] | undefined>> };
-const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
-/** Every game someone reported, newest report first, with its verdict per platform. */
+/** Every game someone reported, with its verdict per platform: filtered by platform, status and
+ *  online play, sorted by the latest report, name or status, and searched; all of it in the
+ *  address (compatView), so a view can be shared and the back button works. */
 export default async function Compatibility({ searchParams }: Search) {
-  const query = await searchParams;
-  const platform = compatPlatforms.find((p) => p === one(query.platform));
-  const q = (one(query.q) ?? "").trim().slice(0, 80);
-  const shown = Math.min(Math.max(Number(one(query.n)) || 50, 50), 500);
-  const params = new URLSearchParams({
-    limit: "100",
-    ...(q ? { q } : {}),
-    ...(platform ? { platform } : {}),
-  });
+  const view = compatView(await searchParams);
+  const { platform, status, online, sort, q, n: shown } = view;
+  const params = compatQuery(view);
   const [texts, user, first, releases] = await Promise.all([
     strings(),
     currentUser(),
@@ -52,15 +52,14 @@ export default async function Compatibility({ searchParams }: Search) {
   const total = first.body?.total ?? 0;
   const hasMore = games.length > shown || Boolean(next);
   games = games.slice(0, shown);
-  const href = (change: { platform?: CompatPlatform | null; n?: number }) => {
-    const out = new URLSearchParams();
-    const p = change.platform === undefined ? platform : change.platform;
-    if (p) out.set("platform", p);
-    if (q) out.set("q", q);
-    if (change.n) out.set("n", String(change.n));
-    return `/compatibility${out.size ? `?${out}` : ""}`;
-  };
+  const href = (change: Parameters<typeof compatHref>[1] = {}) => compatHref(view, change);
   const columns = platform ? [platform] : compatPlatforms;
+  const filtered = Boolean(platform || status || online || q);
+  const sortNames: Record<CompatSort, string> = {
+    updated: texts.sortUpdated,
+    name: texts.sortName,
+    status: texts.sortStatus,
+  };
 
   return (
     <section className={`page hub-page compat site ${wide.variable}`}>
@@ -70,15 +69,6 @@ export default async function Compatibility({ searchParams }: Search) {
           <p className="lead in d2">{texts.compatLead}</p>
         </div>
       </div>
-
-      <ul className="compat-legend in d2" aria-label={texts.howFar}>
-        {compatStatuses.map((status) => (
-          <li key={status} title={texts[`statusHint_${status}`]}>
-            <span className={`compat-dot is-${status}`} aria-hidden="true" />
-            {texts[`status_${status}`]}
-          </li>
-        ))}
-      </ul>
 
       <div className="hub-controls in d3">
         <nav className="seg" aria-label={texts.platform}>
@@ -94,6 +84,9 @@ export default async function Compatibility({ searchParams }: Search) {
         <search className="hub-search-wrap">
           <form className="field hub-search" action="/compatibility">
             {platform && <input type="hidden" name="platform" value={platform} />}
+            {status && <input type="hidden" name="status" value={status} />}
+            {online && <input type="hidden" name="online" value="works" />}
+            {sort !== "updated" && <input type="hidden" name="sort" value={sort} />}
             <svg viewBox="0 0 24 24" aria-hidden="true" className="search-icon">
               <circle cx="11" cy="11" r="6.5" />
               <path d="M20 20l-4.2-4.2" />
@@ -110,12 +103,67 @@ export default async function Compatibility({ searchParams }: Search) {
         </search>
       </div>
 
+      {/* The statuses are the legend and the filter at once: each says what it means on hover. */}
+      <section className="compat-filters in d3" aria-label={texts.filters}>
+        <nav className="compat-chips" aria-label={texts.filterStatus}>
+          <Link href={href({ status: null })} aria-current={!status ? "true" : undefined} className="chip">
+            {texts.anyStatus}
+          </Link>
+          {compatStatuses.map((value) => (
+            <Link
+              key={value}
+              href={href({ status: value === status ? null : value })}
+              aria-current={value === status ? "true" : undefined}
+              title={texts[`statusHint_${value}`]}
+              className="chip"
+            >
+              <span className={`compat-dot is-${value}`} aria-hidden="true" />
+              {texts[`status_${value}`]}
+            </Link>
+          ))}
+          <span className="chip-gap" aria-hidden="true" />
+          <Link
+            href={href({ online: !online })}
+            aria-current={online ? "true" : undefined}
+            className="chip online-chip"
+            title={texts.onlineBadgeHint}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="chip-icon">
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M3.5 12h17M12 3.5c2.6 2.5 3.6 5.3 3.6 8.5s-1 6-3.6 8.5c-2.6-2.5-3.6-5.3-3.6-8.5s1-6 3.6-8.5z" />
+            </svg>
+            {texts.onlineWorksFilter}
+          </Link>
+        </nav>
+        <nav className="seg compat-sort" aria-label={texts.sortBy}>
+          {compatSorts.map((value) => (
+            <Link key={value} href={href({ sort: value })} aria-current={value === sort ? "true" : undefined}>
+              {sortNames[value]}
+            </Link>
+          ))}
+        </nav>
+      </section>
+
       <article className="card compat-list in d4">
         <h3 className="sub">
           {texts.compatibility} <span className="n">{fill(texts.gamesCount, { n: total })}</span>
+          {filtered && (
+            <Link
+              href={compatHref({ ...view, platform: null, status: null, online: false, q: "", n: 50 })}
+              className="quiet-link clear-filters"
+            >
+              {texts.clearFilters}
+            </Link>
+          )}
         </h3>
         {games.length === 0 ? (
-          <p className="empty">{q || platform ? texts.noGamesFound : texts.noCompatGames}</p>
+          <p className="empty">
+            {online && !status && !q
+              ? texts.noOnlineGames
+              : filtered
+                ? texts.noGamesFound
+                : texts.noCompatGames}
+          </p>
         ) : (
           <ul className="compat-rows">
             {games.map((game) => {
@@ -129,7 +177,14 @@ export default async function Compatibility({ searchParams }: Search) {
                       </span>
                       <span className="lines">
                         <span className="name">{name}</span>
-                        <span className="meta">{game.titleId}</span>
+                        <span className="meta">
+                          {game.titleId}
+                          {onlineWorks(game, columns) && (
+                            <span className="online-badge" title={texts.onlineBadgeHint}>
+                              {texts.onlineBadge}
+                            </span>
+                          )}
+                        </span>
                       </span>
                     </span>
                     <span className={`compat-verdicts n${columns.length}`}>

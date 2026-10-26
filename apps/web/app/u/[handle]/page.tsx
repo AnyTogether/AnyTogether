@@ -20,7 +20,7 @@ import {
   trophyText,
 } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
-import { fill, shownName } from "@/lib/people";
+import { fill, isMinimalCard, shownName } from "@/lib/people";
 import type { Person, Profile, PublicProfile } from "@/lib/people";
 import type { PostPage } from "@/lib/posts";
 import { type LevelBadgeData, type Showcase, accents, localArt } from "@/lib/psn";
@@ -35,12 +35,16 @@ type Params = { params: Promise<{ handle: string }> };
 const clean = (handle: string) => decodeURIComponent(handle).replace(/^@/, "").toLowerCase();
 
 /** The card, and each part the viewer may open; a part that is private comes back as null.
- *  Signed out, only what the person opened to everyone comes back. */
+ *  Signed out, only what the person opened to everyone comes back. With the public profile off,
+ *  someone who is not a friend gets the minimal card and nothing else (the API refuses the parts). */
 async function load(handle: string) {
   if (!/^[a-z0-9_.]{1,40}$/.test(handle)) return null;
   const path = `/users/${encodeURIComponent(handle)}`;
+  const card = await publicJson<Profile>(path);
+  if (!card.body) return null;
+  if (isMinimalCard(card.body)) return { profile: card.body, minimal: true as const };
   const [profile, library, trophies, friends, activity, storage, showcase] = await Promise.all([
-    publicJson<Profile>(path),
+    card,
     publicJson<{ games: LibraryGame[] }>(`${path}/library`),
     publicJson<{ trophies: EarnedTrophy[] }>(`${path}/trophies`),
     publicJson<{ friends: (Person & { level?: LevelBadgeData | null })[] }>(`${path}/friends`),
@@ -56,6 +60,7 @@ async function load(handle: string) {
   // Captures are for the signed in: what this reader may see of them (none signed out).
   const posts = storage.body?.enabled ? await publicJson<PostPage>(`${path}/posts?limit=12`) : null;
   return {
+    minimal: false as const,
     profile: profile.body,
     games: shown(library, { games: [] })?.games ?? null,
     trophies: shown(trophies, { trophies: [] })?.trophies ?? null,
@@ -68,8 +73,8 @@ async function load(handle: string) {
           max: storage.body?.galleryMax ?? 12,
         }
       : null,
-    showcase: showcase.body ?? { trophies: null, games: null },
-    posts: posts?.body ?? null,
+    showcase: (showcase.status === 200 ? showcase.body : null) ?? { trophies: null, games: null },
+    posts: posts?.status === 200 ? posts.body : null,
   };
 }
 
@@ -121,9 +126,10 @@ export default async function UserProfile({ params }: Params) {
   const [texts, user] = await Promise.all([strings(), currentUser()]);
   const loaded = await load(handle);
   if (!loaded) notFound();
-  const { profile, games, trophies, friends, activity, gallery, showcase, posts } = loaded;
   // An old handle still finds the person for 30 days; the address shows the new one.
-  if (profile.handle.toLowerCase() !== handle) redirect(`/u/${profile.handle}`);
+  if (loaded.profile.handle.toLowerCase() !== handle) redirect(`/u/${loaded.profile.handle}`);
+  if (loaded.minimal) return <MinimalCard profile={loaded.profile} signedIn={Boolean(user)} texts={texts} />;
+  const { profile, games, trophies, friends, activity, gallery, showcase, posts } = loaded;
   const { language } = texts;
   const self = profile.friendship === "me";
   const name = { name: profile.displayName };
@@ -246,6 +252,13 @@ export default async function UserProfile({ params }: Params) {
           </dl>
         )}
         {profile.trophyLevel && <LevelCard level={profile.trophyLevel} texts={texts} language={language} />}
+        {games && games.length > 0 && <GamesPlayed games={games} seconds={seconds} texts={texts} />}
+        {self && profile.publicProfile === false && (
+          <p className="profile-not-public in d3">
+            <span>{texts.profileNotPublicSelf}</span>{" "}
+            <Link href="/settings#public-profile">{texts.profileMakePublic}</Link>
+          </p>
+        )}
         <div className="in d4">
           {user ? (
             <FriendAction profile={profile} texts={ui(texts)} />
@@ -285,6 +298,24 @@ export default async function UserProfile({ params }: Params) {
         )}
       </article>
 
+      <SectionLinks
+        texts={texts}
+        sections={[
+          ["showcase", texts.showcase, Boolean(showcase.trophies?.length || showcase.games?.length || self)],
+          [
+            "gallery",
+            texts.gallery,
+            Boolean(gallery && (gallery.items === null ? user : gallery.items.length > 0 || self)),
+          ],
+          ["captures", texts.captures, Boolean(user && posts && (posts.items.length > 0 || self))],
+          ["activity", texts.recentActivity, true],
+          ["games", texts.library, true],
+          ["trophies", texts.recentTrophies, true],
+          ["friends", texts.friends, true],
+        ]}
+      />
+
+      <div id="showcase" className="section-anchor" />
       <ProfileShowcase
         showcase={showcase}
         self={self}
@@ -294,7 +325,7 @@ export default async function UserProfile({ params }: Params) {
 
       {/* Signed out the gallery is left out rather than shown as private. */}
       {gallery && (gallery.items === null ? Boolean(user) : gallery.items.length > 0 || self) && (
-        <article className="card gallery-card in d3">
+        <article className="card gallery-card in d3" id="gallery">
           <h3 className="sub">
             {texts.gallery}{" "}
             {gallery.items ? <span className="n">{gallery.items.length}</span> : <PrivateTag texts={texts} />}
@@ -314,7 +345,7 @@ export default async function UserProfile({ params }: Params) {
       )}
 
       {user && posts && (posts.items.length > 0 || self) && (
-        <article className="card cap-profile in d3">
+        <article className="card cap-profile in d3" id="captures">
           <div className="card-head">
             <h3 className="sub">
               {texts.captures}{" "}
@@ -340,7 +371,7 @@ export default async function UserProfile({ params }: Params) {
         </article>
       )}
 
-      <article className="card in d3">
+      <article className="card in d3" id="activity">
         <h3 className="sub">{texts.recentActivity}</h3>
         <FeedList
           texts={ui(texts)}
@@ -351,7 +382,7 @@ export default async function UserProfile({ params }: Params) {
         />
       </article>
 
-      <article className="card in d3">
+      <article className="card in d3" id="games">
         <h3 className="sub">
           {texts.library} {games ? <span className="n">{games.length}</span> : <PrivateTag texts={texts} />}
         </h3>
@@ -391,7 +422,7 @@ export default async function UserProfile({ params }: Params) {
         )}
       </article>
 
-      <article className="card in d4">
+      <article className="card in d4" id="trophies">
         <h3 className="sub">
           {texts.recentTrophies} {!trophies && <PrivateTag texts={texts} />}
         </h3>
@@ -433,7 +464,7 @@ export default async function UserProfile({ params }: Params) {
         )}
       </article>
 
-      <article className="card in d4">
+      <article className="card in d4" id="friends">
         <h3 className="sub">
           {texts.friends}{" "}
           {friends ? <span className="n">{friends.length}</span> : user && <PrivateTag texts={texts} />}
@@ -467,4 +498,106 @@ export default async function UserProfile({ params }: Params) {
 
 function PrivateTag({ texts }: { texts: { privateSection: string } }) {
   return <span className="tag private-tag">{texts.privateSection}</span>;
+}
+
+type Texts = Awaited<ReturnType<typeof strings>>;
+
+/** Links to the parts of the profile further down; each part is also an address of its own
+ *  (/u/<handle>#trophies) to share. */
+function SectionLinks({ sections, texts }: { sections: [string, string, boolean][]; texts: Texts }) {
+  const shown = sections.filter(([, , on]) => on);
+  return (
+    <nav className="profile-sections in d2" aria-label={texts.profileSections}>
+      <ul>
+        {shown.map(([id, label]) => (
+          <li key={id}>
+            <a href={`#${id}`}>{label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/** The games played, most recent first: their art in a row, how many and for how long, and a
+ *  link down to the whole library. */
+function GamesPlayed({ games, seconds, texts }: { games: LibraryGame[]; seconds: number; texts: Texts }) {
+  const shown = games.slice(0, 8);
+  return (
+    <section className="games-played in d3" aria-labelledby="games-played">
+      <div className="games-played-head">
+        <h3 id="games-played" className="sub">
+          {texts.gamesPlayed}
+        </h3>
+        <span className="meta">
+          {fill(texts.gamesPlayedCount, { n: games.length, time: totalTime(seconds, texts) })}
+        </span>
+      </div>
+      <ul>
+        {shown.map((game) => {
+          const name = localName(game.names, texts.language) || game.titleId;
+          return (
+            <li key={game.titleId}>
+              <Link href={`/games/${game.titleId}`} className="played" title={name}>
+                <span className="game-icon" aria-hidden="true">
+                  {game.iconUrl ? <img src={game.iconUrl} alt="" loading="lazy" /> : name.slice(0, 1)}
+                </span>
+                <span className="visually-hidden">{name}</span>
+              </Link>
+            </li>
+          );
+        })}
+        {games.length > shown.length && (
+          <li>
+            <a href="#games" className="played more">
+              +{games.length - shown.length}
+              <span className="visually-hidden"> {texts.seeAllGames}</span>
+            </a>
+          </li>
+        )}
+      </ul>
+    </section>
+  );
+}
+
+/** What someone who is not a friend sees while the person keeps their profile private: the name,
+ *  handle and picture, and the way to become friends. */
+function MinimalCard({ profile, signedIn, texts }: { profile: Profile; signedIn: boolean; texts: Texts }) {
+  const name = { name: profile.displayName };
+  return (
+    <section className="page">
+      <article className="card profile minimal in d1">
+        <div className="banner" aria-hidden="true" />
+        <Avatar person={profile} size={96} />
+        <h2 className="in d2">{shownName(profile)}</h2>
+        <p className="handle in d2">@{profile.handle}</p>
+        <div className="private minimal-note in d3">
+          <span className="lock">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="10.5" width="14" height="10" rx="2.5" />
+              <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+            </svg>
+          </span>
+          <div>
+            <p className="minimal-title">{texts.profilePrivateTitle}</p>
+            <p>{fill(signedIn ? texts.profilePrivateFriend : texts.profilePrivateSignIn, name)}</p>
+          </div>
+        </div>
+        <div className="in d4">
+          {signedIn ? (
+            <FriendAction profile={profile} texts={ui(texts)} />
+          ) : (
+            <div className="visitor-actions">
+              <Link
+                href={`/login?next=${encodeURIComponent(`/u/${profile.handle}`)}`}
+                className="pill accent"
+              >
+                {fill(texts.signInToAdd, name)}
+              </Link>
+            </div>
+          )}
+        </div>
+      </article>
+    </section>
+  );
 }

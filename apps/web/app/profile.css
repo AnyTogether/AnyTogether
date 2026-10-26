@@ -1,0 +1,128 @@
+/* The public profile switch on /u/<handle>: the minimal card strangers get, the games played and
+   the links to each part of a profile. */
+
+.profile-sections {
+  margin: 4px 0 2px;
+}
+.profile-sections ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+.profile-sections a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--mute);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+.profile-sections a:hover {
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.profile-sections a:focus-visible,
+.games-played .played:focus-visible,
+.profile-not-public a:focus-visible {
+  outline: 2px solid var(--a);
+  outline-offset: 2px;
+}
+
+/* Each part is an address of its own: it lands below the sticky header, and lights up a moment. */
+.section-anchor,
+.page > article[id] {
+  scroll-margin-top: 84px;
+}
+.page > article[id]:target {
+  animation: section-found 1.4s ease-out 1;
+}
+@keyframes section-found {
+  0% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--a) 70%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
+.games-played {
+  margin-top: 18px;
+  text-align: left;
+}
+.games-played-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.games-played ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.games-played .played {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.games-played .played .game-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.games-played .played:hover {
+  transform: translateY(-2px);
+}
+.games-played .played.more {
+  color: var(--mute);
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+}
+
+.profile-not-public {
+  margin-top: 14px;
+  font-size: 13.5px;
+  color: var(--mute);
+}
+.profile-not-public a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
+.profile.minimal .minimal-note {
+  margin-top: 18px;
+  text-align: left;
+}
+.profile.minimal .minimal-title {
+  color: var(--ink);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page > article[id]:target {
+    animation: none;
+  }
+  .games-played .played,
+  .profile-sections a {
+    transition: none;
+  }
+}

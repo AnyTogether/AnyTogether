@@ -35,6 +35,9 @@ import "./account.css";
 import "./night.css";
 import "./legal.css";
 import "./psn.css";
+import "./profile.css";
+import "./compat.css";
+import "./voice.css";
 
 const display = Space_Grotesk({
   subsets: ["latin", "latin-ext"],

@@ -100,7 +100,14 @@ export interface Profile extends Person {
   presence?: Presence;
   /** Linked Steam and Discord accounts the person shows (older API answers have none). */
   connections?: ConnectionBadge[];
+  /** The public profile switch. False to a stranger means this is the minimal card: name,
+   *  handle and picture only (older API answers lack it). */
+  publicProfile?: boolean;
 }
+
+/** The minimal card: the person keeps their profile from people who are not friends. */
+export const isMinimalCard = (profile: Pick<Profile, "publicProfile" | "friendship">) =>
+  profile.publicProfile === false && profile.friendship !== "me" && profile.friendship !== "friends";
 
 export type Visibility = "everyone" | "friends" | "nobody";
 export type PrivacySection = Section | "search" | "gallery";
@@ -127,6 +134,8 @@ export interface Own {
     rememberMet?: boolean;
     appearOffline?: boolean;
     readReceipts?: boolean;
+    /** The public profile switch (older API answers lack it: off). */
+    publicProfile?: boolean;
     /** The friends-only name and picture (older API answers lack them). */
     privateName?: string | null;
     privateAvatar?: string | null;

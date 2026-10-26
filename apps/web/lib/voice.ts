@@ -38,6 +38,43 @@ export interface VoiceState {
   level: number;
 }
 
+/** The microphone's processing: the browser's echo cancellation and gain always, noise
+ *  suppression as the person set it (on unless turned off). */
+export const audioConstraints = (noiseSuppression: boolean): MediaTrackConstraints => ({
+  echoCancellation: true,
+  noiseSuppression,
+  autoGainControl: true,
+  channelCount: 1,
+});
+
+/** Where the browser keeps the noise suppression choice, for party voice and calls alike. */
+export const noiseSuppressionKey = "voice-noise-suppression";
+
+/** The noise suppression choice: on unless it was turned off (and on where storage is shut). */
+export function loadNoiseSuppression(
+  storage: Pick<Storage, "getItem"> | undefined = globalThis.localStorage,
+) {
+  try {
+    return storage?.getItem(noiseSuppressionKey) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+export function saveNoiseSuppression(
+  on: boolean,
+  storage: Pick<Storage, "setItem"> | undefined = globalThis.localStorage,
+) {
+  try {
+    storage?.setItem(noiseSuppressionKey, on ? "on" : "off");
+  } catch {}
+}
+
+/** Whether a track runs with the noise suppression wanted, as far as the browser says (one that
+ *  does not say is taken at its word). */
+export const processingMatches = (settings: MediaTrackSettings, noiseSuppression: boolean) =>
+  settings.noiseSuppression === undefined || settings.noiseSuppression === noiseSuppression;
+
 /** Above this the person is speaking; the ring stays a moment after, so it does not flicker. */
 const speakingLevel = 0.02;
 const speakingHoldMs = 350;
@@ -57,13 +94,38 @@ export class VoiceMesh {
   private level = 0;
   private timer: ReturnType<typeof setInterval> | undefined;
 
-  /** Asks for the microphone, with the platform's voice processing; throws when the browser or
-   *  the person says no. */
-  static microphone() {
-    return navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
-      video: false,
-    });
+  /** Asks for the microphone, with the platform's voice processing (noise suppression as the
+   *  person set it); throws when the browser or the person says no. */
+  static microphone(noiseSuppression = loadNoiseSuppression()) {
+    return navigator.mediaDevices.getUserMedia({ audio: audioConstraints(noiseSuppression), video: false });
+  }
+
+  /** Noise suppression on or off in the call now, nothing reconnecting: the track is asked to
+   *  change its processing; a browser that will not (or says it did not) gets a new microphone
+   *  track with it, put on every connection in place of the old one (no new offer). */
+  async setNoiseSuppression(on: boolean) {
+    const track = this.stream?.getAudioTracks()[0];
+    if (!track) return;
+    try {
+      await track.applyConstraints(audioConstraints(on));
+      if (processingMatches(track.getSettings(), on)) return;
+    } catch {
+      // Not changeable on this track: a new one below.
+    }
+    const fresh = await VoiceMesh.microphone(on);
+    const replacement = fresh.getAudioTracks()[0];
+    if (!replacement || !this.stream) {
+      for (const t of fresh.getTracks()) t.stop();
+      return;
+    }
+    replacement.enabled = this.talking;
+    for (const peer of this.peers.values())
+      for (const sender of peer.pc.getSenders())
+        if (sender.track === track || sender.track?.kind === "audio") await sender.replaceTrack(replacement);
+    this.stream.removeTrack(track);
+    this.stream.addTrack(replacement);
+    track.stop();
+    this.local = this.analyse(this.stream);
   }
 
   constructor(

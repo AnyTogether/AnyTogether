@@ -24,7 +24,9 @@ import {
   VoiceMesh,
   type VoiceState,
   keyLabel,
+  loadNoiseSuppression,
   micState,
+  saveNoiseSuppression,
   toggleDeafen,
   toggleMic,
 } from "@/lib/voice";
@@ -92,8 +94,19 @@ export function PartyBoard({
   const [prefs, setPrefs] = useState<{ mode: Mode; key: string }>({ mode: "open", key: "KeyV" });
   const [held, setHeld] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [noise, setNoise] = useState(true);
 
-  useEffect(() => setPrefs(loadPrefs()), []);
+  useEffect(() => {
+    setPrefs(loadPrefs());
+    setNoise(loadNoiseSuppression());
+  }, []);
+
+  /** Noise suppression on or off: kept for next time, and changed in the call now. */
+  function changeNoise(on: boolean) {
+    setNoise(on);
+    saveNoiseSuppression(on);
+    mesh.current?.setNoiseSuppression(on).catch(() => {});
+  }
 
   const reload = useCallback(async () => {
     const [mine, list] = await Promise.all([
@@ -242,7 +255,7 @@ export function PartyBoard({
     setNotice(null);
     let stream: MediaStream | null = null;
     try {
-      stream = await VoiceMesh.microphone();
+      stream = await VoiceMesh.microphone(noise);
       const joined = await social<CallJoin>("calls", { method: "POST", ...json({ partyId: party.id }) });
       if (!joined.body?.call) throw new Error("no call");
       const call = joined.body.call.id;
@@ -479,6 +492,7 @@ export function PartyBoard({
                     <i style={{ transform: `scaleX(${Math.min(1, (voice?.level ?? 0) * 8)})` }} />
                   </div>
                 )}
+                <NoiseSwitch on={noise} onChange={changeNoise} texts={texts} />
               </div>
               <button type="button" className="pill danger" onClick={() => stopVoice(true)}>
                 {texts.leaveVoice}
@@ -998,5 +1012,30 @@ function CodeEntry({ texts }: { texts: UiStrings }) {
         {texts.go}
       </button>
     </form>
+  );
+}
+
+/** Noise suppression, a switch that changes the call as it is (nothing reconnects). */
+export function NoiseSwitch({
+  on,
+  onChange,
+  texts,
+}: { on: boolean; onChange: (on: boolean) => void; texts: UiStrings }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      className="noise-switch"
+      onClick={() => onChange(!on)}
+    >
+      <span className="noise-track" aria-hidden="true">
+        <span className="noise-knob" />
+      </span>
+      <span className="noise-lines">
+        <span className="noise-name">{texts.noiseSuppression}</span>
+        <span className="meta">{on ? texts.noiseSuppressionOnHint : texts.noiseSuppressionOffHint}</span>
+      </span>
+    </button>
   );
 }

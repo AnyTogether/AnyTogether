@@ -14,6 +14,7 @@ import {
   PresenceModeForm,
   PrivacyForm,
   ProfileForm,
+  PublicProfileForm,
   ReadReceiptsForm,
   SessionList,
 } from "@/components/Settings";
@@ -138,6 +139,7 @@ export default async function Settings({
           <PresenceModeForm appearOffline={me.profile.appearOffline === true} texts={t} />
           <ReadReceiptsForm readReceipts={me.profile.readReceipts !== false} texts={t} />
           <hr />
+          <PublicProfileForm publicProfile={me.profile.publicProfile === true} texts={t} />
           <p className="hint section-lead">{texts.privacyLead}</p>
           <PrivacyForm
             privacy={me.profile.privacy}
