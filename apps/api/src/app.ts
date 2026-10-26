@@ -146,8 +146,9 @@ export function createApp(deps: Deps) {
   const notes = notifier(deps);
   const partyPieces = partyService(deps, notes);
   const shares = sharePlayRoutes(deps);
+  const gameSessions = gameSessionRoutes(deps, notes, partyPieces);
   // What a join code opens is read signed out too (a link opened from Discord).
-  v1.route("/", joinCodeRoutes(deps, partyPieces.codes, partyPieces, shares));
+  v1.route("/", joinCodeRoutes(deps, partyPieces.codes, partyPieces, shares, gameSessions));
   // Before the profile routes, whose PATCH /me/* counts against the profile limit.
   const family = familyRoutes(deps, notes);
   v1.route("/", family);
@@ -166,7 +167,7 @@ export function createApp(deps: Deps) {
   v1.route("/", partyRoutes(deps, partyPieces));
   const calls = callRoutes(deps, partyPieces);
   v1.route("/", calls);
-  v1.route("/", gameSessionRoutes(deps, notes));
+  v1.route("/", gameSessions);
   v1.route("/", shares);
   const lfg = lfgRoutes(deps, notes, partyPieces, shares);
   v1.route("/", lfg);
@@ -179,14 +180,17 @@ export function createApp(deps: Deps) {
   v1.route("/", realtimeRoutes(deps));
   v1.route("/", adminRoutes(deps, notes));
   app.route("/api/v1", v1);
-  /** Devices whose socket went: out of their calls and share plays. */
+  /** Devices whose socket went: out of their calls, share plays and Play Together games. */
   const sweepDepartures = async (now = Date.now()) =>
-    (await calls.sweepDepartures(now)) + (await shares.sweepDepartures(now));
+    (await calls.sweepDepartures(now)) +
+    (await shares.sweepDepartures(now)) +
+    (await gameSessions.sweepDepartures(now));
   return Object.assign(app, {
     notes,
     sweepDepartures,
     sweepCalls: calls.sweepDepartures,
     sweepShares: shares.sweepDepartures,
+    sweepGames: gameSessions.sweepDepartures,
     /** Looking-for-group posts whose time ran out leave the board. */
     sweepLfg: lfg.sweep,
     /** The weekly summaries for parents. */

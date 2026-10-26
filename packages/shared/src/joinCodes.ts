@@ -34,7 +34,8 @@ export interface JoinCode {
   expiresAt: string;
 }
 
-export type JoinCodeKind = "party" | "share_play";
+/** A game session's code (Play Together) lets its holder in at once: redeeming it is an invite. */
+export type JoinCodeKind = "party" | "share_play" | "game_session";
 /** Where the reader stands with what a code opens (signed in only). */
 export type JoinCodeState = "none" | "member" | "requested" | "invited";
 

@@ -16,6 +16,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
+import type { GameSessionService } from "./gameSessions.js";
 import { type AuthVariables, optionalUser, requireUser } from "./middleware.js";
 import { assertNotMuted } from "./moderation.js";
 import type { PartyService } from "./parties.js";
@@ -32,7 +33,7 @@ function newCode() {
 
 const noCode = () => new HttpError(404, ErrorCode.notFound, "No such code, or it stopped working");
 
-/** The codes themselves: one working code per party or share play at a time. */
+/** The codes themselves: one working code per party, share play or game session at a time. */
 export function joinCodeStore(deps: { db: Database; publicUrl: string }) {
   const { db } = deps;
   const working = () => and(isNull(joinCodes.revokedAt), gt(joinCodes.expiresAt, new Date()));
@@ -98,6 +99,7 @@ export function joinCodeRoutes(
   codes: JoinCodeStore,
   parties: PartyService,
   shares: SharePlayService,
+  games: Pick<GameSessionService, "codeTarget" | "askWithCode">,
 ) {
   const app = new Hono<{ Variables: Partial<AuthVariables> }>();
   const limit = rateLimiter(deps.valkey, deps.limits);
@@ -109,7 +111,9 @@ export function joinCodeRoutes(
     const summary =
       row.kind === "party"
         ? await parties.codeTarget(row.targetId, me)
-        : await shares.codeTarget(row.targetId, me);
+        : row.kind === "game_session"
+          ? await games.codeTarget(row.targetId, me)
+          : await shares.codeTarget(row.targetId, me);
     if (!summary) throw noCode();
     return { row, summary };
   }
@@ -141,7 +145,9 @@ export function joinCodeRoutes(
     const outcome =
       row.kind === "party"
         ? await parties.askWithCode(row.targetId, me)
-        : await shares.askWithCode(row.targetId, me);
+        : row.kind === "game_session"
+          ? await games.askWithCode(row.targetId, me)
+          : await shares.askWithCode(row.targetId, me);
     const answer: JoinCodeRedeemed = {
       kind: row.kind as JoinCodeKind,
       id: row.targetId,

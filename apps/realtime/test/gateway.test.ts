@@ -503,6 +503,23 @@ describe("the gateway", () => {
     for (const c of [host, player]) c.socket.close();
   });
 
+  it("notes a Play Together player's device going, for the API to take out after the grace", async () => {
+    await valkey.sadd("device-games:mac", "gs1");
+    const host = await signedIn("u1", "mac");
+    const other = await signedIn("u1", "phone");
+    other.socket.close();
+    await other.closed;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await valkey.zcard("game-departures")).toBe(0);
+    const before = Date.now();
+    host.socket.close();
+    await host.closed;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const [entry, score] = await valkey.zrange("game-departures", 0, -1, "WITHSCORES");
+    expect(entry).toBe("u1:mac");
+    expect(Number(score)).toBeGreaterThanOrEqual(before + 20_000);
+  });
+
   it("passes no signals from one share play viewer to another, only to and from the host", async () => {
     await valkey.set("share-play:sp2", JSON.stringify({ id: "sp2", hostId: "u1", hostDevice: "mac" }));
     await valkey.sadd("share-play:sp2:members", "u1", "u2", "u4");

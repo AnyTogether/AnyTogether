@@ -132,6 +132,10 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
   const callOf: { current: (partyId: string) => Promise<PartyView["call"]> } = {
     current: async () => null,
   };
+  /** The party's Play Together game, as the game session routes register it. */
+  const togetherOf: { current: (partyId: string) => Promise<PartyView["together"]> } = {
+    current: async () => null,
+  };
 
   /** The party as a member sees it; anyone else (a public party's visitor) sees no invites or
    *  requests. */
@@ -156,6 +160,7 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
       }),
       invited: invites.flatMap((i) => cards.get(i.accountId) ?? []),
       call: await callOf.current(party.id),
+      together: await togetherOf.current(party.id),
       public: party.publicJoin
         ? {
             join: party.publicJoin as "request" | "open",
@@ -442,6 +447,7 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
     tell,
     leaveHooks,
     callOf,
+    togetherOf,
     notes,
     inviteTo,
     create,

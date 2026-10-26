@@ -8,9 +8,11 @@ import {
   callMembersKey,
   conversationMembersKey,
   deviceCallsKey,
+  deviceGameSessionsKey,
   devicePresenceKey,
   deviceSharePlaysKey,
   friendsKey,
+  gameDeparturesKey,
   gameSessionMembersKey,
   gameSignalKinds,
   maxWatchedTopics,
@@ -185,6 +187,13 @@ export async function createGateway(options: GatewayOptions) {
     if (await store.exists(deviceSharePlaysKey(connection.sessionId)))
       await store.zadd(
         shareDeparturesKey,
+        Date.now() + callDepartureGraceMs,
+        `${connection.userId}:${connection.sessionId}`,
+      );
+    // Playing together (a LAN game): the same; a host's session ends with them.
+    if (await store.exists(deviceGameSessionsKey(connection.sessionId)))
+      await store.zadd(
+        gameDeparturesKey,
         Date.now() + callDepartureGraceMs,
         `${connection.userId}:${connection.sessionId}`,
       );
