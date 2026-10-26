@@ -50,6 +50,9 @@ describe("retiring old clients", () => {
       version: "0.2.13",
     });
     expect(readClient("phone/1.16.0+19 (Android 15)")).toEqual({ kind: "phone", version: "1.16.0+19" });
+    // The phone app names itself after its system.
+    expect(readClient("remote-android/1.16.0")).toEqual({ kind: "phone", version: "1.16.0" });
+    expect(readClient("remote-ios/1.15.0")).toEqual({ kind: "phone", version: "1.15.0" });
     for (const unread of [
       undefined,
       "",
@@ -90,6 +93,10 @@ describe("retiring old clients", () => {
     const signedOut = await h.call("GET", friends, undefined, undefined, "phone/1.15.2 (Android 15)");
     expect(signedOut.status).toBe(426);
     expect(signedOut.body).toMatchObject({ client: "phone", minimum: "1.16.0", current: "1.15.2" });
+    const oldPhone = await h.call("GET", friends, undefined, me.token, "remote-android/1.15.0");
+    expect(oldPhone.status).toBe(426);
+    expect(oldPhone.body).toMatchObject({ client: "phone", current: "1.15.0" });
+    expect((await h.call("GET", friends, undefined, me.token, "remote-ios/1.16.0")).status).toBe(200);
     const signIn = await h.call(
       "POST",
       "/api/v1/auth/email/start",

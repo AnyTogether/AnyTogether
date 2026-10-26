@@ -55,10 +55,14 @@ export function parseClientMinimums(value: string | undefined): ClientMinimums {
   return minimums;
 }
 
+/** The phone app names itself after its system ("remote-android/1.16.0", "remote-ios/1.16.0"). */
+const phoneNames = ["remote-android", "remote-ios"];
+
 /** The program and version an AnyTogether-Client header names ("launcher-macos/0.2.13 (macOS
  *  26.6)"); nothing when it names no known program or no version that reads. */
 export function readClient(header: string | undefined) {
-  const [name = "", rest = ""] = (header ?? "").split("/", 2);
+  const [given = "", rest = ""] = (header ?? "").split("/", 2);
+  const name = phoneNames.includes(given) ? "phone" : given;
   const version = rest.split(" ")[0] ?? "";
   if (!clientKinds.includes(name as ClientKind) || !clientVersion.test(version)) return undefined;
   return { kind: name as ClientKind, version };
