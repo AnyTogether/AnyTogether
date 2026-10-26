@@ -28,6 +28,7 @@ const en = {
   plan: "The full plan, phase by phase",
   suggest: "Suggest something",
   changelog: "What each release brought",
+  status: "Status at a glance, with every feature",
 };
 
 export type RoadmapStrings = typeof en;
@@ -58,6 +59,7 @@ const tr: RoadmapStrings = {
   plan: "Aşama aşama tüm plan",
   suggest: "Bir öneride bulun",
   changelog: "Her sürümün getirdikleri",
+  status: "Bir bakışta durum, tüm özelliklerle",
 };
 
 export const roadmapStrings = (language: Language): RoadmapStrings => (language === "tr" ? tr : en);

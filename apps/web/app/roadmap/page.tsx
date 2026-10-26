@@ -34,6 +34,12 @@ export default async function Roadmap() {
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
           </Link>
+          <Link href="/specs#status" className="text-link">
+            {r.status}
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="ico arrow">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </Link>
         </div>
       </PageHead>
 

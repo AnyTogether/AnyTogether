@@ -136,6 +136,7 @@ const en = {
     "Only AnyPS5's own software is offered here. Never game files, firmware or keys: you bring decrypted copies of games you own.",
   older: "Older versions and their notes are on the {link}.",
   changelog: "changelog",
+  specs: "Every feature, on one sheet",
 };
 
 export type DownloadPageStrings = typeof en;
@@ -261,6 +262,7 @@ const tr: DownloadPageStrings = {
     "Burada yalnızca AnyPS5'in kendi yazılımı var. Asla oyun dosyası, firmware ya da anahtar yok: sahip olduğun oyunların şifresi çözülmüş kopyalarını sen getirirsin.",
   older: "Eski sürümler ve notları {link} sayfasında.",
   changelog: "sürüm notları",
+  specs: "Her özellik, tek sayfada",
 };
 
 export const downloadPageStrings = (language: Language): DownloadPageStrings => (language === "tr" ? tr : en);

@@ -17,6 +17,7 @@ export const publicPages: {
   { path: "/help", priority: 0.7, changeFrequency: "monthly" },
   { path: "/changelog", priority: 0.7, changeFrequency: "weekly" },
   { path: "/roadmap", priority: 0.6, changeFrequency: "weekly" },
+  { path: "/specs", priority: 0.7, changeFrequency: "weekly" },
   { path: "/projects", priority: 0.6, changeFrequency: "monthly" },
   { path: "/compatibility", priority: 0.7, changeFrequency: "daily" },
   { path: "/themes", priority: 0.6, changeFrequency: "daily" },

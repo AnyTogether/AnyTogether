@@ -71,6 +71,14 @@ export default async function Download() {
             </li>
           ))}
         </ul>
+        <div className="pg-links">
+          <Link href="/specs" className="text-link">
+            {d.specs}
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="ico arrow">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </Link>
+        </div>
       </PageHead>
 
       {!releases && <p className="pg-notice">{d.down}</p>}

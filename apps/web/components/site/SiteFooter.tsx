@@ -74,6 +74,9 @@ export function SiteFooter({
               <Link href="/roadmap">{s.footer.roadmap}</Link>
             </li>
             <li>
+              <Link href="/specs">{s.footer.specs}</Link>
+            </li>
+            <li>
               <Link href="/projects">{s.footer.openSource}</Link>
             </li>
             <li>
