@@ -64,7 +64,7 @@ const app = createApp({
   db,
   valkey,
   mailer,
-  tokens: await createTokenSigner(settings.jwtPrivateKey, settings.publicUrl),
+  tokens: await createTokenSigner(settings.jwtPrivateKey, settings.publicUrl, settings.previousPublicUrls),
   providers: settings.providers,
   publicUrl: settings.publicUrl,
   rpName: settings.rpName,

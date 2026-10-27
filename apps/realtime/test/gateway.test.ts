@@ -11,19 +11,20 @@ let valkey: Redis;
 let gateway: Awaited<ReturnType<typeof createGateway>>;
 let url: string;
 
-const token = (userId: string, sessionId: string) =>
+const previousIssuer = "https://old.anytogether.test";
+const token = (userId: string, sessionId: string, tokenIssuer = issuer) =>
   new SignJWT({ sid: sessionId })
     .setProtectedHeader({ alg: "EdDSA" })
     .setSubject(userId)
-    .setIssuer(issuer)
+    .setIssuer(tokenIssuer)
     .setAudience("anytogether")
     .setIssuedAt()
     .setExpirationTime("15m")
     .sign(keys.privateKey);
 
 /** A client socket that keeps every frame it gets and can wait for one. */
-function client() {
-  const socket = new WebSocket(url);
+function client(target = url) {
+  const socket = new WebSocket(target);
   const frames: Record<string, unknown>[] = [];
   const closed = new Promise<number>((resolve) => socket.on("close", (code) => resolve(code)));
   socket.on("message", (data) => frames.push(JSON.parse(String(data))));
@@ -98,6 +99,32 @@ describe("the gateway", () => {
     const ready = c.frames.find((frame) => frame.op === "ready");
     expect(ready).toMatchObject({ op: "ready", session: "s1", heartbeat: 25 });
     c.socket.close();
+  });
+
+  it("takes a token from a previous issuer only when it is listed", async () => {
+    const old = await token("u1", "s1", previousIssuer);
+    const refused = client();
+    await refused.opened;
+    refused.send({ op: "hello", token: old });
+    expect(await refused.closed).toBe(4001);
+
+    const moved = await createGateway({
+      keys: keys.publicKey,
+      issuer: [issuer, previousIssuer],
+      valkeyUrl: process.env.TEST_VALKEY_URL ?? "redis://127.0.0.1:63799/2",
+      helloTimeoutMs: 300,
+      heartbeatSeconds: 25,
+    });
+    await new Promise<void>((resolve) => moved.server.listen(0, "127.0.0.1", resolve));
+    try {
+      const accepted = client(`ws://127.0.0.1:${(moved.server.address() as AddressInfo).port}/rt`);
+      await accepted.opened;
+      accepted.send({ op: "hello", token: old });
+      expect(await accepted.waitFor((frame) => frame.op === "ready")).toMatchObject({ session: "s1" });
+      accepted.socket.close();
+    } finally {
+      await moved.close();
+    }
   });
 
   it("closes a socket with a bad token", async () => {

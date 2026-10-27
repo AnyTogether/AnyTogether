@@ -39,6 +39,8 @@ export function config(env = process.env) {
     valkeyUrl: env.VALKEY_URL ?? "redis://127.0.0.1:63799",
     jwtPrivateKey: env.JWT_PRIVATE_KEY?.replace(/\\n/g, "\n") || undefined,
     publicUrl,
+    /** Earlier PUBLIC_URLs (PREVIOUS_PUBLIC_URLS, comma list): tokens they issued still verify. */
+    previousPublicUrls: list(env.PREVIOUS_PUBLIC_URLS),
     /** Retiring old clients: MIN_LAUNCHER_VERSION ("macos=0.2.20,desktop=0.1.8,phone=1.16.0",
      *  empty: off) and where a refused one is sent to update (CLIENT_DOWNLOAD_URL, the website's
      *  downloads page by default). */

@@ -2758,8 +2758,8 @@ export const repositories: Repo[] = [
     branches: [
       {
         name: "main",
-        en: "What runs on anytogether.kodla.agency; every push to it goes live.",
-        tr: "anytogether.kodla.agency'de çalışan; ona her gönderim yayına girer.",
+        en: "What runs on anytogether.net; every push to it goes live.",
+        tr: "anytogether.net'te çalışan; ona her gönderim yayına girer.",
       },
     ],
     merged: ["staging", "family", "gaps", "landing", "motion", "polish", "psn", "site2", "storage"],

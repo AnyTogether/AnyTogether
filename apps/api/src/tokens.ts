@@ -11,8 +11,15 @@ export interface AccessClaims {
   sessionId: string;
 }
 
-/** Access tokens: EdDSA JWTs for 15 minutes. Without a key (development) one is made per run. */
-export async function createTokenSigner(privateKeyPem: string | undefined, issuer: string) {
+/** Access tokens: EdDSA JWTs for 15 minutes. Without a key (development) one is made per run.
+ *  Tokens are signed under `issuer` (PUBLIC_URL); verification also accepts `previousIssuers`
+ *  (PREVIOUS_PUBLIC_URLS), so tokens and documents issued before a domain move keep working. */
+export async function createTokenSigner(
+  privateKeyPem: string | undefined,
+  issuer: string,
+  previousIssuers: readonly string[] = [],
+) {
+  const issuers = [issuer, ...previousIssuers.filter((previous) => previous && previous !== issuer)];
   let privateKey: KeyLike;
   let publicKey: KeyLike;
   if (privateKeyPem) {
@@ -62,9 +69,14 @@ export async function createTokenSigner(privateKeyPem: string | undefined, issue
         .setExpirationTime(`${days}d`)
         .sign(privateKey),
     verifyDocument: async (token: string, audienceName: string) =>
-      (await jwtVerify(token, publicKey, { issuer, audience: audienceName, algorithms: ["EdDSA"] })).payload,
+      (await jwtVerify(token, publicKey, { issuer: issuers, audience: audienceName, algorithms: ["EdDSA"] }))
+        .payload,
     verify: async (token: string): Promise<AccessClaims> => {
-      const { payload } = await jwtVerify(token, publicKey, { issuer, audience, algorithms: ["EdDSA"] });
+      const { payload } = await jwtVerify(token, publicKey, {
+        issuer: issuers,
+        audience,
+        algorithms: ["EdDSA"],
+      });
       if (!payload.sub || typeof payload.sid !== "string") throw new Error("incomplete token");
       return { userId: payload.sub, sessionId: payload.sid };
     },
@@ -79,7 +91,7 @@ export async function createTokenSigner(privateKeyPem: string | undefined, issue
         .sign(privateKey),
     verifyAppeal: async (token: string) => {
       const { payload } = await jwtVerify(token, publicKey, {
-        issuer,
+        issuer: issuers,
         audience: appealAudience,
         algorithms: ["EdDSA"],
       });
