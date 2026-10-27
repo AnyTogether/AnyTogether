@@ -28,11 +28,11 @@ describe("release notes", () => {
 
   it("keep only web and mail links, made whole and marked", () => {
     const html = notesToHtml(
-      "[guide](docs/user/GUIDE.md) [site](https://anytogether.kodla.agency) [bad](javascript:alert(1)) [data](data:text/html,x) [mail](mailto:a@b.c) [top](#install)",
+      "[guide](docs/user/GUIDE.md) [site](https://anytogether.net) [bad](javascript:alert(1)) [data](data:text/html,x) [mail](mailto:a@b.c) [top](#install)",
       repo,
     );
     expect(html).toContain('href="https://github.com/AnyTogether/AnyPS5-ARM/blob/HEAD/docs/user/GUIDE.md"');
-    expect(html).toContain('href="https://anytogether.kodla.agency" rel="nofollow noopener noreferrer"');
+    expect(html).toContain('href="https://anytogether.net" rel="nofollow noopener noreferrer"');
     expect(html).toContain('href="mailto:a@b.c"');
     expect(html).not.toMatch(/javascript:|data:text/);
   });

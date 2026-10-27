@@ -8,7 +8,7 @@ import type { Language } from "./i18n";
 export const legalUpdated = "2026-10-26";
 
 /** The AnyTogether server these texts speak for; any other address is someone else's server. */
-export const officialOrigin = "https://anytogether.kodla.agency";
+export const officialOrigin = "https://anytogether.net";
 
 const repo = "https://github.com/AnyTogether/AnyTogether";
 const issues = `${repo}/issues`;
@@ -57,7 +57,7 @@ const privacyEn: LegalDoc = {
   lead: "AnyTogether is the online part of AnyPS5: accounts, friends, messages, parties, trophies and cloud saves. This page says in plain words what this server stores about you, who can see it, how long it stays, and how to take it with you or delete it.",
   updated: "Last updated {date}",
   otherServer:
-    "This AnyTogether server ({host}) is run by its own operator, not by the AnyTogether project. The text below is the project's notice for anytogether.kodla.agency: ask this server's operator how they handle your data.",
+    "This AnyTogether server ({host}) is run by its own operator, not by the AnyTogether project. The text below is the project's notice for anytogether.net: ask this server's operator how they handle your data.",
   summary: {
     title: "The short version",
     points: [
@@ -73,7 +73,7 @@ const privacyEn: LegalDoc = {
       id: "who",
       title: "Who runs this server",
       blocks: [
-        "anytogether.kodla.agency is run by the maintainer of the open source AnyTogether project, Utku Halis (kodla.agency). The maintainer decides what this server keeps and is responsible for it.",
+        "anytogether.net is run by the maintainer of the open source AnyTogether project, Utku Halis (kodla.agency). The maintainer decides what this server keeps and is responsible for it.",
         "AnyTogether is open source: anyone can run their own server, and the AnyPS5 apps can sign in to one. A server at another address is run by its own operator, who decides how it handles data. This notice does not cover it.",
         "The AnyPS5 apps (the Mac launcher, the Windows and Linux launcher, and AnyPS5 Remote on your phone) use this same server when you sign in to AnyTogether in them, so this notice covers what they send here too. What the apps keep on your own computer or phone stays there, such as the log of a game's online calls that the Mac launcher writes on your Mac when you turn on Online play: it is never sent here.",
       ],
@@ -323,7 +323,7 @@ const termsEn: LegalDoc = {
   lead: "AnyTogether is free and open source, run for the players who use it. These terms are the rules for using this server: by signing in you agree to them, and to the way the privacy notice says your data is handled.",
   updated: "Last updated {date}",
   otherServer:
-    "This AnyTogether server ({host}) is run by its own operator, not by the AnyTogether project. The terms below are the project's terms for anytogether.kodla.agency; this server's operator may set their own.",
+    "This AnyTogether server ({host}) is run by its own operator, not by the AnyTogether project. The terms below are the project's terms for anytogether.net; this server's operator may set their own.",
   summary: null,
   tocLabel: "On this page",
   sections: [
@@ -331,7 +331,7 @@ const termsEn: LegalDoc = {
       id: "service",
       title: "The service",
       blocks: [
-        "AnyTogether is the online part of AnyPS5: accounts, friends, messages, parties and voice, share play, trophies and leaderboards, communities and events, cloud saves, the Theme Hub and the compatibility list. anytogether.kodla.agency is run by the maintainer of the open source AnyTogether project. It costs nothing and shows no ads.",
+        "AnyTogether is the online part of AnyPS5: accounts, friends, messages, parties and voice, share play, trophies and leaderboards, communities and events, cloud saves, the Theme Hub and the compatibility list. anytogether.net is run by the maintainer of the open source AnyTogether project. It costs nothing and shows no ads.",
         "AnyPS5 and AnyTogether have nothing to do with Sony Interactive Entertainment. PlayStation, PS5 and DualSense are Sony's trademarks.",
       ],
     },
@@ -448,7 +448,7 @@ const privacyTr: LegalDoc = {
   lead: "AnyTogether, AnyPS5'in online tarafı: hesaplar, arkadaşlar, mesajlar, partiler, kupalar ve bulut kayıtları. Bu sayfa bu sunucunun senin hakkında neleri sakladığını, kimlerin görebildiğini, ne kadar kaldığını ve onları nasıl yanına alıp silebileceğini sade bir dille anlatır.",
   updated: "Son güncelleme: {date}",
   otherServer:
-    "Bu AnyTogether sunucusu ({host}) AnyTogether projesi tarafından değil, kendi işletmecisi tarafından çalıştırılıyor. Aşağıdaki metin projenin anytogether.kodla.agency için yazdığı bildirim: verilerini nasıl işlediğini bu sunucunun işletmecisine sor.",
+    "Bu AnyTogether sunucusu ({host}) AnyTogether projesi tarafından değil, kendi işletmecisi tarafından çalıştırılıyor. Aşağıdaki metin projenin anytogether.net için yazdığı bildirim: verilerini nasıl işlediğini bu sunucunun işletmecisine sor.",
   summary: {
     title: "Kısaca",
     points: [
@@ -464,7 +464,7 @@ const privacyTr: LegalDoc = {
       id: "who",
       title: "Bu sunucuyu kim çalıştırıyor",
       blocks: [
-        "anytogether.kodla.agency'yi açık kaynak AnyTogether projesinin geliştiricisi Utku Halis (kodla.agency) çalıştırır. Bu sunucunun neleri sakladığına o karar verir ve bundan o sorumludur.",
+        "anytogether.net'i açık kaynak AnyTogether projesinin geliştiricisi Utku Halis (kodla.agency) çalıştırır. Bu sunucunun neleri sakladığına o karar verir ve bundan o sorumludur.",
         "AnyTogether açık kaynaktır: herkes kendi sunucusunu kurabilir ve AnyPS5 uygulamaları böyle bir sunucuya da bağlanabilir. Başka bir adresteki sunucuyu kendi işletmecisi çalıştırır ve verileri nasıl işleyeceğine o karar verir. Bu bildirim o sunucuları kapsamaz.",
         "AnyPS5 uygulamaları (Mac başlatıcısı, Windows ve Linux başlatıcısı, telefondaki AnyPS5 Remote) içlerinde AnyTogether'a giriş yaptığında bu sunucuyu kullanır; bu yüzden bu bildirim onların buraya gönderdiklerini de kapsar. Uygulamaların kendi bilgisayarında ya da telefonunda tuttukları orada kalır; örneğin Online oyunu açtığında Mac başlatıcısının Mac'inde tuttuğu, bir oyunun online çağrılarının kaydı: buraya asla gönderilmez.",
       ],
@@ -710,7 +710,7 @@ const termsTr: LegalDoc = {
   lead: "AnyTogether ücretsiz ve açık kaynaktır; onu kullanan oyuncular için çalıştırılır. Bu koşullar bu sunucuyu kullanmanın kurallarıdır: giriş yaparak bunları ve verilerinin gizlilik bildiriminde anlatıldığı gibi işlenmesini kabul edersin.",
   updated: "Son güncelleme: {date}",
   otherServer:
-    "Bu AnyTogether sunucusu ({host}) AnyTogether projesi tarafından değil, kendi işletmecisi tarafından çalıştırılıyor. Aşağıdaki koşullar projenin anytogether.kodla.agency için koşulları; bu sunucunun işletmecisi kendi koşullarını koyabilir.",
+    "Bu AnyTogether sunucusu ({host}) AnyTogether projesi tarafından değil, kendi işletmecisi tarafından çalıştırılıyor. Aşağıdaki koşullar projenin anytogether.net için koşulları; bu sunucunun işletmecisi kendi koşullarını koyabilir.",
   summary: null,
   tocLabel: "Bu sayfada",
   sections: [
@@ -718,7 +718,7 @@ const termsTr: LegalDoc = {
       id: "service",
       title: "Hizmet",
       blocks: [
-        "AnyTogether, AnyPS5'in online tarafıdır: hesaplar, arkadaşlar, mesajlar, partiler ve sesli sohbet, birlikte oynama, kupalar ve liderlik tabloları, topluluklar ve etkinlikler, bulut kayıtları, Tema Merkezi ve uyumluluk listesi. anytogether.kodla.agency'yi açık kaynak AnyTogether projesinin geliştiricisi çalıştırır. Ücretsizdir ve reklam göstermez.",
+        "AnyTogether, AnyPS5'in online tarafıdır: hesaplar, arkadaşlar, mesajlar, partiler ve sesli sohbet, birlikte oynama, kupalar ve liderlik tabloları, topluluklar ve etkinlikler, bulut kayıtları, Tema Merkezi ve uyumluluk listesi. anytogether.net'i açık kaynak AnyTogether projesinin geliştiricisi çalıştırır. Ücretsizdir ve reklam göstermez.",
         "AnyPS5 ve AnyTogether'ın Sony Interactive Entertainment ile bir ilgisi yoktur. PlayStation, PS5 ve DualSense Sony'nin markalarıdır.",
       ],
     },

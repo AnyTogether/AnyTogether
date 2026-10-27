@@ -43,7 +43,8 @@ import { WebSocket, WebSocketServer } from "ws";
 export interface GatewayOptions {
   /** The API's access-token key: its public key, or its JWKS. */
   keys: KeyLike | JWTVerifyGetKey;
-  issuer: string;
+  /** The issuer tokens must carry; a list also accepts earlier ones (after a domain move). */
+  issuer: string | string[];
   valkeyUrl: string;
   helloTimeoutMs?: number;
   heartbeatSeconds?: number;

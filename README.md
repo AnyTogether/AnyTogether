@@ -1,7 +1,7 @@
 # AnyTogether
 
 The online home of the AnyPS5 launchers: profiles, trophies, friends, parties, voice, messages,
-share play, leaderboards, themes and downloads, at https://anytogether.kodla.agency.
+share play, leaderboards, themes and downloads, at https://anytogether.net.
 
 The plan lives on the `anytogether` branch of
 [AnyPS5-ARM](https://github.com/AnyTogether/AnyPS5-ARM/tree/anytogether) (English and Turkish).
