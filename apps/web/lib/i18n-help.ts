@@ -10,11 +10,11 @@ export interface Faq {
   a: string[];
 }
 
-const guide = "https://github.com/utkuhalis/AnyPS5-ARM/blob/main/docs/user/GUIDE.md";
-const selfHosting = "https://github.com/utkuhalis/AnyTogether/blob/main/docs/self-hosting.md";
-const crash = "https://github.com/utkuhalis/AnyPS5-ARM/issues/new?template=crash.yml";
-const desktopIssues = "https://github.com/utkuhalis/AnyPS5-Desktop/issues/new";
-const macCompat = "https://github.com/utkuhalis/AnyPS5-ARM/blob/main/docs/user/COMPATIBILITY.md";
+const guide = "https://github.com/AnyTogether/AnyPS5-ARM/blob/main/docs/user/GUIDE.md";
+const selfHosting = "https://github.com/AnyTogether/AnyTogether/blob/main/docs/self-hosting.md";
+const crash = "https://github.com/AnyTogether/AnyPS5-ARM/issues/new?template=crash.yml";
+const desktopIssues = "https://github.com/AnyTogether/AnyPS5-Desktop/issues/new";
+const macCompat = "https://github.com/AnyTogether/AnyPS5-ARM/blob/main/docs/user/COMPATIBILITY.md";
 
 const en = {
   meta: {

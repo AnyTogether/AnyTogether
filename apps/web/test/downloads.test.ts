@@ -12,11 +12,11 @@ import {
 
 const releases: Releases = {
   macos: {
-    repo: "utkuhalis/AnyPS5-ARM",
+    repo: "AnyTogether/AnyPS5-ARM",
     version: "0.2.15",
     tag: "v0.2.15-arm",
     publishedAt: "2026-10-25T00:00:00Z",
-    url: "https://github.com/utkuhalis/AnyPS5-ARM/releases/tag/v0.2.15-arm",
+    url: "https://github.com/AnyTogether/AnyPS5-ARM/releases/tag/v0.2.15-arm",
     assets: [
       {
         name: "AnyPS5-macOS.zip",
@@ -39,11 +39,11 @@ const releases: Releases = {
     ],
   },
   desktop: {
-    repo: "utkuhalis/AnyPS5-Desktop",
+    repo: "AnyTogether/AnyPS5-Desktop",
     version: "0.1.1",
     tag: "v0.1.1",
     publishedAt: "2026-10-25T00:00:00Z",
-    url: "https://github.com/utkuhalis/AnyPS5-Desktop/releases/tag/v0.1.1",
+    url: "https://github.com/AnyTogether/AnyPS5-Desktop/releases/tag/v0.1.1",
     assets: [
       {
         name: "AnyPS5-Desktop-Setup-0.1.1-x64.exe",
@@ -134,12 +134,12 @@ describe("the download button", () => {
 
   it("falls back to GitHub's latest-release links when the releases are not known", () => {
     expect(pickDownload("mac", null)).toMatchObject({
-      url: "https://github.com/utkuhalis/AnyPS5-ARM/releases/latest/download/AnyPS5-macOS.zip",
+      url: "https://github.com/AnyTogether/AnyPS5-ARM/releases/latest/download/AnyPS5-macOS.zip",
       size: null,
       version: null,
     });
     expect(pickDownload("windows", null)).toMatchObject({
-      url: "https://github.com/utkuhalis/AnyPS5-Desktop/releases/latest/download/AnyPS5-Desktop-windows-x64.zip",
+      url: "https://github.com/AnyTogether/AnyPS5-Desktop/releases/latest/download/AnyPS5-Desktop-windows-x64.zip",
       kind: "zip",
     });
     expect(pickDownload("linux", null).kind).toBe("tar.gz");
@@ -151,7 +151,7 @@ describe("the download button", () => {
     expect(filesFor("linux", null)).toEqual([
       {
         label: ".tar.gz",
-        url: "https://github.com/utkuhalis/AnyPS5-Desktop/releases/latest/download/AnyPS5-Desktop-linux-x64.tar.gz",
+        url: "https://github.com/AnyTogether/AnyPS5-Desktop/releases/latest/download/AnyPS5-Desktop-linux-x64.tar.gz",
         size: null,
       },
     ]);
@@ -247,8 +247,8 @@ describe("the downloads page", () => {
     const { groups, other } = downloadGroups(null, null);
     expect(groups.map((g) => g.platform)).toEqual(["mac", "windows", "linux", "iphone", "android"]);
     expect(groups[0]?.files.map((f) => f.url)).toEqual([
-      "https://github.com/utkuhalis/AnyPS5-ARM/releases/latest/download/AnyPS5-macOS.zip",
-      "https://github.com/utkuhalis/AnyPS5-ARM/releases/latest/download/install.sh",
+      "https://github.com/AnyTogether/AnyPS5-ARM/releases/latest/download/AnyPS5-macOS.zip",
+      "https://github.com/AnyTogether/AnyPS5-ARM/releases/latest/download/install.sh",
     ]);
     expect(groups[1]?.files[0]).toMatchObject({ size: null, sha256: null, version: null, kind: "portable" });
     expect(other).toEqual([]);

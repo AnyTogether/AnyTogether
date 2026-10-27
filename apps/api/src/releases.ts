@@ -11,17 +11,17 @@ import { HttpError } from "./errors.js";
 
 export const releaseRepos = {
   /** The macOS launcher, with the phone app's APK and IPA beside it. */
-  macos: "utkuhalis/AnyPS5-ARM",
+  macos: "AnyTogether/AnyPS5-ARM",
   /** The Windows and Linux launcher. */
-  desktop: "utkuhalis/AnyPS5-Desktop",
+  desktop: "AnyTogether/AnyPS5-Desktop",
 } as const;
 type Product = keyof typeof releaseRepos;
 
 /** The repositories the projects page lists, the upstream engine last. */
 export const projectRepos = [
-  "utkuhalis/AnyPS5-ARM",
-  "utkuhalis/AnyPS5-Desktop",
-  "utkuhalis/AnyTogether",
+  "AnyTogether/AnyPS5-ARM",
+  "AnyTogether/AnyPS5-Desktop",
+  "AnyTogether/AnyTogether",
   "boykopovar/AnyPS5",
 ] as const;
 

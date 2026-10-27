@@ -11,14 +11,14 @@ const armRelease = {
   tag_name: "v0.2.13-arm",
   name: "AnyPS5-ARM 0.2.13",
   published_at: "2026-10-24T15:11:32Z",
-  html_url: "https://github.com/utkuhalis/AnyPS5-ARM/releases/tag/v0.2.13-arm",
+  html_url: "https://github.com/AnyTogether/AnyPS5-ARM/releases/tag/v0.2.13-arm",
   body: "## What's new",
   assets: [
     {
       name: "AnyPS5-macOS.zip",
       size: 43580022,
       browser_download_url:
-        "https://github.com/utkuhalis/AnyPS5-ARM/releases/download/v0.2.13-arm/AnyPS5-macOS.zip",
+        "https://github.com/AnyTogether/AnyPS5-ARM/releases/download/v0.2.13-arm/AnyPS5-macOS.zip",
       digest: "sha256:9bdc",
       updated_at: "2026-10-24T15:10:00Z",
     },
@@ -26,7 +26,7 @@ const armRelease = {
       name: "AnyPS5-Remote.apk",
       size: 53254825,
       browser_download_url:
-        "https://github.com/utkuhalis/AnyPS5-ARM/releases/download/v0.2.13-arm/AnyPS5-Remote.apk",
+        "https://github.com/AnyTogether/AnyPS5-ARM/releases/download/v0.2.13-arm/AnyPS5-Remote.apk",
       digest: "sha256:f7ba",
     },
     { name: "elsewhere.zip", size: 1, browser_download_url: "https://evil.example/x.zip" },
@@ -49,13 +49,13 @@ function fakeGithub(answers: Record<string, () => Response>) {
 
 describe("releases", () => {
   it("lists each project's latest release from GitHub, cached, with coming soon for none", async () => {
-    const github = fakeGithub({ "utkuhalis/AnyPS5-ARM": () => Response.json(armRelease) });
+    const github = fakeGithub({ "AnyTogether/AnyPS5-ARM": () => Response.json(armRelease) });
     h = await harness({ githubFetch: github.fetcher });
     const answer = await h.call("GET", `${v1}/releases`);
     expect(answer.status).toBe(200);
     expect(answer.body.desktop).toBeNull();
     expect(answer.body.macos).toMatchObject({
-      repo: "utkuhalis/AnyPS5-ARM",
+      repo: "AnyTogether/AnyPS5-ARM",
       version: "0.2.13",
       tag: "v0.2.13-arm",
       publishedAt: "2026-10-24T15:11:32Z",
@@ -78,13 +78,13 @@ describe("releases", () => {
   it("keeps the last good answer when GitHub fails", async () => {
     let up = true;
     const github = fakeGithub({
-      "utkuhalis/AnyPS5-ARM": () =>
+      "AnyTogether/AnyPS5-ARM": () =>
         up ? Response.json(armRelease) : new Response("rate limited", { status: 403 }),
     });
     h = await harness({ githubFetch: github.fetcher });
     await h.call("GET", `${v1}/releases`);
     up = false;
-    await h.valkey.del("releases:utkuhalis/AnyPS5-ARM");
+    await h.valkey.del("releases:AnyTogether/AnyPS5-ARM");
     const answer = await h.call("GET", `${v1}/releases`);
     expect(answer.body.macos.version).toBe("0.2.13");
 
@@ -105,8 +105,8 @@ describe("release history", () => {
 
   it("lists every published release of both projects, newest first, with whole notes, cached", async () => {
     const github = fakeGithub({
-      "repos/utkuhalis/AnyPS5-ARM/releases?per_page=50": () => Response.json([draft, armRelease, older]),
-      "repos/utkuhalis/AnyPS5-Desktop/releases?per_page=50": () =>
+      "repos/AnyTogether/AnyPS5-ARM/releases?per_page=50": () => Response.json([draft, armRelease, older]),
+      "repos/AnyTogether/AnyPS5-Desktop/releases?per_page=50": () =>
         Response.json([{ tag_name: "v0.1.1", prerelease: true, published_at: "2026-10-24T20:56:40Z" }]),
     });
     h = await harness({ githubFetch: github.fetcher });
@@ -129,15 +129,15 @@ describe("release history", () => {
   it("answers null for a project GitHub cannot tell about, and keeps the last good answer", async () => {
     let up = true;
     const github = fakeGithub({
-      "repos/utkuhalis/AnyPS5-ARM/releases?per_page=50": () =>
+      "repos/AnyTogether/AnyPS5-ARM/releases?per_page=50": () =>
         up ? Response.json([armRelease]) : new Response("rate limited", { status: 403 }),
-      "repos/utkuhalis/AnyPS5-Desktop/releases?per_page=50": () => new Response("down", { status: 500 }),
+      "repos/AnyTogether/AnyPS5-Desktop/releases?per_page=50": () => new Response("down", { status: 500 }),
     });
     h = await harness({ githubFetch: github.fetcher });
     const first = await h.call("GET", `${v1}/releases/history`);
     expect(first.body.desktop).toBeNull();
     up = false;
-    await h.valkey.del("releases:history:utkuhalis/AnyPS5-ARM");
+    await h.valkey.del("releases:history:AnyTogether/AnyPS5-ARM");
     expect((await h.call("GET", `${v1}/releases/history`)).body.macos).toHaveLength(1);
   });
 });
@@ -145,37 +145,37 @@ describe("release history", () => {
 describe("projects", () => {
   it("gives each repository's stars, forks, licence and last push, cached for an hour", async () => {
     const github = fakeGithub({
-      "repos/utkuhalis/AnyPS5-ARM": () =>
+      "repos/AnyTogether/AnyPS5-ARM": () =>
         Response.json({
-          full_name: "utkuhalis/AnyPS5-ARM",
+          full_name: "AnyTogether/AnyPS5-ARM",
           description: "PS5 games on Apple silicon",
           stargazers_count: 120,
           forks_count: 9,
           open_issues_count: 4,
           license: { spdx_id: "GPL-2.0" },
           pushed_at: "2026-10-25T08:00:00Z",
-          html_url: "https://github.com/utkuhalis/AnyPS5-ARM",
+          html_url: "https://github.com/AnyTogether/AnyPS5-ARM",
         }),
-      "repos/utkuhalis/AnyTogether": () =>
-        Response.json({ full_name: "utkuhalis/AnyTogether", license: { spdx_id: "NOASSERTION" } }),
+      "repos/AnyTogether/AnyTogether": () =>
+        Response.json({ full_name: "AnyTogether/AnyTogether", license: { spdx_id: "NOASSERTION" } }),
       "repos/boykopovar/AnyPS5": () => new Response("down", { status: 502 }),
     });
     h = await harness({ githubFetch: github.fetcher });
     const answer = await h.call("GET", `${v1}/projects`);
     expect(answer.status).toBe(200);
-    expect(answer.body.repos["utkuhalis/AnyPS5-ARM"]).toEqual({
-      repo: "utkuhalis/AnyPS5-ARM",
+    expect(answer.body.repos["AnyTogether/AnyPS5-ARM"]).toEqual({
+      repo: "AnyTogether/AnyPS5-ARM",
       description: "PS5 games on Apple silicon",
       stars: 120,
       forks: 9,
       openIssues: 4,
       license: "GPL-2.0",
       pushedAt: "2026-10-25T08:00:00Z",
-      url: "https://github.com/utkuhalis/AnyPS5-ARM",
+      url: "https://github.com/AnyTogether/AnyPS5-ARM",
     });
-    expect(answer.body.repos["utkuhalis/AnyTogether"]).toMatchObject({ stars: 0, license: null });
+    expect(answer.body.repos["AnyTogether/AnyTogether"]).toMatchObject({ stars: 0, license: null });
     // 404 for the Desktop repository here: nothing to tell; GitHub down for upstream: unknown.
-    expect(answer.body.repos["utkuhalis/AnyPS5-Desktop"]).toBeNull();
+    expect(answer.body.repos["AnyTogether/AnyPS5-Desktop"]).toBeNull();
     expect(answer.body.repos["boykopovar/AnyPS5"]).toBeNull();
     const calls = github.calls.length;
     await h.call("GET", `${v1}/projects`);

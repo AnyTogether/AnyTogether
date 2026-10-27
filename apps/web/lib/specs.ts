@@ -2652,7 +2652,7 @@ export interface Repo {
 
 export const repositories: Repo[] = [
   {
-    repo: "utkuhalis/AnyPS5-ARM",
+    repo: "AnyTogether/AnyPS5-ARM",
     name: "AnyPS5-ARM",
     license: "GPL-2.0",
     project: "macos",
@@ -2719,7 +2719,7 @@ export const repositories: Repo[] = [
     ],
   },
   {
-    repo: "utkuhalis/AnyPS5-Desktop",
+    repo: "AnyTogether/AnyPS5-Desktop",
     name: "AnyPS5 Desktop",
     license: "GPL-2.0",
     project: "desktop",
@@ -2750,7 +2750,7 @@ export const repositories: Repo[] = [
     merged: ["browser-pad", "feedback-ux", "online-p2p-streams", "together-levels", "release/0.1.8"],
   },
   {
-    repo: "utkuhalis/AnyTogether",
+    repo: "AnyTogether/AnyTogether",
     name: "AnyTogether",
     license: "MIT",
     en: "The online home: the API, the realtime gateway, the worker, backups and this website. Runs from main, no tagged releases.",

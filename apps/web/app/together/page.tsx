@@ -31,7 +31,7 @@ export default async function Together() {
               <span className="cta-label">{s.nav.createAccount}</span>
             </Link>
           )}
-          <a href="https://github.com/utkuhalis/AnyTogether" className="cta ghost">
+          <a href="https://github.com/AnyTogether/AnyTogether" className="cta ghost">
             GitHub
           </a>
         </>

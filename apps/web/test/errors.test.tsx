@@ -30,7 +30,7 @@ describe("the error pages", () => {
     expect(html).toContain("<code>2847561923</code>");
     expect(html).toContain("Try again");
     expect(html).toContain('href="/"');
-    expect(html).toContain("github.com/utkuhalis/AnyTogether/issues");
+    expect(html).toContain("github.com/AnyTogether/AnyTogether/issues");
     expect(html).not.toContain("boom");
   });
 

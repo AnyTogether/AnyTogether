@@ -1009,7 +1009,7 @@ const en: ProductStrings = {
     install: {
       title: "Run your own AnyTogether",
       steps: [
-        "git clone https://github.com/utkuhalis/AnyTogether.git, then cd AnyTogether/deploy and cp .env.example .env.",
+        "git clone https://github.com/AnyTogether/AnyTogether.git, then cd AnyTogether/deploy and cp .env.example .env.",
         "Set your domain, a database password and a signing key in .env.",
         "docker compose up -d --build. Then point the launchers and the phone at it in Settings → AnyTogether → Server.",
       ],
@@ -1949,7 +1949,7 @@ const tr: ProductStrings = {
     install: {
       title: "Kendi AnyTogether'ını kur",
       steps: [
-        "git clone https://github.com/utkuhalis/AnyTogether.git, sonra cd AnyTogether/deploy ve cp .env.example .env.",
+        "git clone https://github.com/AnyTogether/AnyTogether.git, sonra cd AnyTogether/deploy ve cp .env.example .env.",
         ".env'de alan adını, bir veritabanı şifresini ve bir imza anahtarını ayarla.",
         "docker compose up -d --build. Sonra launcher'ları ve telefonu Ayarlar → AnyTogether → Sunucu'dan ona yönlendir.",
       ],

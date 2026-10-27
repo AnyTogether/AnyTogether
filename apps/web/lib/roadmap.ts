@@ -23,8 +23,8 @@ export const statuses: Status[] = ["done", "progress", "next", "later"];
 export const updated = "2026-10-26";
 
 export const planDocs = {
-  en: "https://github.com/utkuhalis/AnyPS5-ARM/blob/anytogether/docs/en/10-roadmap.md",
-  tr: "https://github.com/utkuhalis/AnyPS5-ARM/blob/anytogether/docs/tr/10-yol-haritasi.md",
+  en: "https://github.com/AnyTogether/AnyPS5-ARM/blob/anytogether/docs/en/10-roadmap.md",
+  tr: "https://github.com/AnyTogether/AnyPS5-ARM/blob/anytogether/docs/tr/10-yol-haritasi.md",
 };
 
 export const roadmap: RoadmapItem[] = [

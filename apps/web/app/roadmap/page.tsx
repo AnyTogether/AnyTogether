@@ -90,7 +90,7 @@ export default async function Roadmap() {
 
       <p className="fine-note pg-foot-note">
         {fill(r.updated, { date: day(updated, lang) })}{" "}
-        <a href="https://github.com/utkuhalis/AnyTogether/issues/new">{r.suggest}</a>
+        <a href="https://github.com/AnyTogether/AnyTogether/issues/new">{r.suggest}</a>
       </p>
     </div>
   );

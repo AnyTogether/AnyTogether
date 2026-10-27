@@ -458,7 +458,7 @@ export function Landing({
               </span>
               {"\n"}
               <span className="ln" style={{ "--i": 1 } as CSSProperties}>
-                <span className="p">$</span> git clone https://github.com/utkuhalis/AnyTogether.git
+                <span className="p">$</span> git clone https://github.com/AnyTogether/AnyTogether.git
               </span>
               {"\n"}
               <span className="ln" style={{ "--i": 2 } as CSSProperties}>
@@ -476,7 +476,7 @@ export function Landing({
             </code>
           </pre>
           <a
-            href="https://github.com/utkuhalis/AnyTogether/blob/main/docs/self-hosting.md"
+            href="https://github.com/AnyTogether/AnyTogether/blob/main/docs/self-hosting.md"
             className="text-link"
           >
             {l.open.guide}

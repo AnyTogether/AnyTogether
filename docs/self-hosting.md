@@ -1,7 +1,7 @@
 # Running your own AnyTogether
 
 Everything AnyTogether runs on is in this repository
-([github.com/utkuhalis/AnyTogether](https://github.com/utkuhalis/AnyTogether)), and `deploy/` puts it
+([github.com/AnyTogether/AnyTogether](https://github.com/AnyTogether/AnyTogether)), and `deploy/` puts it
 on one machine with Docker Compose:
 
 | Service | What it is |
@@ -34,7 +34,7 @@ AnyTogether is MIT licensed: use it, change it and run it however you like.
 ## Steps
 
 ```sh
-git clone https://github.com/utkuhalis/AnyTogether.git
+git clone https://github.com/AnyTogether/AnyTogether.git
 cd AnyTogether/deploy
 cp .env.example .env
 ```

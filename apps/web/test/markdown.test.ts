@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { notesToHtml } from "../lib/markdown";
 
-const repo = "utkuhalis/AnyPS5-ARM";
+const repo = "AnyTogether/AnyPS5-ARM";
 
 describe("release notes", () => {
   it("render GitHub-flavoured Markdown, headings below the page's", () => {
@@ -31,7 +31,7 @@ describe("release notes", () => {
       "[guide](docs/user/GUIDE.md) [site](https://anytogether.kodla.agency) [bad](javascript:alert(1)) [data](data:text/html,x) [mail](mailto:a@b.c) [top](#install)",
       repo,
     );
-    expect(html).toContain('href="https://github.com/utkuhalis/AnyPS5-ARM/blob/HEAD/docs/user/GUIDE.md"');
+    expect(html).toContain('href="https://github.com/AnyTogether/AnyPS5-ARM/blob/HEAD/docs/user/GUIDE.md"');
     expect(html).toContain('href="https://anytogether.kodla.agency" rel="nofollow noopener noreferrer"');
     expect(html).toContain('href="mailto:a@b.c"');
     expect(html).not.toMatch(/javascript:|data:text/);

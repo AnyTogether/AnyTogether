@@ -29,9 +29,9 @@ export interface Releases {
 }
 
 export const repos = {
-  mac: "utkuhalis/AnyPS5-ARM",
-  desktop: "utkuhalis/AnyPS5-Desktop",
-  together: "utkuhalis/AnyTogether",
+  mac: "AnyTogether/AnyPS5-ARM",
+  desktop: "AnyTogether/AnyPS5-Desktop",
+  together: "AnyTogether/AnyTogether",
 } as const;
 
 /** The phone app's own version, which AnyPS5-ARM's release notes name ("**Phone controller
@@ -197,7 +197,7 @@ export function filesFor(platform: Platform, releases: Releases | null): FileLin
 }
 
 export const installLine =
-  "curl -fsSL https://github.com/utkuhalis/AnyPS5-ARM/releases/latest/download/install.sh | sh";
+  "curl -fsSL https://github.com/AnyTogether/AnyPS5-ARM/releases/latest/download/install.sh | sh";
 
 /** Totals worth showing on the front page: each only once it is past a number that does not look
  *  empty, and the row only with at least two of them. */

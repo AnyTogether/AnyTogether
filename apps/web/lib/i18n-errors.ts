@@ -48,4 +48,4 @@ export const errorStrings = (language: Language | string): ErrorStrings =>
   language === "tr" ? errorStringsTr : errorStringsEn;
 
 /** Where people report a problem: the project's issues. */
-export const reportUrl = "https://github.com/utkuhalis/AnyTogether/issues";
+export const reportUrl = "https://github.com/AnyTogether/AnyTogether/issues";

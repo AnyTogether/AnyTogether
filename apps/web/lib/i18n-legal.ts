@@ -10,7 +10,7 @@ export const legalUpdated = "2026-10-26";
 /** The AnyTogether server these texts speak for; any other address is someone else's server. */
 export const officialOrigin = "https://anytogether.kodla.agency";
 
-const repo = "https://github.com/utkuhalis/AnyTogether";
+const repo = "https://github.com/AnyTogether/AnyTogether";
 const issues = `${repo}/issues`;
 const history = `${repo}/commits/main/apps/web/lib/i18n-legal.ts`;
 
@@ -305,7 +305,7 @@ const privacyEn: LegalDoc = {
       id: "contact",
       title: "Contact",
       blocks: [
-        `Questions, requests or something wrong: open an issue at [github.com/utkuhalis/AnyTogether](${issues}). Issues are public, so keep personal details out of them; for a private matter, say so in the issue and ask for a private way to reach the maintainer.`,
+        `Questions, requests or something wrong: open an issue at [github.com/AnyTogether/AnyTogether](${issues}). Issues are public, so keep personal details out of them; for a private matter, say so in the issue and ask for a private way to reach the maintainer.`,
       ],
     },
   ],
@@ -427,7 +427,7 @@ const termsEn: LegalDoc = {
       id: "contact",
       title: "Contact",
       blocks: [
-        `Questions about these terms: open an issue at [github.com/utkuhalis/AnyTogether](${issues}). To report a person or something they posted, use Report on the site or in the app instead: it reaches the moderators directly.`,
+        `Questions about these terms: open an issue at [github.com/AnyTogether/AnyTogether](${issues}). To report a person or something they posted, use Report on the site or in the app instead: it reaches the moderators directly.`,
       ],
     },
   ],
@@ -692,7 +692,7 @@ const privacyTr: LegalDoc = {
       id: "contact",
       title: "İletişim",
       blocks: [
-        `Sorular, istekler ya da bir sorun için [github.com/utkuhalis/AnyTogether](${issues}) adresinde bir issue aç. Issue'lar herkese açıktır; içine kişisel bilgi yazma. Özel bir konuysa bunu issue'da belirt ve geliştiriciye ulaşmak için özel bir yol iste.`,
+        `Sorular, istekler ya da bir sorun için [github.com/AnyTogether/AnyTogether](${issues}) adresinde bir issue aç. Issue'lar herkese açıktır; içine kişisel bilgi yazma. Özel bir konuysa bunu issue'da belirt ve geliştiriciye ulaşmak için özel bir yol iste.`,
       ],
     },
   ],
@@ -814,7 +814,7 @@ const termsTr: LegalDoc = {
       id: "contact",
       title: "İletişim",
       blocks: [
-        `Bu koşullarla ilgili sorular için [github.com/utkuhalis/AnyTogether](${issues}) adresinde bir issue aç. Bir kişiyi ya da paylaştığı bir şeyi bildirmek içinse sitedeki ya da uygulamadaki Raporla'yı kullan: doğrudan moderatörlere ulaşır.`,
+        `Bu koşullarla ilgili sorular için [github.com/AnyTogether/AnyTogether](${issues}) adresinde bir issue aç. Bir kişiyi ya da paylaştığı bir şeyi bildirmek içinse sitedeki ya da uygulamadaki Raporla'yı kullan: doğrudan moderatörlere ulaşır.`,
       ],
     },
   ],

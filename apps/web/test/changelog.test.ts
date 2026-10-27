@@ -14,12 +14,12 @@ const release = (repo: string, version: string, publishedAt: string, prerelease 
 
 const history = {
   macos: [
-    release("utkuhalis/AnyPS5-ARM", "0.2.15", "2026-10-24T21:56:47Z"),
-    release("utkuhalis/AnyPS5-ARM", "0.2.14", "2026-10-24T18:13:47Z"),
+    release("AnyTogether/AnyPS5-ARM", "0.2.15", "2026-10-24T21:56:47Z"),
+    release("AnyTogether/AnyPS5-ARM", "0.2.14", "2026-10-24T18:13:47Z"),
   ],
   desktop: [
-    release("utkuhalis/AnyPS5-Desktop", "0.1.2", "2026-10-25T09:00:00Z", true),
-    release("utkuhalis/AnyPS5-Desktop", "0.1.1", "2026-10-24T20:56:40Z"),
+    release("AnyTogether/AnyPS5-Desktop", "0.1.2", "2026-10-25T09:00:00Z", true),
+    release("AnyTogether/AnyPS5-Desktop", "0.1.1", "2026-10-24T20:56:40Z"),
   ],
 };
 
@@ -46,7 +46,7 @@ describe("the changelog", () => {
   });
   it("leaves the nightly builds out", () => {
     const nightly = release(
-      "utkuhalis/AnyPS5-ARM",
+      "AnyTogether/AnyPS5-ARM",
       "0.2.16-arm-nightly.20261025.1",
       "2026-10-25T20:00:00Z",
       true,

@@ -4,7 +4,7 @@ The online home of the AnyPS5 launchers: profiles, trophies, friends, parties, v
 share play, leaderboards, themes and downloads, at https://anytogether.kodla.agency.
 
 The plan lives on the `anytogether` branch of
-[AnyPS5-ARM](https://github.com/utkuhalis/AnyPS5-ARM/tree/anytogether) (English and Turkish).
+[AnyPS5-ARM](https://github.com/AnyTogether/AnyPS5-ARM/tree/anytogether) (English and Turkish).
 
 ## Screenshots
 
@@ -59,8 +59,8 @@ real server (`e2e/`, last run 2026-10-24: every check passed).
 | Play time and trophies sync | ✅ | – | ✅ | ✅ (profiles) |
 | Joining a friend's game | ✅ | – | ✅ | – |
 
-"–": not a feature of that client. ¹ Built, not yet part of the cross-client run. The clients: [AnyPS5-ARM](https://github.com/utkuhalis/AnyPS5-ARM)
-(macOS launcher, phone app), [AnyPS5-Desktop](https://github.com/utkuhalis/AnyPS5-Desktop) (Windows
+"–": not a feature of that client. ¹ Built, not yet part of the cross-client run. The clients: [AnyPS5-ARM](https://github.com/AnyTogether/AnyPS5-ARM)
+(macOS launcher, phone app), [AnyPS5-Desktop](https://github.com/AnyTogether/AnyPS5-Desktop) (Windows
 and Linux). How to run the cross-client checks: [e2e/README.md](e2e/README.md).
 
 ## Development

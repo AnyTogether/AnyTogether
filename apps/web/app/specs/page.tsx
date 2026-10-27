@@ -164,7 +164,7 @@ export default async function Specs() {
 
       <p className="fine-note pg-foot-note">
         {fill(t.checkedOn, { date: day(checked, lang) })}{" "}
-        <a href="https://github.com/utkuhalis/AnyTogether/issues/new">{t.suggest}</a>
+        <a href="https://github.com/AnyTogether/AnyTogether/issues/new">{t.suggest}</a>
       </p>
     </div>
   );

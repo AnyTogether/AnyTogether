@@ -178,7 +178,7 @@ export default async function Help() {
             {h.more.guide}
           </a>
           <a
-            href="https://github.com/utkuhalis/AnyPS5-ARM/issues/new?template=crash.yml"
+            href="https://github.com/AnyTogether/AnyPS5-ARM/issues/new?template=crash.yml"
             className="cta ghost"
           >
             {h.more.issue}

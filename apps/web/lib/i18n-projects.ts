@@ -35,7 +35,7 @@ const en = {
   inside: "What's inside",
   repos: [
     {
-      repo: "utkuhalis/AnyPS5-ARM",
+      repo: "AnyTogether/AnyPS5-ARM",
       name: "AnyPS5-ARM",
       license: "GPL-2.0",
       role: "Engine · Mac launcher · phone app",
@@ -55,10 +55,10 @@ const en = {
         ],
       ],
       links: [
-        ["Repository", `${gh}/utkuhalis/AnyPS5-ARM`],
-        ["User guide", `${gh}/utkuhalis/AnyPS5-ARM/blob/main/docs/user/GUIDE.md`],
-        ["Compatibility", `${gh}/utkuhalis/AnyPS5-ARM/blob/main/docs/user/COMPATIBILITY.md`],
-        ["macOS port notes", `${gh}/utkuhalis/AnyPS5-ARM/blob/main/docs/dev/MACOS_PORT.md`],
+        ["Repository", `${gh}/AnyTogether/AnyPS5-ARM`],
+        ["User guide", `${gh}/AnyTogether/AnyPS5-ARM/blob/main/docs/user/GUIDE.md`],
+        ["Compatibility", `${gh}/AnyTogether/AnyPS5-ARM/blob/main/docs/user/COMPATIBILITY.md`],
+        ["macOS port notes", `${gh}/AnyTogether/AnyPS5-ARM/blob/main/docs/dev/MACOS_PORT.md`],
       ],
       branches: [
         ["main", "The whole project: engine, launcher and phone app. Releases are made from here."],
@@ -77,7 +77,7 @@ const en = {
       release: "macos",
     },
     {
-      repo: "utkuhalis/AnyPS5-Desktop",
+      repo: "AnyTogether/AnyPS5-Desktop",
       name: "AnyPS5 Desktop",
       license: "GPL-2.0",
       role: "Windows · Linux launcher",
@@ -94,14 +94,14 @@ const en = {
         ],
       ],
       links: [
-        ["Repository", `${gh}/utkuhalis/AnyPS5-Desktop`],
-        ["Releases", `${gh}/utkuhalis/AnyPS5-Desktop/releases`],
-        ["Issues", `${gh}/utkuhalis/AnyPS5-Desktop/issues`],
+        ["Repository", `${gh}/AnyTogether/AnyPS5-Desktop`],
+        ["Releases", `${gh}/AnyTogether/AnyPS5-Desktop/releases`],
+        ["Issues", `${gh}/AnyTogether/AnyPS5-Desktop/issues`],
       ],
       release: "desktop",
     },
     {
-      repo: "utkuhalis/AnyTogether",
+      repo: "AnyTogether/AnyTogether",
       name: "AnyTogether",
       license: "MIT",
       role: "Server · this website",
@@ -118,9 +118,9 @@ const en = {
         ["Tests", "API tests against a real database, and e2e/: every client against one real stack."],
       ],
       links: [
-        ["Repository", `${gh}/utkuhalis/AnyTogether`],
-        ["Self-hosting guide", `${gh}/utkuhalis/AnyTogether/blob/main/docs/self-hosting.md`],
-        ["Cross-client tests", `${gh}/utkuhalis/AnyTogether/blob/main/e2e/README.md`],
+        ["Repository", `${gh}/AnyTogether/AnyTogether`],
+        ["Self-hosting guide", `${gh}/AnyTogether/AnyTogether/blob/main/docs/self-hosting.md`],
+        ["Cross-client tests", `${gh}/AnyTogether/AnyTogether/blob/main/e2e/README.md`],
       ],
     },
   ] as [RepoCard, RepoCard, RepoCard],
@@ -156,17 +156,17 @@ const en = {
       [
         "Report a crash",
         "When a game stops, the Mac launcher's Open Issue fills in the crash report template for you; attach the file Export Report saved.",
-        `${gh}/utkuhalis/AnyPS5-ARM/issues/new?template=crash.yml`,
+        `${gh}/AnyTogether/AnyPS5-ARM/issues/new?template=crash.yml`,
       ],
       [
         "Open an issue",
         "Bugs and performance problems have their own forms on AnyPS5-ARM; AnyPS5 Desktop and AnyTogether take plain issues.",
-        `${gh}/utkuhalis/AnyPS5-ARM/issues/new/choose`,
+        `${gh}/AnyTogether/AnyPS5-ARM/issues/new/choose`,
       ],
       [
         "Send a pull request",
         "Fork, branch, and open a pull request against main. Keep it small and say what you tested.",
-        `${gh}/utkuhalis/AnyPS5-ARM/pulls`,
+        `${gh}/AnyTogether/AnyPS5-ARM/pulls`,
       ],
       [
         "Tell how a game runs",
@@ -177,7 +177,7 @@ const en = {
       [
         "Translate",
         "Everything is in English and Turkish today. Open an issue to start another language.",
-        `${gh}/utkuhalis/AnyTogether/issues/new`,
+        `${gh}/AnyTogether/AnyTogether/issues/new`,
       ],
     ] as [string, string, string][],
   },
@@ -219,10 +219,10 @@ const tr: ProjectsStrings = {
         ],
       ],
       links: [
-        ["Depo", `${gh}/utkuhalis/AnyPS5-ARM`],
-        ["Kullanım rehberi", `${gh}/utkuhalis/AnyPS5-ARM/blob/main/docs/user/GUIDE.md#türkçe`],
-        ["Uyumluluk", `${gh}/utkuhalis/AnyPS5-ARM/blob/main/docs/user/COMPATIBILITY.md`],
-        ["macOS uyarlama notları", `${gh}/utkuhalis/AnyPS5-ARM/blob/main/docs/dev/MACOS_PORT.md`],
+        ["Depo", `${gh}/AnyTogether/AnyPS5-ARM`],
+        ["Kullanım rehberi", `${gh}/AnyTogether/AnyPS5-ARM/blob/main/docs/user/GUIDE.md#türkçe`],
+        ["Uyumluluk", `${gh}/AnyTogether/AnyPS5-ARM/blob/main/docs/user/COMPATIBILITY.md`],
+        ["macOS uyarlama notları", `${gh}/AnyTogether/AnyPS5-ARM/blob/main/docs/dev/MACOS_PORT.md`],
       ],
       branches: [
         ["main", "Projenin tamamı: motor, launcher ve telefon uygulaması. Sürümler buradan çıkar."],
@@ -252,9 +252,9 @@ const tr: ProjectsStrings = {
         ],
       ],
       links: [
-        ["Depo", `${gh}/utkuhalis/AnyPS5-Desktop`],
-        ["Sürümler", `${gh}/utkuhalis/AnyPS5-Desktop/releases`],
-        ["Sorunlar", `${gh}/utkuhalis/AnyPS5-Desktop/issues`],
+        ["Depo", `${gh}/AnyTogether/AnyPS5-Desktop`],
+        ["Sürümler", `${gh}/AnyTogether/AnyPS5-Desktop/releases`],
+        ["Sorunlar", `${gh}/AnyTogether/AnyPS5-Desktop/issues`],
       ],
     },
     {
@@ -276,9 +276,9 @@ const tr: ProjectsStrings = {
         ],
       ],
       links: [
-        ["Depo", `${gh}/utkuhalis/AnyTogether`],
-        ["Kendi sunucunu kur", `${gh}/utkuhalis/AnyTogether/blob/main/docs/self-hosting.md`],
-        ["İstemciler arası testler", `${gh}/utkuhalis/AnyTogether/blob/main/e2e/README.md`],
+        ["Depo", `${gh}/AnyTogether/AnyTogether`],
+        ["Kendi sunucunu kur", `${gh}/AnyTogether/AnyTogether/blob/main/docs/self-hosting.md`],
+        ["İstemciler arası testler", `${gh}/AnyTogether/AnyTogether/blob/main/e2e/README.md`],
       ],
     },
   ],
@@ -311,17 +311,17 @@ const tr: ProjectsStrings = {
       [
         "Çökme bildir",
         "Bir oyun durduğunda Mac launcher'ının Sorun Aç düğmesi çökme raporu şablonunu senin için doldurur; Raporu Dışa Aktar'ın kaydettiği dosyayı ekle.",
-        `${gh}/utkuhalis/AnyPS5-ARM/issues/new?template=crash.yml`,
+        `${gh}/AnyTogether/AnyPS5-ARM/issues/new?template=crash.yml`,
       ],
       [
         "Sorun aç",
         "Hataların ve performans sorunlarının AnyPS5-ARM'da kendi formları var; AnyPS5 Desktop ve AnyTogether düz sorun kabul eder.",
-        `${gh}/utkuhalis/AnyPS5-ARM/issues/new/choose`,
+        `${gh}/AnyTogether/AnyPS5-ARM/issues/new/choose`,
       ],
       [
         "Pull request gönder",
         "Fork'la, dal aç ve main'e karşı pull request aç. Küçük tut ve neyi denediğini yaz.",
-        `${gh}/utkuhalis/AnyPS5-ARM/pulls`,
+        `${gh}/AnyTogether/AnyPS5-ARM/pulls`,
       ],
       [
         "Oyunun nasıl çalıştığını söyle",
@@ -332,7 +332,7 @@ const tr: ProjectsStrings = {
       [
         "Çevir",
         "Bugün her şey İngilizce ve Türkçe. Başka bir dil başlatmak için bir sorun aç.",
-        `${gh}/utkuhalis/AnyTogether/issues/new`,
+        `${gh}/AnyTogether/AnyTogether/issues/new`,
       ],
     ],
   },
