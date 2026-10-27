@@ -106,7 +106,7 @@ describe("release history", () => {
   it("lists every published release of both projects, newest first, with whole notes, cached", async () => {
     const github = fakeGithub({
       "repos/AnyTogether/AnyPS5-ARM/releases?per_page=50": () => Response.json([draft, armRelease, older]),
-      "repos/AnyTogether/AnyPS5-Desktop/releases?per_page=50": () =>
+      "repos/AnyTogether/AnyLauncher-Port/releases?per_page=50": () =>
         Response.json([{ tag_name: "v0.1.1", prerelease: true, published_at: "2026-10-24T20:56:40Z" }]),
     });
     h = await harness({ githubFetch: github.fetcher });
@@ -131,7 +131,7 @@ describe("release history", () => {
     const github = fakeGithub({
       "repos/AnyTogether/AnyPS5-ARM/releases?per_page=50": () =>
         up ? Response.json([armRelease]) : new Response("rate limited", { status: 403 }),
-      "repos/AnyTogether/AnyPS5-Desktop/releases?per_page=50": () => new Response("down", { status: 500 }),
+      "repos/AnyTogether/AnyLauncher-Port/releases?per_page=50": () => new Response("down", { status: 500 }),
     });
     h = await harness({ githubFetch: github.fetcher });
     const first = await h.call("GET", `${v1}/releases/history`);
@@ -175,7 +175,7 @@ describe("projects", () => {
     });
     expect(answer.body.repos["AnyTogether/AnyTogether"]).toMatchObject({ stars: 0, license: null });
     // 404 for the Desktop repository here: nothing to tell; GitHub down for upstream: unknown.
-    expect(answer.body.repos["AnyTogether/AnyPS5-Desktop"]).toBeNull();
+    expect(answer.body.repos["AnyTogether/AnyLauncher-Port"]).toBeNull();
     expect(answer.body.repos["boykopovar/AnyPS5"]).toBeNull();
     const calls = github.calls.length;
     await h.call("GET", `${v1}/projects`);

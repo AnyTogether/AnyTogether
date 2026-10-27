@@ -60,7 +60,7 @@ real server (`e2e/`, last run 2026-10-24: every check passed).
 | Joining a friend's game | ✅ | – | ✅ | – |
 
 "–": not a feature of that client. ¹ Built, not yet part of the cross-client run. The clients: [AnyPS5-ARM](https://github.com/AnyTogether/AnyPS5-ARM)
-(macOS launcher, phone app), [AnyPS5-Desktop](https://github.com/AnyTogether/AnyPS5-Desktop) (Windows
+(macOS launcher, phone app), [AnyPS5-Desktop](https://github.com/AnyTogether/AnyLauncher-Port) (Windows
 and Linux). How to run the cross-client checks: [e2e/README.md](e2e/README.md).
 
 ## Development

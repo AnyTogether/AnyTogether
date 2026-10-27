@@ -13,14 +13,14 @@ export const releaseRepos = {
   /** The macOS launcher, with the phone app's APK and IPA beside it. */
   macos: "AnyTogether/AnyPS5-ARM",
   /** The Windows and Linux launcher. */
-  desktop: "AnyTogether/AnyPS5-Desktop",
+  desktop: "AnyTogether/AnyLauncher-Port",
 } as const;
 type Product = keyof typeof releaseRepos;
 
 /** The repositories the projects page lists, the upstream engine last. */
 export const projectRepos = [
   "AnyTogether/AnyPS5-ARM",
-  "AnyTogether/AnyPS5-Desktop",
+  "AnyTogether/AnyLauncher-Port",
   "AnyTogether/AnyTogether",
   "boykopovar/AnyPS5",
 ] as const;

@@ -18,8 +18,8 @@ const history = {
     release("AnyTogether/AnyPS5-ARM", "0.2.14", "2026-10-24T18:13:47Z"),
   ],
   desktop: [
-    release("AnyTogether/AnyPS5-Desktop", "0.1.2", "2026-10-25T09:00:00Z", true),
-    release("AnyTogether/AnyPS5-Desktop", "0.1.1", "2026-10-24T20:56:40Z"),
+    release("AnyTogether/AnyLauncher-Port", "0.1.2", "2026-10-25T09:00:00Z", true),
+    release("AnyTogether/AnyLauncher-Port", "0.1.1", "2026-10-24T20:56:40Z"),
   ],
 };
 

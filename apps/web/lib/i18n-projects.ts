@@ -77,7 +77,7 @@ const en = {
       release: "macos",
     },
     {
-      repo: "AnyTogether/AnyPS5-Desktop",
+      repo: "AnyTogether/AnyLauncher-Port",
       name: "AnyPS5 Desktop",
       license: "GPL-2.0",
       role: "Windows · Linux launcher",
@@ -94,9 +94,9 @@ const en = {
         ],
       ],
       links: [
-        ["Repository", `${gh}/AnyTogether/AnyPS5-Desktop`],
-        ["Releases", `${gh}/AnyTogether/AnyPS5-Desktop/releases`],
-        ["Issues", `${gh}/AnyTogether/AnyPS5-Desktop/issues`],
+        ["Repository", `${gh}/AnyTogether/AnyLauncher-Port`],
+        ["Releases", `${gh}/AnyTogether/AnyLauncher-Port/releases`],
+        ["Issues", `${gh}/AnyTogether/AnyLauncher-Port/issues`],
       ],
       release: "desktop",
     },
@@ -252,9 +252,9 @@ const tr: ProjectsStrings = {
         ],
       ],
       links: [
-        ["Depo", `${gh}/AnyTogether/AnyPS5-Desktop`],
-        ["Sürümler", `${gh}/AnyTogether/AnyPS5-Desktop/releases`],
-        ["Sorunlar", `${gh}/AnyTogether/AnyPS5-Desktop/issues`],
+        ["Depo", `${gh}/AnyTogether/AnyLauncher-Port`],
+        ["Sürümler", `${gh}/AnyTogether/AnyLauncher-Port/releases`],
+        ["Sorunlar", `${gh}/AnyTogether/AnyLauncher-Port/issues`],
       ],
     },
     {

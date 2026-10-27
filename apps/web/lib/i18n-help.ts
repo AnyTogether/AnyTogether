@@ -13,7 +13,7 @@ export interface Faq {
 const guide = "https://github.com/AnyTogether/AnyPS5-ARM/blob/main/docs/user/GUIDE.md";
 const selfHosting = "https://github.com/AnyTogether/AnyTogether/blob/main/docs/self-hosting.md";
 const crash = "https://github.com/AnyTogether/AnyPS5-ARM/issues/new?template=crash.yml";
-const desktopIssues = "https://github.com/AnyTogether/AnyPS5-Desktop/issues/new";
+const desktopIssues = "https://github.com/AnyTogether/AnyLauncher-Port/issues/new";
 const macCompat = "https://github.com/AnyTogether/AnyPS5-ARM/blob/main/docs/user/COMPATIBILITY.md";
 
 const en = {

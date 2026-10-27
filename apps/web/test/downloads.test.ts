@@ -39,11 +39,11 @@ const releases: Releases = {
     ],
   },
   desktop: {
-    repo: "AnyTogether/AnyPS5-Desktop",
+    repo: "AnyTogether/AnyLauncher-Port",
     version: "0.1.1",
     tag: "v0.1.1",
     publishedAt: "2026-10-25T00:00:00Z",
-    url: "https://github.com/AnyTogether/AnyPS5-Desktop/releases/tag/v0.1.1",
+    url: "https://github.com/AnyTogether/AnyLauncher-Port/releases/tag/v0.1.1",
     assets: [
       {
         name: "AnyPS5-Desktop-Setup-0.1.1-x64.exe",
@@ -139,7 +139,7 @@ describe("the download button", () => {
       version: null,
     });
     expect(pickDownload("windows", null)).toMatchObject({
-      url: "https://github.com/AnyTogether/AnyPS5-Desktop/releases/latest/download/AnyPS5-Desktop-windows-x64.zip",
+      url: "https://github.com/AnyTogether/AnyLauncher-Port/releases/latest/download/AnyPS5-Desktop-windows-x64.zip",
       kind: "zip",
     });
     expect(pickDownload("linux", null).kind).toBe("tar.gz");
@@ -151,7 +151,7 @@ describe("the download button", () => {
     expect(filesFor("linux", null)).toEqual([
       {
         label: ".tar.gz",
-        url: "https://github.com/AnyTogether/AnyPS5-Desktop/releases/latest/download/AnyPS5-Desktop-linux-x64.tar.gz",
+        url: "https://github.com/AnyTogether/AnyLauncher-Port/releases/latest/download/AnyPS5-Desktop-linux-x64.tar.gz",
         size: null,
       },
     ]);
