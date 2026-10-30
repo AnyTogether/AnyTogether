@@ -20,7 +20,7 @@ export interface RoadmapItem {
 export const statuses: Status[] = ["done", "progress", "next", "later"];
 
 /** When the list was last checked against the plan and the releases. */
-export const updated = "2026-10-26";
+export const updated = "2026-10-30";
 
 export const planDocs = {
   en: "https://github.com/AnyTogether/AnyPS5-ARM/blob/anytogether/docs/en/10-roadmap.md",
@@ -29,6 +29,20 @@ export const planDocs = {
 
 export const roadmap: RoadmapItem[] = [
   // Done, newest first.
+  {
+    id: "opus",
+    status: "done",
+    areas: ["mac", "online"],
+    shipped: "AnyPS5-ARM 0.2.17",
+    en: {
+      t: "Opus game sound in share play",
+      d: "The game's sound as a stereo Opus track, about 128 kbit/s instead of 1.5 Mbit/s, for hosts on slow uploads. The Mac launcher sends it and watching in a browser plays it; viewers without it still get the old sound.",
+    },
+    tr: {
+      t: "Birlikte oynamada Opus oyun sesi",
+      d: "Oyun sesi stereo bir Opus izi olarak; 1,5 Mbit/s yerine yaklaşık 128 kbit/s, yükleme hızı düşük olanlar için. Mac launcher'ı gönderiyor, tarayıcıda izlerken çalıyor; onu çalamayan izleyiciler eski sesi almaya devam ediyor.",
+    },
+  },
   {
     id: "controllers",
     status: "done",
@@ -362,20 +376,6 @@ export const roadmap: RoadmapItem[] = [
     tr: {
       t: "Yerel arm64 motoru",
       d: "Oyunlar kilit açılırken bir kez arm64'e çevrilir, Rosetta olmadan çalışır. native-arm64 dalında DOOM, E1M1'i yerel olarak oynuyor.",
-    },
-  },
-
-  {
-    id: "opus",
-    status: "progress",
-    areas: ["mac", "online"],
-    en: {
-      t: "Opus game sound in share play",
-      d: "The game's sound as a stereo Opus track, about 128 kbit/s instead of 1.5 Mbit/s, for hosts on slow uploads. Watching in a browser plays it already; the Mac launcher sends it from its next release.",
-    },
-    tr: {
-      t: "Birlikte oynamada Opus oyun sesi",
-      d: "Oyun sesi stereo bir Opus izi olarak; 1,5 Mbit/s yerine yaklaşık 128 kbit/s, yükleme hızı düşük olanlar için. Tarayıcıda izlerken şimdiden çalıyor; Mac launcher'ı bir sonraki sürümünden itibaren gönderiyor.",
     },
   },
   // Next
