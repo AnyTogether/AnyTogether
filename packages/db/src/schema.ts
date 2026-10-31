@@ -29,6 +29,9 @@ export const accounts = pgTable("accounts", {
   role: text().notNull().default("user"),
   status: text().notNull().default("active"),
   deleteAfter: timestamp({ withTimezone: true }),
+  /** The language its mail is written in ("en", "tr"): the website's when the account was made,
+   *  or the one chosen there since. Null: English. */
+  locale: text(),
   createdAt: now(),
 });
 

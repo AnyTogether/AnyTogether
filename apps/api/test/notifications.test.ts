@@ -443,7 +443,7 @@ describe("mail digest", () => {
     expect(await digests()).toBe(1);
     expect(mailed()).toHaveLength(1);
     expect(mailed()[0]?.to).toBe("ayse@example.com");
-    expect(mailed()[0]?.text).toContain("2 new messages · AnyTogether");
+    expect(mailed()[0]?.text).toContain("AnyTogether: 2 new messages");
     expect(mailed()[0]?.text).toContain("2 messages from utku");
     expect(mailed()[0]?.text).not.toContain("two");
     expect(await digests()).toBe(0);

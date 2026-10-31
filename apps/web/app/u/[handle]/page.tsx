@@ -175,11 +175,8 @@ export default async function UserProfile({ params }: Params) {
               : {})}
           />
         )}
-        <Avatar
-          person={profile}
-          size={96}
-          presence={presence && presence.state !== "offline" ? presence.state : undefined}
-        />
+        {/* No presence dot here: the status line under the name says it, in words. */}
+        <Avatar person={profile} size={96} />
         <h2 className="in d2">{shownName(profile)}</h2>
         {profile.privateName && profile.privateName !== profile.displayName && (
           <p className="private-line in d2">

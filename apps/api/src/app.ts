@@ -163,7 +163,6 @@ export function createApp(deps: Deps) {
   const gameSessions = gameSessionRoutes(deps, notes, partyPieces);
   // What a join code opens is read signed out too (a link opened from Discord).
   v1.route("/", joinCodeRoutes(deps, partyPieces.codes, partyPieces, shares, gameSessions));
-  // Before the profile routes, whose PATCH /me/* counts against the profile limit.
   const family = familyRoutes(deps, notes);
   v1.route("/", family);
   v1.route("/", profileRoutes(deps));

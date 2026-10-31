@@ -840,9 +840,8 @@ export function DiscoverySettings({ initial, texts }: { initial: Discovery; text
             {texts.failed}
           </p>
         ) : (
-          <output className={`saved${status === "saved" ? " on" : ""}`}>
-            {status === "saved" ? texts.saved : ""}
-          </output>
+          // The switch shows the change; "Saved" is for screen readers.
+          <output className="visually-hidden">{status === "saved" ? texts.saved : ""}</output>
         )}
       </div>
     </div>

@@ -4,6 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { AvatarEditor } from "@/components/AvatarEditor";
 import type { UiStrings } from "@/lib/i18n";
 import type { Own } from "@/lib/people";
+import { rateLimitText } from "@/lib/rateLimit";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -74,7 +75,11 @@ export function PrivateIdentity({ own, texts }: { own: Own; texts: UiStrings }) 
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ privateName: name.trim() || null }),
     }).catch(() => undefined);
-    const body = (await response?.json().catch(() => ({}))) as { privateName?: string | null; code?: string };
+    const body = (await response?.json().catch(() => ({}))) as {
+      privateName?: string | null;
+      code?: string;
+      retryAfter?: number;
+    };
     if (!response?.ok)
       return setStatus({
         kind: "error",
@@ -82,7 +87,7 @@ export function PrivateIdentity({ own, texts }: { own: Own; texts: UiStrings }) 
           body.code === "links_not_allowed"
             ? texts.noLinks
             : body.code === "rate_limited"
-              ? texts.tooMany
+              ? rateLimitText(body.retryAfter, texts)
               : body.code === "account_muted"
                 ? texts.r_muted
                 : texts.failed,

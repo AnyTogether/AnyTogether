@@ -2,6 +2,7 @@
 
 import { Avatar } from "@/components/Avatar";
 import type { UiStrings } from "@/lib/i18n";
+import { rateLimitText } from "@/lib/rateLimit";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, type PointerEvent, useEffect, useRef, useState } from "react";
 
@@ -125,6 +126,7 @@ export function AvatarEditor({
       avatar?: string;
       privateAvatar?: string;
       code?: string;
+      retryAfter?: number;
     };
     const uploaded = kind === "private" ? result.privateAvatar : result.avatar;
     if (!response?.ok || !uploaded) {
@@ -134,7 +136,7 @@ export function AvatarEditor({
           : result.code === "unsupported_media_type"
             ? texts.avatarWrongType
             : result.code === "rate_limited"
-              ? texts.tooMany
+              ? rateLimitText(result.retryAfter, texts)
               : result.code === "bad_image"
                 ? texts.avatarBad
                 : texts.failed,
@@ -177,7 +179,7 @@ export function AvatarEditor({
           <button
             ref={stage}
             type="button"
-            className="stage"
+            className="crop-stage"
             aria-label={texts.cropHint}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
@@ -213,7 +215,7 @@ export function AvatarEditor({
                 } as CSSProperties
               }
             />
-            <span className="mask" aria-hidden="true" />
+            <span className="crop-mask" aria-hidden="true" />
           </button>
           <label className="zoom">
             <span>{texts.zoom}</span>

@@ -36,7 +36,7 @@ import { HttpError } from "./errors.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { type ProfileRow, blockedBetween, canSee, findProfile, relationOf } from "./people.js";
-import { rateLimiter } from "./ratelimit.js";
+import { settingLimiter } from "./ratelimit.js";
 
 type Texts = Record<string, { name: string; detail?: string }>;
 const roundRarity = (rarity: number | null) =>
@@ -170,7 +170,7 @@ export function showcaseRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const { db } = deps;
-  const limit = rateLimiter(deps.valkey, deps.limits);
+  const setting = settingLimiter(deps.valkey, deps.limits);
 
   /** Someone the asker may look at (not blocked either way), and how they relate. */
   const person = async (me: string, handle: string) => {
@@ -188,7 +188,7 @@ export function showcaseRoutes(deps: Deps) {
 
   app.patch("/me/look", async (c) => {
     const me = c.get("userId");
-    await limit("profile", me);
+    await setting("look", me);
     const input = await body(c, LookUpdate);
     const changes: { cover?: string | null; accent?: string | null } = {};
     if (input.accent !== undefined) changes.accent = input.accent;
@@ -210,7 +210,7 @@ export function showcaseRoutes(deps: Deps) {
 
   app.put("/me/showcase", async (c) => {
     const me = c.get("userId");
-    await limit("profile", me);
+    await setting("showcase", me);
     const input = await body(c, ShowcaseUpdate);
     const profile = await own(me);
     const stored = { ...((profile.showcase ?? {}) as ShowcaseStored) };

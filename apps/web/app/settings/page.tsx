@@ -18,6 +18,7 @@ import {
   ReadReceiptsForm,
   SessionList,
 } from "@/components/Settings";
+import { type NavGroup, type NavLink, SettingsNav } from "@/components/SettingsNav";
 import { StorageSettings } from "@/components/StorageSettings";
 import { type ConnectionProvider, type ConnectionSetup, providerName } from "@/lib/connections";
 import { countryOptions } from "@/lib/countries";
@@ -74,151 +75,172 @@ export default async function Settings({
               : fill(query.link_error === "taken" ? texts.linkTaken : texts.linkFailed, { provider }),
         }
       : null;
-  const sections = [
-    ["profile", texts.sectionProfile],
-    ["private", texts.sectionPrivate],
-    ["look", texts.sectionLook],
-    ["privacy", texts.sectionPrivacy],
-    ["connections", texts.sectionConnections],
-    ["discovery", texts.sectionDiscovery],
-    ["notifications", texts.sectionNotifications],
-    ...(files ? ([["storage", texts.sectionStorage]] as const) : []),
-    ["passkeys", texts.sectionPasskeys],
-    ["devices", texts.sectionDevices],
-    ["data", texts.sectionData],
-  ] as const;
+  // The table of contents: only the sections this page shows.
+  const item = (id: string, label: string, shown = true) => (shown ? [{ id, label }] : []);
+  const navGroups: NavGroup[] = [
+    {
+      label: texts.navGroupProfile,
+      items: [
+        ...item("profile", texts.sectionProfile),
+        ...item("private", texts.sectionPrivate),
+        ...item("look", texts.sectionLook),
+      ],
+    },
+    {
+      label: texts.navGroupSharing,
+      items: [
+        ...item("privacy", texts.sectionPrivacy),
+        ...item("connections", texts.sectionConnections, Boolean(linked.body)),
+        ...item("discovery", texts.sectionDiscovery, Boolean(discovery.body)),
+        ...item("notifications", texts.sectionNotifications, Boolean(notify.body)),
+      ],
+    },
+    {
+      label: texts.navGroupAccount,
+      items: [
+        ...item("storage", texts.sectionStorage, Boolean(files)),
+        ...item("passkeys", texts.sectionPasskeys),
+        ...item("devices", texts.sectionDevices),
+        ...item("data", texts.sectionData),
+        ...item("delete", texts.sectionDelete),
+      ],
+    },
+  ];
+  const navLinks: NavLink[] = [
+    { href: "/family", label: texts.family },
+    ...(user.account.role === "admin" ? [{ href: "/admin", label: texts.admin }] : []),
+  ];
 
   return (
     <section className="page settings">
-      <h2 className="in d1">{texts.settings}</h2>
-      <p className="lead in d2">{texts.settingsLead}</p>
-      <nav className="jump in d2" aria-label={texts.settings}>
-        {sections.map(([id, label]) => (
-          <a key={id} href={`#${id}`} className="pill">
-            {label}
-          </a>
-        ))}
-        <a href="/family" className="pill">
-          {texts.family}
-        </a>
-        {user.account.role === "admin" && (
-          <a href="/admin" className="pill admin-link">
-            {texts.admin}
-          </a>
-        )}
-      </nav>
-
-      <div className="in d3">
-        <article className="card" id="profile">
-          <h3 className="sub">{texts.sectionProfile}</h3>
-          <AvatarEditor person={me.profile} texts={t} hint={texts.publicPictureHint} />
-          <hr />
-          <HandleForm own={me} texts={t} />
-          <hr />
-          <ProfileForm own={me} texts={t} options={countryOptions(texts.language)} />
-        </article>
-
-        <article className="card" id="private">
-          <h3 className="sub">{texts.sectionPrivate}</h3>
-          <PrivateIdentity own={me} texts={t} />
-        </article>
-
-        <article className="card" id="look">
-          <h3 className="sub">{texts.sectionLook}</h3>
-          <p className="hint section-lead">{texts.lookLead}</p>
-          <LookSettings
-            texts={t}
-            cover={me.profile.cover ?? null}
-            accent={me.profile.accent ?? null}
-            games={withArt}
+      <div className="settings-layout">
+        <div className="settings-head">
+          <h2 className="in d1">{texts.settings}</h2>
+          <p className="lead in d2">{texts.settingsLead}</p>
+        </div>
+        <aside className="settings-aside in d2">
+          <SettingsNav
+            groups={navGroups}
+            links={navLinks}
+            label={texts.settings}
+            sectionsLabel={texts.navSection}
           />
-        </article>
+        </aside>
 
-        <article className="card" id="privacy">
-          <h3 className="sub">{texts.sectionPrivacy}</h3>
-          <PresenceModeForm appearOffline={me.profile.appearOffline === true} texts={t} />
-          <ReadReceiptsForm readReceipts={me.profile.readReceipts !== false} texts={t} />
-          <hr />
-          <PublicProfileForm publicProfile={me.profile.publicProfile === true} texts={t} />
-          <p className="hint section-lead">{texts.privacyLead}</p>
-          <PrivacyForm
-            privacy={me.profile.privacy}
-            texts={t}
-            {...(files ? { sections: privacySectionsWithGallery } : {})}
-          />
-        </article>
-
-        {linked.body && (
-          <article className="card" id="connections">
-            <h3 className="sub">{texts.sectionConnections}</h3>
-            <p className="hint section-lead">{texts.connectionsLead}</p>
-            <ConnectionList setup={linked.body} texts={t} notice={linkNotice} />
+        <div className="settings-cards in d3">
+          <article className="card" id="profile">
+            <h3 className="sub">{texts.sectionProfile}</h3>
+            <AvatarEditor person={me.profile} texts={t} hint={texts.publicPictureHint} />
+            <hr />
+            <HandleForm own={me} texts={t} />
+            <hr />
+            <ProfileForm own={me} texts={t} options={countryOptions(texts.language)} />
           </article>
-        )}
 
-        {discovery.body && (
-          <article className="card" id="discovery">
-            <h3 className="sub">{texts.sectionDiscovery}</h3>
-            <p className="hint section-lead">{texts.discoveryLead}</p>
-            <DiscoverySettings initial={discovery.body} texts={t} />
+          <article className="card" id="private">
+            <h3 className="sub">{texts.sectionPrivate}</h3>
+            <PrivateIdentity own={me} texts={t} />
           </article>
-        )}
 
-        {notify.body && (
-          <article className="card" id="notifications">
-            <h3 className="sub">{texts.sectionNotifications}</h3>
-            <p className="hint section-lead">{texts.notifySettingsLead}</p>
-            <NotificationSettings setup={notify.body} texts={t}>
-              <PushSwitch publicKey={notify.body.push?.publicKey ?? null} texts={t} />
-            </NotificationSettings>
+          <article className="card" id="look">
+            <h3 className="sub">{texts.sectionLook}</h3>
+            <p className="hint section-lead">{texts.lookLead}</p>
+            <LookSettings
+              texts={t}
+              cover={me.profile.cover ?? null}
+              accent={me.profile.accent ?? null}
+              games={withArt}
+              person={me.profile}
+              level={me.profile.trophyLevel}
+            />
           </article>
-        )}
 
-        <InstallApp texts={t} />
-
-        {files && (
-          <article className="card" id="storage">
-            <h3 className="sub">{texts.sectionStorage}</h3>
-            <p className="hint section-lead">{texts.storageLead}</p>
-            <StorageSettings initial={files} texts={t} />
+          <article className="card" id="privacy">
+            <h3 className="sub">{texts.sectionPrivacy}</h3>
+            <PresenceModeForm appearOffline={me.profile.appearOffline === true} texts={t} />
+            <ReadReceiptsForm readReceipts={me.profile.readReceipts !== false} texts={t} />
+            <hr />
+            <PublicProfileForm publicProfile={me.profile.publicProfile === true} texts={t} />
+            <p className="hint section-lead">{texts.privacyLead}</p>
+            <PrivacyForm
+              privacy={me.profile.privacy}
+              texts={t}
+              {...(files ? { sections: privacySectionsWithGallery } : {})}
+            />
           </article>
-        )}
 
-        <article className="card" id="passkeys">
-          <h3 className="sub">
-            {texts.sectionPasskeys} <span className="n">{keys.body?.passkeys.length ?? 0}</span>
-          </h3>
-          <p className="hint section-lead">{texts.passkeysLead}</p>
-          <PasskeyList passkeys={keys.body?.passkeys ?? []} max={keys.body?.max ?? 10} texts={t} />
-        </article>
+          {linked.body && (
+            <article className="card" id="connections">
+              <h3 className="sub">{texts.sectionConnections}</h3>
+              <p className="hint section-lead">{texts.connectionsLead}</p>
+              <ConnectionList setup={linked.body} texts={t} notice={linkNotice} />
+            </article>
+          )}
 
-        <article className="card" id="devices">
-          <h3 className="sub">
-            {texts.sectionDevices} <span className="n">{signedIn.body?.sessions.length ?? 0}</span>
-          </h3>
-          <p className="hint section-lead">{texts.devicesLead}</p>
-          <SessionList sessions={signedIn.body?.sessions ?? []} texts={t} />
-        </article>
+          {discovery.body && (
+            <article className="card" id="discovery">
+              <h3 className="sub">{texts.sectionDiscovery}</h3>
+              <p className="hint section-lead">{texts.discoveryLead}</p>
+              <DiscoverySettings initial={discovery.body} texts={t} />
+            </article>
+          )}
 
-        <article className="card" id="data">
-          <h3 className="sub">{texts.sectionData}</h3>
-          <p className="hint section-lead">{texts.dataLead}</p>
-          <div className="save-row">
-            <span />
-            <a className="pill" href="/me/export" download>
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">
-                <path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14" />
-              </svg>
-              {texts.download}
-            </a>
-          </div>
-          <LegalLinks texts={texts} />
-        </article>
+          {notify.body && (
+            <article className="card" id="notifications">
+              <h3 className="sub">{texts.sectionNotifications}</h3>
+              <p className="hint section-lead">{texts.notifySettingsLead}</p>
+              <NotificationSettings setup={notify.body} texts={t}>
+                <PushSwitch publicKey={notify.body.push?.publicKey ?? null} texts={t} />
+              </NotificationSettings>
+            </article>
+          )}
 
-        <article className="card danger-zone" id="delete">
-          <h3 className="sub">{texts.sectionDelete}</h3>
-          <DeleteAccount own={me} texts={t} />
-        </article>
+          <InstallApp texts={t} />
+
+          {files && (
+            <article className="card" id="storage">
+              <h3 className="sub">{texts.sectionStorage}</h3>
+              <p className="hint section-lead">{texts.storageLead}</p>
+              <StorageSettings initial={files} texts={t} />
+            </article>
+          )}
+
+          <article className="card" id="passkeys">
+            <h3 className="sub">
+              {texts.sectionPasskeys} <span className="n">{keys.body?.passkeys.length ?? 0}</span>
+            </h3>
+            <p className="hint section-lead">{texts.passkeysLead}</p>
+            <PasskeyList passkeys={keys.body?.passkeys ?? []} max={keys.body?.max ?? 10} texts={t} />
+          </article>
+
+          <article className="card" id="devices">
+            <h3 className="sub">
+              {texts.sectionDevices} <span className="n">{signedIn.body?.sessions.length ?? 0}</span>
+            </h3>
+            <p className="hint section-lead">{texts.devicesLead}</p>
+            <SessionList sessions={signedIn.body?.sessions ?? []} texts={t} />
+          </article>
+
+          <article className="card" id="data">
+            <h3 className="sub">{texts.sectionData}</h3>
+            <p className="hint section-lead">{texts.dataLead}</p>
+            <div className="save-row">
+              <span />
+              <a className="pill" href="/me/export" download>
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">
+                  <path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14" />
+                </svg>
+                {texts.download}
+              </a>
+            </div>
+            <LegalLinks texts={texts} />
+          </article>
+
+          <article className="card danger-zone" id="delete">
+            <h3 className="sub">{texts.sectionDelete}</h3>
+            <DeleteAccount own={me} texts={t} />
+          </article>
+        </div>
       </div>
     </section>
   );

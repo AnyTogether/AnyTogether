@@ -13,6 +13,8 @@ export interface Identity {
   emailVerified?: boolean | undefined;
   name?: string | undefined;
   avatarUrl?: string | undefined;
+  /** The language the client shows, kept for the account's mail when it is made here. */
+  locale?: string | null | undefined;
 }
 
 /** The account for this way in: the one it already belongs to, the one with its verified email
@@ -44,7 +46,9 @@ export async function findOrCreateAccount(db: Database, identity: Identity) {
     }
 
     const accountId = uuidv7();
-    await tx.insert(accounts).values({ id: accountId, email: email ?? null });
+    await tx
+      .insert(accounts)
+      .values({ id: accountId, email: email ?? null, locale: identity.locale ?? null });
     await tx.insert(identities).values({ accountId, provider: identity.provider, subject: identity.subject });
     const wanted = handleFrom(identity.name ?? email?.split("@")[0] ?? "player");
     const base = isReservedHandle(wanted) ? "player" : wanted;

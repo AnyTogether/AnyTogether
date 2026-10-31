@@ -793,28 +793,173 @@ select option {
   margin-top: 6px;
 }
 
-/* Look settings */
+/* Look settings: a live copy of the profile, then the covers and the accents. Every class is
+   its own (look-*, lp-*): the landing page's .look buttons must not reach in here. */
+.look-settings {
+  display: grid;
+  gap: 26px;
+  margin-top: 14px;
+}
+.look-group {
+  display: grid;
+  gap: 10px;
+}
+.look-heading {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.look-hint {
+  margin: -4px 0 2px;
+  font-size: 13.5px;
+}
+
+.look-preview {
+  --accent: var(--a);
+  position: relative;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0c0e14;
+  isolation: isolate;
+}
+.lp-cover {
+  display: block;
+  height: 92px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  transition: background-image 0.3s ease;
+}
+.lp-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(12, 14, 20, 0.75));
+}
+.lp-cover.plain {
+  background: radial-gradient(60% 120% at 18% 0%, rgba(79, 124, 255, 0.55), transparent 70%),
+    radial-gradient(50% 120% at 82% 10%, rgba(182, 92, 255, 0.45), transparent 70%), #0c0e14;
+}
+.lp-cover.game::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: rgba(7, 8, 12, 0.25);
+}
+.lp-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "avatar name" "avatar handle" "level level";
+  column-gap: 14px;
+  row-gap: 2px;
+  align-items: end;
+  padding: 0 18px 16px;
+  margin-top: -30px;
+  position: relative;
+}
+.lp-avatar {
+  grid-area: avatar;
+  align-self: start;
+  display: inline-grid;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px #0c0e14, 0 0 0 5.5px var(--accent);
+  transition: box-shadow 0.3s ease;
+}
+.lp-name {
+  grid-area: name;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-top: 34px;
+}
+.lp-handle {
+  grid-area: handle;
+  font: 400 12px / 1.3 var(--font-mono), monospace;
+  color: var(--mute);
+}
+.lp-level {
+  grid-area: level;
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 12px;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 65%);
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+.lp-level-title {
+  font-size: 12.5px;
+  color: var(--mute);
+}
+.lp-bar {
+  display: block;
+  height: 5px;
+  border-radius: 5px;
+  background: var(--line);
+  overflow: hidden;
+}
+.lp-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--c));
+}
+.look-preview figcaption {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font: 500 10.5px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(238, 240, 246, 0.85);
+  background: rgba(7, 8, 12, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Covers: every thumbnail keeps a 3:1 box whatever its picture or its name's length, so a tile
+   can never grow out of its column (a tall neighbour no longer stretches it). */
 .cover-grid {
   border: 0;
   padding: 0;
-  margin: 10px 0 0;
+  margin: 0;
+  min-width: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+  align-items: start;
+  gap: 14px 10px;
 }
 .cover-grid label {
   position: relative;
+  min-width: 0;
   display: grid;
-  gap: 6px;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 7px;
   cursor: pointer;
-  font: 400 12px / 1.2 var(--font-mono), monospace;
+  font: 400 12.5px / 1.25 var(--font-display), system-ui, sans-serif;
   letter-spacing: 0;
   text-transform: none;
   color: var(--mute);
 }
 .cover-grid .thumb {
+  position: relative;
   display: block;
-  aspect-ratio: 3;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 1;
   border-radius: 10px;
   border: 1px solid var(--line);
   background-size: cover;
@@ -822,6 +967,16 @@ select option {
   outline: 2px solid transparent;
   outline-offset: 2px;
   transition: outline-color 0.15s ease, transform 0.2s ease;
+}
+.cover-name {
+  display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cover-name small {
+  font: 400 11.5px / 1.3 var(--font-mono), monospace;
+  color: var(--mute);
+  opacity: 0.8;
 }
 .cover-grid label:hover .thumb {
   transform: translateY(-1px);
@@ -845,13 +1000,24 @@ select option {
   background: radial-gradient(60% 120% at 18% 0%, rgba(79, 124, 255, 0.55), transparent 70%),
     radial-gradient(50% 120% at 82% 10%, rgba(182, 92, 255, 0.45), transparent 70%), #0c0e14;
 }
+.cover-grid .look-tick {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  width: 20px;
+  height: 20px;
+  padding: 3px;
+  border-radius: 50%;
+  background: var(--ink);
+  stroke: #07080c;
+}
 .swatches {
   border: 0;
   padding: 0;
-  margin: 10px 0 0;
+  margin: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 .swatches label {
   position: relative;
@@ -859,13 +1025,17 @@ select option {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 7px 11px 7px 7px;
+  padding: 6px 12px 6px 6px;
   border: 1px solid var(--line);
   border-radius: 999px;
   font: 400 13px / 1 var(--font-display), system-ui, sans-serif;
   letter-spacing: 0;
   text-transform: none;
   color: var(--ink);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.swatches label:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 .swatches label.on {
   border-color: var(--ink);
@@ -875,15 +1045,44 @@ select option {
   outline-offset: 2px;
 }
 .swatches i {
-  width: 18px;
-  height: 18px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   background: var(--swatch);
   box-shadow: 0 0 12px color-mix(in srgb, var(--swatch) 50%, transparent);
 }
-.look-label {
+.swatches .look-tick {
+  width: 14px;
+  height: 14px;
+  stroke: #07080c;
+}
+/* The tick: drawn once, then it fades with the moment. */
+.look-tick {
   display: block;
-  margin-top: 18px;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: look-tick-out 0.35s ease 1.25s forwards;
+}
+.look-tick path {
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+  animation: look-tick-draw 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes look-tick-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes look-tick-out {
+  to {
+    opacity: 0;
+  }
 }
 
 @media (max-width: 560px) {
@@ -926,8 +1125,16 @@ select option {
   }
   .showcase-trophy,
   .icon-grid label,
-  .cover-grid .thumb {
+  .cover-grid .thumb,
+  .lp-cover,
+  .lp-avatar,
+  .lp-level {
     transition: none;
+  }
+  .look-tick,
+  .look-tick path {
+    animation: none;
+    stroke-dashoffset: 0;
   }
 }
 
