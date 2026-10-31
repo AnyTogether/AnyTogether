@@ -14,8 +14,8 @@ const en = {
   filter: "Show",
   all: "All",
   projects: {
-    macos: ["AnyPS5-ARM", "Mac · phone"],
-    desktop: ["AnyPS5 Desktop", "Windows · Linux"],
+    macos: ["AnyPS5-ARM", "Mac & phone"],
+    desktop: ["AnyPS5 Desktop", "Windows & Linux"],
   },
   latest: "Latest",
   prerelease: "Pre-release",
@@ -36,16 +36,16 @@ const tr: ChangelogStrings = {
   meta: {
     title: "Sürüm notları: AnyPS5'in her sürümü · AnyTogether",
     description:
-      "AnyPS5-ARM (Mac launcher'ı, motor ve telefon uygulaması) ve AnyPS5 Desktop (Windows ve Linux) sürüm notları; en yenisi önce, her sürümün indirmeleriyle.",
+      "AnyPS5-ARM (Mac launcher'ı, motor ve telefon uygulaması) ve AnyPS5 Desktop (Windows ve Linux) sürüm notları, en yenisi önce ve her sürümün indirmeleriyle.",
   },
   kicker: "Sürüm notları",
   title: ["Neler yeni.", "Her sürüm, en yenisi önce."],
-  lead: "AnyPS5-ARM (Mac launcher'ı, motor ve telefon uygulaması) ve AnyPS5 Desktop (Windows ve Linux) sürüm notları; GitHub'da yayımlandıkları gibi, her sürümün dosyalarıyla.",
+  lead: "AnyPS5-ARM (Mac launcher'ı, motor ve telefon uygulaması) ve AnyPS5 Desktop (Windows ve Linux) sürüm notları, GitHub'da yayımlandıkları gibi ve her sürümün dosyalarıyla.",
   filter: "Göster",
   all: "Tümü",
   projects: {
-    macos: ["AnyPS5-ARM", "Mac · telefon"],
-    desktop: ["AnyPS5 Desktop", "Windows · Linux"],
+    macos: ["AnyPS5-ARM", "Mac ve telefon"],
+    desktop: ["AnyPS5 Desktop", "Windows ve Linux"],
   },
   latest: "En yeni",
   prerelease: "Ön sürüm",

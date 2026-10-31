@@ -38,7 +38,7 @@ const en = {
       repo: "AnyTogether/AnyPS5-ARM",
       name: "AnyPS5-ARM",
       license: "GPL-2.0",
-      role: "Engine · Mac launcher · phone app",
+      role: "Engine, Mac launcher & phone app",
       lead: "The macOS port of AnyPS5 for Apple silicon, the PS5-style launcher AnyPS5.app, and AnyPS5 Remote, the phone app that is your DualSense. Releases carry every platform's files.",
       parts: [
         [
@@ -80,7 +80,7 @@ const en = {
       repo: "AnyTogether/AnyLauncher-Port",
       name: "AnyPS5 Desktop",
       license: "GPL-2.0",
-      role: "Windows · Linux launcher",
+      role: "Windows & Linux launcher",
       lead: "The AnyPS5-ARM launcher for PCs: the same PS5-style home screen, unlocking and starting games, per-game controls, trophies, saves and AnyTogether. Early preview.",
       parts: [
         [
@@ -104,8 +104,8 @@ const en = {
       repo: "AnyTogether/AnyTogether",
       name: "AnyTogether",
       license: "MIT",
-      role: "Server · this website",
-      lead: "The online home of the AnyPS5 launchers: the API, the realtime gateway and this website. Run your own with Docker Compose; every launcher and the phone can point at it.",
+      role: "Server & this website",
+      lead: "The online home of the AnyPS5 launchers: the API, the realtime gateway and this website. Run your own with Docker Compose. Every launcher and the phone can point at it.",
       parts: [
         [
           "Server",
@@ -137,7 +137,7 @@ const en = {
     items: [
       [
         "GPL-2.0: AnyPS5-ARM, AnyPS5 Desktop",
-        "Like the engine they are built on. Use, study, change and share them; what you share changed must stay GPL-2.0, with its source.",
+        "Like the engine they are built on. Use, study, change and share them. What you share changed must stay GPL-2.0, with its source.",
       ],
       [
         "MIT: AnyTogether",
@@ -155,12 +155,12 @@ const en = {
     items: [
       [
         "Report a crash",
-        "When a game stops, the Mac launcher's Open Issue fills in the crash report template for you; attach the file Export Report saved.",
+        "When a game stops, the Mac launcher's Open Issue fills in the crash report template for you. Attach the file Export Report saved.",
         `${gh}/AnyTogether/AnyPS5-ARM/issues/new?template=crash.yml`,
       ],
       [
         "Open an issue",
-        "Bugs and performance problems have their own forms on AnyPS5-ARM; AnyPS5 Desktop and AnyTogether take plain issues.",
+        "Bugs and performance problems have their own forms on AnyPS5-ARM. AnyPS5 Desktop and AnyTogether take plain issues.",
         `${gh}/AnyTogether/AnyPS5-ARM/issues/new/choose`,
       ],
       [
@@ -194,7 +194,7 @@ const tr: ProjectsStrings = {
   },
   kicker: "Açık kaynak",
   title: ["Her satır açık.", "İşte nerede durduğu."],
-  lead: "AnyPS5 ve AnyTogether'ı üç depo oluşturuyor; hepsi upstream AnyPS5 motorunun üzerine kurulu. Hepsi GitHub'da: okumak, derlemek, çalıştırmak ve geliştirmek serbest.",
+  lead: "AnyPS5 ve AnyTogether'ı, upstream AnyPS5 motorunun üzerine kurulu üç depo oluşturuyor. Hepsi GitHub'da: okumak, derlemek, çalıştırmak ve geliştirmek serbest.",
   stats: { stars: "yıldız", forks: "fork", issues: "açık sorun", pushed: "son gönderim {date}" },
   latest: "Son sürüm {version}",
   branches: "Dallar",
@@ -202,7 +202,7 @@ const tr: ProjectsStrings = {
   repos: [
     {
       ...en.repos[0],
-      role: "Motor · Mac launcher'ı · telefon uygulaması",
+      role: "Motor, Mac launcher'ı ve telefon uygulaması",
       lead: "AnyPS5'in Apple silicon için macOS uyarlaması, PS5 tarzı launcher AnyPS5.app ve telefonunu DualSense yapan AnyPS5 Remote. Sürümler her platformun dosyalarını taşır.",
       parts: [
         [
@@ -215,7 +215,7 @@ const tr: ProjectsStrings = {
         ],
         [
           "Telefon uygulaması",
-          "iOS ve Android için Flutter ile AnyPS5 Remote: kumanda, hareket, titreşim, Remote Play ve çevrimiçi sayfalar.",
+          "iOS ve Android için Flutter ile AnyPS5 Remote: kontrolcü, hareket, titreşim, Remote Play ve çevrimiçi sayfalar.",
         ],
       ],
       links: [
@@ -231,19 +231,19 @@ const tr: ProjectsStrings = {
           "mobile-controller",
           "Yalnızca telefon uygulaması: tek Flutter kod tabanından Android ve iOS için AnyPS5 Remote.",
         ],
-        ["rosetta", "Yalnızca motor; oyunun x86-64 kodu Rosetta 2 altında çalışır."],
+        ["rosetta", "Yalnızca motor, oyunun x86-64 kodu Rosetta 2 altında çalışır."],
         ["native-arm64", "Kendi x86-64'ten arm64'e çeviricisiyle motor: Rosetta'sız oyunlar."],
         ["anytogether", "AnyTogether'ın İngilizce ve Türkçe planı: neyin yapıldığı, neyin planlandığı."],
       ],
     },
     {
       ...en.repos[1],
-      role: "Windows · Linux launcher'ı",
+      role: "Windows ve Linux launcher'ı",
       lead: "PC'ler için AnyPS5-ARM launcher'ı: aynı PS5 tarzı ana ekran, oyunların kilidini açıp başlatma, oyun başına kontroller, kupalar, kayıtlar ve AnyTogether. Erken sürüm.",
       parts: [
         [
           "Launcher",
-          "Windows 10/11 ve Linux x64 için Flutter; kurulum, AppImage, .deb ve taşınabilir sürümlerle.",
+          "Windows 10/11 ve Linux x64 için Flutter. Kurulum, AppImage, .deb ve taşınabilir sürümlerle.",
         ],
         ["Motor", "Sistemin için AnyPS5 motorunu indirir ve GitHub'ın sağlama toplamlarıyla doğrular."],
         [
@@ -259,8 +259,8 @@ const tr: ProjectsStrings = {
     },
     {
       ...en.repos[2],
-      role: "Sunucu · bu site",
-      lead: "AnyPS5 launcher'larının çevrimiçi evi: API, anlık bağlantı sunucusu ve bu site. Docker Compose ile kendininkini çalıştır; her launcher ve telefon ona bağlanabilir.",
+      role: "Sunucu ve bu site",
+      lead: "AnyPS5 launcher'larının çevrimiçi evi: API, anlık bağlantı sunucusu ve bu site. Docker Compose ile kendininkini çalıştır. Her launcher ve telefon ona bağlanabilir.",
       parts: [
         [
           "Sunucu",
@@ -284,7 +284,7 @@ const tr: ProjectsStrings = {
   ],
   upstream: {
     title: "Upstream AnyPS5.",
-    lead: "boykopovar/AnyPS5, buradaki her şeyin üzerine kurulduğu açık kaynak PS5 uyumluluk katmanı: Linux ve Windows için relinker, sistem kütüphaneleri ve gölgelendirici derleyicisi. AnyPS5-ARM onun macOS uyarlaması ve çalışmalarını düzenli olarak birleştirir.",
+    lead: "boykopovar/AnyPS5, buradaki her şeyin üzerine kurulduğu açık kaynak PS5 uyumluluk katmanı: Linux ve Windows için relinker, sistem kütüphaneleri ve gölgelendirici derleyicisi. AnyPS5-ARM onun macOS uyarlaması ve çalışmalarını birleştirir.",
     credits:
       "Mach-O çıktısını ekleyen ve AnyPS5-ARM'a birleştirilen topluluk macOS uyarlaması {link} için de teşekkürler.",
     repo: "Depo",
@@ -295,9 +295,9 @@ const tr: ProjectsStrings = {
     items: [
       [
         "GPL-2.0: AnyPS5-ARM, AnyPS5 Desktop",
-        "Üzerine kuruldukları motor gibi. Kullan, incele, değiştir ve paylaş; değiştirip paylaştığın da kaynağıyla birlikte GPL-2.0 kalmalı.",
+        "Üzerine kuruldukları motor gibi. Kullan, incele, değiştir ve paylaş. Değiştirip paylaştığın da kaynağıyla birlikte GPL-2.0 kalmalı.",
       ],
-      ["MIT: AnyTogether", "Sunucu ve bu site. Çalıştır, değiştir, üzerine kur; telif bildirimini koru."],
+      ["MIT: AnyTogether", "Sunucu ve bu site. Çalıştır, değiştir, üzerine kur ve telif bildirimini koru."],
       [
         "Asla oyun dosyası yok",
         "Bu projelerin hiçbiri oyun dosyası, firmware ya da anahtar içermez veya sunmaz. Sahip olduğun oyunların şifresi çözülmüş kopyalarını sen getirirsin.",
@@ -310,12 +310,12 @@ const tr: ProjectsStrings = {
     items: [
       [
         "Çökme bildir",
-        "Bir oyun durduğunda Mac launcher'ının Sorun Aç düğmesi çökme raporu şablonunu senin için doldurur; Raporu Dışa Aktar'ın kaydettiği dosyayı ekle.",
+        "Bir oyun durduğunda Mac launcher'ının Sorun Aç düğmesi çökme raporu şablonunu senin için doldurur. Raporu Dışa Aktar'ın kaydettiği dosyayı ekle.",
         `${gh}/AnyTogether/AnyPS5-ARM/issues/new?template=crash.yml`,
       ],
       [
         "Sorun aç",
-        "Hataların ve performans sorunlarının AnyPS5-ARM'da kendi formları var; AnyPS5 Desktop ve AnyTogether düz sorun kabul eder.",
+        "Hataların ve performans sorunlarının AnyPS5-ARM'da kendi formları var. AnyPS5 Desktop ve AnyTogether düz sorun kabul eder.",
         `${gh}/AnyTogether/AnyPS5-ARM/issues/new/choose`,
       ],
       [

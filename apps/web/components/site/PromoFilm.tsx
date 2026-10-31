@@ -9,27 +9,34 @@ export type FilmStrings = {
   soundOn: string;
   soundOff: string;
   watch: string;
+  seek: string;
+  speed: string;
 };
+
+/** The speeds the speed button steps through. */
+const speeds = [1, 1.5, 2] as const;
 
 const base = "/media/anyps5-promo";
 // The video files carry a version: they are cached for good, so a new cut gets a new name.
 const film = "/media/anyps5-promo-v1";
 
 /** The AnyPS5 film. Nothing of it is fetched until it comes near the screen (the picture under it
- *  is a lazy image, the video gets its sources only then); it plays silently while it is on screen
- *  and stops when it leaves. Sound is one press away. With reduced motion it waits for a press of
- *  its play button instead of starting by itself. */
+ *  is a lazy image, the video gets its sources only then). It plays silently while it is on screen
+ *  and stops when it leaves. A press on the picture pauses or plays it, as on any video site, the
+ *  bar along the bottom seeks, and the speed button goes 1x, 1.5x, 2x. Sound is one press away.
+ *  With reduced motion it waits for a press of its play button instead of starting by itself. */
 export function PromoFilm({ t }: { t: FilmStrings }) {
   const frame = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const picture = useRef<HTMLImageElement>(null);
-  const bar = useRef<HTMLSpanElement>(null);
+  const seekBar = useRef<HTMLInputElement>(null);
   const [near, setNear] = useState(false);
   const [poster, setPoster] = useState<string>();
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [still, setStill] = useState(false);
   const [started, setStarted] = useState(false);
+  const [speed, setSpeed] = useState<(typeof speeds)[number]>(1);
   // Pressed play (needed with reduced motion), pressed pause (stays paused until play again).
   const wanted = useRef({ started: false, paused: false, visible: false });
 
@@ -95,19 +102,39 @@ export function PromoFilm({ t }: { t: FilmStrings }) {
     return () => io.disconnect();
   }, [near, still, tryPlay]);
 
-  // The thin line along the bottom: how far into the film.
+  // The seek bar follows the film while it plays.
+  const showTime = useCallback(() => {
+    const v = video.current;
+    const input = seekBar.current;
+    if (!v || !input || !v.duration) return;
+    input.max = String(v.duration);
+    input.value = String(v.currentTime);
+    input.style.setProperty("--done", `${(v.currentTime / v.duration) * 100}%`);
+  }, []);
   useEffect(() => {
     if (!playing) return;
     let id = 0;
     const tick = () => {
-      const v = video.current;
-      if (v && bar.current && v.duration)
-        bar.current.style.transform = `scaleX(${v.currentTime / v.duration})`;
+      showTime();
       id = requestAnimationFrame(tick);
     };
     id = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(id);
-  }, [playing]);
+  }, [playing, showTime]);
+
+  const seek = (to: number) => {
+    const v = video.current;
+    if (!v || !Number.isFinite(to)) return;
+    v.currentTime = to;
+    showTime();
+  };
+
+  const nextSpeed = () => {
+    const v = video.current;
+    const next = speeds[(speeds.indexOf(speed) + 1) % speeds.length] ?? 1;
+    setSpeed(next);
+    if (v) v.playbackRate = next;
+  };
 
   const start = () => {
     wanted.current.started = true;
@@ -151,6 +178,7 @@ export function PromoFilm({ t }: { t: FilmStrings }) {
         loading="lazy"
         decoding="async"
       />
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: a press on the picture is the video-site habit; the play button is the keyboard's way */}
       <video
         ref={video}
         className="film-video"
@@ -160,6 +188,12 @@ export function PromoFilm({ t }: { t: FilmStrings }) {
         playsInline
         preload={near ? "metadata" : "none"}
         poster={poster}
+        onClick={togglePlay}
+        onLoadedMetadata={(e) => {
+          e.currentTarget.playbackRate = speed;
+          showTime();
+        }}
+        onSeeked={showTime}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onVolumeChange={(e) => setMuted(e.currentTarget.muted)}
@@ -192,6 +226,26 @@ export function PromoFilm({ t }: { t: FilmStrings }) {
             </svg>
           </button>
         )}
+        <input
+          ref={seekBar}
+          type="range"
+          className="film-seek"
+          min={0}
+          max={88}
+          step={0.1}
+          defaultValue={0}
+          aria-label={t.seek}
+          onInput={(e) => seek(Number(e.currentTarget.value))}
+          onChange={(e) => seek(Number(e.currentTarget.value))}
+        />
+        <button
+          type="button"
+          className="film-btn film-speed"
+          onClick={nextSpeed}
+          aria-label={`${t.speed}: ${speed}x`}
+        >
+          {speed}×
+        </button>
         <button
           type="button"
           className="film-btn film-sound"
@@ -209,9 +263,6 @@ export function PromoFilm({ t }: { t: FilmStrings }) {
           <span>{muted ? t.soundOn : t.soundOff}</span>
         </button>
       </div>
-      <span className="film-progress" aria-hidden="true">
-        <span ref={bar} />
-      </span>
     </div>
   );
 }

@@ -50,11 +50,11 @@ const en = {
       ],
       [
         "Choose your games folder",
-        "The folder with the decrypted copies of your games; subfolders are scanned and games you add later show up on their own.",
+        "The folder with the decrypted copies of your games. Subfolders are scanned, and games you add later show up on their own.",
       ],
       [
         "Unlock a game",
-        "A game that is not converted yet shows a lock. Unlock relinks it for your computer; on a Mac the files are clones, so it takes no extra space.",
+        "A game that is not converted yet shows a lock. Unlock relinks it for your computer. On a Mac the files are clones, so it takes no extra space.",
       ],
       [
         "Play",
@@ -77,15 +77,15 @@ const en = {
         id: "legal",
         q: "Is it legal? Where do the games come from?",
         a: [
-          "AnyPS5 is not an emulator and has nothing from Sony in it: it relinks a game's own program to run natively, against system libraries written from scratch. It never talks to Sony's servers.",
-          "You bring the games: decrypted copies of games you own. No game files, firmware or keys are offered anywhere on this site or in the projects, and asking for them gets you nowhere. Laws differ between countries; check what yours allows.",
+          "AnyPS5 relinks a game's own program to run natively, against system libraries written from scratch, and has nothing from Sony in it. It is not an emulator and it never talks to Sony's servers.",
+          "You bring the games: decrypted copies of games you own. No game files, firmware or keys are offered anywhere on this site or in the projects, and asking for them gets you nowhere. Laws differ between countries, so check what yours allows.",
         ],
       },
       {
         id: "games",
         q: "Which games work?",
         a: [
-          `More every release. Players' reports for Mac, Windows and Linux are on the [community compatibility list](/compatibility); the games tested on macOS, with their frame rates, are in the [Mac compatibility list](${macCompat}).`,
+          `More every release. Players' reports for Mac, Windows and Linux are on the [community compatibility list](/compatibility). The games tested on macOS, with their frame rates, are in the [Mac compatibility list](${macCompat}).`,
           "Recent releases were tested on Cat Quest III, Hollow Knight: Silksong, Dreaming Sarah, Plants vs. Zombies: Replanted and DOOM. After you play, the launcher asks how it ran: one tap adds your report.",
         ],
       },
@@ -93,7 +93,7 @@ const en = {
         id: "performance",
         q: "How do I get the best performance?",
         a: [
-          "The first run of a game compiles its shaders, so it can stutter; later runs load them from the shader cache. If a game misbehaves after an update, Clear Shader Cache in its settings gives it a clean start.",
+          "The first run of a game compiles its shaders, so it can stutter. Later runs load them from the shader cache. If a game misbehaves after an update, Clear Shader Cache in its settings gives it a clean start.",
           "Turn on the performance overlay in the game's settings to see the frame rate. On a Mac, keep it plugged in and out of Low Power Mode, and pick an output resolution for titles that offer one. A newer engine (Settings → Engine) often runs games better.",
         ],
       },
@@ -109,16 +109,16 @@ const en = {
         id: "phone",
         q: "How do I pair my phone?",
         a: [
-          "Install AnyPS5 Remote, keep the phone on the same Wi-Fi as the computer and open the launcher: the phone finds it. The first time, both show the same four-digit code to confirm; after that it connects by itself. If nothing is found, type the computer's address.",
-          "On a Mac a cable works too: an iPhone connects through it by itself, an Android phone with USB debugging on and adb installed. Up to four phones play as four players. AnyPS5 Desktop pairs the phone as well; playing Windows and Linux games with it needs an engine built from AnyPS5-ARM, which is [on the roadmap](/roadmap).",
+          "Install AnyPS5 Remote, keep the phone on the same Wi-Fi as the computer and open the launcher: the phone finds it. The first time, both show the same four-digit code to confirm. After that it connects by itself. If nothing is found, type the computer's address.",
+          "On a Mac a cable works too: an iPhone connects through it by itself, an Android phone with USB debugging on and adb installed. Up to four phones play as four players. AnyPS5 Desktop pairs the phone as well. Playing Windows and Linux games with it needs an engine built from AnyPS5-ARM, which is [on the roadmap](/roadmap).",
         ],
       },
       {
         id: "share-play",
         q: "How does share play work?",
         a: [
-          "While a game runs on your Mac, open the Friends panel and choose Share play. Friends watch in their browser, on the phone or in their launcher, and you can let each one play as player 2, 3 or 4 with their own pad. Your controller stays player 1; take a pad back at any time.",
-          "Up to four can watch (from three on, each gets 540p). macOS asks once for the screen recording permission; only the game is sent. In a browser, a controller works, and so does the keyboard.",
+          "While a game runs on your Mac, open the Friends panel and choose Share play. Friends watch in their browser, on the phone or in their launcher, and you can let each one play as player 2, 3 or 4 with their own pad. Your controller stays player 1, and you can take a pad back at any time.",
+          "Up to four can watch (from three on, each gets 540p). macOS asks once for the screen recording permission, and only the game is sent. In a browser, a controller works, and so does the keyboard.",
         ],
       },
       {
@@ -132,14 +132,14 @@ const en = {
         id: "self-hosting",
         q: "Can I run my own server?",
         a: [
-          `Yes. AnyTogether is MIT licensed and the whole server runs on one machine with Docker Compose; the [self-hosting guide](${selfHosting}) walks through it. Point the launchers and the phone at it in Settings → AnyTogether → Server.`,
+          `Yes. AnyTogether is MIT licensed and the whole server runs on one machine with Docker Compose. The [self-hosting guide](${selfHosting}) walks through it. Point the launchers and the phone at it in Settings → AnyTogether → Server.`,
         ],
       },
       {
         id: "crash",
         q: "A game crashed. How do I report it?",
         a: [
-          `On a Mac, the launcher shows why the game stopped and opens its crash report. Export Report saves the log, macOS's crash report and your settings in one file; Open Issue opens a [filled-in GitHub issue](${crash}) with your name, email and tokens taken out. Attach the exported file.`,
+          `On a Mac, the launcher shows why the game stopped and opens its crash report. Export Report saves the log, macOS's crash report and your settings in one file. Open Issue opens a [filled-in GitHub issue](${crash}) with your name, email and tokens taken out. Attach the exported file.`,
           `For a hard bug, turn on Detailed Logging (Trace) in the game's options and play again. The log is at ~/Library/Logs/AnyPS5/<TITLE ID>.log. On Windows or Linux, [open an issue on AnyPS5 Desktop](${desktopIssues}).`,
         ],
       },
@@ -176,7 +176,7 @@ const en = {
       ],
       [
         "Stutters the first time",
-        "Shaders are being compiled; later runs load them from the cache. Clear Shader Cache only when a game misbehaves.",
+        "Shaders are being compiled. Later runs load them from the cache. Clear Shader Cache only when a game misbehaves.",
       ],
       [
         "The phone does not find the computer",
@@ -241,19 +241,19 @@ const tr: HelpStrings = {
       ],
       [
         "Oyun klasörünü seç",
-        "Oyunlarının şifresi çözülmüş kopyalarının olduğu klasör; alt klasörler de taranır, sonradan eklediğin oyunlar kendiliğinden görünür.",
+        "Oyunlarının şifresi çözülmüş kopyalarının olduğu klasör. Alt klasörler de taranır ve sonradan eklediğin oyunlar kendiliğinden görünür.",
       ],
       [
         "Bir oyunun kilidini aç",
-        "Henüz dönüştürülmemiş oyunda kilit görünür. Kilidi Aç onu bilgisayarın için yeniden bağlar; Mac'te dosyalar kopya değil klon olduğundan ek yer kaplamaz.",
+        "Henüz dönüştürülmemiş oyunda kilit görünür. Kilidi Aç onu bilgisayarın için yeniden bağlar. Mac'te dosyalar klon olduğundan ek yer kaplamaz.",
       ],
       [
         "Oyna",
-        "Oyna başlatır. ⋯ ayarlarını açar: çözünürlük, pencere, dikey eşitleme, kontroller (klavye ve fareyle kumanda), kupalar ve fazlası. Kumanda doğrudan çalışır.",
+        "Oyna başlatır. ⋯ ayarlarını açar: çözünürlük, pencere, dikey eşitleme, kontroller (klavye ve fareden kontrolcüye), kupalar ve fazlası. Kontrolcü doğrudan çalışır.",
       ],
       [
         "Telefonunu eşleştir",
-        "AnyPS5 Remote'u aynı Wi-Fi'da aç, dört haneli kodu onayla; telefon artık bir DualSense: dört telefona kadar, dört oyuncu.",
+        "AnyPS5 Remote'u aynı Wi-Fi'da aç ve dört haneli kodu onayla. Telefon artık bir DualSense: dört telefona kadar, dört oyuncu.",
       ],
       [
         "AnyTogether'a giriş yap (isteğe bağlı)",
@@ -268,15 +268,15 @@ const tr: HelpStrings = {
         id: "legal",
         q: "Yasal mı? Oyunlar nereden geliyor?",
         a: [
-          "AnyPS5 bir emülatör değil ve içinde Sony'den hiçbir şey yok: oyunun kendi programını, sıfırdan yazılmış sistem kütüphanelerine bağlayıp yerel olarak çalıştırır. Sony'nin sunucularıyla asla konuşmaz.",
-          "Oyunları sen getirirsin: sahip olduğun oyunların şifresi çözülmüş kopyaları. Bu sitede ya da projelerde hiçbir yerde oyun dosyası, firmware ya da anahtar sunulmaz; istemek de bir yere götürmez. Yasalar ülkeden ülkeye değişir; seninkinin neye izin verdiğine bak.",
+          "AnyPS5 oyunun kendi programını sıfırdan yazılmış sistem kütüphanelerine bağlayıp yerel olarak çalıştırır ve içinde Sony'den hiçbir şey yoktur. Bir emülatör değildir ve Sony'nin sunucularıyla asla konuşmaz.",
+          "Oyunları sen getirirsin: sahip olduğun oyunların şifresi çözülmüş kopyaları. Bu sitede ya da projelerde hiçbir yerde oyun dosyası, firmware ya da anahtar sunulmaz ve istemek de bir yere götürmez. Yasalar ülkeden ülkeye değişir, bu yüzden seninkinin neye izin verdiğine bak.",
         ],
       },
       {
         id: "games",
         q: "Hangi oyunlar çalışıyor?",
         a: [
-          `Her sürümde daha fazlası. Mac, Windows ve Linux için oyuncuların raporları [topluluk uyumluluk listesinde](/compatibility); macOS'ta denenen oyunlar kare hızlarıyla [Mac uyumluluk listesinde](${macCompat}).`,
+          `Her sürümde daha fazlası. Mac, Windows ve Linux için oyuncuların raporları [topluluk uyumluluk listesinde](/compatibility). macOS'ta denenen oyunlar kare hızlarıyla [Mac uyumluluk listesinde](${macCompat}).`,
           "Son sürümler Cat Quest III, Hollow Knight: Silksong, Dreaming Sarah, Plants vs. Zombies: Replanted ve DOOM'da denendi. Oynadıktan sonra launcher nasıl çalıştığını sorar: tek dokunuş raporunu ekler.",
         ],
       },
@@ -284,7 +284,7 @@ const tr: HelpStrings = {
         id: "performance",
         q: "En iyi performansı nasıl alırım?",
         a: [
-          "Bir oyunun ilk açılışında gölgelendiricileri derlenir, bu yüzden takılabilir; sonraki açılışlar onları önbellekten yükler. Bir güncellemeden sonra oyun tuhaf davranırsa, ayarlarındaki Gölgelendirici Önbelleğini Temizle temiz bir başlangıç sağlar.",
+          "Bir oyunun ilk açılışında gölgelendiricileri derlenir, bu yüzden takılabilir. Sonraki açılışlar onları önbellekten yükler. Bir güncellemeden sonra oyun tuhaf davranırsa, ayarlarındaki Gölgelendirici Önbelleğini Temizle temiz bir başlangıç sağlar.",
           "Kare hızını görmek için oyunun ayarlarından performans göstergesini aç. Mac'te fişe takılı tut, Düşük Güç Modu'nda oynama ve sunan oyunlarda bir çıkış çözünürlüğü seç. Daha yeni bir motor (Ayarlar → Motor) çoğu zaman oyunları daha iyi çalıştırır.",
         ],
       },
@@ -292,24 +292,24 @@ const tr: HelpStrings = {
         id: "framegen",
         q: "Kare üretimi nedir?",
         a: [
-          "Mac'te, oyunun her iki karesi arasına aradaki hareketten bir kare üretilir; böylece 60 fps bir oyun 120 Hz ekranda 120 gösterir.",
-          "Bir oyunun ayarlarından açılır. Dikey eşitleme gerekir; 60 Hz ekranda, Düşük Güç Modu'nda ve oyuna kare kaybettireceği her yerde kendini kapatır.",
+          "Mac'te, oyunun her iki karesi arasına aradaki hareketten bir kare üretilir, böylece 60 fps bir oyun 120 Hz ekranda 120 gösterir.",
+          "Bir oyunun ayarlarından açılır. Dikey eşitleme gerekir. 60 Hz ekranda, Düşük Güç Modu'nda ve oyuna kare kaybettireceği her yerde kendini kapatır.",
         ],
       },
       {
         id: "phone",
         q: "Telefonumu nasıl eşleştiririm?",
         a: [
-          "AnyPS5 Remote'u kur, telefonu bilgisayarla aynı Wi-Fi'da tut ve launcher'ı aç: telefon onu bulur. İlk seferde ikisi de aynı dört haneli kodu gösterir, onaylarsın; sonra kendiliğinden bağlanır. Bir şey bulunmazsa bilgisayarın adresini yaz.",
-          "Mac'te kablo da olur: iPhone onunla kendiliğinden bağlanır, Android telefon USB hata ayıklama açık ve Mac'te adb kuruluyken. Dört telefona kadar dört oyuncu. AnyPS5 Desktop da telefonu eşleştirir; Windows ve Linux oyunlarında onunla oynamak için AnyPS5-ARM'dan derlenmiş bir motor gerekiyor, bu [yol haritasında](/roadmap).",
+          "AnyPS5 Remote'u kur, telefonu bilgisayarla aynı Wi-Fi'da tut ve launcher'ı aç: telefon onu bulur. İlk seferde ikisi de aynı dört haneli kodu gösterir ve onaylarsın. Sonra kendiliğinden bağlanır. Bir şey bulunmazsa bilgisayarın adresini yaz.",
+          "Mac'te kablo da olur: iPhone onunla kendiliğinden bağlanır, Android telefon USB hata ayıklama açık ve Mac'te adb kuruluyken. Dört telefona kadar dört oyuncu. AnyPS5 Desktop da telefonu eşleştirir. Windows ve Linux oyunlarında onunla oynamak için AnyPS5-ARM'dan derlenmiş bir motor gerekiyor ve bu [yol haritasında](/roadmap).",
         ],
       },
       {
         id: "share-play",
         q: "Birlikte oynama nasıl çalışıyor?",
         a: [
-          "Mac'inde bir oyun çalışırken Arkadaşlar panelini aç ve Birlikte oyna'yı seç. Arkadaşların tarayıcıda, telefonda ya da launcher'larında izler; her birine kendi kumandasıyla 2., 3. ya da 4. oyuncu olarak oynama izni verebilirsin. Senin kumandan 1. oyuncu kalır; bir kumandayı istediğin an geri alırsın.",
-          "En çok dört kişi izleyebilir (üçten itibaren her biri 540p alır). macOS bir kez ekran kaydı izni ister; yalnızca oyun gönderilir. Tarayıcıda kumanda da klavye de çalışır.",
+          "Mac'inde bir oyun çalışırken Arkadaşlar panelini aç ve Birlikte oyna'yı seç. Arkadaşların tarayıcıda, telefonda ya da launcher'larında izler. Her birine kendi kontrolcüsüyle 2., 3. ya da 4. oyuncu olarak oynama izni verebilirsin. Senin kontrolcün 1. oyuncu kalır ve bir kontrolcüyü istediğin an geri alırsın.",
+          "En çok dört kişi izleyebilir (üçten itibaren her biri 540p alır). macOS bir kez ekran kaydı izni ister ve yalnızca oyun gönderilir. Tarayıcıda kontrolcü de klavye de çalışır.",
         ],
       },
       {
@@ -323,14 +323,14 @@ const tr: HelpStrings = {
         id: "self-hosting",
         q: "Kendi sunucumu çalıştırabilir miyim?",
         a: [
-          `Evet. AnyTogether MIT lisanslı ve tüm sunucu tek makinede Docker Compose ile çalışır; [kurulum rehberi](${selfHosting}) adım adım anlatır. Launcher'ları ve telefonu Ayarlar → AnyTogether → Sunucu'dan ona yönlendir.`,
+          `Evet. AnyTogether MIT lisanslı ve tüm sunucu tek makinede Docker Compose ile çalışır. [Kurulum rehberi](${selfHosting}) adım adım anlatır. Launcher'ları ve telefonu Ayarlar → AnyTogether → Sunucu'dan ona yönlendir.`,
         ],
       },
       {
         id: "crash",
         q: "Bir oyun çöktü. Nasıl bildiririm?",
         a: [
-          `Mac'te launcher oyunun neden durduğunu gösterir ve çökme raporunu açar. Raporu Dışa Aktar günlüğü, macOS'un çökme raporunu ve ayarlarını tek dosyaya kaydeder; Sorun Aç, adın, e-postan ve anahtarların çıkarılmış [hazır bir GitHub sorunu](${crash}) açar. Dışa aktardığın dosyayı ekle.`,
+          `Mac'te launcher oyunun neden durduğunu gösterir ve çökme raporunu açar. Raporu Dışa Aktar günlüğü, macOS'un çökme raporunu ve ayarlarını tek dosyaya kaydeder. Sorun Aç, adın, e-postan ve anahtarların çıkarılmış [hazır bir GitHub sorunu](${crash}) açar. Dışa aktardığın dosyayı ekle.`,
           `Zor bir hata için oyunun seçeneklerinden Ayrıntılı Günlük'ü (Trace) aç ve yeniden oyna. Günlük ~/Library/Logs/AnyPS5/<TITLE ID>.log konumunda. Windows ya da Linux'ta [AnyPS5 Desktop'ta bir sorun aç](${desktopIssues}).`,
         ],
       },
@@ -338,14 +338,14 @@ const tr: HelpStrings = {
         id: "update",
         q: "Nasıl güncellerim?",
         a: [
-          "0.2.8 ve sonrası olan bir Mac'te Ayarlar → Hakkında yeni sürümü sunar ve kendini değiştirir. Motorun güncellemeleri Ayarlar → Motor'da; eski bir motorla kilidi açılmış oyun, kayıtları ve kupaları koruyarak Güncelle ve Oyna sunar. AnyPS5 Desktop motor güncellemelerini Ayarlar → AnyPS5 Motoru'nda denetler.",
+          "0.2.8 ve sonrası olan bir Mac'te Ayarlar → Hakkında yeni sürümü sunar ve kendini değiştirir. Motorun güncellemeleri Ayarlar → Motor'da. Eski bir motorla kilidi açılmış oyun, kayıtları ve kupaları koruyarak Güncelle ve Oyna sunar. AnyPS5 Desktop motor güncellemelerini Ayarlar → AnyPS5 Motoru'nda denetler.",
         ],
       },
       {
         id: "free",
         q: "Ücretli mi?",
         a: [
-          "Hayır. Her şey ücretsiz ve açık kaynak; hiçbir şey satılmaz, hiçbir şey seni takip etmez. AnyTogether verilerin senin: Ayarlar'dan dışa aktar ya da sil.",
+          "Hayır. Her şey ücretsiz ve açık kaynak, hiçbir şey satılmaz ve hiçbir şey seni takip etmez. AnyTogether verilerin senin: Ayarlar'dan dışa aktar ya da sil.",
         ],
       },
     ],
@@ -359,7 +359,7 @@ const tr: HelpStrings = {
       ],
       [
         "Oyun şifreli olduğunu söylüyor",
-        "AnyPS5, oyunun şifresi çözülmüş bir kopyasına ihtiyaç duyar. Şifreli bir dump dönüştürülmez, bildirilir.",
+        "AnyPS5, oyunun şifresi çözülmüş bir kopyasına ihtiyaç duyar. Şifreli bir dump dönüştürülmek yerine bildirilir.",
       ],
       [
         "Oyun açılışta ya da siyah ekranda duruyor",
@@ -367,7 +367,7 @@ const tr: HelpStrings = {
       ],
       [
         "İlk seferde takılıyor",
-        "Gölgelendiriciler derleniyor; sonraki açılışlar önbellekten yükler. Gölgelendirici önbelleğini yalnızca oyun tuhaf davranırsa temizle.",
+        "Gölgelendiriciler derleniyor. Sonraki açılışlar önbellekten yükler. Gölgelendirici önbelleğini yalnızca oyun tuhaf davranırsa temizle.",
       ],
       [
         "Telefon bilgisayarı bulamıyor",
@@ -379,7 +379,7 @@ const tr: HelpStrings = {
       ],
       [
         "Linux: launcher çalışıyor ama oyunlar çalışmıyor",
-        "Oyunlar AnyPS5'in güncel Linux motoruyla çalışır; glibc 2.38 ya da sonrası gerekir (Ubuntu 24.04, Debian 13, Fedora 39 ve sonrası).",
+        "Oyunlar AnyPS5'in güncel Linux motoruyla çalışır ve glibc 2.38 ya da sonrası gerekir (Ubuntu 24.04, Debian 13, Fedora 39 ve sonrası).",
       ],
       [
         "Birlikte oynamada izleyiciler bir şey görmüyor",

@@ -1,7 +1,15 @@
 import { CopyButton } from "@/components/CopyButton";
 import { installLine } from "@/lib/downloads";
 import { motionStrings } from "@/lib/i18n-motion";
-import type { Chapter, Frame, ProductPage as Page, ProductStrings, ShotRef, Tag } from "@/lib/i18n-products";
+import type {
+  Chapter,
+  Frame,
+  GalleryShot,
+  ProductPage as Page,
+  ProductStrings,
+  ShotRef,
+  Tag,
+} from "@/lib/i18n-products";
 import { type SiteStrings, siteStrings } from "@/lib/i18n-site";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -12,6 +20,8 @@ import { LiveChat, LiveFriends, LivePad, LiveParty } from "./LiveBits";
 import { LiveLauncher } from "./LiveLauncher";
 import { Reveal } from "./Reveal";
 import { BrowserFrame, MacFrame, PcFrame, PhoneFrame, Shot } from "./Shot";
+import { Strip } from "./Strip";
+import { SelfHostTerminal } from "./Terminal";
 import { wide } from "./fonts";
 
 type Key = "mac" | "pc" | "phone" | "together";
@@ -156,26 +166,43 @@ export function ProductPage({
           <div className="cta-row">{cta}</div>
         </div>
         <div className="install-body">
-          {which === "mac" && (
-            <div className="term-line install-command">
-              <code>{installLine}</code>
-              <CopyButton text={installLine} label={s.copy} done={s.copied} />
-            </div>
+          {which === "together" ? (
+            <>
+              <SelfHostTerminal guide={s.landing.open.guide} />
+              {page.install.steps.map((step) => (
+                <p key={step} className="install-note">
+                  {step}
+                </p>
+              ))}
+            </>
+          ) : (
+            <>
+              {which === "mac" && (
+                <div className="term-line install-command">
+                  <code>{installLine}</code>
+                  <CopyButton text={installLine} label={s.copy} done={s.copied} />
+                </div>
+              )}
+              <ol className="install-steps">
+                {page.install.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+              {page.install.requirements.length > 0 && (
+                <>
+                  <h3 className="meta">{p.requirements}</h3>
+                  <dl className="reqs">
+                    {page.install.requirements.map(([k, v]) => (
+                      <div key={k}>
+                        <dt>{k}</dt>
+                        <dd>{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </>
+              )}
+            </>
           )}
-          <ol className="install-steps">
-            {page.install.steps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
-          <h3 className="meta">{p.requirements}</h3>
-          <dl className="reqs">
-            {page.install.requirements.map(([k, v]) => (
-              <div key={k}>
-                <dt>{k}</dt>
-                <dd>{v}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
       </section>
 
@@ -230,21 +257,33 @@ function ChapterBlock({ chapter, index, s }: { chapter: Chapter; index: number; 
       </ul>
       {chapter.gallery && (
         <div className="gallery-wrap" data-reveal>
-          <ul className="gallery">
-            {chapter.gallery.map((shot) => (
-              <li key={shot.name}>
-                <figure>
-                  <div className="g-shot">
-                    <Shot name={shot.name} alt={shot.alt} sizes="(max-width: 760px) 80vw, 420px" />
-                  </div>
-                  <figcaption>{shot.caption}</figcaption>
-                </figure>
-              </li>
-            ))}
-          </ul>
+          {chapter.gallery.length >= 3 ? (
+            <Strip label={chapter.title}>
+              {chapter.gallery.map((shot) => (
+                <GalleryFigure key={shot.name} shot={shot} />
+              ))}
+            </Strip>
+          ) : (
+            <div className="gallery">
+              {chapter.gallery.map((shot) => (
+                <GalleryFigure key={shot.name} shot={shot} />
+              ))}
+            </div>
+          )}
           {chapter.galleryNote && <p className="fine-note">{chapter.galleryNote}</p>}
         </div>
       )}
     </section>
+  );
+}
+
+function GalleryFigure({ shot }: { shot: GalleryShot }) {
+  return (
+    <figure className="g-item">
+      <div className="g-shot">
+        <Shot name={shot.name} alt={shot.alt} sizes="(max-width: 760px) 80vw, 420px" />
+      </div>
+      <figcaption>{shot.caption}</figcaption>
+    </figure>
   );
 }
