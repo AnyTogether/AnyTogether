@@ -43,7 +43,7 @@ const en = {
   passkeySignIn: "Sign in with a passkey",
   passkeyHint: "Touch ID, Face ID, Windows Hello or your phone. No email needed.",
   passkeyUnknown:
-    "This passkey is not known here. It may have been removed; sign in with your email instead.",
+    "This passkey is not known here. It may have been removed. Sign in with your email instead.",
   passkeyExpired: "That took too long. Try again.",
   passkeyBanned: "This account is banned from AnyTogether.",
   linkTitle: "Sign in a launcher",
@@ -139,7 +139,7 @@ const en = {
   displayName: "Name",
   handle: "Handle",
   handleHint:
-    "3 to 20 of a-z, 0-9, _ and . You can change it once every 30 days; the old one keeps leading here for 30 days.",
+    "3 to 20 of a-z, 0-9, _ and . You can change it once every 30 days. The old one keeps leading here for 30 days.",
   handleNextChange: "You can change it again on {date}.",
   handleTaken: "That handle is taken.",
   handleReserved: "That handle is reserved.",
@@ -155,7 +155,7 @@ const en = {
   saved: "Saved",
   editProfile: "Edit profile",
   privacyLead:
-    "Your picture, name and handle are shown to anyone; your bio and the rest follow the public profile switch above. Choose who sees each part; you always see all of it.",
+    "Your picture, name and handle are shown to anyone. Your bio and the rest follow the public profile switch above. Choose who sees each part. You always see all of it.",
   privacy_library: "Games and play time",
   privacy_trophies: "Trophies",
   privacy_friends: "Friends list",
@@ -254,7 +254,7 @@ const tr: typeof en = {
   or: "ya da",
   passkeySignIn: "Geçiş anahtarıyla giriş yap",
   passkeyHint: "Touch ID, Face ID, Windows Hello ya da telefonun. E-posta gerekmez.",
-  passkeyUnknown: "Bu geçiş anahtarı burada tanınmıyor. Kaldırılmış olabilir; e-postanla giriş yap.",
+  passkeyUnknown: "Bu geçiş anahtarı burada tanınmıyor. Kaldırılmış olabilir. E-postanla giriş yap.",
   passkeyExpired: "Çok uzun sürdü. Yeniden dene.",
   passkeyBanned: "Bu hesap AnyTogether'dan uzaklaştırıldı.",
   linkTitle: "Bir launcher'a giriş yap",
@@ -350,7 +350,7 @@ const tr: typeof en = {
   displayName: "İsim",
   handle: "Kullanıcı adı",
   handleHint:
-    "3-20 karakter: a-z, 0-9, _ ve . 30 günde bir değiştirebilirsin; eskisi 30 gün boyunca buraya yönlendirir.",
+    "3-20 karakter: a-z, 0-9, _ ve . 30 günde bir değiştirebilirsin. Eskisi 30 gün boyunca buraya yönlendirir.",
   handleNextChange: "{date} tarihinde yeniden değiştirebilirsin.",
   handleTaken: "Bu kullanıcı adı alınmış.",
   handleReserved: "Bu kullanıcı adı ayrılmış.",
@@ -366,7 +366,7 @@ const tr: typeof en = {
   saved: "Kaydedildi",
   editProfile: "Profili düzenle",
   privacyLead:
-    "Resmin, ismin ve kullanıcı adın herkese görünür; bion ve gerisi yukarıdaki herkese açık profil anahtarına uyar. Her bölümü kimin göreceğini seç; sen hepsini her zaman görürsün.",
+    "Resmin, ismin ve kullanıcı adın herkese görünür. Bion ve gerisi yukarıdaki herkese açık profil anahtarına uyar. Her bölümü kimin göreceğini seç. Sen hepsini her zaman görürsün.",
   privacy_library: "Oyunlar ve oynama süresi",
   privacy_trophies: "Kupalar",
   privacy_friends: "Arkadaş listesi",
@@ -397,7 +397,7 @@ const tr: typeof en = {
   passkeySynced: "Senkron",
   noPasskeys: "Henüz geçiş anahtarı yok.",
   passkeysFull:
-    "10 geçiş anahtarın var; bir hesap en fazla bu kadar alabilir. Yenisini eklemek için birini kaldır.",
+    "10 geçiş anahtarın var. Bir hesap en fazla bu kadar alabilir. Yenisini eklemek için birini kaldır.",
   passkeyExists: "Bu cihazda hesabın için zaten bir geçiş anahtarı var.",
   passkeyUnsupported: "Bu tarayıcı geçiş anahtarı oluşturamıyor. Safari, Chrome, Edge ya da Firefox dene.",
   passkeyRemove: "Kaldır",

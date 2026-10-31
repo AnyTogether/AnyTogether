@@ -109,7 +109,7 @@ export const accountTr: typeof accountEn = {
   ogAlt: "AnyTogether'da {name}",
   ogTrophies: "kupa",
   handleTooSimilar:
-    "Bu kullanıcı adı başka birininkine fazla benziyor (o yerine 0, l yerine 1, m yerine rn; nokta ve alt çizgi sayılmaz). Başka bir tane dene.",
+    "Bu kullanıcı adı başka birininkine fazla benziyor (o yerine 0, l yerine 1, m yerine rn, nokta ve alt çizgi sayılmaz). Başka bir tane dene.",
   r_banned: "Hesabın uzaklaştırıldı",
   r_suspended: "Hesabın askıya alındı",
   r_muted: "Hesabın susturuldu",
@@ -177,7 +177,7 @@ export const accountTr: typeof accountEn = {
   "au_appeal.declined": "itirazı reddetti:",
   sectionConnections: "Bağlı hesaplar",
   connectionsLead:
-    "Steam ve Discord'unu profilinde göster, arkadaşların seni orada da bulsun. AnyTogether yalnızca hesabın adını ve kimliğini tutar; şifre ya da jeton asla.",
+    "Steam ve Discord'unu profilinde göster, arkadaşların seni orada da bulsun. AnyTogether yalnızca hesabın adını ve kimliğini tutar. Şifre ya da jeton asla tutmaz.",
   connectionLead_steam: "Steam profilin, Steam'in kendi girişiyle bağlanır.",
   connectionLead_discord: "Discord adın, Discord üzerinden bağlanır.",
   linkAccount: "{provider} bağla",
