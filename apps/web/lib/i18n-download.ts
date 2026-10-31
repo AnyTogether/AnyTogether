@@ -62,7 +62,7 @@ const en = {
   guides: {
     mac: {
       steps: [
-        "Paste the one-line installer into Terminal. It puts AnyPS5.app in Applications and installs Rosetta 2 if it is missing; macOS opens it without a warning.",
+        "Paste the one-line installer into Terminal. It puts AnyPS5.app in Applications and installs Rosetta 2 if it is missing. macOS opens it without a warning.",
         "Or unzip AnyPS5-macOS.zip and open the app. The first time, open System Settings → Privacy & Security and click Open Anyway.",
         "Pick the language, a theme and the folder with your games. Already on 0.2.8 or later? Settings → About updates it.",
       ],
@@ -145,7 +145,7 @@ const tr: DownloadPageStrings = {
   meta: {
     title: "Mac, Windows, Linux, iPhone ve Android için AnyPS5'i indir · AnyTogether",
     description:
-      "AnyPS5-ARM ve AnyPS5 Desktop'ın son sürümlerindeki her dosya; sürümü, boyutu, tarihi ve SHA-256'sıyla, platforma göre, kurulum adımları ve gereksinimleriyle.",
+      "AnyPS5-ARM ve AnyPS5 Desktop'ın son sürümlerindeki her dosya, sürümü, boyutu, tarihi ve SHA-256'sıyla. Platforma göre gruplanmış, kurulum adımları ve gereksinimleriyle.",
   },
   kicker: "İndir",
   title: ["Her dosya.", "Sahip olduğun her ekran."],
@@ -153,7 +153,7 @@ const tr: DownloadPageStrings = {
   allReleases: "GitHub'da tüm sürümler",
   latestOf: "{name} {version}",
   releasedOn: "{date} tarihinde çıktı",
-  down: "GitHub şu an yanıt vermiyor; boyutlar ve sağlama toplamları eksik. Bu bağlantılar her zaman en yeni dosyalara gider:",
+  down: "GitHub şu an yanıt vermiyor, bu yüzden boyutlar ve sağlama toplamları eksik. Bu bağlantılar her zaman en yeni dosyalara gider:",
   onThisPage: "Platformlar",
   yourSystem: "Senin sistemin",
   install: "Kurulum",
@@ -173,9 +173,9 @@ const tr: DownloadPageStrings = {
   otherLead: "Sürümlere ekli diğer dosyalar.",
   kinds: {
     app: ["Launcher", "AnyPS5.app, zip içinde: aç ve çalıştır."],
-    script: ["Tek satırlık kurulum", "AnyPS5.app'i Uygulamalar'a koyar; eksikse Rosetta 2'yi de kurar."],
+    script: ["Tek satırlık kurulum", "AnyPS5.app'i Uygulamalar'a koyar, eksikse Rosetta 2'yi de kurar."],
     engine: ["Motor", "Launcher'ın motor seçicisi için. Launcher senin yerine indirir."],
-    installer: ["Kurulum", "Kullanıcın için kurar, yönetici gerekmez; kaldırıcısı da var."],
+    installer: ["Kurulum", "Yönetici gerektirmeden kullanıcın için kurar, kaldırıcısı da var."],
     portable: ["Taşınabilir", "Herhangi bir yere aç ve anyps5_desktop.exe'yi çalıştır."],
     appimage: ["AppImage", "Her dağıtımda: çalıştırılabilir yap ve aç."],
     deb: ["Debian paketi", "Ubuntu ve Debian: apt ile kur."],
@@ -188,7 +188,7 @@ const tr: DownloadPageStrings = {
   guides: {
     mac: {
       steps: [
-        "Tek satırlık kurulumu Terminal'e yapıştır. AnyPS5.app'i Uygulamalar'a koyar, eksikse Rosetta 2'yi kurar; macOS uyarı vermeden açar.",
+        "Tek satırlık kurulumu Terminal'e yapıştır. AnyPS5.app'i Uygulamalar'a koyar, eksikse Rosetta 2'yi kurar. macOS uyarı vermeden açar.",
         "Ya da AnyPS5-macOS.zip'i aç ve uygulamayı çalıştır. İlk seferde Sistem Ayarları → Gizlilik ve Güvenlik'te Yine de Aç'a tıkla.",
         "Dili, bir temayı ve oyunlarının klasörünü seç. Zaten 0.2.8 ya da sonrası mı var? Ayarlar → Hakkında günceller.",
       ],
@@ -201,9 +201,9 @@ const tr: DownloadPageStrings = {
     },
     windows: {
       steps: [
-        "Setup .exe'yi çalıştır. Kullanıcın için kurar, yönetici gerekmez; Başlat menüsü kısayolu ve kaldırıcısı olur.",
+        "Setup .exe'yi çalıştır. Kullanıcın için kurar, yönetici gerekmez. Başlat menüsü kısayolu ve kaldırıcısı da olur.",
         "SmartScreen “Windows bilgisayarınızı korudu” derse Ek bilgi → Yine de çalıştır'a tıkla. Kurmak istemiyor musun? Taşınabilir .zip'i aç ve anyps5_desktop.exe'yi çalıştır.",
-        "İlk açılışta AnyPS5 motorunu indir'e bas, oyun klasörünü seç; telefonu eşleştireceksen güvenlik duvarı sorusuna izin ver.",
+        "İlk açılışta AnyPS5 motorunu indir'e bas, oyun klasörünü seç ve telefonu eşleştireceksen güvenlik duvarı sorusuna izin ver.",
       ],
       requirements: [
         ["Windows", "10 ya da 11, x64"],
@@ -228,7 +228,7 @@ const tr: DownloadPageStrings = {
     iphone: {
       steps: [
         "AnyPS5-Remote.ipa'yı bilgisayarına indir.",
-        "AltStore, SideStore ya da Sideloadly ile kur; uygulamayı kendi Apple kimliğinle imzalarlar.",
+        "AltStore, SideStore ya da Sideloadly ile kur. Uygulamayı kendi Apple kimliğinle imzalarlar.",
         "Launcher'ı aynı Wi-Fi'da aç (ya da iPhone'u Mac'e kabloyla tak) ve dört haneli kodu iki tarafta da onayla.",
       ],
       requirements: [

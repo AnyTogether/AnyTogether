@@ -67,20 +67,20 @@ const en: ProductStrings = {
     meta: {
       title: "AnyPS5 for Mac · AnyTogether",
       description:
-        "AnyPS5-ARM: the PS5-style launcher for Apple silicon Macs. Unlock and play the games you own, with frame generation, trophies, clips, save sync and AnyTogether built in.",
+        "AnyPS5-ARM is a PS5-style launcher for the Mac. Unlock and play the games you own, with trophies, clips, save sync and AnyTogether built in.",
     },
-    kicker: "AnyPS5-ARM · Mac",
+    kicker: "AnyPS5-ARM",
     title: ["The PS5 home screen,", "on your Mac."],
-    lead: "Point AnyPS5.app at the folder with your game dumps and it does the rest: it finds the games, unlocks them for the Mac, starts them, and keeps your controls, saves and trophies per game. No Terminal, no build, no Vulkan SDK.",
+    lead: "Point AnyPS5 at your folder of game dumps. It turns each one into a game you play on your Mac, with no Terminal and no build.",
     hero: {
       name: "mac-home-trophies",
       alt: "The AnyPS5 home screen with Hollow Knight: Silksong selected: Play, 8 of 34 trophies, status, size, title ID and version",
       frame: "mac",
     },
     facts: [
-      ["120 fps", "Silksong on an M3 Pro, playable"],
-      ["0 bytes", "extra disk for an unlocked game"],
-      ["4", "players: phones and controllers"],
+      ["120 fps", "Silksong on an M3 Pro"],
+      ["0 bytes", "extra disk per unlocked game"],
+      ["4", "players with phones and controllers"],
     ],
     chapters: [
       {
@@ -88,7 +88,7 @@ const en: ProductStrings = {
         nav: "Engine",
         kicker: "The engine",
         title: "Not an emulator.",
-        lead: "AnyPS5's relinker turns a PS5 game's program into a native Mac executable, linked against system libraries written from scratch. The game's x86-64 code runs under Rosetta 2, and the PS5 graphics driver runs on Vulkan through MoltenVK, on Metal.",
+        lead: "AnyPS5 relinks a PS5 game into a native Mac app. The game's code runs under Rosetta 2 and its graphics on Metal.",
         shots: [
           {
             name: "mac-unlocking",
@@ -98,28 +98,28 @@ const en: ProductStrings = {
         ],
         items: [
           {
-            t: "Relinked, not emulated",
-            d: "The relinker writes a Mach-O executable and macOS modules; the result is a normal .app opened from Finder.",
+            t: "Relinked into a Mac app",
+            d: "The result is a normal .app you open from Finder.",
           },
           {
             t: "Rosetta 2 and Metal",
-            d: "x86-64 code translated by Rosetta 2, graphics through MoltenVK. The first start of a title takes longest; later ones use the caches.",
+            d: "The first start of a game takes longest. Later starts use the caches.",
           },
           {
             t: "Engine versions",
-            d: "Settings holds the engine the app carries, newer ones downloaded from GitHub, or a folder of your own build. Delete the ones you don't need.",
+            d: "Use the built-in engine, download a newer one or pick your own build.",
           },
           {
             t: "Games that play today",
-            d: "Hollow Knight: Silksong at 120 fps and Dreaming Sarah at 60 fps are playable, DOOM (homebrew) plays, Stray plays its first chapter at a low frame rate for now, Minecraft gets into a world.",
+            d: "Silksong plays at 120 fps and Dreaming Sarah at 60. DOOM, Stray and Minecraft get in-game.",
           },
           {
             t: "The compatibility list",
-            d: "How far each game gets, per platform, reported by players from the launcher and kept on AnyTogether.",
+            d: "Players report how far each game gets, and AnyTogether keeps the list.",
           },
           {
             t: "Auto-update",
-            d: "Settings → About shows Update to … when a new AnyPS5 is out: it downloads, takes its place and opens again.",
+            d: "When a new version is out, Settings offers it. It installs and reopens the app.",
           },
         ],
       },
@@ -128,29 +128,29 @@ const en: ProductStrings = {
         nav: "Home",
         kicker: "Home screen",
         title: "Laid out like the console.",
-        lead: "Every game sits in a row of tiles. The selected one grows, its artwork drifts behind the screen and its theme song plays, with the facts below: status, size, title ID and version.",
+        lead: "Your games sit in a row of tiles. The selected one grows and its theme song plays.",
         shots: [{ name: "mac-library", alt: "The game library as a grid of tiles", frame: "mac" }],
         items: [
           {
-            t: "Play, Unlock, Retry",
-            d: "The button under the title does what the game's state calls for; trophies and ⋯ sit beside it.",
+            t: "Play, unlock, retry",
+            d: "The main button does whatever the game needs next.",
           },
           {
             t: "Library",
-            d: "Every game as a grid. Games you add to the folder later show up on their own.",
+            d: "All your games in a grid. New ones in the folder show up on their own.",
           },
           {
             t: "Console controls",
-            d: "Arrow keys, Return (✕), Esc (○), Q and E for L1 and R1, or a game controller whose PS button brings the launcher in front of the game and back.",
+            d: "Arrow keys, Return and Esc work like a pad. A controller's PS button opens the launcher.",
           },
-          { t: "Mouse and trackpad", d: "Click a tile, double-click to play, scroll through the row." },
+          { t: "Mouse and trackpad", d: "Click a tile, double-click to play and scroll through the row." },
           {
             t: "Three animated themes",
-            d: "Cosmic, Aurora and Sunset, an accent colour, or your own picture or looping video behind it all.",
+            d: "Cosmic, Aurora and Sunset, or your own picture or video behind it all.",
           },
           {
             t: "Türkçe or English",
-            d: "The launcher, the phone and the games' language follow your choice.",
+            d: "The launcher, the phone and the games follow your choice.",
           },
         ],
       },
@@ -158,8 +158,8 @@ const en: ProductStrings = {
         id: "unlock",
         nav: "Unlocking",
         kicker: "Unlocking",
-        title: "From a dump to a Mac app, in minutes.",
-        lead: "Unlock turns a PS5 dump into a Mac app with a progress bar like the console's. Several games can be queued.",
+        title: "From a dump to a Mac app in minutes.",
+        lead: "Unlock turns a PS5 dump into a Mac app. You can queue several games.",
         shots: [
           {
             name: "mac-starting",
@@ -170,27 +170,27 @@ const en: ProductStrings = {
         items: [
           {
             t: "Unwrap",
-            d: "eboot.bin and every module are opened, SELF containers included. A dump that is still encrypted is reported, not converted.",
+            d: "The game and its modules are opened. A dump that is still encrypted is reported.",
           },
           {
             t: "Relink and bundle",
-            d: "A Mach-O executable, macOS modules, MoltenVK, per-title patches and a launch script go into the app.",
+            d: "The program, its modules and per-game patches go into one Mac app.",
           },
           {
             t: "APFS clones",
-            d: "The game's files become clones of the dump, so an unlocked game takes no extra space.",
+            d: "The game's files are clones of the dump, so they take no extra space.",
           },
           {
-            t: "Updates kept fresh",
-            d: "When the toolkit is newer, the game shows Update available; Unlock Again brings it up to date and keeps its saves and trophies.",
+            t: "Stays up to date",
+            d: "When the toolkit is newer, Unlock Again updates the game and keeps its saves and trophies.",
           },
           {
             t: "A start screen",
-            d: "The game's icon and a timer until its first window appears; Esc stops it before it shows.",
+            d: "The game's icon and a timer show until its window appears.",
           },
           {
-            t: "Plain-words errors",
-            d: "A missing module, an unsupported system function by name, the GPU stopping, a crash: read from the log and macOS's crash report.",
+            t: "Clear errors",
+            d: "A missing module or a crash is explained in plain words.",
           },
         ],
       },
@@ -199,7 +199,7 @@ const en: ProductStrings = {
         nav: "Game settings",
         kicker: "Per game",
         title: "Each game keeps its own settings.",
-        lead: "Applied at every start, from the game's ⋯ menu.",
+        lead: "Open them from the game's ⋯ menu. They apply at every start.",
         shots: [
           {
             name: "mac-game-settings",
@@ -208,60 +208,60 @@ const en: ProductStrings = {
           },
         ],
         items: [
-          { t: "Output resolution", d: "For titles with a resolution patch, such as Stray." },
-          { t: "Window or full screen", d: "And the window's size." },
-          { t: "Vertical sync", d: "On or off, per game." },
+          { t: "Output resolution", d: "For games with a resolution patch, such as Stray." },
+          { t: "Window or full screen", d: "And the size of the window." },
+          { t: "Vertical sync", d: "On or off for each game." },
           {
             t: "Frame generation",
-            d: "A frame made between each two of the game's, so 60 fps shows 120 on a 120 Hz display. Needs vertical sync; turns itself off on a 60 Hz display or in Low Power Mode.",
+            d: "Adds a frame between each two, so 60 fps shows as 120 on a 120 Hz display.",
             tag: "experimental",
           },
           {
             t: "Performance overlay",
-            d: "Minimal, one line with fps, generated frames, frame time, GPU, CPU and memory; or Detailed, with the frame-time graph. In any corner.",
+            d: "fps, GPU, CPU and memory in one line, or a detailed view with a graph.",
           },
-          { t: "Game language", d: "The launcher's, or any of the console's languages." },
+          { t: "Game language", d: "The launcher's language or any of the console's." },
           {
             t: "Screenshots and clips",
-            d: "The game's F12 shots and clips in a grid, and one at a time over the whole screen.",
+            d: "Your F12 shots and clips in a grid or one at a time.",
           },
           {
             t: "Save backups",
-            d: "Back Up Saves and Restore Saves: saves and trophies as a zip; a restore backs up what the game had first.",
+            d: "Saves and trophies go into a zip. A restore backs up the current saves first.",
           },
-          { t: "Shader cache", d: "On or off, and Clear Shader Cache when a game needs a clean start." },
+          { t: "Shader cache", d: "Turn it off, or clear it when a game needs a clean start." },
         ],
       },
       {
         id: "controls",
         nav: "Controls",
         kicker: "Controls",
-        title: "Keyboard, mouse, pads and phones.",
-        lead: "Every game has its own layout. Pick a button and press the key you want; a connected controller keeps its own buttons.",
+        title: "Keyboard, mouse, controllers and phones.",
+        lead: "Every game has its own layout. Pick a button and press the key you want.",
         shots: [
           { name: "mac-controls", alt: "The controls panel waiting for a key for Square", frame: "mac" },
         ],
         items: [
           {
             t: "What a button does",
-            d: "For Unreal Engine games, each button shows what the game itself does with it (Jump, Sprint), read from the game's own input settings.",
+            d: "In Unreal Engine games, each button shows its action, such as Jump or Sprint.",
           },
           {
             t: "Mouse as the camera",
-            d: "Sensitivity, vertical speed, the response curve, minimum tilt, maximum speed, smoothing and how soon the camera stops.",
+            d: "Tune sensitivity, speed, smoothing and the response curve.",
           },
-          { t: "Stick deadzones", d: "One per stick, to stop a drifting controller." },
+          { t: "Stick deadzones", d: "One for each stick, to stop a drifting controller." },
           {
             t: "Keyboard feel",
-            d: "Slow movement, how fast a key tilts a stick, how fast a key presses L2 or R2 for racing games.",
+            d: "Set how fast a key tilts a stick or presses L2 and R2.",
           },
           {
             t: "Four players",
-            d: "Up to four phones and the Mac's game controllers are four DualSenses for local co-op.",
+            d: "Up to four phones and controllers act as DualSenses for local co-op.",
           },
           {
             t: "Share a setup",
-            d: "Export Settings saves a game's keys and every setting as one file; Import Settings applies one a friend shared.",
+            d: "Export a game's keys and settings as one file, or import a friend's.",
           },
         ],
       },
@@ -270,7 +270,7 @@ const en: ProductStrings = {
         nav: "Trophies",
         kicker: "Trophies",
         title: "Every trophy, as on the console.",
-        lead: "The list, the texts and the icons come from the game's own trophy package, in the game's language when it has one.",
+        lead: "Names, texts and icons come from the game itself, in its language when it has one.",
         shots: [
           {
             name: "mac-trophy-banner",
@@ -281,17 +281,13 @@ const en: ProductStrings = {
         items: [
           {
             t: "A card over the game",
-            d: "The trophy's icon, name and grade with a sound, in full screen too, never taking the keyboard or mouse.",
+            d: "The icon, name and grade drop in with a sound, without taking your keys.",
           },
           {
             t: "The full list",
-            d: "Percentage weighted by grade, platinum to bronze counts, and the day and time each was earned.",
+            d: "Counts by grade and the date of each trophy. Hidden ones stay hidden until earned.",
           },
-          {
-            t: "Hidden and counted",
-            d: "Hidden trophies stay hidden until earned; trophies that count something show how far you are, such as 23/51.",
-          },
-          { t: "Play time", d: "Each session is kept, and with AnyTogether goes to your profile." },
+          { t: "Play time", d: "Each session is saved, and with AnyTogether it goes to your profile." },
         ],
       },
       {
@@ -299,7 +295,7 @@ const en: ProductStrings = {
         nav: "Extras",
         kicker: "The details",
         title: "The things you'd miss.",
-        lead: "Small features, each one asked for by someone who plays.",
+        lead: "Small features, each one asked for by a player.",
         shots: [
           {
             name: "mac-hub",
@@ -310,32 +306,24 @@ const en: ProductStrings = {
         items: [
           {
             t: "Clips",
-            d: "The last 15 to 120 seconds of the game, picture and sound, saved as an MP4 with Create on a DualSense, ⌥F12 or Create on the phone.",
+            d: "Save the last 15 to 120 seconds as an MP4 with Create or ⌥F12.",
           },
           {
-            t: "Save Sync",
-            d: "Saves and trophies stay the same across your Macs through iCloud Drive or any folder you choose; what is replaced is backed up first.",
+            t: "Save sync",
+            d: "Saves and trophies stay the same on all your Macs through iCloud Drive or a folder.",
           },
           {
             t: "Theme Studio",
-            d: "Motion, colours, accent, a picture or video, menu music. Save it as one .anyps5theme file, or share it on the Theme Hub.",
+            d: "Make a theme with motion, colours, a picture and music, then share it.",
           },
           {
             t: "Theme Hub",
-            d: "Themes people share, installed with one press. The phone wears the launcher's theme too.",
+            d: "Install themes other people share with one press. The phone follows your theme too.",
           },
-          { t: "Discord status", d: "The game you play shows on Discord, with or without AnyTogether." },
-          {
-            t: "Links",
-            d: "anyps5://game/<title ID> selects a game and anyps5://play/<title ID> starts it.",
-          },
+          { t: "Discord status", d: "Discord shows the game you play, with or without AnyTogether." },
           {
             t: "Crash reports",
-            d: "Why a game stopped, in plain words, a report to attach, detailed logging, and a pre-filled GitHub issue.",
-          },
-          {
-            t: "Console fonts",
-            d: "A folder of system fonts for games that ask for them, and your own screenshot folder.",
+            d: "Why a game stopped, in plain words, with a ready-made GitHub issue.",
           },
         ],
       },
@@ -344,7 +332,7 @@ const en: ProductStrings = {
         nav: "AnyTogether",
         kicker: "AnyTogether, built in",
         title: "Your friends, inside the launcher.",
-        lead: "Optional: signed out, the launcher works as before. Signed in, the top bar gets friends, messages and a party, and everything you play counts.",
+        lead: "Sign in to get friends, messages and parties in the top bar. Without an account, the launcher works as before.",
         shots: [
           {
             name: "mac-shareplay",
@@ -360,42 +348,30 @@ const en: ProductStrings = {
         items: [
           {
             t: "Sign in",
-            d: "A code sent to your email, or one tap on your phone if it is signed in. No password.",
+            d: "Use a code from your email or one tap on your phone. No password.",
           },
-          { t: "Friends", d: "Add by handle, see who is online and what they play." },
-          { t: "Messages", d: "Chats and group chats, live, with typing indicators and an unread count." },
+          { t: "Friends", d: "Add friends by handle and see who is online and what they play." },
+          { t: "Messages", d: "Live chats and group chats with typing indicators." },
           {
-            t: "Parties",
-            d: "Start one, invite friends or open it to them; the leader hands over the lead or removes someone.",
+            t: "Parties and voice",
+            d: "Start a party and talk. Push-to-talk on ⌥V works over the game.",
           },
-          {
-            t: "Voice",
-            d: "Player to player, through a relay when needed. Push-to-talk on ⌥V works over the game.",
-          },
-          { t: "1:1 calls", d: "An incoming call shows over the game: ⌥A answers, ⌥D declines." },
+          { t: "1:1 calls", d: "A call shows over the game. ⌥A answers and ⌥D declines." },
           {
             t: "Share play",
-            d: "Share the game you play, or watch a friend's with your controller as their player.",
+            d: "Share your game, or watch a friend's and join in with your controller.",
           },
           {
             t: "Join a friend's game",
-            d: "Friends see “Joinable” and start the same game, checked against your game's version.",
+            d: "Friends see when you can be joined and start the same game.",
           },
           {
-            t: "Profiles, activity, leaderboards",
-            d: "Games, hours, trophies with rarity; friends' activity with reactions; points among friends or everyone.",
+            t: "Profiles and leaderboards",
+            d: "Games, hours and trophies, and points among friends or everyone.",
           },
           {
             t: "Notifications",
-            d: "Requests, invites, missed calls and messages that came while you played.",
-          },
-          {
-            t: "Compatibility reports",
-            d: "Say how far a game got; the launcher adds its version, the engine, the Mac and macOS.",
-          },
-          {
-            t: "Another server",
-            d: "Settings → AnyTogether → Server connects to a self-hosted AnyTogether.",
+            d: "Requests, invites and messages that came while you played.",
           },
         ],
       },
@@ -403,14 +379,14 @@ const en: ProductStrings = {
     install: {
       title: "Install AnyPS5 for Mac",
       steps: [
-        "Paste the Terminal line: it puts AnyPS5.app in Applications and installs Rosetta 2 if it is missing, with no “cannot be opened” warning.",
-        "Or download the zip, unzip it and open the app; the first time, System Settings → Privacy & Security → Open Anyway.",
-        "Pick a language, a theme and your games folder. Already installed? Settings → About → Update.",
+        "Paste the Terminal line. It puts AnyPS5 in Applications and adds Rosetta 2 if needed.",
+        "Or download the zip and open the app. The first time, allow it under Privacy & Security in System Settings.",
+        "Pick a language, a theme and your games folder.",
       ],
       requirements: [
         ["Mac", "Apple silicon (M1 or later)"],
         ["macOS", "14 Sonoma or later"],
-        ["Also", "Rosetta 2, and decrypted dumps of games you own"],
+        ["Also", "Rosetta 2 and decrypted dumps of games you own"],
       ],
     },
   },
@@ -418,12 +394,12 @@ const en: ProductStrings = {
     meta: {
       title: "AnyPS5 for Windows and Linux · AnyTogether",
       description:
-        "AnyPS5 Desktop: the PS5-style launcher for Windows and Linux, with the engine downloading itself, trophies, save backups and AnyTogether built in. Early preview.",
+        "AnyPS5 Desktop is the PS5-style launcher for Windows and Linux. The engine downloads itself, and trophies, save backups and AnyTogether are built in. Early preview.",
     },
-    kicker: "AnyPS5 Desktop · Windows & Linux",
+    kicker: "AnyPS5 Desktop",
     tag: "preview",
     title: ["The same launcher,", "on your PC."],
-    lead: "AnyPS5 Desktop brings the Mac launcher to Windows and Linux: the PS5-style home, the library, unlocking, controls, trophies, saves and AnyTogether. It downloads the AnyPS5 engine by itself on first start.",
+    lead: "The Mac launcher, now on Windows and Linux. It downloads the AnyPS5 engine by itself on first start.",
     hero: {
       name: "pc-home-cosmic",
       alt: "AnyPS5 Desktop's home screen with a demo game selected, Play and 2 of 5 trophies",
@@ -431,7 +407,7 @@ const en: ProductStrings = {
     },
     facts: [
       ["Setup.exe", "no admin needed"],
-      ["AppImage · .deb", "and a .tar.gz"],
+      ["AppImage & .deb", "and a .tar.gz"],
       ["1 click", "to download the engine"],
     ],
     chapters: [
@@ -440,7 +416,7 @@ const en: ProductStrings = {
         nav: "Engine",
         kicker: "The engine",
         title: "It downloads itself.",
-        lead: "The last step of the first start offers Download the AnyPS5 engine: the launcher takes the right files for your system from AnyPS5's latest release and sets them up.",
+        lead: "On first start, the launcher fetches the right engine for your system and sets it up.",
         shots: [
           {
             name: "pc-onboarding-toolkit",
@@ -451,19 +427,15 @@ const en: ProductStrings = {
         items: [
           {
             t: "Checked downloads",
-            d: "Each file's size and GitHub's sha256 are checked; a dropped connection resumes where it stopped.",
+            d: "Every file is checked, and a dropped download resumes where it stopped.",
           },
           {
             t: "Engine versions",
-            d: "Settings → AnyPS5 Engine checks for updates, lists GitHub's versions, switches between them or uses your own folder.",
+            d: "Check for updates, switch versions or use your own folder.",
           },
           {
-            t: "Kept tidy",
-            d: "The engine in use, the two newest and the ones your games were made with stay; the rest go.",
-          },
-          {
-            t: "Update and Play",
-            d: "A newer engine offers games the usual update: it downloads the engine, then unlocks the game again.",
+            t: "Update and play",
+            d: "When a newer engine is out, your games offer an update and unlock again.",
           },
         ],
       },
@@ -472,7 +444,7 @@ const en: ProductStrings = {
         nav: "Library",
         kicker: "Library",
         title: "Find, unlock, play.",
-        lead: "It finds the decrypted copies of your games in one folder, with their names, icons and backgrounds, unwraps them, relinks them for your system and starts them.",
+        lead: "It finds your games in one folder, unlocks them for your system and starts them.",
         shots: [
           {
             name: "pc-library",
@@ -483,25 +455,25 @@ const en: ProductStrings = {
         items: [
           {
             t: "Names in your language",
-            d: "Read from the game's own data, with its icon, background and theme song.",
+            d: "Read from the game itself, with its icon, background and theme song.",
           },
           {
             t: "Unlock",
-            d: "SELF executables unwrapped byte for byte as upstream does, relinked into a native Windows PE or Linux ELF.",
+            d: "Each game is relinked into a native Windows or Linux program.",
           },
           {
             t: "Light on disk",
-            d: "Game files are hard links where the drive allows, so an unlocked game takes little extra space.",
+            d: "Hard links keep an unlocked game small where the drive allows.",
           },
           {
             t: "Saves stay with the game",
-            d: "Saves and trophies move into a new install when a game is unlocked again.",
+            d: "Saves and trophies move along when a game is unlocked again.",
           },
           {
             t: "Three animated themes",
-            d: "Cosmic, Aurora and Sunset: the Mac launcher's background shader, ported.",
+            d: "Cosmic, Aurora and Sunset, the same as on the Mac.",
           },
-          { t: "Türkçe or English", d: "Chosen on the first start." },
+          { t: "Türkçe or English", d: "Chosen on first start." },
         ],
       },
       {
@@ -509,7 +481,7 @@ const en: ProductStrings = {
         nav: "Settings",
         kicker: "Per game",
         title: "Settings and controls.",
-        lead: "Each game keeps its own choices, applied at every start.",
+        lead: "Each game keeps its own choices. They apply at every start.",
         shots: [
           {
             name: "pc-game-settings",
@@ -519,14 +491,14 @@ const en: ProductStrings = {
           { name: "pc-controls", alt: "The controls panel, waiting for a key for Circle", frame: "pc" },
         ],
         items: [
-          { t: "Resolution", d: "For titles whose patch file names a width and height." },
-          { t: "Window or full screen", d: "And the window size." },
-          { t: "Vertical sync and shader cache", d: "On or off, per game." },
-          { t: "Game language", d: "The launcher's or any of the console's." },
-          { t: "Keyboard layout", d: "Pick a button and press a key, per game." },
+          { t: "Resolution", d: "For games whose patch sets a width and height." },
+          { t: "Window or full screen", d: "And the size of the window." },
+          { t: "Vertical sync and shader cache", d: "On or off for each game." },
+          { t: "Game language", d: "The launcher's language or any of the console's." },
+          { t: "Keyboard layout", d: "Pick a button and press a key, for each game." },
           {
             t: "Overlay and frame generation",
-            d: "Passed to the engine; they take effect with an engine built from AnyPS5-ARM.",
+            d: "These work with an engine built from AnyPS5-ARM.",
             tag: "experimental",
           },
         ],
@@ -536,7 +508,7 @@ const en: ProductStrings = {
         nav: "Trophies",
         kicker: "Trophies and saves",
         title: "Nothing you earn is lost.",
-        lead: "Trophies listed as on the console, and the saves of each game backed up when you want.",
+        lead: "Trophies look as they do on the console. You back up saves whenever you want.",
         shots: [
           {
             name: "pc-trophies",
@@ -547,13 +519,12 @@ const en: ProductStrings = {
         items: [
           {
             t: "Trophies",
-            d: "From the game's own trophy package: grades, hidden trophies, the date each was earned.",
+            d: "Grades, hidden trophies and the date each one was earned.",
           },
-          { t: "Save backups", d: "A game's saves and trophies as a zip, restored whenever you like." },
-          { t: "Play time", d: "Every session kept, and sent to AnyTogether when you are signed in." },
+          { t: "Save backups", d: "A game's saves and trophies as a zip, restored when you like." },
           {
-            t: "Offline is fine",
-            d: "Sessions and trophies wait on disk and go up later; nothing counts twice.",
+            t: "Play time, even offline",
+            d: "Sessions and trophies wait on disk and reach AnyTogether later, counted once.",
           },
         ],
       },
@@ -561,8 +532,8 @@ const en: ProductStrings = {
         id: "together",
         nav: "AnyTogether",
         kicker: "AnyTogether, built in",
-        title: "Friends, messages, parties, voice.",
-        lead: "Sign in from Settings → AnyTogether and the top bar gets friends, messages and a party.",
+        title: "Friends, messages, parties and voice.",
+        lead: "Sign in from the launcher's AnyTogether settings. The top bar gets friends, messages and a party.",
         shots: [
           {
             name: "pc-together-messages",
@@ -578,30 +549,25 @@ const en: ProductStrings = {
         items: [
           {
             t: "Sign in",
-            d: "An email code, a passkey through the website, or one tap from your paired phone.",
+            d: "Use an email code, a passkey or one tap from your paired phone.",
           },
-          { t: "Friends", d: "Requests, adding by handle, what each friend plays." },
+          { t: "Friends", d: "Add friends by handle and see what each one plays." },
           {
             t: "Messages",
-            d: "Conversations with quick replies a controller can send, typing shown both ways.",
+            d: "Chats with quick replies you can send from a controller.",
           },
           {
             t: "Parties and voice",
-            d: "Start one, invite, walk into a friend's open party. A talk key, or push-to-talk, read over the game.",
+            d: "Start or join a party and talk with a key or push-to-talk.",
           },
           {
             t: "Profiles",
-            d: "Games with play time and trophy progress, recent trophies with rarity, as private as their owner keeps them.",
+            d: "Games, play time and recent trophies, as private as their owner wants.",
           },
           {
             t: "Join a friend's game",
-            d: "Checked that the game, its version and the engine build match the host's.",
+            d: "The game, its version and the engine are checked against the host's.",
           },
-          {
-            t: "Sealed sign-in",
-            d: "Windows keeps the session with DPAPI; Linux in the Secret Service keyring, or a file only you can read.",
-          },
-          { t: "Another server", d: "Point the launcher at a self-hosted AnyTogether." },
         ],
       },
       {
@@ -609,7 +575,7 @@ const en: ProductStrings = {
         nav: "Phone",
         kicker: "Phone",
         title: "Pair AnyPS5 Remote.",
-        lead: "The phone app finds the launcher on your network and pairs with a four-digit code. In games, the phone as a controller needs an engine built from AnyPS5-ARM; upstream's engine doesn't support it yet.",
+        lead: "The phone app finds the launcher on your network and pairs with a four-digit code. Using it as a controller in games needs an engine built from AnyPS5-ARM.",
         shots: [
           {
             name: "pc-pairing",
@@ -618,11 +584,11 @@ const en: ProductStrings = {
           },
         ],
         items: [
-          { t: "Finds itself", d: "Over Wi-Fi with Bonjour/mDNS; allow the firewall prompt once." },
-          { t: "Or a cable", d: "An Android phone over adb." },
+          { t: "Over Wi-Fi", d: "The phone finds the launcher on Wi-Fi. Allow the firewall prompt once." },
+          { t: "Or a cable", d: "An Android phone can connect over adb." },
           {
             t: "Signs you in",
-            d: "A signed-in phone approves the launcher with one tap, and the other way round.",
+            d: "A signed-in phone signs in the launcher with one tap, and the other way round.",
           },
         ],
       },
@@ -630,17 +596,14 @@ const en: ProductStrings = {
     install: {
       title: "Install AnyPS5 Desktop",
       steps: [
-        "Windows: run the Setup.exe. It installs for your user with a Start menu shortcut and an uninstaller. If SmartScreen warns: More info → Run anyway. Or unzip the portable .zip.",
-        "Linux: chmod +x the AppImage and run it, or sudo apt install ./anyps5-desktop_<version>_amd64.deb, or unpack the .tar.gz.",
-        "Open it, press Download the AnyPS5 engine, choose your games folder, and allow the firewall prompt if you want to pair your phone.",
+        "Windows: run Setup.exe. If SmartScreen warns, choose More info and then Run anyway. A portable zip is there too.",
+        "Linux: make the AppImage executable and run it, install the .deb or unpack the .tar.gz.",
+        "Open it, download the engine and choose your games folder.",
       ],
       requirements: [
         ["Windows", "10 or 11, x64"],
-        [
-          "Linux",
-          "x64, glibc 2.34+ for the launcher (Ubuntu 22.04+); games need glibc 2.38+ (Ubuntu 24.04, Debian 13, Fedora 39 or newer)",
-        ],
-        ["Also", "A CPU and GPU that AnyPS5 supports, and decrypted copies of games you own"],
+        ["Linux", "x64, and for games Ubuntu 24.04, Debian 13, Fedora 39 or newer"],
+        ["Also", "A supported CPU and GPU, and decrypted copies of games you own"],
       ],
     },
   },
@@ -648,11 +611,11 @@ const en: ProductStrings = {
     meta: {
       title: "AnyPS5 Remote: your phone as a DualSense · AnyTogether",
       description:
-        "AnyPS5 Remote for iPhone and Android: sticks, touchpad, motion, rumble and the light bar, Remote Play, up to four phones, and AnyTogether on the go.",
+        "AnyPS5 Remote for Android and iPhone turns your phone into a DualSense, with motion, rumble, Remote Play and AnyTogether.",
     },
-    kicker: "AnyPS5 Remote · iPhone & Android",
+    kicker: "AnyPS5 Remote",
     title: ["Your phone", "is the DualSense."],
-    lead: "AnyPS5 Remote turns a phone on the same Wi-Fi, or on a cable, into a DualSense for the games your Mac runs. It finds the launcher by itself, and with Remote Play the game comes to the phone's screen.",
+    lead: "AnyPS5 Remote turns your phone into a DualSense for the games your Mac runs. With Remote Play, the game shows on the phone too.",
     hero: {
       name: "phone-pad",
       alt: "The phone pad: sticks, D-pad, face buttons, shoulder buttons, touchpad and PS",
@@ -666,7 +629,7 @@ const en: ProductStrings = {
     facts: [
       ["4", "phones at once, one per player"],
       ["2", "ways to connect: Wi-Fi or a cable"],
-      ["iOS 15+", "and Android"],
+      ["Android & iOS", "the same app on both"],
     ],
     chapters: [
       {
@@ -674,7 +637,7 @@ const en: ProductStrings = {
         nav: "The pad",
         kicker: "The pad",
         title: "Every button, all at once.",
-        lead: "Both sticks, ✕ ○ □ △, L1 R1, L2 R2, the D-pad, Options and the touchpad, any number of them held at once, with the latency shown. It takes over when a game starts.",
+        lead: "Every DualSense button is there, and you can hold as many as you like. The pad takes over when a game starts.",
         shots: [
           {
             name: "phone-live-silksong",
@@ -685,30 +648,31 @@ const en: ProductStrings = {
         items: [
           {
             t: "Touchpad",
-            d: "Slide to move the touch, tap to click, hold to keep clicking; two fingers are two touches.",
+            d: "Slide to move and tap to click. Two fingers are two touches.",
           },
-          { t: "L3 and R3", d: "A double tap on a stick holds it in." },
+          { t: "L3 and R3", d: "Double-tap a stick to hold it in." },
           {
             t: "Motion",
-            d: "The accelerometer and gyroscope are the DualSense's motion sensors, turned to match how you hold the phone.",
+            d: "The phone's gyroscope and accelerometer act as the DualSense's motion sensors.",
           },
           {
             t: "Rumble",
-            d: "The game's two motors: the large one dull, the small one crisp (Core Haptics on iPhone).",
+            d: "The game's two motors, one deep and one crisp.",
           },
           {
             t: "Trigger effects",
-            d: "While L2 or R2 is held, the phone pulses where the trigger would push back.",
+            d: "The phone pulses where the trigger would push back.",
           },
-          { t: "Light bar", d: "The pad glows with the game's light bar colour." },
+          { t: "Light bar", d: "The pad glows in the game's light bar colour." },
           {
             t: "PS and Create",
-            d: "PS brings the launcher in front of the game; Create saves the last seconds as a clip.",
+            d: "PS opens the launcher. Create saves the last seconds as a clip.",
           },
           {
-            t: "Your layout, per game",
-            d: "Move, size, fade or hide any control, or make it a toggle or turbo button. The Mac keeps it with the game.",
+            t: "Your layout for each game",
+            d: "Move, resize or hide any control, or make it a toggle or turbo button.",
           },
+          { t: "Latency shown", d: "The pad shows its current latency." },
         ],
       },
       {
@@ -716,7 +680,7 @@ const en: ProductStrings = {
         nav: "Remote Play",
         kicker: "Remote Play",
         title: "The game on the phone's screen.",
-        lead: "Turn it on in the phone's About sheet and the game plays behind the pad, picture and sound. Off by default: the phone stays the controller alone.",
+        lead: "Turn on Remote Play and the game plays behind the pad, with sound. It is off by default.",
         shots: [
           {
             name: "phone-live-launcher",
@@ -725,21 +689,21 @@ const en: ProductStrings = {
           },
         ],
         items: [
-          { t: "Picture and sound", d: "The Mac needs the screen recording permission once." },
+          { t: "Picture and sound", d: "The Mac asks for screen recording permission once." },
           {
             t: "Launcher mode",
-            d: "The Mac's games over the selected one's background. Picking one on the phone picks it on the Mac.",
+            d: "Browse the Mac's games on the phone. Picking one picks it on the Mac.",
           },
           {
             t: "Play from the couch",
-            d: "Play, Back to Game and Close Game; the arrows, ✕, ○ and ≡ move around the launcher's own screen.",
+            d: "Start a game, go back to it or close it from the phone.",
           },
           {
             t: "What the Mac is doing",
-            d: "Unlocking, updating or starting: the step, a bar and the time it has taken.",
+            d: "Unlocking, updating or starting, with a progress bar.",
           },
-          { t: "Trophies", d: "A trophy earned drops in at the top of the phone, and the phone buzzes." },
-          { t: "The launcher's theme", d: "And its language, English or Turkish." },
+          { t: "Trophies", d: "A new trophy drops in at the top and the phone buzzes." },
+          { t: "The launcher's theme", d: "The phone takes the launcher's theme and language." },
         ],
       },
       {
@@ -747,7 +711,7 @@ const en: ProductStrings = {
         nav: "Connecting",
         kicker: "Connecting",
         title: "Finds the Mac by itself.",
-        lead: "The first time, the Mac asks once and both show the same four-digit code. After that it connects with no question.",
+        lead: "The first time, both screens show the same four-digit code. After that it connects on its own.",
         shots: [
           {
             name: "phone-activity",
@@ -756,16 +720,15 @@ const en: ProductStrings = {
           },
         ],
         items: [
-          { t: "Wi-Fi", d: "Found on the same network; the Mac's address can be typed in when needed." },
+          { t: "Wi-Fi", d: "The phone finds the Mac on the same network. You can also type its address." },
           {
-            t: "A cable, no Wi-Fi",
-            d: "An iPhone plugged into the Mac connects through it by itself (usbmuxd); Android with USB debugging and adb.",
+            t: "Or a cable",
+            d: "Android connects with USB debugging, and an iPhone connects when plugged into the Mac.",
           },
           {
             t: "Up to four phones",
-            d: "One per player; a phone becomes the next player the first time a button is pressed. New phones pair while others play.",
+            d: "One per player. A phone becomes the next player on its first button press.",
           },
-          { t: "PCs too", d: "AnyPS5 Desktop speaks the same protocol and pairs the phone." },
         ],
       },
       {
@@ -773,7 +736,7 @@ const en: ProductStrings = {
         nav: "AnyTogether",
         kicker: "AnyTogether on the go",
         title: "Your friends, still on the pad.",
-        lead: "From the people button on the home screen. Signed out, the phone is the controller as always.",
+        lead: "Open it from the people button on the home screen. Signed out, the phone is just a controller.",
         shots: [
           {
             name: "phone-party",
@@ -785,37 +748,36 @@ const en: ProductStrings = {
         items: [
           {
             t: "Sign in",
-            d: "An email code, or one tap with the account the Mac uses; a signed-in phone signs the Mac in too.",
+            d: "Use an email code or one tap with the Mac's account. The phone can sign in the Mac too.",
           },
-          { t: "Friends", d: "Who is online and what they play, requests, adding by handle." },
-          { t: "Messages", d: "The same conversations as on the Mac and the website, with unread counts." },
-          { t: "Parties and voice", d: "Talk with your party while the phone is still your pad." },
-          { t: "1:1 calls", d: "Call a friend from their entry." },
-          { t: "Profile", d: "Edit your name, bio and picture; see your games, hours and trophies." },
+          { t: "Friends", d: "See who is online and what they play, and add friends by handle." },
+          { t: "Messages", d: "The same chats as on the Mac and the website." },
+          { t: "Parties and voice", d: "Talk with your party while the phone is still your controller." },
+          { t: "1:1 calls", d: "Call a friend from your friends list." },
+          { t: "Profile", d: "Edit your name, bio and picture, and see your games and trophies." },
           {
             t: "Activity and leaderboards",
-            d: "Friends' trophies and milestones with reactions; points among friends or everyone.",
+            d: "Friends' trophies with reactions, and points among friends or everyone.",
           },
-          { t: "Notifications", d: "Requests, invites, missed calls." },
+          { t: "Notifications", d: "Requests, invites and missed calls." },
           {
-            t: "Share play, with the pad",
-            d: "Watch a friend's game and play along when they hand you a controller.",
+            t: "Share play with the pad",
+            d: "Watch a friend's game and join in when they hand you a controller.",
           },
-          { t: "Another server", d: "When the Mac uses a self-hosted AnyTogether, the phone offers it." },
         ],
       },
     ],
     install: {
       title: "Install AnyPS5 Remote",
       steps: [
-        "Android: open AnyPS5-Remote.apk on the phone and allow installing from your browser when asked.",
-        "iPhone: install AnyPS5-Remote.ipa with AltStore (or SideStore, or Sideloadly from a computer); it signs the app with your own Apple ID. With a free Apple ID it is refreshed every 7 days, which AltStore does by itself.",
-        "Keep the phone on the Mac's Wi-Fi, or plug it in, and accept the code once.",
+        "Android: open AnyPS5-Remote.apk on the phone and allow installs from your browser.",
+        "iPhone: install AnyPS5-Remote.ipa with AltStore, SideStore or Sideloadly. A free Apple ID needs a refresh every 7 days, and AltStore does it for you.",
+        "Keep the phone on the Mac's Wi-Fi or plug it in, then accept the code once.",
       ],
       requirements: [
+        ["Android", "Any recent phone, and adb on the Mac for a cable"],
         ["iPhone", "iOS 15 or later"],
-        ["Android", "Any recent phone; adb on the Mac for the cable"],
-        ["Mac", "AnyPS5.app with phone support; older unlocked games need Update and Play once"],
+        ["Mac", "AnyPS5 with phone support, and older unlocked games updated once"],
       ],
     },
   },
@@ -823,11 +785,11 @@ const en: ProductStrings = {
     meta: {
       title: "AnyTogether: friends, parties, voice and share play for AnyPS5",
       description:
-        "AnyTogether is AnyPS5's online home: profiles, trophies with rarity, friends, messages, parties, voice, 1:1 calls, share play, finding players and the Theme Hub. Open source, MIT, self-hostable.",
+        "AnyTogether is the online home of AnyPS5. Profiles, trophies, friends, parties, voice and share play in one account. Open source and self-hostable.",
     },
-    kicker: "AnyTogether · online",
+    kicker: "AnyTogether",
     title: ["Play together.", "Anywhere."],
-    lead: "The online home of every AnyPS5 launcher, the phone app and this website: one account for your profile, trophies, friends, messages, parties, voice and share play. Open source, and yours to run.",
+    lead: "One account for friends, parties and trophies. It works in every AnyPS5 app and on this website.",
     hero: {
       name: "web-home",
       alt: "The AnyTogether website: friends' activity feed with trophies and reactions",
@@ -835,8 +797,8 @@ const en: ProductStrings = {
     },
     heroSide: { name: "web-phone", alt: "Messages on the AnyTogether website on a phone", frame: "tall" },
     facts: [
-      ["4", "clients, one account: Mac, PC, phone, web"],
-      ["MIT", "open source, self-hostable"],
+      ["4", "places, one account: Mac, PC, phone and web"],
+      ["MIT", "open source and self-hostable"],
       ["0", "passwords"],
     ],
     chapters: [
@@ -845,7 +807,7 @@ const en: ProductStrings = {
         nav: "Account",
         kicker: "Your account",
         title: "No password, no sign‑up form.",
-        lead: "The first sign-in makes your account. Everything about it is yours to change, export or delete.",
+        lead: "Your first sign-in creates the account. You can change, export or delete it at any time.",
         shots: [
           {
             name: "web-profile",
@@ -854,32 +816,32 @@ const en: ProductStrings = {
           },
         ],
         items: [
-          { t: "Email code", d: "Six digits in your inbox, on any client." },
+          { t: "Email code", d: "Six digits in your inbox, in any app." },
           {
             t: "Passkeys",
-            d: "Touch ID, Face ID, Windows Hello or your phone, added on the website; launchers sign in through it too.",
+            d: "Sign in with Touch ID, Face ID, Windows Hello or your phone.",
           },
           {
             t: "One tap",
-            d: "A signed-in phone signs in a launcher, and a launcher the phone; or type a launcher's code here.",
+            d: "A signed-in phone signs in a launcher, and the other way round.",
           },
           {
             t: "Profiles",
-            d: "Picture, name, handle, bio and country, with games, hours, trophies and points.",
+            d: "Picture, name, handle and bio, with your games, hours and trophies.",
           },
           {
             t: "Privacy per part",
-            d: "Choose who sees your games, trophies, friends and online status: everyone, friends or only you.",
+            d: "Choose who sees your games, trophies, friends and online status.",
           },
-          { t: "Your data", d: "Export everything, or delete the account, from Settings." },
+          { t: "Your data", d: "Export everything or delete the account from Settings." },
         ],
       },
       {
         id: "friends",
         nav: "Friends",
         kicker: "Friends",
-        title: "Friends, messages, parties, calls.",
-        lead: "The same on the Mac, the PC, the phone and here, live.",
+        title: "Friends, messages, parties and calls.",
+        lead: "The same live on the Mac, the PC, the phone and here.",
         shots: [
           {
             name: "web-messages",
@@ -891,19 +853,22 @@ const en: ProductStrings = {
         items: [
           {
             t: "Friends and presence",
-            d: "Online, away, and what each friend plays; requests, blocking, removing.",
+            d: "See who is online and what they play. Block or remove anyone.",
           },
-          { t: "Messages", d: "Direct and group chats with typing indicators and unread counts." },
+          { t: "Messages", d: "Direct and group chats with typing indicators." },
           {
             t: "Parties",
-            d: "Up to eight, with a leader who invites, removes and hands over the lead; open them to friends or to everyone.",
+            d: "Up to eight people, open to friends or to everyone.",
           },
           {
             t: "Voice",
-            d: "Straight from player to player, through a relay only when the networks need it. Mute, and see who is speaking.",
+            d: "Player to player, through a relay only when needed. See who is speaking.",
           },
-          { t: "1:1 calls", d: "Ring a friend from any client; missed calls are kept." },
-          { t: "Join a friend's game", d: "From the launchers, checked against the game's version." },
+          { t: "1:1 calls", d: "Call a friend from any app. Missed calls are kept." },
+          {
+            t: "Join a friend's game",
+            d: "Start the same game from your launcher, checked against its version.",
+          },
         ],
       },
       {
@@ -911,18 +876,17 @@ const en: ProductStrings = {
         nav: "Share play",
         kicker: "Share play",
         title: "Watch, then take a pad.",
-        lead: "A friend shares the game they play; you watch here, in your launcher or on your phone, and when they hand you a controller, your gamepad or keyboard plays along.",
+        lead: "A friend shares their game and you watch. When they hand you a controller, you play along.",
         shots: [
           { name: "mac-shareplay", alt: "The host's side of share play in the Mac launcher", frame: "mac" },
         ],
         items: [
-          { t: "In the browser", d: "Picture and sound over WebRTC, no install." },
+          { t: "In the browser", d: "Watch with picture and sound, with nothing to install." },
           {
-            t: "Player 2 to 4",
-            d: "Your gamepad or keyboard drives the player you are handed; nobody takes the host's player 1.",
+            t: "Players 2 to 4",
+            d: "Your gamepad or keyboard plays the player you are given. The host stays player 1.",
           },
-          { t: "Direct or relay", d: "Latency and quality shown for every viewer." },
-          { t: "Host's rules", d: "Who may walk in, how many may watch, and taking anyone out." },
+          { t: "The host's rules", d: "The host decides who joins, how many watch and who leaves." },
         ],
       },
       {
@@ -930,19 +894,15 @@ const en: ProductStrings = {
         nav: "Find players",
         kicker: "Find players",
         title: "Meet people who play what you play.",
-        lead: "For when your friends are asleep.",
+        lead: "Find a group for co-op, online play or trophy help.",
         shots: [],
         items: [
           {
             t: "Looking for group",
-            d: "Post a game, a time, a language and what for: co-op, online, a party or trophy help. People ask to join, you choose.",
+            d: "Post a game, a time and a language. People ask to join and you choose.",
           },
-          { t: "Public parties", d: "Open a party to anyone, or drop into one." },
-          { t: "Game hubs", d: "Each game's page: who plays it, open parties and live share plays." },
-          {
-            t: "People",
-            d: "Find players by the games and languages they play, if they choose to be found.",
-          },
+          { t: "Public parties", d: "Open your party to anyone, or drop into one." },
+          { t: "Game hubs", d: "Each game's page shows who plays it, open parties and live share plays." },
         ],
       },
       {
@@ -950,7 +910,7 @@ const en: ProductStrings = {
         nav: "Trophies",
         kicker: "Trophies and play time",
         title: "Everything you play, counted.",
-        lead: "Each session and trophy goes to your account from the launchers, so friends see it and the boards stay honest.",
+        lead: "Every session and trophy goes to your account, so your friends can see it.",
         shots: [
           {
             name: "web-leaderboards",
@@ -959,18 +919,17 @@ const en: ProductStrings = {
           },
         ],
         items: [
-          { t: "Trophies with rarity", d: "Common to ultra rare, from everyone who plays the game." },
+          {
+            t: "Trophies with rarity",
+            d: "From common to ultra rare, based on everyone who plays the game.",
+          },
           {
             t: "Activity feed",
-            d: "Friends' trophies, first plays, milestones and new friends, with reactions.",
+            d: "Friends' trophies, first plays and milestones, with reactions.",
           },
           {
-            t: "Leaderboards",
-            d: "Points, play time and completion, among friends or everyone, per game or overall.",
-          },
-          {
-            t: "Fair play",
-            d: "Impossible trophy patterns are held off the boards until a moderator looks.",
+            t: "Fair leaderboards",
+            d: "Points and play time among friends or everyone. Impossible trophy patterns wait for a moderator.",
           },
         ],
       },
@@ -978,8 +937,8 @@ const en: ProductStrings = {
         id: "more",
         nav: "More",
         kicker: "And",
-        title: "Themes, compatibility, notifications.",
-        lead: "The rest of what lives here.",
+        title: "Themes, compatibility and notifications.",
+        lead: "Everything else on the website.",
         shots: [
           { name: "web-themes", alt: "The Theme Hub on the website", frame: "browser" },
           { name: "web-compat", alt: "The compatibility list on the website", frame: "browser" },
@@ -987,37 +946,31 @@ const en: ProductStrings = {
         items: [
           {
             t: "Theme Hub",
-            d: "Themes made in the launcher's Theme Studio, liked, downloaded and installed with one press.",
+            d: "Themes made in Theme Studio, installed with one press.",
           },
           {
             t: "Compatibility list",
-            d: "How far each game gets on each platform, from players' reports on the newest launcher version.",
+            d: "How far each game gets on each platform, reported by players.",
           },
           {
             t: "Notifications",
-            d: "Requests, invites, messages and missed calls, with web push and a mail digest you control.",
+            d: "Web push and an email digest you control.",
           },
-          { t: "Downloads", d: "Every AnyPS5 build from each project's latest release, with checksums." },
-          { t: "Moderation", d: "Report a person, a message or a theme; moderators review it." },
+          { t: "Downloads", d: "Every AnyPS5 build from the latest releases, with checksums." },
+          { t: "Moderation", d: "Report a person, a message or a theme, and moderators review it." },
           {
             t: "Open source",
-            d: "MIT. docker compose up runs the whole server on one machine, HTTPS and an optional TURN relay included.",
+            d: "MIT licensed. The whole server runs on one machine with Docker.",
           },
         ],
       },
     ],
     install: {
-      title: "Run your own AnyTogether",
+      title: "Run your own server",
       steps: [
-        "git clone https://github.com/AnyTogether/AnyTogether.git, then cd AnyTogether/deploy and cp .env.example .env.",
-        "Set your domain, a database password and a signing key in .env.",
-        "docker compose up -d --build. Then point the launchers and the phone at it in Settings → AnyTogether → Server.",
+        "You need a Linux server with 2 GB of memory, Docker and a domain name. Then pick your server in the launchers' AnyTogether settings.",
       ],
-      requirements: [
-        ["Machine", "Linux with a public IPv4 address, 2 GB of memory, 10 GB of disk"],
-        ["Software", "Docker Engine 24+ with the Compose plugin"],
-        ["Network", "A host name pointing at it; ports 80 and 443"],
-      ],
+      requirements: [],
     },
   },
 };
@@ -1031,20 +984,20 @@ const tr: ProductStrings = {
     meta: {
       title: "Mac için AnyPS5 · AnyTogether",
       description:
-        "AnyPS5-ARM: Apple silicon Mac'ler için PS5 tarzı launcher. Sahip olduğun oyunları aç ve oyna; kare üretimi, kupalar, klipler, kayıt senkronu ve AnyTogether içinde.",
+        "AnyPS5-ARM, Mac için PS5 tarzı bir launcher. Sahip olduğun oyunları aç ve oyna. Kupalar, klipler, kayıt senkronu ve AnyTogether içinde.",
     },
-    kicker: "AnyPS5-ARM · Mac",
+    kicker: "AnyPS5-ARM",
     title: ["PS5 ana ekranı,", "Mac'inde."],
-    lead: "AnyPS5.app'e oyun dump'larının olduğu klasörü göster, gerisini o halleder: oyunları bulur, Mac için açar, başlatır; kontrollerini, kayıtlarını ve kupalarını oyun oyun tutar. Terminal yok, derleme yok, Vulkan SDK yok.",
+    lead: "AnyPS5'e oyun dump'larının klasörünü göster. Her birini Mac'inde oynanan bir oyuna çevirir, Terminal ve derleme gerekmez.",
     hero: {
       name: "mac-home-trophies",
       alt: "AnyPS5 ana ekranında Hollow Knight: Silksong seçili: Oyna, 34 kupanın 8'i, durum, boyut, oyun kimliği ve sürüm",
       frame: "mac",
     },
     facts: [
-      ["120 fps", "M3 Pro'da Silksong, oynanabilir"],
-      ["0 bayt", "açılan oyun için ek disk"],
-      ["4", "oyuncu: telefonlar ve kollar"],
+      ["120 fps", "M3 Pro'da Silksong"],
+      ["0 bayt", "açılan oyun başına ek disk"],
+      ["4", "oyuncu, telefon ve kontrolcüyle"],
     ],
     chapters: [
       {
@@ -1052,7 +1005,7 @@ const tr: ProductStrings = {
         nav: "Motor",
         kicker: "Motor",
         title: "Emülatör değil.",
-        lead: "AnyPS5'in relinker'ı bir PS5 oyununun programını yerel bir Mac programına çevirir ve sıfırdan yazılmış sistem kütüphanelerine bağlar. Oyunun x86-64 kodu Rosetta 2 altında çalışır, PS5 grafik sürücüsü de Metal üstünde MoltenVK aracılığıyla Vulkan'da.",
+        lead: "AnyPS5 bir PS5 oyununu yerel bir Mac uygulamasına yeniden bağlar. Oyunun kodu Rosetta 2 ile, grafikleri Metal üstünde çalışır.",
         shots: [
           {
             name: "mac-unlocking",
@@ -1062,28 +1015,28 @@ const tr: ProductStrings = {
         ],
         items: [
           {
-            t: "Emüle değil, yeniden bağlanmış",
-            d: "Relinker bir Mach-O programı ve macOS modülleri yazar; sonuç Finder'dan açılan normal bir .app'tir.",
+            t: "Mac uygulamasına bağlanır",
+            d: "Sonuç, Finder'dan açtığın normal bir .app olur.",
           },
           {
             t: "Rosetta 2 ve Metal",
-            d: "x86-64 kod Rosetta 2 ile çevrilir, grafikler MoltenVK ile çizilir. Bir oyunun ilk açılışı en uzunudur; sonrakiler önbelleği kullanır.",
+            d: "Bir oyunun ilk açılışı en uzun sürer. Sonrakiler önbelleği kullanır.",
           },
           {
             t: "Motor sürümleri",
-            d: "Ayarlar'da uygulamanın taşıdığı motor, GitHub'dan indirilen yenileri ya da kendi derlemenin klasörü. Gerekmeyenleri sil.",
+            d: "Yerleşik motoru kullan, daha yenisini indir ya da kendi derlemeni seç.",
           },
           {
             t: "Bugün oynanan oyunlar",
-            d: "Hollow Knight: Silksong 120 fps'te, Dreaming Sarah 60 fps'te oynanabilir; DOOM (homebrew) oynanır, Stray ilk bölümünü şimdilik düşük kare hızıyla oynatır, Minecraft bir dünyaya girer.",
+            d: "Silksong 120 fps'te, Dreaming Sarah 60 fps'te oynanır. DOOM, Stray ve Minecraft oyuna girer.",
           },
           {
             t: "Uyumluluk listesi",
-            d: "Her oyunun her platformda ne kadar ilerlediği; oyuncular launcher'dan bildirir, AnyTogether'da tutulur.",
+            d: "Oyuncular her oyunun ne kadar ilerlediğini bildirir, liste AnyTogether'da tutulur.",
           },
           {
             t: "Otomatik güncelleme",
-            d: "Yeni AnyPS5 çıktığında Ayarlar → Hakkında'da … sürümüne güncelle görünür: indirir, yerine geçer ve yeniden açılır.",
+            d: "Yeni sürüm çıkınca Ayarlar'da görünür. Kurulur ve uygulama yeniden açılır.",
           },
         ],
       },
@@ -1092,29 +1045,29 @@ const tr: ProductStrings = {
         nav: "Ana ekran",
         kicker: "Ana ekran",
         title: "Konsol gibi dizilmiş.",
-        lead: "Her oyun bir sıra kutucukta durur. Seçilen büyür, görseli ekranın arkasında süzülür, tema müziği çalar; altında bilgiler: durum, boyut, oyun kimliği ve sürüm.",
+        lead: "Oyunların bir sıra kutucukta durur. Seçilen büyür ve tema müziği çalar.",
         shots: [
           { name: "mac-library", alt: "Oyun kütüphanesi kutucuklardan bir ızgara olarak", frame: "mac" },
         ],
         items: [
           {
-            t: "Oyna, Aç, Yeniden dene",
-            d: "Başlığın altındaki düğme oyunun durumunun gerektirdiğini yapar; kupalar ve ⋯ yanında.",
+            t: "Oyna, aç, yeniden dene",
+            d: "Ana düğme, oyunun o an neye ihtiyacı varsa onu yapar.",
           },
           {
             t: "Kütüphane",
-            d: "Tüm oyunlar ızgara olarak. Klasöre sonradan eklediklerin kendiliğinden görünür.",
+            d: "Tüm oyunların bir ızgarada. Klasöre eklediklerin kendiliğinden görünür.",
           },
           {
             t: "Konsol kontrolleri",
-            d: "Ok tuşları, Return (✕), Esc (○), L1 ve R1 için Q ve E; ya da PS tuşu launcher'ı oyunun önüne getiren bir kol.",
+            d: "Ok tuşları, Return ve Esc kontrolcü gibi çalışır. Kontrolcünün PS tuşu launcher'ı açar.",
           },
           { t: "Fare ve trackpad", d: "Bir kutucuğa tıkla, oynamak için çift tıkla, sırada kaydır." },
           {
             t: "Üç hareketli tema",
-            d: "Cosmic, Aurora ve Sunset; bir vurgu rengi ya da arkada kendi resmin veya döngüdeki videon.",
+            d: "Cosmic, Aurora ve Sunset ya da arkada kendi resmin veya videon.",
           },
-          { t: "Türkçe ya da English", d: "Launcher, telefon ve oyunların dili seçimini izler." },
+          { t: "Türkçe ya da English", d: "Launcher, telefon ve oyunlar seçimini izler." },
         ],
       },
       {
@@ -1122,31 +1075,31 @@ const tr: ProductStrings = {
         nav: "Açma",
         kicker: "Açma",
         title: "Dump'tan Mac uygulamasına, dakikalar içinde.",
-        lead: "Aç, bir PS5 dump'ını konsoldakine benzer bir ilerleme çubuğuyla Mac uygulamasına çevirir. Birkaç oyun sıraya konabilir.",
+        lead: "Aç düğmesi bir PS5 dump'ını Mac uygulamasına çevirir. Birkaç oyunu sıraya koyabilirsin.",
         shots: [
           { name: "mac-starting", alt: "Oyun açılırken simgesi ve sayaçla başlangıç ekranı", frame: "mac" },
         ],
         items: [
           {
             t: "Paketten çıkarma",
-            d: "eboot.bin ve tüm modüller açılır, SELF kapları dahil. Hâlâ şifreli bir dump bildirilir, dönüştürülmez.",
+            d: "Oyun ve modülleri açılır. Hâlâ şifreli bir dump varsa bildirilir.",
           },
           {
             t: "Bağlama ve paketleme",
-            d: "Mach-O programı, macOS modülleri, MoltenVK, oyuna özel yamalar ve bir başlatma betiği uygulamaya girer.",
+            d: "Program, modülleri ve oyuna özel yamalar tek bir Mac uygulamasına girer.",
           },
-          { t: "APFS klonları", d: "Oyunun dosyaları dump'ın klonu olur; açılan oyun ek yer kaplamaz." },
+          { t: "APFS klonları", d: "Oyunun dosyaları dump'ın klonudur, bu yüzden ek yer kaplamaz." },
           {
             t: "Hep güncel",
-            d: "Araç takımı daha yeniyse oyun Güncelleme var der; Yeniden Aç, kayıtları ve kupaları koruyarak günceller.",
+            d: "Araç takımı yenilenince Yeniden Aç oyunu günceller. Kayıtlar ve kupalar kalır.",
           },
           {
             t: "Başlangıç ekranı",
-            d: "Oyunun ilk penceresi gelene kadar simgesi ve bir sayaç; Esc görünmeden durdurur.",
+            d: "Oyunun penceresi gelene kadar simgesi ve bir sayaç görünür.",
           },
           {
             t: "Anlaşılır hatalar",
-            d: "Eksik modül, adıyla desteklenmeyen sistem işlevi, GPU'nun durması, çökme: günlükten ve macOS'un çökme raporundan okunur.",
+            d: "Eksik bir modül ya da çökme sade bir dille anlatılır.",
           },
         ],
       },
@@ -1155,7 +1108,7 @@ const tr: ProductStrings = {
         nav: "Oyun ayarları",
         kicker: "Oyuna özel",
         title: "Her oyunun kendi ayarları.",
-        lead: "Oyunun ⋯ menüsünden, her açılışta uygulanır.",
+        lead: "Oyunun ⋯ menüsünden açılır. Her açılışta uygulanır.",
         shots: [
           {
             name: "mac-game-settings",
@@ -1166,28 +1119,28 @@ const tr: ProductStrings = {
         items: [
           { t: "Çıkış çözünürlüğü", d: "Stray gibi çözünürlük yaması olan oyunlarda." },
           { t: "Pencere ya da tam ekran", d: "Ve pencerenin boyutu." },
-          { t: "Dikey senkron", d: "Oyun oyun açık ya da kapalı." },
+          { t: "Dikey senkron", d: "Her oyun için açık ya da kapalı." },
           {
             t: "Kare üretimi",
-            d: "Oyunun her iki karesi arasına bir kare; 60 fps, 120 Hz ekranda 120 gösterir. Dikey senkron ister; 60 Hz ekranda ya da Düşük Güç Modu'nda kendini kapatır.",
+            d: "Her iki karenin arasına bir kare ekler. 120 Hz ekranda 60 fps, 120 olarak görünür.",
             tag: "experimental",
           },
           {
             t: "Performans katmanı",
-            d: "Minimal: fps, üretilen kareler, kare süresi, GPU, CPU ve bellekle tek satır; ya da kare süresi grafiğiyle Ayrıntılı. Herhangi bir köşede.",
+            d: "Tek satırda fps, GPU, CPU ve bellek ya da grafikli ayrıntılı görünüm.",
           },
-          { t: "Oyun dili", d: "Launcher'ınki ya da konsolun dillerinden biri." },
+          { t: "Oyun dili", d: "Launcher'ın dili ya da konsolun dillerinden biri." },
           {
             t: "Ekran görüntüleri ve klipler",
-            d: "Oyunun F12 görüntüleri ve klipleri ızgarada, tek tek de tam ekranda.",
+            d: "F12 görüntülerin ve kliplerin ızgarada ya da tek tek.",
           },
           {
             t: "Kayıt yedekleri",
-            d: "Kayıtları Yedekle ve Geri Yükle: kayıtlar ve kupalar zip olarak; geri yükleme önce oyunun elindekini yedekler.",
+            d: "Kayıtlar ve kupalar zip olur. Geri yükleme önce mevcut kayıtları yedekler.",
           },
           {
             t: "Shader önbelleği",
-            d: "Açık ya da kapalı; temiz bir başlangıç için Shader Önbelleğini Temizle.",
+            d: "Kapat ya da oyun temiz bir başlangıç isterse temizle.",
           },
         ],
       },
@@ -1195,30 +1148,30 @@ const tr: ProductStrings = {
         id: "controls",
         nav: "Kontroller",
         kicker: "Kontroller",
-        title: "Klavye, fare, kollar ve telefonlar.",
-        lead: "Her oyunun kendi düzeni var. Bir tuş seç ve istediğin tuşa bas; bağlı bir kol kendi tuşlarını korur.",
+        title: "Klavye, fare, kontrolcü ve telefon.",
+        lead: "Her oyunun kendi düzeni var. Bir tuş seç ve istediğin tuşa bas.",
         shots: [{ name: "mac-controls", alt: "Kontroller paneli Kare için bir tuş bekliyor", frame: "mac" }],
         items: [
           {
             t: "Tuş ne yapar",
-            d: "Unreal Engine oyunlarında her tuş, oyunun onunla ne yaptığını (Zıpla, Koş) oyunun kendi giriş ayarlarından okuyup gösterir.",
+            d: "Unreal Engine oyunlarında her tuş, Zıpla ya da Koş gibi işini gösterir.",
           },
           {
             t: "Kamera olarak fare",
-            d: "Hassasiyet, dikey hız, tepki eğrisi, en az eğim, en yüksek hız, yumuşatma ve kameranın ne kadar çabuk durduğu.",
+            d: "Hassasiyeti, hızı, yumuşatmayı ve tepki eğrisini ayarla.",
           },
-          { t: "Analog ölü bölgesi", d: "Her analog için ayrı; kayan bir kolu durdurur." },
+          { t: "Analog ölü bölgesi", d: "Her analog için ayrı. Kayan bir kontrolcüyü durdurur." },
           {
             t: "Klavye hissi",
-            d: "Yavaş yürüme, bir tuşun analogu ne hızla eğdiği, yarış oyunları için L2 ve R2'ye ne hızla bastığı.",
+            d: "Bir tuşun analogu ve L2 ile R2'yi ne hızla bastırdığını ayarla.",
           },
           {
             t: "Dört oyuncu",
-            d: "Dört telefona kadar ve Mac'in kolları, yerel co-op için dört DualSense olur.",
+            d: "En fazla dört telefon ve kontrolcü, yerel co-op için DualSense olur.",
           },
           {
             t: "Ayarını paylaş",
-            d: "Ayarları Dışa Aktar oyunun tuşlarını ve tüm ayarlarını tek dosyaya yazar; İçe Aktar bir arkadaşının paylaştığını uygular.",
+            d: "Bir oyunun tuşlarını ve ayarlarını tek dosyaya aktar ya da arkadaşınınkini al.",
           },
         ],
       },
@@ -1227,24 +1180,20 @@ const tr: ProductStrings = {
         nav: "Kupalar",
         kicker: "Kupalar",
         title: "Her kupa, konsoldaki gibi.",
-        lead: "Liste, metinler ve simgeler oyunun kendi kupa paketinden gelir; varsa oyunun dilinde.",
+        lead: "Adlar, metinler ve simgeler oyunun kendisinden gelir, varsa oyunun dilinde.",
         shots: [
           { name: "mac-trophy-banner", alt: "Silksong oynarken üstüne düşen bir kupa kartı", frame: "mac" },
         ],
         items: [
           {
             t: "Oyunun üstünde bir kart",
-            d: "Kupanın simgesi, adı ve derecesi bir sesle; tam ekranda da, klavyeyi ya da fareyi hiç almadan.",
+            d: "Simge, ad ve derece bir sesle düşer, tuşlarını almadan.",
           },
           {
             t: "Tam liste",
-            d: "Dereceye göre ağırlıklı yüzde, platinden bronza sayılar, her birinin kazanıldığı gün ve saat.",
+            d: "Dereceye göre sayılar ve her kupanın tarihi. Gizli kupalar kazanılana kadar gizli kalır.",
           },
-          {
-            t: "Gizli ve sayaçlı",
-            d: "Gizli kupalar kazanılana kadar gizli kalır; bir şey sayan kupalar ne kadar ilerlediğini gösterir, 23/51 gibi.",
-          },
-          { t: "Oynama süresi", d: "Her oturum tutulur, AnyTogether ile profiline gider." },
+          { t: "Oynama süresi", d: "Her oturum kaydedilir, AnyTogether ile profiline gider." },
         ],
       },
       {
@@ -1252,7 +1201,7 @@ const tr: ProductStrings = {
         nav: "Ayrıntılar",
         kicker: "Ayrıntılar",
         title: "Olmasa arayacakların.",
-        lead: "Küçük özellikler; her biri oynayan birinin isteği.",
+        lead: "Küçük özellikler, her biri bir oyuncunun isteği.",
         shots: [
           {
             name: "mac-hub",
@@ -1263,32 +1212,24 @@ const tr: ProductStrings = {
         items: [
           {
             t: "Klipler",
-            d: "Oyunun son 15 ila 120 saniyesi, görüntü ve sesiyle; DualSense'te Create, ⌥F12 ya da telefonda Create ile MP4 olarak.",
+            d: "Son 15 ila 120 saniyeyi Create ya da ⌥F12 ile MP4 olarak kaydet.",
           },
           {
-            t: "Kayıt Senkronu",
-            d: "Kayıtlar ve kupalar iCloud Drive ya da seçtiğin herhangi bir klasörle Mac'lerinde aynı kalır; değişen önce yedeklenir.",
+            t: "Kayıt senkronu",
+            d: "Kayıtlar ve kupalar iCloud Drive ya da bir klasörle tüm Mac'lerinde aynı kalır.",
           },
           {
             t: "Tema Stüdyosu",
-            d: "Hareket, renkler, vurgu, resim ya da video, menü müziği. Tek bir .anyps5theme dosyası olarak kaydet ya da Tema Merkezi'nde paylaş.",
+            d: "Hareket, renk, resim ve müzikle bir tema yap, sonra paylaş.",
           },
           {
             t: "Tema Merkezi",
-            d: "İnsanların paylaştığı temalar, tek tuşla kurulur. Telefon da launcher'ın temasını giyer.",
+            d: "İnsanların paylaştığı temaları tek tuşla kur. Telefon da temanı izler.",
           },
           { t: "Discord durumu", d: "Oynadığın oyun Discord'da görünür, AnyTogether olsa da olmasa da." },
           {
-            t: "Bağlantılar",
-            d: "anyps5://game/<oyun kimliği> bir oyunu seçer, anyps5://play/<oyun kimliği> başlatır.",
-          },
-          {
             t: "Çökme raporları",
-            d: "Oyunun neden durduğu anlaşılır sözlerle, eklenecek bir rapor, ayrıntılı günlük ve önceden doldurulmuş bir GitHub issue.",
-          },
-          {
-            t: "Konsol yazı tipleri",
-            d: "İsteyen oyunlar için bir sistem yazı tipi klasörü, ve kendi ekran görüntüsü klasörün.",
+            d: "Oyunun neden durduğu sade bir dille, hazır bir GitHub issue ile.",
           },
         ],
       },
@@ -1297,7 +1238,7 @@ const tr: ProductStrings = {
         nav: "AnyTogether",
         kicker: "AnyTogether, içinde",
         title: "Arkadaşların, launcher'ın içinde.",
-        lead: "İsteğe bağlı: çıkış yapmışken launcher eskisi gibi çalışır. Giriş yaptığında üst çubuğa arkadaşlar, mesajlar ve parti gelir; oynadığın her şey sayılır.",
+        lead: "Giriş yapınca üst çubuğa arkadaşlar, mesajlar ve parti gelir. Hesapsız da launcher eskisi gibi çalışır.",
         shots: [
           {
             name: "mac-shareplay",
@@ -1311,51 +1252,39 @@ const tr: ProductStrings = {
           },
         ],
         items: [
-          { t: "Giriş", d: "E-postana gelen bir kod ya da giriş yapmış telefonunda tek dokunuş. Şifre yok." },
-          { t: "Arkadaşlar", d: "Kullanıcı adıyla ekle, kim çevrimiçi ve ne oynuyor gör." },
+          { t: "Giriş", d: "E-postana gelen bir kod ya da telefonunda tek dokunuş. Şifre yok." },
+          { t: "Arkadaşlar", d: "Kullanıcı adıyla ekle, kimin çevrimiçi olduğunu ve ne oynadığını gör." },
           {
             t: "Mesajlar",
-            d: "Canlı birebir ve grup sohbetleri, yazıyor göstergesi ve okunmamış sayısıyla.",
+            d: "Yazıyor göstergesiyle canlı birebir ve grup sohbetleri.",
           },
           {
-            t: "Partiler",
-            d: "Kur, arkadaşlarını davet et ya da onlara aç; lider liderliği devreder ya da birini çıkarır.",
+            t: "Parti ve ses",
+            d: "Bir parti kur ve konuş. ⌥V ile bas-konuş oyunun üstünde çalışır.",
           },
-          {
-            t: "Ses",
-            d: "Oyuncudan oyuncuya, gerektiğinde relay ile. ⌥V ile bas-konuş oyunun üstünde çalışır.",
-          },
-          { t: "Birebir arama", d: "Gelen arama oyunun üstünde görünür: ⌥A açar, ⌥D reddeder." },
+          { t: "Birebir arama", d: "Gelen arama oyunun üstünde görünür. ⌥A açar, ⌥D reddeder." },
           {
             t: "Share play",
-            d: "Oynadığın oyunu paylaş ya da bir arkadaşınınkini izle, kolun onun oyuncusu olsun.",
+            d: "Oyununu paylaş ya da bir arkadaşınınkini izle ve kontrolcünle katıl.",
           },
           {
             t: "Arkadaşının oyununa katıl",
-            d: "Arkadaşların “Katılınabilir” görür ve aynı oyunu açar; oyunun sürümü önce kontrol edilir.",
+            d: "Arkadaşların katılabileceklerini görür ve aynı oyunu açar.",
           },
           {
-            t: "Profil, aktivite, liderlik",
-            d: "Oyunlar, saatler, nadirliğiyle kupalar; tepkilerle arkadaş aktivitesi; arkadaşlar ya da herkes arasında puanlar.",
+            t: "Profil ve liderlik",
+            d: "Oyunlar, saatler ve kupalar, arkadaşlar ya da herkes arasında puanlar.",
           },
-          { t: "Bildirimler", d: "Oynarken gelen istekler, davetler, cevapsız aramalar ve mesajlar." },
-          {
-            t: "Uyumluluk raporları",
-            d: "Bir oyunun ne kadar ilerlediğini söyle; launcher sürümünü, motoru, Mac'i ve macOS'u ekler.",
-          },
-          {
-            t: "Başka sunucu",
-            d: "Ayarlar → AnyTogether → Sunucu, kendi kurduğun bir AnyTogether'a bağlar.",
-          },
+          { t: "Bildirimler", d: "Oynarken gelen istekler, davetler ve mesajlar." },
         ],
       },
     ],
     install: {
       title: "Mac için AnyPS5'i kur",
       steps: [
-        "Terminal satırını yapıştır: AnyPS5.app'i Uygulamalar'a koyar, eksikse Rosetta 2'yi kurar; “açılamıyor” uyarısı çıkmaz.",
-        "Ya da zip'i indir, aç ve uygulamayı başlat; ilk seferde Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç.",
-        "Bir dil, bir tema ve oyun klasörünü seç. Zaten kurulu mu? Ayarlar → Hakkında → Güncelle.",
+        "Terminal satırını yapıştır. AnyPS5'i Uygulamalar'a koyar, gerekirse Rosetta 2'yi kurar.",
+        "Ya da zip'i indirip uygulamayı aç. İlk seferde Sistem Ayarları'ndaki Gizlilik ve Güvenlik bölümünden izin ver.",
+        "Bir dil, bir tema ve oyun klasörünü seç.",
       ],
       requirements: [
         ["Mac", "Apple silicon (M1 ve sonrası)"],
@@ -1368,12 +1297,12 @@ const tr: ProductStrings = {
     meta: {
       title: "Windows ve Linux için AnyPS5 · AnyTogether",
       description:
-        "AnyPS5 Desktop: Windows ve Linux için PS5 tarzı launcher; motor kendini indirir, kupalar, kayıt yedekleri ve AnyTogether içinde. Erken sürüm.",
+        "AnyPS5 Desktop, Windows ve Linux için PS5 tarzı launcher. Motor kendini indirir, kupalar, kayıt yedekleri ve AnyTogether içinde. Erken sürüm.",
     },
-    kicker: "AnyPS5 Desktop · Windows ve Linux",
+    kicker: "AnyPS5 Desktop",
     tag: "preview",
     title: ["Aynı launcher,", "PC'nde."],
-    lead: "AnyPS5 Desktop, Mac launcher'ını Windows ve Linux'a getirir: PS5 tarzı ana ekran, kütüphane, açma, kontroller, kupalar, kayıtlar ve AnyTogether. İlk açılışta AnyPS5 motorunu kendisi indirir.",
+    lead: "Mac launcher'ı artık Windows ve Linux'ta. İlk açılışta AnyPS5 motorunu kendisi indirir.",
     hero: {
       name: "pc-home-cosmic",
       alt: "AnyPS5 Desktop ana ekranı: örnek bir oyun seçili, Oyna ve 5 kupanın 2'si",
@@ -1381,7 +1310,7 @@ const tr: ProductStrings = {
     },
     facts: [
       ["Setup.exe", "yönetici gerekmez"],
-      ["AppImage · .deb", "ve bir .tar.gz"],
+      ["AppImage & .deb", "ve bir .tar.gz"],
       ["1 tık", "motoru indirmek için"],
     ],
     chapters: [
@@ -1390,7 +1319,7 @@ const tr: ProductStrings = {
         nav: "Motor",
         kicker: "Motor",
         title: "Kendini indirir.",
-        lead: "İlk açılışın son adımı AnyPS5 motorunu indir'i sunar: launcher sistemine uygun dosyaları AnyPS5'in son sürümünden alır ve kurar.",
+        lead: "İlk açılışta launcher sistemine uygun motoru indirir ve kurar.",
         shots: [
           {
             name: "pc-onboarding-toolkit",
@@ -1401,19 +1330,15 @@ const tr: ProductStrings = {
         items: [
           {
             t: "Kontrollü indirme",
-            d: "Her dosyanın boyutu ve GitHub'ın sha256'sı kontrol edilir; kopan bağlantı kaldığı yerden sürer.",
+            d: "Her dosya kontrol edilir, kopan indirme kaldığı yerden sürer.",
           },
           {
             t: "Motor sürümleri",
-            d: "Ayarlar → AnyPS5 Motoru güncellemeleri denetler, GitHub'daki sürümleri listeler, aralarında geçer ya da kendi klasörünü kullanır.",
+            d: "Güncellemeleri denetle, sürüm değiştir ya da kendi klasörünü kullan.",
           },
           {
-            t: "Düzenli",
-            d: "Kullanılan motor, en yeni iki sürüm ve oyunlarının yapıldığı sürümler kalır; gerisi silinir.",
-          },
-          {
-            t: "Güncelle ve Oyna",
-            d: "Yeni bir motor oyunlara güncelleme önerir: önce motoru indirir, sonra oyunu yeniden açar.",
+            t: "Güncelle ve oyna",
+            d: "Yeni bir motor çıkınca oyunların güncelleme önerir ve yeniden açılır.",
           },
         ],
       },
@@ -1422,27 +1347,30 @@ const tr: ProductStrings = {
         nav: "Kütüphane",
         kicker: "Kütüphane",
         title: "Bul, aç, oyna.",
-        lead: "Oyunlarının şifresi çözülmüş kopyalarını tek klasörde adları, simgeleri ve arka planlarıyla bulur; paketten çıkarır, sistemine göre bağlar ve başlatır.",
+        lead: "Oyunlarını tek klasörde bulur, sistemine göre açar ve başlatır.",
         shots: [
           { name: "pc-library", alt: "Dört örnek oyunlu kütüphane, biri kilitli biri hasarlı", frame: "pc" },
         ],
         items: [
-          { t: "Kendi dilinde adlar", d: "Oyunun kendi verisinden; simgesi, arka planı ve tema müziğiyle." },
+          {
+            t: "Kendi dilinde adlar",
+            d: "Oyunun kendisinden okunur, simgesi, arka planı ve tema müziğiyle.",
+          },
           {
             t: "Açma",
-            d: "SELF programları upstream'deki gibi bayt bayt çıkarılır, yerel bir Windows PE ya da Linux ELF'e bağlanır.",
+            d: "Her oyun yerel bir Windows ya da Linux programına bağlanır.",
           },
           {
             t: "Diskte hafif",
-            d: "Sürücü izin verdiğinde oyun dosyaları sabit bağlantıdır; açılan oyun az yer kaplar.",
+            d: "Sürücü izin verirse sabit bağlantılar açılan oyunu küçük tutar.",
           },
           {
             t: "Kayıtlar oyunla kalır",
-            d: "Oyun yeniden açıldığında kayıtlar ve kupalar yeni kuruluma taşınır.",
+            d: "Oyun yeniden açıldığında kayıtlar ve kupalar da taşınır.",
           },
           {
             t: "Üç hareketli tema",
-            d: "Cosmic, Aurora ve Sunset: Mac launcher'ının arka plan shader'ı, taşınmış.",
+            d: "Cosmic, Aurora ve Sunset, Mac'tekinin aynısı.",
           },
           { t: "Türkçe ya da English", d: "İlk açılışta seçilir." },
         ],
@@ -1452,7 +1380,7 @@ const tr: ProductStrings = {
         nav: "Ayarlar",
         kicker: "Oyuna özel",
         title: "Ayarlar ve kontroller.",
-        lead: "Her oyun kendi seçimlerini tutar, her açılışta uygulanır.",
+        lead: "Her oyun kendi seçimlerini tutar. Her açılışta uygulanır.",
         shots: [
           {
             name: "pc-game-settings",
@@ -1462,14 +1390,14 @@ const tr: ProductStrings = {
           { name: "pc-controls", alt: "Kontroller paneli Daire için bir tuş bekliyor", frame: "pc" },
         ],
         items: [
-          { t: "Çözünürlük", d: "Yama dosyası genişlik ve yükseklik belirten oyunlarda." },
-          { t: "Pencere ya da tam ekran", d: "Ve pencere boyutu." },
-          { t: "Dikey senkron ve shader önbelleği", d: "Oyun oyun açık ya da kapalı." },
-          { t: "Oyun dili", d: "Launcher'ınki ya da konsolun dillerinden biri." },
-          { t: "Klavye düzeni", d: "Bir tuş seç ve bir tuşa bas, oyun oyun." },
+          { t: "Çözünürlük", d: "Yaması genişlik ve yükseklik belirten oyunlarda." },
+          { t: "Pencere ya da tam ekran", d: "Ve pencerenin boyutu." },
+          { t: "Dikey senkron ve shader önbelleği", d: "Her oyun için açık ya da kapalı." },
+          { t: "Oyun dili", d: "Launcher'ın dili ya da konsolun dillerinden biri." },
+          { t: "Klavye düzeni", d: "Her oyun için bir tuş seç ve bir tuşa bas." },
           {
             t: "Katman ve kare üretimi",
-            d: "Motora iletilir; AnyPS5-ARM'dan derlenmiş bir motorla etkili olur.",
+            d: "AnyPS5-ARM'dan derlenmiş bir motorla çalışır.",
             tag: "experimental",
           },
         ],
@@ -1479,7 +1407,7 @@ const tr: ProductStrings = {
         nav: "Kupalar",
         kicker: "Kupalar ve kayıtlar",
         title: "Kazandığın hiçbir şey kaybolmaz.",
-        lead: "Kupalar konsoldaki gibi listelenir, her oyunun kayıtları istediğinde yedeklenir.",
+        lead: "Kupalar konsoldaki gibi görünür. Kayıtları istediğin zaman yedeklersin.",
         shots: [
           {
             name: "pc-trophies",
@@ -1490,16 +1418,15 @@ const tr: ProductStrings = {
         items: [
           {
             t: "Kupalar",
-            d: "Oyunun kendi kupa paketinden: dereceler, gizli kupalar, her birinin kazanıldığı tarih.",
+            d: "Dereceler, gizli kupalar ve her birinin kazanıldığı tarih.",
           },
           {
             t: "Kayıt yedekleri",
             d: "Bir oyunun kayıtları ve kupaları zip olarak, istediğinde geri yüklenir.",
           },
-          { t: "Oynama süresi", d: "Her oturum tutulur, giriş yaptıysan AnyTogether'a gönderilir." },
           {
-            t: "Çevrimdışı sorun değil",
-            d: "Oturumlar ve kupalar diskte bekler, sonra gider; hiçbir şey iki kez sayılmaz.",
+            t: "Çevrimdışı da oynama süresi",
+            d: "Oturumlar ve kupalar diskte bekler, sonra AnyTogether'a bir kez sayılarak gider.",
           },
         ],
       },
@@ -1507,8 +1434,8 @@ const tr: ProductStrings = {
         id: "together",
         nav: "AnyTogether",
         kicker: "AnyTogether, içinde",
-        title: "Arkadaşlar, mesajlar, parti, ses.",
-        lead: "Ayarlar → AnyTogether'dan giriş yap; üst çubuğa arkadaşlar, mesajlar ve parti gelir.",
+        title: "Arkadaşlar, mesajlar, parti ve ses.",
+        lead: "Launcher'ın AnyTogether ayarlarından giriş yap. Üst çubuğa arkadaşlar, mesajlar ve parti gelir.",
         shots: [
           {
             name: "pc-together-messages",
@@ -1522,29 +1449,24 @@ const tr: ProductStrings = {
           },
         ],
         items: [
-          { t: "Giriş", d: "E-posta kodu, site üzerinden passkey ya da eşleşmiş telefonundan tek dokunuş." },
-          { t: "Arkadaşlar", d: "İstekler, kullanıcı adıyla ekleme, her arkadaşın ne oynadığı." },
+          { t: "Giriş", d: "E-posta kodu, passkey ya da eşleşmiş telefonundan tek dokunuş." },
+          { t: "Arkadaşlar", d: "Kullanıcı adıyla ekle, her arkadaşın ne oynadığını gör." },
           {
             t: "Mesajlar",
-            d: "Kolla gönderilebilen hızlı yanıtlarla sohbetler, iki yönde yazıyor göstergesi.",
+            d: "Kontrolcüyle gönderilebilen hızlı yanıtlarla sohbetler.",
           },
           {
             t: "Parti ve ses",
-            d: "Kur, davet et, bir arkadaşının açık partisine gir. Konuşma tuşu ya da bas-konuş, oyunun üstünde de okunur.",
+            d: "Bir parti kur ya da katıl, bir tuşla ya da bas-konuşla konuş.",
           },
           {
             t: "Profiller",
-            d: "Oynama süresi ve kupa ilerlemesiyle oyunlar, nadirliğiyle son kupalar; sahibi ne kadar gizli tutuyorsa o kadar.",
+            d: "Oyunlar, oynama süresi ve son kupalar, sahibinin istediği kadar gizli.",
           },
           {
             t: "Arkadaşının oyununa katıl",
-            d: "Oyunun, sürümünün ve motor derlemesinin yayıncınınkiyle aynı olduğu kontrol edilir.",
+            d: "Oyun, sürümü ve motor, yayıncınınkiyle karşılaştırılır.",
           },
-          {
-            t: "Mühürlü oturum",
-            d: "Windows oturumu DPAPI ile, Linux Secret Service anahtarlığında ya da yalnızca senin okuyabildiğin bir dosyada tutar.",
-          },
-          { t: "Başka sunucu", d: "Launcher'ı kendi kurduğun bir AnyTogether'a yönlendir." },
         ],
       },
       {
@@ -1552,7 +1474,7 @@ const tr: ProductStrings = {
         nav: "Telefon",
         kicker: "Telefon",
         title: "AnyPS5 Remote'u eşleştir.",
-        lead: "Telefon uygulaması launcher'ı ağında bulur ve dört haneli bir kodla eşleşir. Oyunlarda telefonun kumanda olması AnyPS5-ARM'dan derlenmiş bir motor ister; upstream motoru henüz desteklemiyor.",
+        lead: "Telefon uygulaması launcher'ı ağında bulur ve dört haneli bir kodla eşleşir. Oyunlarda kontrolcü olarak kullanmak için AnyPS5-ARM'dan derlenmiş bir motor gerekir.",
         shots: [
           {
             name: "pc-pairing",
@@ -1561,11 +1483,14 @@ const tr: ProductStrings = {
           },
         ],
         items: [
-          { t: "Kendini bulur", d: "Wi-Fi'da Bonjour/mDNS ile; güvenlik duvarı sorusuna bir kez izin ver." },
-          { t: "Ya da kablo", d: "Android telefon adb üzerinden." },
+          {
+            t: "Wi-Fi ile",
+            d: "Telefon launcher'ı Wi-Fi'da bulur. Güvenlik duvarı sorusuna bir kez izin ver.",
+          },
+          { t: "Ya da kablo", d: "Android telefon adb ile bağlanabilir." },
           {
             t: "Seni giriş yaptırır",
-            d: "Giriş yapmış telefon launcher'ı tek dokunuşla onaylar, tersi de olur.",
+            d: "Giriş yapmış telefon launcher'ı tek dokunuşla giriş yaptırır, tersi de olur.",
           },
         ],
       },
@@ -1573,19 +1498,16 @@ const tr: ProductStrings = {
     install: {
       title: "AnyPS5 Desktop'ı kur",
       steps: [
-        "Windows: Setup.exe'yi çalıştır. Kullanıcın için Başlat menüsü kısayolu ve kaldırıcıyla kurulur. SmartScreen uyarırsa: Ek bilgi → Yine de çalıştır. Ya da taşınabilir .zip'i aç.",
-        "Linux: AppImage'a chmod +x verip çalıştır, ya da sudo apt install ./anyps5-desktop_<sürüm>_amd64.deb, ya da .tar.gz'yi aç.",
-        "Aç, AnyPS5 motorunu indir'e bas, oyun klasörünü seç; telefonunu eşleştireceksen güvenlik duvarı sorusuna izin ver.",
+        "Windows: Setup.exe'yi çalıştır. SmartScreen uyarırsa önce Ek bilgi'yi, sonra Yine de çalıştır'ı seç. Taşınabilir bir zip de var.",
+        "Linux: AppImage'ı çalıştırılabilir yapıp aç, .deb'i kur ya da .tar.gz'yi aç.",
+        "Uygulamayı aç, motoru indir ve oyun klasörünü seç.",
       ],
       requirements: [
         ["Windows", "10 ya da 11, x64"],
-        [
-          "Linux",
-          "x64; launcher için glibc 2.34+ (Ubuntu 22.04+), oyunlar için glibc 2.38+ (Ubuntu 24.04, Debian 13, Fedora 39 ve sonrası)",
-        ],
+        ["Linux", "x64, oyunlar için Ubuntu 24.04, Debian 13, Fedora 39 ya da daha yenisi"],
         [
           "Ayrıca",
-          "AnyPS5'in desteklediği bir işlemci ve ekran kartı, sahip olduğun oyunların şifresi çözülmüş kopyaları",
+          "Desteklenen bir işlemci ve ekran kartı, sahip olduğun oyunların şifresi çözülmüş kopyaları",
         ],
       ],
     },
@@ -1594,14 +1516,14 @@ const tr: ProductStrings = {
     meta: {
       title: "AnyPS5 Remote: telefonun DualSense olur · AnyTogether",
       description:
-        "iPhone ve Android için AnyPS5 Remote: analoglar, touchpad, hareket, titreşim ve ışık çubuğu, Remote Play, dört telefona kadar, ve yanında AnyTogether.",
+        "Android ve iPhone için AnyPS5 Remote, telefonunu DualSense yapar. Hareket, titreşim, Remote Play ve AnyTogether ile.",
     },
-    kicker: "AnyPS5 Remote · iPhone ve Android",
+    kicker: "AnyPS5 Remote",
     title: ["Telefonun", "DualSense olur."],
-    lead: "AnyPS5 Remote, aynı Wi-Fi'daki ya da kabloyla bağlı bir telefonu Mac'inin çalıştırdığı oyunlar için DualSense yapar. Launcher'ı kendisi bulur; Remote Play ile oyun telefonun ekranına gelir.",
+    lead: "AnyPS5 Remote, telefonunu Mac'inin çalıştırdığı oyunlar için DualSense yapar. Remote Play ile oyun telefonda da görünür.",
     hero: {
       name: "phone-pad",
-      alt: "Telefon kumandası: analoglar, yön tuşları, ana tuşlar, omuz tuşları, touchpad ve PS",
+      alt: "Telefon kontrolcüsü: analoglar, yön tuşları, ana tuşlar, omuz tuşları, touchpad ve PS",
       frame: "phone",
     },
     heroSide: {
@@ -1612,43 +1534,44 @@ const tr: ProductStrings = {
     facts: [
       ["4", "telefon aynı anda, her oyuncuya bir"],
       ["2", "bağlanma yolu: Wi-Fi ya da kablo"],
-      ["iOS 15+", "ve Android"],
+      ["Android & iOS", "ikisinde de aynı uygulama"],
     ],
     chapters: [
       {
         id: "pad",
-        nav: "Kumanda",
-        kicker: "Kumanda",
+        nav: "Kontrolcü",
+        kicker: "Kontrolcü",
         title: "Her tuş, hepsi aynı anda.",
-        lead: "İki analog, ✕ ○ □ △, L1 R1, L2 R2, yön tuşları, Options ve touchpad; istediğin kadarı aynı anda, gecikmesi görünür. Oyun başlayınca devreye girer.",
+        lead: "DualSense'in tüm tuşları burada ve istediğin kadarını aynı anda basılı tutabilirsin. Oyun başlayınca devreye girer.",
         shots: [
           {
             name: "phone-live-silksong",
-            alt: "Silksong telefonla oynanıyor, kumanda köşede",
+            alt: "Silksong telefonla oynanıyor, kontrolcü köşede",
             frame: "plain",
           },
         ],
         items: [
           {
             t: "Touchpad",
-            d: "Kaydır dokunuşu taşır, dokun tıklar, basılı tut tıklamayı sürdürür; iki parmak iki dokunuştur.",
+            d: "Kaydırarak taşı, dokunarak tıkla. İki parmak iki dokunuştur.",
           },
-          { t: "L3 ve R3", d: "Analoga çift dokunuş onu basılı tutar." },
+          { t: "L3 ve R3", d: "Bir analoga çift dokun, basılı kalsın." },
           {
             t: "Hareket",
-            d: "İvmeölçer ve jiroskop DualSense'in hareket sensörleridir; telefonu nasıl tuttuğuna göre döner.",
+            d: "Telefonun jiroskopu ve ivmeölçeri DualSense'in hareket sensörleri olur.",
           },
-          { t: "Titreşim", d: "Oyunun iki motoru: büyüğü tok, küçüğü keskin (iPhone'da Core Haptics)." },
-          { t: "Tetik efektleri", d: "L2 ya da R2 basılıyken telefon, tetiğin geri iteceği yerde titrer." },
-          { t: "Işık çubuğu", d: "Kumanda oyunun ışık çubuğu rengiyle parlar." },
+          { t: "Titreşim", d: "Oyunun iki motoru, biri tok, biri keskin." },
+          { t: "Tetik efektleri", d: "Telefon, tetiğin geri iteceği yerde titrer." },
+          { t: "Işık çubuğu", d: "Kontrolcü oyunun ışık çubuğu rengiyle parlar." },
           {
             t: "PS ve Create",
-            d: "PS launcher'ı oyunun önüne getirir; Create son saniyeleri klip olarak kaydeder.",
+            d: "PS launcher'ı açar. Create son saniyeleri klip olarak kaydeder.",
           },
           {
             t: "Oyuna özel düzen",
-            d: "Her kontrolü taşı, boyutlandır, soldur, gizle ya da aç-kapa veya turbo tuş yap. Mac onu oyunla tutar.",
+            d: "Her kontrolü taşı, boyutlandır ya da gizle, aç-kapa veya turbo tuş yap.",
           },
+          { t: "Gecikme görünür", d: "Kontrolcü o anki gecikmeyi gösterir." },
         ],
       },
       {
@@ -1656,7 +1579,7 @@ const tr: ProductStrings = {
         nav: "Remote Play",
         kicker: "Remote Play",
         title: "Oyun telefonun ekranında.",
-        lead: "Telefonun Hakkında sayfasından aç; oyun, görüntü ve sesiyle kumandanın arkasında oynar. Varsayılan olarak kapalı: telefon yalnızca kumanda kalır.",
+        lead: "Remote Play'i aç, oyun sesiyle birlikte kontrolcünün arkasında oynar. Varsayılan olarak kapalıdır.",
         shots: [
           {
             name: "phone-live-launcher",
@@ -1668,15 +1591,15 @@ const tr: ProductStrings = {
           { t: "Görüntü ve ses", d: "Mac bir kez ekran kaydı izni ister." },
           {
             t: "Launcher modu",
-            d: "Mac'in oyunları seçilenin arka planı üstünde. Telefonda birini seçmek Mac'te de seçer.",
+            d: "Mac'in oyunlarına telefondan göz at. Telefonda seçtiğin Mac'te de seçilir.",
           },
           {
             t: "Koltuktan oyna",
-            d: "Oyna, Oyuna Dön ve Oyunu Kapat; oklar, ✕, ○ ve ≡ launcher'ın kendi ekranında gezinir.",
+            d: "Telefondan bir oyunu başlat, ona geri dön ya da kapat.",
           },
-          { t: "Mac ne yapıyor", d: "Açma, güncelleme ya da başlatma: adım, bir çubuk ve geçen süre." },
-          { t: "Kupalar", d: "Kazanılan kupa telefonun üstüne düşer, telefon titrer." },
-          { t: "Launcher'ın teması", d: "Ve dili, İngilizce ya da Türkçe." },
+          { t: "Mac ne yapıyor", d: "Açma, güncelleme ya da başlatma, bir ilerleme çubuğuyla." },
+          { t: "Kupalar", d: "Yeni kupa ekranın üstüne düşer, telefon titrer." },
+          { t: "Launcher'ın teması", d: "Telefon launcher'ın temasını ve dilini alır." },
         ],
       },
       {
@@ -1684,7 +1607,7 @@ const tr: ProductStrings = {
         nav: "Bağlanma",
         kicker: "Bağlanma",
         title: "Mac'i kendisi bulur.",
-        lead: "İlk seferde Mac bir kez sorar, ikisi de aynı dört haneli kodu gösterir. Sonra soru sormadan bağlanır.",
+        lead: "İlk seferde iki ekran da aynı dört haneli kodu gösterir. Sonra kendiliğinden bağlanır.",
         shots: [
           {
             name: "phone-activity",
@@ -1693,24 +1616,23 @@ const tr: ProductStrings = {
           },
         ],
         items: [
-          { t: "Wi-Fi", d: "Aynı ağda bulunur; gerekirse Mac'in adresi yazılabilir." },
+          { t: "Wi-Fi", d: "Telefon Mac'i aynı ağda bulur. İstersen adresini de yazabilirsin." },
           {
-            t: "Kablo, Wi-Fi'sız",
-            d: "Mac'e takılan iPhone kendiliğinden kablodan bağlanır (usbmuxd); Android USB hata ayıklama ve adb ile.",
+            t: "Ya da kablo",
+            d: "Android USB hata ayıklamayla bağlanır, iPhone ise Mac'e takılınca bağlanır.",
           },
           {
             t: "Dört telefona kadar",
-            d: "Her oyuncuya bir; telefon, oyunda ilk tuşa basıldığında sıradaki oyuncu olur. Diğerleri oynarken yenileri eşleşir.",
+            d: "Her oyuncuya bir. Telefon ilk tuşa basınca sıradaki oyuncu olur.",
           },
-          { t: "PC'ler de", d: "AnyPS5 Desktop aynı protokolü konuşur ve telefonu eşleştirir." },
         ],
       },
       {
         id: "together",
         nav: "AnyTogether",
         kicker: "Yanında AnyTogether",
-        title: "Arkadaşların, kumanda elindeyken.",
-        lead: "Ana ekrandaki kişiler düğmesinden. Çıkış yapmışken telefon her zamanki gibi kumandadır.",
+        title: "Arkadaşların, kontrolcü elindeyken.",
+        lead: "Ana ekrandaki kişiler düğmesinden aç. Çıkış yapmışken telefon yalnızca kontrolcüdür.",
         shots: [
           {
             name: "phone-party",
@@ -1722,34 +1644,33 @@ const tr: ProductStrings = {
         items: [
           {
             t: "Giriş",
-            d: "E-posta kodu ya da Mac'in kullandığı hesapla tek dokunuş; giriş yapmış telefon Mac'i de giriş yaptırır.",
+            d: "E-posta kodu ya da Mac'in hesabıyla tek dokunuş. Telefon Mac'i de giriş yaptırabilir.",
           },
-          { t: "Arkadaşlar", d: "Kim çevrimiçi ve ne oynuyor, istekler, kullanıcı adıyla ekleme." },
-          { t: "Mesajlar", d: "Mac'teki ve sitedeki sohbetlerin aynısı, okunmamış sayılarıyla." },
-          { t: "Parti ve ses", d: "Telefon hâlâ kumandanken partinle konuş." },
-          { t: "Birebir arama", d: "Bir arkadaşını kendi satırından ara." },
-          { t: "Profil", d: "Adını, bionu ve resmini düzenle; oyunlarını, saatlerini ve kupalarını gör." },
+          { t: "Arkadaşlar", d: "Kimin çevrimiçi olduğunu ve ne oynadığını gör, kullanıcı adıyla ekle." },
+          { t: "Mesajlar", d: "Mac'teki ve sitedeki sohbetlerin aynısı." },
+          { t: "Parti ve ses", d: "Telefon hâlâ kontrolcünken partinle konuş." },
+          { t: "Birebir arama", d: "Bir arkadaşını arkadaş listenden ara." },
+          { t: "Profil", d: "Adını, bionu ve resmini düzenle, oyunlarını ve kupalarını gör." },
           {
             t: "Aktivite ve liderlik",
-            d: "Tepkilerle arkadaşların kupaları ve dönüm noktaları; arkadaşlar ya da herkes arasında puanlar.",
+            d: "Tepkilerle arkadaşların kupaları, arkadaşlar ya da herkes arasında puanlar.",
           },
-          { t: "Bildirimler", d: "İstekler, davetler, cevapsız aramalar." },
-          { t: "Kumandayla share play", d: "Bir arkadaşının oyununu izle, sana bir kol verdiğinde katıl." },
-          { t: "Başka sunucu", d: "Mac kendi kurulmuş bir AnyTogether kullanıyorsa telefon da onu önerir." },
+          { t: "Bildirimler", d: "İstekler, davetler ve cevapsız aramalar." },
+          { t: "Kontrolcüyle share play", d: "Bir arkadaşının oyununu izle, sana kontrolcü verince katıl." },
         ],
       },
     ],
     install: {
       title: "AnyPS5 Remote'u kur",
       steps: [
-        "Android: AnyPS5-Remote.apk'yı telefonda aç, sorulursa tarayıcından kurmaya izin ver.",
-        "iPhone: AnyPS5-Remote.ipa'yı AltStore (ya da SideStore, veya bilgisayardan Sideloadly) ile kur; uygulamayı kendi Apple kimliğinle imzalar. Ücretsiz Apple kimliğiyle 7 günde bir yenilenir, AltStore bunu kendisi yapar.",
-        "Telefonu Mac'in Wi-Fi'ında tut ya da kabloyla bağla, kodu bir kez onayla.",
+        "Android: AnyPS5-Remote.apk'yı telefonda aç ve tarayıcından kuruluma izin ver.",
+        "iPhone: AnyPS5-Remote.ipa'yı AltStore, SideStore ya da Sideloadly ile kur. Ücretsiz Apple kimliğiyle 7 günde bir yenilenmesi gerekir, AltStore bunu kendisi yapar.",
+        "Telefonu Mac'in Wi-Fi'ında tut ya da kabloyla bağla, sonra kodu bir kez onayla.",
       ],
       requirements: [
+        ["Android", "Güncel herhangi bir telefon, kablo için Mac'te adb"],
         ["iPhone", "iOS 15 ve sonrası"],
-        ["Android", "Güncel herhangi bir telefon; kablo için Mac'te adb"],
-        ["Mac", "Telefon destekli AnyPS5.app; önceden açılmış oyunlar bir kez Güncelle ve Oyna ister"],
+        ["Mac", "Telefon destekli AnyPS5, önceden açılmış oyunlar bir kez güncellenmiş"],
       ],
     },
   },
@@ -1757,11 +1678,11 @@ const tr: ProductStrings = {
     meta: {
       title: "AnyTogether: AnyPS5 için arkadaşlar, parti, ses ve share play",
       description:
-        "AnyTogether, AnyPS5'in online evi: profiller, nadirliğiyle kupalar, arkadaşlar, mesajlar, partiler, ses, birebir arama, share play, oyuncu bulma ve Tema Merkezi. Açık kaynak, MIT, kendi sunucunda çalışır.",
+        "AnyTogether, AnyPS5'in çevrimiçi evi. Profil, kupalar, arkadaşlar, parti, ses ve share play tek hesapta. Açık kaynak, kendi sunucunda da çalışır.",
     },
-    kicker: "AnyTogether · online",
+    kicker: "AnyTogether",
     title: ["Birlikte oyna.", "Her yerden."],
-    lead: "Tüm AnyPS5 launcher'larının, telefon uygulamasının ve bu sitenin online evi: profilin, kupaların, arkadaşların, mesajların, partilerin, sesli sohbet ve share play için tek hesap. Açık kaynak, istersen kendin çalıştır.",
+    lead: "Arkadaşlar, parti ve kupalar için tek hesap. Tüm AnyPS5 uygulamalarında ve bu sitede çalışır.",
     hero: {
       name: "web-home",
       alt: "AnyTogether sitesi: arkadaşların kupalar ve tepkilerle aktivite akışı",
@@ -1769,8 +1690,8 @@ const tr: ProductStrings = {
     },
     heroSide: { name: "web-phone", alt: "Telefonda AnyTogether sitesinde mesajlar", frame: "tall" },
     facts: [
-      ["4", "istemci, tek hesap: Mac, PC, telefon, web"],
-      ["MIT", "açık kaynak, kendi sunucunda"],
+      ["4", "yer, tek hesap: Mac, PC, telefon ve web"],
+      ["MIT", "açık kaynak, kendi sunucunda da"],
       ["0", "şifre"],
     ],
     chapters: [
@@ -1779,7 +1700,7 @@ const tr: ProductStrings = {
         nav: "Hesap",
         kicker: "Hesabın",
         title: "Şifre yok, kayıt formu yok.",
-        lead: "İlk giriş hesabını oluşturur. Hesabınla ilgili her şeyi değiştirebilir, dışa aktarabilir ya da silebilirsin.",
+        lead: "İlk girişin hesabını oluşturur. Onu istediğin zaman değiştirebilir, dışa aktarabilir ya da silebilirsin.",
         shots: [
           {
             name: "web-profile",
@@ -1788,22 +1709,22 @@ const tr: ProductStrings = {
           },
         ],
         items: [
-          { t: "E-posta kodu", d: "Gelen kutuna altı hane, her istemcide." },
+          { t: "E-posta kodu", d: "Gelen kutuna altı hane, her uygulamada." },
           {
             t: "Passkey",
-            d: "Touch ID, Face ID, Windows Hello ya da telefonun; sitede eklenir, launcher'lar da onunla giriş yapar.",
+            d: "Touch ID, Face ID, Windows Hello ya da telefonunla giriş yap.",
           },
           {
             t: "Tek dokunuş",
-            d: "Giriş yapmış telefon bir launcher'ı giriş yaptırır, launcher da telefonu; ya da launcher'ın kodunu burada yaz.",
+            d: "Giriş yapmış telefon bir launcher'ı giriş yaptırır, tersi de olur.",
           },
           {
             t: "Profiller",
-            d: "Resim, ad, kullanıcı adı, bio ve ülke; oyunlar, saatler, kupalar ve puanlarla.",
+            d: "Resim, ad, kullanıcı adı ve bio, oyunların, saatlerin ve kupalarınla.",
           },
           {
             t: "Parça parça gizlilik",
-            d: "Oyunlarını, kupalarını, arkadaşlarını ve çevrimiçi durumunu kimin göreceğini seç: herkes, arkadaşlar ya da yalnızca sen.",
+            d: "Oyunlarını, kupalarını, arkadaşlarını ve çevrimiçi durumunu kimin göreceğini seç.",
           },
           { t: "Verilerin", d: "Ayarlar'dan her şeyi dışa aktar ya da hesabı sil." },
         ],
@@ -1812,7 +1733,7 @@ const tr: ProductStrings = {
         id: "friends",
         nav: "Arkadaşlar",
         kicker: "Arkadaşlar",
-        title: "Arkadaşlar, mesajlar, parti, arama.",
+        title: "Arkadaşlar, mesajlar, parti ve arama.",
         lead: "Mac'te, PC'de, telefonda ve burada aynı, canlı.",
         shots: [
           {
@@ -1825,40 +1746,42 @@ const tr: ProductStrings = {
         items: [
           {
             t: "Arkadaşlar ve durum",
-            d: "Çevrimiçi, uzakta ve her arkadaşın ne oynadığı; istekler, engelleme, çıkarma.",
+            d: "Kimin çevrimiçi olduğunu ve ne oynadığını gör. İstediğini engelle ya da çıkar.",
           },
-          { t: "Mesajlar", d: "Yazıyor göstergesi ve okunmamış sayısıyla birebir ve grup sohbetleri." },
+          { t: "Mesajlar", d: "Yazıyor göstergesiyle birebir ve grup sohbetleri." },
           {
             t: "Partiler",
-            d: "Sekiz kişiye kadar; davet eden, çıkaran ve liderliği devreden bir lider; arkadaşlara ya da herkese açılabilir.",
+            d: "Sekiz kişiye kadar, arkadaşlara ya da herkese açık.",
           },
           {
             t: "Ses",
-            d: "Doğrudan oyuncudan oyuncuya, yalnızca ağlar gerektirdiğinde relay ile. Sessize al, kimin konuştuğunu gör.",
+            d: "Oyuncudan oyuncuya, yalnızca gerektiğinde relay ile. Kimin konuştuğunu gör.",
           },
-          { t: "Birebir arama", d: "Herhangi bir istemciden bir arkadaşını ara; cevapsız aramalar tutulur." },
-          { t: "Arkadaşının oyununa katıl", d: "Launcher'lardan, oyunun sürümü kontrol edilerek." },
+          {
+            t: "Birebir arama",
+            d: "Herhangi bir uygulamadan bir arkadaşını ara. Cevapsız aramalar tutulur.",
+          },
+          { t: "Arkadaşının oyununa katıl", d: "Aynı oyunu launcher'ından aç, sürümü kontrol edilir." },
         ],
       },
       {
         id: "share",
         nav: "Share play",
         kicker: "Share play",
-        title: "İzle, sonra kolu al.",
-        lead: "Bir arkadaşın oynadığı oyunu paylaşır; sen burada, launcher'ında ya da telefonunda izlersin, sana bir kol verdiğinde kendi kolun ya da klavyenle katılırsın.",
+        title: "İzle, sonra kontrolcüyü al.",
+        lead: "Bir arkadaşın oyununu paylaşır, sen izlersin. Sana kontrolcü verdiğinde sen de oynarsın.",
         shots: [
           { name: "mac-shareplay", alt: "Mac launcher'ında share play'in yayıncı tarafı", frame: "mac" },
         ],
         items: [
-          { t: "Tarayıcıda", d: "WebRTC ile görüntü ve ses, kurulum yok." },
+          { t: "Tarayıcıda", d: "Görüntü ve sesle izle, hiçbir şey kurmadan." },
           {
             t: "2. ila 4. oyuncu",
-            d: "Kolun ya da klavyen sana verilen oyuncuyu oynatır; yayıncının 1. oyuncusunu kimse almaz.",
+            d: "Kontrolcün ya da klavyen sana verilen oyuncuyu oynatır. Yayıncı 1. oyuncu kalır.",
           },
-          { t: "Doğrudan ya da relay", d: "Her izleyicinin gecikmesi ve kalitesi görünür." },
           {
             t: "Yayıncının kuralları",
-            d: "Kimin girebileceği, kaç kişinin izleyebileceği ve birini çıkarmak.",
+            d: "Kimin gireceğine, kaç kişinin izleyeceğine ve kimin çıkacağına yayıncı karar verir.",
           },
         ],
       },
@@ -1867,19 +1790,18 @@ const tr: ProductStrings = {
         nav: "Oyuncu bul",
         kicker: "Oyuncu bul",
         title: "Senin oynadıklarını oynayanlarla tanış.",
-        lead: "Arkadaşların uyurken.",
+        lead: "Co-op, çevrimiçi oyun ya da kupa yardımı için bir grup bul.",
         shots: [],
         items: [
           {
             t: "Grup arayanlar",
-            d: "Bir oyun, saat, dil ve amaç yaz: co-op, online, parti ya da kupa yardımı. İnsanlar katılmak ister, sen seçersin.",
+            d: "Bir oyun, saat ve dil yaz. İnsanlar katılmak ister, sen seçersin.",
           },
           { t: "Herkese açık partiler", d: "Partini herkese aç ya da birine katıl." },
           {
             t: "Oyun sayfaları",
-            d: "Her oyunun sayfası: kimler oynuyor, açık partiler ve canlı share play'ler.",
+            d: "Her oyunun sayfasında kimin oynadığı, açık partiler ve canlı share play'ler.",
           },
-          { t: "İnsanlar", d: "Bulunmayı seçenleri oynadıkları oyunlara ve dillere göre bul." },
         ],
       },
       {
@@ -1887,7 +1809,7 @@ const tr: ProductStrings = {
         nav: "Kupalar",
         kicker: "Kupalar ve oynama süresi",
         title: "Oynadığın her şey sayılır.",
-        lead: "Her oturum ve kupa launcher'lardan hesabına gelir; arkadaşların görür, tablolar dürüst kalır.",
+        lead: "Her oturum ve kupa hesabına gelir, arkadaşların da görür.",
         shots: [
           {
             name: "web-leaderboards",
@@ -1896,18 +1818,14 @@ const tr: ProductStrings = {
           },
         ],
         items: [
-          { t: "Nadirliğiyle kupalar", d: "Yaygından ultra nadire; oyunu oynayan herkesten." },
+          { t: "Nadirliğiyle kupalar", d: "Yaygından ultra nadire, oyunu oynayan herkese göre." },
           {
             t: "Aktivite akışı",
-            d: "Arkadaşlarının kupaları, ilk oynayışları, dönüm noktaları ve yeni arkadaşlıkları, tepkilerle.",
+            d: "Arkadaşlarının kupaları, ilk oynayışları ve dönüm noktaları, tepkilerle.",
           },
           {
-            t: "Liderlik tabloları",
-            d: "Puan, oynama süresi ve tamamlama; arkadaşlar ya da herkes arasında, oyun oyun ya da genel.",
-          },
-          {
-            t: "Adil oyun",
-            d: "İmkânsız kupa desenleri bir moderatör bakana kadar tablolardan uzak tutulur.",
+            t: "Adil liderlik tabloları",
+            d: "Arkadaşlar ya da herkes arasında puan ve süre. İmkânsız kupa desenleri bir moderatörü bekler.",
           },
         ],
       },
@@ -1915,8 +1833,8 @@ const tr: ProductStrings = {
         id: "more",
         nav: "Dahası",
         kicker: "Ve",
-        title: "Temalar, uyumluluk, bildirimler.",
-        lead: "Burada yaşayan geri kalan her şey.",
+        title: "Temalar, uyumluluk ve bildirimler.",
+        lead: "Sitedeki diğer her şey.",
         shots: [
           { name: "web-themes", alt: "Sitede Tema Merkezi", frame: "browser" },
           { name: "web-compat", alt: "Sitede uyumluluk listesi", frame: "browser" },
@@ -1924,40 +1842,34 @@ const tr: ProductStrings = {
         items: [
           {
             t: "Tema Merkezi",
-            d: "Launcher'ın Tema Stüdyosu'nda yapılan temalar; beğenilir, indirilir, tek tuşla kurulur.",
+            d: "Tema Stüdyosu'nda yapılan temalar, tek tuşla kurulur.",
           },
           {
             t: "Uyumluluk listesi",
-            d: "Her oyunun her platformda ne kadar ilerlediği; en yeni launcher sürümündeki oyuncu raporlarından.",
+            d: "Her oyunun her platformda ne kadar ilerlediği, oyuncu raporlarıyla.",
           },
           {
             t: "Bildirimler",
-            d: "İstekler, davetler, mesajlar ve cevapsız aramalar; web push ve senin ayarladığın bir e-posta özeti.",
+            d: "Web push ve senin ayarladığın bir e-posta özeti.",
           },
           {
             t: "İndirmeler",
-            d: "Her projenin son sürümünden tüm AnyPS5 derlemeleri, sağlama toplamlarıyla.",
+            d: "Son sürümlerden tüm AnyPS5 derlemeleri, sağlama toplamlarıyla.",
           },
-          { t: "Moderasyon", d: "Bir kişiyi, mesajı ya da temayı bildir; moderatörler inceler." },
+          { t: "Moderasyon", d: "Bir kişiyi, mesajı ya da temayı bildir, moderatörler inceler." },
           {
             t: "Açık kaynak",
-            d: "MIT. docker compose up tüm sunucuyu tek makinede çalıştırır; HTTPS ve isteğe bağlı TURN relay dahil.",
+            d: "MIT lisanslı. Tüm sunucu Docker ile tek makinede çalışır.",
           },
         ],
       },
     ],
     install: {
-      title: "Kendi AnyTogether'ını kur",
+      title: "Kendi sunucunu kur",
       steps: [
-        "git clone https://github.com/AnyTogether/AnyTogether.git, sonra cd AnyTogether/deploy ve cp .env.example .env.",
-        ".env'de alan adını, bir veritabanı şifresini ve bir imza anahtarını ayarla.",
-        "docker compose up -d --build. Sonra launcher'ları ve telefonu Ayarlar → AnyTogether → Sunucu'dan ona yönlendir.",
+        "2 GB belleği olan bir Linux sunucu, Docker ve bir alan adı gerekir. Sonra launcher'ların AnyTogether ayarlarından sunucunu seç.",
       ],
-      requirements: [
-        ["Makine", "Genel IPv4 adresli Linux, 2 GB bellek, 10 GB disk"],
-        ["Yazılım", "Compose eklentili Docker Engine 24+"],
-        ["Ağ", "Ona yönlenen bir alan adı; 80 ve 443 portları"],
-      ],
+      requirements: [],
     },
   },
 };
@@ -2030,11 +1942,6 @@ const galleriesEn: Galleries = {
         alt: "Silksong's leaderboard by points, your rank 41 of 312",
         caption: "Leaderboard",
       },
-      {
-        name: "mac-notifications",
-        alt: "The notifications list: messages, invites, requests, a missed call",
-        caption: "Notifications",
-      },
     ],
   },
   "pc.engine": {
@@ -2042,7 +1949,7 @@ const galleriesEn: Galleries = {
       {
         name: "pc-settings-engine",
         alt: "Settings, AnyPS5 Engine: the version in use, updates, other versions and your own folder",
-        caption: "Settings → AnyPS5 Engine",
+        caption: "Engine settings",
       },
     ],
   },
@@ -2093,7 +2000,7 @@ const galleriesEn: Galleries = {
     ],
   },
   "together.share": {
-    note: "Real frames from a share play test with Cat Quest III between two test accounts: the host on a Mac, the viewer in a browser.",
+    note: "Frames from Cat Quest III shared from a Mac and played in a browser.",
     shots: [
       {
         name: "share-world",
@@ -2119,25 +2026,6 @@ const galleriesEn: Galleries = {
         name: "share-invite",
         alt: "The viewer's website: an invite to watch Cat Quest III, with Watch and Decline",
         caption: "The invite",
-      },
-      {
-        name: "share-frame",
-        alt: "A clean stream frame: Cat Quest III's title screen with the performance overlay",
-        caption: "The stream",
-      },
-      {
-        name: "share-stopped",
-        alt: "The viewer's page after the host stopped sharing",
-        caption: "When the host stops",
-      },
-    ],
-  },
-  "together.more": {
-    shots: [
-      {
-        name: "web-download",
-        alt: "The download page: AnyPS5 for Mac with checksum and the Terminal line, the phone controller",
-        caption: "Downloads",
       },
     ],
   },
@@ -2210,11 +2098,6 @@ const galleriesTr: Galleries = {
         alt: "Silksong'un puan liderlik tablosu, sıran 312'de 41",
         caption: "Liderlik tablosu",
       },
-      {
-        name: "mac-notifications",
-        alt: "Bildirim listesi: mesajlar, davetler, istekler, cevapsız arama",
-        caption: "Bildirimler",
-      },
     ],
   },
   "pc.engine": {
@@ -2222,7 +2105,7 @@ const galleriesTr: Galleries = {
       {
         name: "pc-settings-engine",
         alt: "Ayarlar, AnyPS5 Motoru: kullanılan sürüm, güncellemeler, diğer sürümler ve kendi klasörün",
-        caption: "Ayarlar → AnyPS5 Motoru",
+        caption: "Motor ayarları",
       },
     ],
   },
@@ -2273,7 +2156,7 @@ const galleriesTr: Galleries = {
     ],
   },
   "together.share": {
-    note: "İki test hesabı arasında Cat Quest III ile yapılan bir share play testinden gerçek kareler: yayıncı Mac'te, izleyici tarayıcıda.",
+    note: "Bir Mac'ten paylaşılıp tarayıcıda oynanan Cat Quest III'ten kareler.",
     shots: [
       {
         name: "share-world",
@@ -2299,25 +2182,6 @@ const galleriesTr: Galleries = {
         name: "share-invite",
         alt: "İzleyicinin sitesi: Cat Quest III'ü izleme daveti, İzle ve Reddet ile",
         caption: "Davet",
-      },
-      {
-        name: "share-frame",
-        alt: "Temiz bir yayın karesi: performans katmanıyla Cat Quest III başlık ekranı",
-        caption: "Yayın",
-      },
-      {
-        name: "share-stopped",
-        alt: "Yayıncı paylaşımı durdurduktan sonra izleyicinin sayfası",
-        caption: "Yayıncı durdurunca",
-      },
-    ],
-  },
-  "together.more": {
-    shots: [
-      {
-        name: "web-download",
-        alt: "İndirme sayfası: sağlama toplamı ve Terminal satırıyla Mac için AnyPS5, telefon kumandası",
-        caption: "İndirmeler",
       },
     ],
   },

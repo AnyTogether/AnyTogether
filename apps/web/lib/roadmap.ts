@@ -36,11 +36,11 @@ export const roadmap: RoadmapItem[] = [
     shipped: "AnyPS5-ARM 0.2.17",
     en: {
       t: "Opus game sound in share play",
-      d: "The game's sound as a stereo Opus track, about 128 kbit/s instead of 1.5 Mbit/s, for hosts on slow uploads. The Mac launcher sends it and watching in a browser plays it; viewers without it still get the old sound.",
+      d: "The game's sound as a stereo Opus track, about 128 kbit/s instead of 1.5 Mbit/s, for hosts on slow uploads. The Mac launcher sends it and watching in a browser plays it. Viewers without it still get the old sound.",
     },
     tr: {
       t: "Birlikte oynamada Opus oyun sesi",
-      d: "Oyun sesi stereo bir Opus izi olarak; 1,5 Mbit/s yerine yaklaşık 128 kbit/s, yükleme hızı düşük olanlar için. Mac launcher'ı gönderiyor, tarayıcıda izlerken çalıyor; onu çalamayan izleyiciler eski sesi almaya devam ediyor.",
+      d: "Oyun sesi stereo bir Opus izi olarak, 1,5 Mbit/s yerine yaklaşık 128 kbit/s, yükleme hızı düşük olanlar için. Mac launcher'ı gönderiyor ve tarayıcıda izlerken çalıyor. Onu çalamayan izleyiciler eski sesi almaya devam ediyor.",
     },
   },
   {
@@ -53,8 +53,8 @@ export const roadmap: RoadmapItem[] = [
       d: "DualSense, DualShock 4, Xbox, Switch Pro and more over USB or Bluetooth (the DualShock 3 over USB on the Mac), with a screen that tests them and a troubleshooter.",
     },
     tr: {
-      t: "Kumandalar",
-      d: "DualSense, DualShock 4, Xbox, Switch Pro ve daha fazlası USB ya da Bluetooth ile (Mac'te DualShock 3 de USB ile); onları deneyen bir ekran ve bir sorun giderici.",
+      t: "Kontrolcüler",
+      d: "DualSense, DualShock 4, Xbox, Switch Pro ve daha fazlası USB ya da Bluetooth ile (Mac'te DualShock 3 de USB ile). Onları deneyen bir ekran ve bir sorun giderici de var.",
     },
   },
   {
@@ -64,11 +64,11 @@ export const roadmap: RoadmapItem[] = [
     shipped: "AnyPS5-ARM 0.2.21 · AnyPS5 Desktop 0.1.7",
     en: {
       t: "Add to Steam",
-      d: "AnyPS5 and each unlocked game in your Steam library with their own art, starting straight into the game; on the Steam Deck too.",
+      d: "AnyPS5 and each unlocked game in your Steam library with their own art, starting straight into the game. On the Steam Deck too.",
     },
     tr: {
-      t: "Steam'e Ekle",
-      d: "AnyPS5 ve kilidi açılmış her oyun kendi görselleriyle Steam kütüphanende, doğrudan oyunu açarak; Steam Deck'te de.",
+      t: "Steam'e ekle",
+      d: "AnyPS5 ve kilidi açılmış her oyun kendi görselleriyle Steam kütüphanende, doğrudan oyunu açarak. Steam Deck'te de.",
     },
   },
   {
@@ -96,7 +96,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Daha zengin mesajlar",
-      d: "Fotoğraflar, klipler ve sesli notlar; yanıtlar, tepkiler, düzenleme, geri alma, okundu bilgisi ve sabitlenmiş sohbetler.",
+      d: "Fotoğraflar, klipler, sesli notlar, yanıtlar, tepkiler, düzenleme, geri alma, okundu bilgisi ve sabitlenmiş sohbetler.",
     },
   },
   {
@@ -120,11 +120,11 @@ export const roadmap: RoadmapItem[] = [
     shipped: "AnyPS5-ARM 0.2.16 · AnyPS5 Remote 1.12",
     en: {
       t: "Finding players in the apps",
-      d: "The looking-for-group board, public parties and game hubs in the Mac launcher and on the phone, not only on the web.",
+      d: "The looking-for-group board, public parties and game hubs in the Mac launcher and on the phone, as well as on the web.",
     },
     tr: {
       t: "Uygulamalarda oyuncu bulma",
-      d: "Grup arayan ilanları, herkese açık partiler ve oyun sayfaları yalnızca web'de değil, Mac launcher'ında ve telefonda da.",
+      d: "Grup arayan ilanları, herkese açık partiler ve oyun sayfaları web'in yanı sıra Mac launcher'ında ve telefonda da.",
     },
   },
   {
@@ -138,7 +138,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Birlikte oynama",
-      d: "Oynadığın oyunu arkadaşlarına tarayıcıda, telefonda ya da launcher'larında yayınla; onlara 2., 3. ya da 4. kolu ver. 1. oyuncu hep sende.",
+      d: "Oynadığın oyunu arkadaşlarına tarayıcıda, telefonda ya da launcher'larında yayınla ve onlara 2., 3. ya da 4. kontrolcüyü ver. 1. oyuncu hep sende.",
     },
   },
   {
@@ -152,7 +152,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Motor seçici",
-      d: "Ayarlar → Motor, sürümlerdeki motor derlemelerini listeler; seçtiğini indirip doğrular, tüm oyunlar ya da tek bir oyun için kullanır; kendi derlemen de olur.",
+      d: "Ayarlar → Motor, sürümlerdeki motor derlemelerini listeler. Seçtiğini indirip doğrular ve tüm oyunlar ya da tek bir oyun için kullanır. Kendi derlemen de olur.",
     },
   },
   {
@@ -162,11 +162,11 @@ export const roadmap: RoadmapItem[] = [
     shipped: "AnyPS5-ARM 0.2.15",
     en: {
       t: "Crash reports",
-      d: "When a game stops, the launcher says why. Export Report saves the log and macOS's crash report in one file; Open Issue fills in a GitHub issue, personal details taken out.",
+      d: "When a game stops, the launcher says why. Export Report saves the log and macOS's crash report in one file. Open Issue fills in a GitHub issue, personal details taken out.",
     },
     tr: {
       t: "Çökme raporları",
-      d: "Oyun durduğunda launcher nedenini söyler. Raporu Dışa Aktar günlüğü ve macOS'un çökme raporunu tek dosyaya kaydeder; Sorun Aç kişisel bilgiler çıkarılmış bir GitHub sorunu doldurur.",
+      d: "Oyun durduğunda launcher nedenini söyler. Raporu Dışa Aktar günlüğü ve macOS'un çökme raporunu tek dosyaya kaydeder. Sorun Aç kişisel bilgiler çıkarılmış bir GitHub sorunu doldurur.",
     },
   },
   {
@@ -180,7 +180,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Yeni motor, upstream birleştirildi",
-      d: "Upstream AnyPS5'in son çalışmaları birleştirildi: düzeltme ve oyun desteğiyle 1.465 commit; Cat Quest III, Silksong, Dreaming Sarah, Plants vs. Zombies: Replanted ve DOOM'da denendi.",
+      d: "Upstream AnyPS5'in son çalışmaları birleştirildi: düzeltme ve oyun desteğiyle 1.465 commit, Cat Quest III, Silksong, Dreaming Sarah, Plants vs. Zombies: Replanted ve DOOM'da denendi.",
     },
   },
   {
@@ -194,7 +194,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Telefon, çevrimiçi",
-      d: "Profilini ve resmini düzenle; etkinlik akışı, liderlik tabloları, birebir aramalar, bildirimler ve bir arkadaşın birlikte oynamasını izlemek ya da katılmak.",
+      d: "Profilini ve resmini düzenleme, etkinlik akışı, liderlik tabloları, birebir aramalar, bildirimler ve bir arkadaşın birlikte oynamasını izlemek ya da ona katılmak.",
     },
   },
   {
@@ -208,7 +208,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Windows ve Linux için kurulum",
-      d: "Yönetici gerektirmeyen bir Windows kurulumu, bir AppImage ve bir .deb; AnyPS5 simgesiyle.",
+      d: "Yönetici gerektirmeyen bir Windows kurulumu, bir AppImage ve bir .deb, AnyPS5 simgesiyle.",
     },
   },
   {
@@ -250,7 +250,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Bildirimler",
-      d: "İstekler, davetler, cevapsız aramalar ve mesajlar için her yerde zil; tarayıcı bildirimleri ve kaçırdıkların için bir e-posta özeti.",
+      d: "İstekler, davetler, cevapsız aramalar ve mesajlar için her yerde zil, tarayıcı bildirimleri ve kaçırdıkların için bir e-posta özeti.",
     },
   },
   {
@@ -260,11 +260,11 @@ export const roadmap: RoadmapItem[] = [
     shipped: "AnyTogether",
     en: {
       t: "Theme Hub",
-      d: "Share a theme from the launcher's Theme Studio; anyone installs it with one press. Likes, versions and reports, on the web and in the launcher.",
+      d: "Share a theme from the launcher's Theme Studio and anyone installs it with one press. Likes, versions and reports, on the web and in the launcher.",
     },
     tr: {
       t: "Tema Merkezi",
-      d: "Launcher'ın Tema Stüdyosu'ndan bir tema paylaş; herkes tek tuşla kurar. Beğeniler, sürümler ve şikâyetler; web'de ve launcher'da.",
+      d: "Launcher'ın Tema Stüdyosu'ndan bir tema paylaş, herkes onu tek tuşla kurar. Beğeniler, sürümler ve şikâyetler, web'de ve launcher'da.",
     },
   },
   {
@@ -274,11 +274,11 @@ export const roadmap: RoadmapItem[] = [
     shipped: "AnyTogether",
     en: {
       t: "Compatibility list",
-      d: "One tap after a game says how it ran; every report, with the launcher, engine and Mac, makes the community list.",
+      d: "One tap after a game says how it ran. Every report, with the launcher, engine and Mac, makes the community list.",
     },
     tr: {
       t: "Uyumluluk listesi",
-      d: "Oyundan sonra tek dokunuş nasıl çalıştığını söyler; launcher, motor ve Mac bilgisiyle her rapor topluluk listesine girer.",
+      d: "Oyundan sonra tek dokunuş nasıl çalıştığını söyler. Launcher, motor ve Mac bilgisiyle her rapor topluluk listesine girer.",
     },
   },
   {
@@ -292,7 +292,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Arkadaşlar, mesajlar, partiler ve ses",
-      d: "Çevrimiçi durumu, sohbetler ve grup sohbetleri, sekiz kişiye kadar sesli partiler, birebir aramalar ve arkadaşının oyununa katılmak; her ekranda aynı.",
+      d: "Çevrimiçi durumu, sohbetler ve grup sohbetleri, sekiz kişiye kadar sesli partiler, birebir aramalar ve arkadaşının oyununa katılmak, her ekranda aynı.",
     },
   },
   {
@@ -320,7 +320,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Kare üretimi",
-      d: "Oyunun her iki karesi arasına bir kare; 60 fps, 120 Hz ekranda 120 olarak görünür. Kare kaybettireceği yerde kendini kapatır.",
+      d: "Oyunun her iki karesi arasına bir kare, böylece 60 fps 120 Hz ekranda 120 olarak görünür. Kare kaybettireceği yerde kendini kapatır.",
     },
   },
   {
@@ -330,11 +330,11 @@ export const roadmap: RoadmapItem[] = [
     shipped: "AnyTogether",
     en: {
       t: "Run your own server",
-      d: "The whole server on one machine with Docker Compose and a guide; every launcher and the phone can point at it.",
+      d: "The whole server on one machine with Docker Compose and a guide. Every launcher and the phone can point at it.",
     },
     tr: {
       t: "Kendi sunucunu çalıştır",
-      d: "Tüm sunucu tek makinede, Docker Compose ve bir rehberle; her launcher ve telefon ona bağlanabilir.",
+      d: "Tüm sunucu tek makinede, Docker Compose ve bir rehberle. Her launcher ve telefon ona bağlanabilir.",
     },
   },
 
@@ -349,7 +349,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Motor köprüsüyle çevrimiçi oyun",
-      d: "Her oyuncu kendi kopyasını çalıştırır, oyunlar Sony üzerinden değil AnyTogether üzerinden birlikte oynar. AnyPS5-ARM 0.2.19'dan beri launcher'larda deneysel: Human Fall Flat herkese açık lobileri listeleyip katılabiliyor; henüz hiçbir oyun baştan sona bir oturum oynamıyor.",
+      d: "Her oyuncu kendi kopyasını çalıştırır ve oyunlar AnyTogether üzerinden birlikte oynar, hiçbir zaman Sony üzerinden geçmez. AnyPS5-ARM 0.2.19'dan beri launcher'larda deneysel: Human Fall Flat herkese açık lobileri listeleyip katılabiliyor ve henüz hiçbir oyun baştan sona bir oturum oynamıyor.",
     },
   },
   {
@@ -357,12 +357,12 @@ export const roadmap: RoadmapItem[] = [
     status: "progress",
     areas: ["mac", "pc", "online"],
     en: {
-      t: "Play Together",
-      d: "Start a game from the party and everyone in it joins its LAN mode over the internet, after a check that they have the same game and version. The server and the party pages are live; the launchers' side is coming.",
+      t: "Play together",
+      d: "Start a game from the party and everyone in it joins its LAN mode over the internet, after a check that they have the same game and version. The server and the party pages are live, and the launchers' side is coming.",
     },
     tr: {
-      t: "Birlikte Oyna",
-      d: "Partiden bir oyun başlat; partideki herkes, aynı oyun ve sürüm kendisinde var mı diye bakıldıktan sonra oyunun LAN moduna internet üzerinden katılır. Sunucu ve parti sayfaları hazır; launcher tarafı geliyor.",
+      t: "Birlikte oyna",
+      d: "Partiden bir oyun başlattığında partideki herkes, aynı oyun ve sürüm kendisinde var mı diye bakıldıktan sonra oyunun LAN moduna internet üzerinden katılır. Sunucu ve parti sayfaları hazır. Launcher tarafı geliyor.",
     },
   },
   {
@@ -389,7 +389,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "İmzalı ve onaylı Mac sürümleri",
-      d: "Developer ID ile imzalanmış ve Apple onaylı sürümler; zip, Gizlilik ve Güvenlik adımı olmadan açılır.",
+      d: "Developer ID ile imzalanmış ve Apple onaylı sürümler, böylece zip Gizlilik ve Güvenlik adımı olmadan açılır.",
     },
   },
   {
@@ -402,7 +402,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Telefonda anlık bildirimler",
-      d: "Kilitli telefonda mesajlar, davetler ve aramalar; APNs ve FCM üzerinden.",
+      d: "Kilitli telefonda mesajlar, davetler ve aramalar, APNs ve FCM üzerinden.",
     },
   },
   {
@@ -415,7 +415,7 @@ export const roadmap: RoadmapItem[] = [
       d: "AnyPS5 Remote plays Windows games with AnyPS5 Desktop, through the engine's Winsock bridge (AnyPS5-ARM 0.2.22, Desktop 0.1.8).",
     },
     tr: {
-      t: "Windows oyunlarında telefon kumandası",
+      t: "Windows oyunlarında telefon kontrolcüsü",
       d: "AnyPS5 Remote, motorun Winsock köprüsüyle AnyPS5 Desktop'ta Windows oyunlarını oynatıyor (AnyPS5-ARM 0.2.22, Desktop 0.1.8).",
     },
   },
@@ -429,7 +429,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "AnyPS5 Desktop'ta birlikte oynama ve akış",
-      d: "Windows ve Linux'ta birlikte oynamayı yayınlamak ve izlemek, etkinlik akışı ve liderlik tabloları; Mac'teki gibi.",
+      d: "Windows ve Linux'ta birlikte oynamayı yayınlamak ve izlemek, etkinlik akışı ve liderlik tabloları, Mac'teki gibi.",
     },
   },
   {
@@ -438,11 +438,11 @@ export const roadmap: RoadmapItem[] = [
     areas: ["mac", "pc", "phone", "online"],
     en: {
       t: "More languages",
-      d: "Everything is in English and Turkish today; more languages for the launchers, the phone and this website.",
+      d: "More languages for the launchers, the phone and this website, which are in English and Turkish today.",
     },
     tr: {
       t: "Daha çok dil",
-      d: "Bugün her şey İngilizce ve Türkçe; launcher'lar, telefon ve bu site için daha çok dil.",
+      d: "Bugün İngilizce ve Türkçe olan launcher'lar, telefon ve bu site için daha çok dil.",
     },
   },
 
@@ -457,7 +457,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Parti sohbeti",
-      d: "Bir partinin sesinin yanında yazılı sohbet; launcher'larda, telefonda ve web'de.",
+      d: "Bir partinin sesinin yanında yazılı sohbet, launcher'larda, telefonda ve web'de.",
     },
   },
   {
@@ -470,7 +470,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Profil temaları ve vitrin",
-      d: "Profilin seçtiğin bir temayı giyer; en üste altı oyun ya da kupa sabitlenir.",
+      d: "Profilin seçtiğin bir temayı giyer ve en üstüne en fazla altı oyun ya da kupa sabitlenir.",
     },
   },
   {
@@ -483,7 +483,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Kulaklık olarak telefon",
-      d: "Telefon kumandayken partinin sesi de onun üzerinden.",
+      d: "Telefon kontrolcüyken partinin sesi de onun üzerinden.",
     },
   },
   {
@@ -509,7 +509,7 @@ export const roadmap: RoadmapItem[] = [
     },
     tr: {
       t: "Mağazalarda telefon uygulaması",
-      d: "AnyPS5 Remote, App Store ve Google Play'de; yan yükleme yok.",
+      d: "AnyPS5 Remote, App Store ve Google Play'de, yan yükleme olmadan.",
     },
   },
   {

@@ -91,7 +91,7 @@
 
 /* Section rhythm: each one its own composition and its own spacing */
 .landing .l-sec {
-  margin-top: clamp(112px, 13vw, 184px);
+  margin-top: clamp(72px, 8vw, 120px);
 }
 .landing .l-share,
 .landing .l-phone,
@@ -1983,7 +1983,7 @@
 }
 .landing .l-open {
   display: grid;
-  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: clamp(32px, 5vw, 80px);
   align-items: center;
 }
@@ -2011,9 +2011,15 @@
 .landing .rules li::before {
   content: none;
 }
+.landing .rules {
+  align-items: stretch;
+}
 .landing .rules li {
   border-top: 0;
-  padding-top: 0;
+  padding: 24px;
+  border-radius: 18px;
+  background: var(--paper-2);
+  box-shadow: 0 0 0 1px var(--rule) inset;
 }
 .landing .rules h3 {
   font-family: var(--font-head);
@@ -2245,7 +2251,8 @@
   border-color: var(--rule);
 }
 @media (max-width: 760px) {
-  .hero-stack {
+  .hero-stack,
+  .product-page .p-hero {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -2327,6 +2334,7 @@
 }
 .film-video {
   background: transparent;
+  cursor: pointer;
 }
 /* A soft shade under the controls, only as deep as they need. */
 .film-frame::after {
@@ -2344,13 +2352,71 @@
 .film-frame:not(.is-playing)::after {
   opacity: 1;
 }
+/* The control bar: play, the seek bar, speed and sound, like any video player. */
 .film-controls {
   position: absolute;
+  left: clamp(10px, 1.6vw, 18px);
   right: clamp(10px, 1.6vw, 18px);
-  bottom: clamp(12px, 1.8vw, 20px);
+  bottom: clamp(10px, 1.6vw, 18px);
   z-index: 2;
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+.film-seek {
+  --done: 0%;
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  margin: 0 6px;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.film-seek::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent) var(--done), rgba(255, 255, 255, 0.22) var(--done));
+  transition: height 0.15s ease;
+}
+.film-seek::-moz-range-track {
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent) var(--done), rgba(255, 255, 255, 0.22) var(--done));
+}
+.film-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transform: scale(0.6);
+  transition: transform 0.15s var(--ease-out);
+}
+.film-seek::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.film-seek:hover::-webkit-slider-thumb,
+.film-seek:focus-visible::-webkit-slider-thumb {
+  transform: scale(1);
+}
+.film-seek:focus-visible {
+  outline: 2px solid #8fb0ff;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.film-speed {
+  min-width: 52px;
+  font-variant-numeric: tabular-nums;
 }
 .film-btn {
   display: inline-flex;
@@ -2393,24 +2459,6 @@
 }
 .film-sound {
   padding: 0 14px 0 12px;
-}
-.film-progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.08);
-  pointer-events: none;
-}
-.film-progress span {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  box-shadow: 0 0 12px var(--accent-glow);
-  transform: scaleX(0);
-  transform-origin: 0 50%;
 }
 /* Reduced motion: the picture, and a button to start it. */
 .film-start {

@@ -68,11 +68,11 @@ export const statusCards: StatusCard[] = [
     release: "Website",
     en: {
       t: "Compatibility filters",
-      d: "Filter the list by platform, status and online play, and sort it by name, status or the latest report; the address keeps it all.",
+      d: "Filter the list by platform, status and online play, and sort it by name, status or the latest report. The address keeps it all.",
     },
     tr: {
       t: "Uyumluluk süzgeçleri",
-      d: "Listeyi platforma, duruma ve çevrimiçi oyuna göre süz; ada, duruma ya da son rapora göre sırala; adres hepsini tutar.",
+      d: "Listeyi platforma, duruma ve çevrimiçi oyuna göre süz ve ada, duruma ya da son rapora göre sırala. Adres hepsini tutar.",
     },
   },
   {
@@ -82,11 +82,11 @@ export const statusCards: StatusCard[] = [
     release: "Website",
     en: {
       t: "Captures",
-      d: "Screenshots and clips as posts, for friends or everyone, with likes, comments and replies; on profiles and game pages.",
+      d: "Screenshots and clips as posts, for friends or everyone, with likes, comments and replies. On profiles and game pages.",
     },
     tr: {
       t: "Çekimler",
-      d: "Ekran görüntüleri ve klipler paylaşım olarak, arkadaşlara ya da herkese; beğeniler, yorumlar ve yanıtlarla; profillerde ve oyun sayfalarında.",
+      d: "Ekran görüntüleri ve klipler paylaşım olarak, arkadaşlara ya da herkese, beğeniler, yorumlar ve yanıtlarla. Profillerde ve oyun sayfalarında.",
     },
   },
   {
@@ -100,7 +100,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "PC için koltuk sürümü",
-      d: "Tam ekran, kumandayla Ayarlar, PS hızlı menü, Create klipleri, Kısayollar ve tarayıcıdan oynama.",
+      d: "Tam ekran, kontrolcüyle Ayarlar, PS hızlı menü, Create klipleri, Kısayollar ve tarayıcıdan oynama.",
     },
   },
   {
@@ -123,12 +123,12 @@ export const statusCards: StatusCard[] = [
     platforms: desk,
     release: "AnyPS5-ARM 0.2.22 · Desktop 0.1.8",
     en: {
-      t: "Play Together and online play",
+      t: "Play together and online play",
       d: "The party's host starts a game for everyone, over a virtual LAN on WebRTC. Experimental.",
     },
     tr: {
-      t: "Birlikte Oyna ve çevrimiçi oyun",
-      d: "Partinin kurucusu oyunu herkes için başlatır; WebRTC üzerinde sanal LAN. Deneysel.",
+      t: "Birlikte oyna ve çevrimiçi oyun",
+      d: "Partinin kurucusu oyunu herkes için, WebRTC üzerinde sanal bir LAN ile başlatır. Deneysel.",
     },
   },
   {
@@ -142,7 +142,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "Human Fall Flat çevrimiçi",
-      d: "Herkese Açık Kur ve Katıl çalışıyor; akış P2P soketleri oyuncular arası TCP konuşan oyunları taşıyor.",
+      d: "Herkese Açık Kur ve Katıl çalışıyor ve akış P2P soketleri oyuncular arası TCP konuşan oyunları taşıyor.",
     },
   },
   {
@@ -156,7 +156,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "Windows oyunlarında telefon",
-      d: "Uzaktan kumanda Winsock üzerinden çalışıyor; telefon Windows oyunlarında da kumanda.",
+      d: "Uzak kontrolcü Winsock üzerinden çalışıyor, böylece telefon Windows oyunlarında da kontrolcü.",
     },
   },
   {
@@ -166,11 +166,11 @@ export const statusCards: StatusCard[] = [
     release: "AnyPS5 Remote 1.17",
     en: {
       t: "A phone app for small screens",
-      d: "Every tab checked on an iPhone SE, a Pro Max and an iPad; join codes, deafen and a vibration test.",
+      d: "Every tab checked on an iPhone SE, a Pro Max and an iPad. Also join codes, deafen and a vibration test.",
     },
     tr: {
       t: "Küçük ekranlara uyan telefon uygulaması",
-      d: "Her sekme iPhone SE, Pro Max ve iPad'de denendi; katılma kodları, sağırlaştırma ve titreşim testi.",
+      d: "Her sekme iPhone SE, Pro Max ve iPad'de denendi. Ayrıca katılma kodları, sağırlaştırma ve titreşim testi.",
     },
   },
   {
@@ -183,8 +183,8 @@ export const statusCards: StatusCard[] = [
       d: "A screen for every pad with live tests, and a troubleshooter that says what keeps one away.",
     },
     tr: {
-      t: "Kumandalar ve sorun giderici",
-      d: "Her kumanda için canlı testli bir ekran ve birini neyin uzak tuttuğunu söyleyen sorun giderici.",
+      t: "Kontrolcüler ve sorun giderici",
+      d: "Her kontrolcü için canlı testli bir ekran ve birini neyin uzak tuttuğunu söyleyen sorun giderici.",
     },
   },
   {
@@ -194,11 +194,11 @@ export const statusCards: StatusCard[] = [
     release: "AnyPS5-ARM 0.2.21 · Desktop 0.1.7",
     en: {
       t: "Add to Steam",
-      d: "AnyPS5 and every unlocked game in your Steam library with their own art; on the Steam Deck too.",
+      d: "AnyPS5 and every unlocked game in your Steam library with their own art. On the Steam Deck too.",
     },
     tr: {
-      t: "Steam'e Ekle",
-      d: "AnyPS5 ve her açılmış oyun kendi görselleriyle Steam kütüphanende; Steam Deck'te de.",
+      t: "Steam'e ekle",
+      d: "AnyPS5 ve her açılmış oyun kendi görselleriyle Steam kütüphanende. Steam Deck'te de.",
     },
   },
   {
@@ -235,7 +235,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "Launcher'larda ve telefonda Çekimler",
-      d: "Galeriden kumandayla AnyTogether'a paylaş; beğenip yorum yapılan bir Çekimler akışı.",
+      d: "Galeriden kontrolcüyle AnyTogether'a paylaşım ve beğenip yorum yapılan bir Çekimler akışı.",
     },
   },
   {
@@ -249,7 +249,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "Mac için koltuk sürümü",
-      d: "Tam ekran, kumandayla Ayarlar, PS hızlı menü, 5 dakikaya kadar klipler, Kısayollar ve tarayıcıdan oynama.",
+      d: "Tam ekran, kontrolcüyle Ayarlar, PS hızlı menü, 5 dakikaya kadar klipler, Kısayollar ve tarayıcıdan oynama.",
     },
   },
   {
@@ -262,8 +262,8 @@ export const statusCards: StatusCard[] = [
       d: "A press packet holds Options on player 1's pad, so the quick menu pauses a game whoever drives it.",
     },
     tr: {
-      t: "1. oyuncuda kumandayla duraklatma",
-      d: "Bir basış paketi 1. oyuncunun kumandasında Options'a basar; hızlı menü oyunu kim sürerse sürsün duraklatır.",
+      t: "1. oyuncuda kontrolcüyle duraklatma",
+      d: "Bir basış paketi 1. oyuncunun kontrolcüsünde Options'a basar, böylece hızlı menü oyunu kim sürerse sürsün duraklatır.",
     },
   },
   {
@@ -277,7 +277,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "Pil ve ısı profilleri",
-      d: "Pildeyken ya da MacBook ısındığında: kare sınırı, düşük çözünürlük ve duraklayan kare üretimi; Geri Al ile.",
+      d: "Pildeyken ya da MacBook ısındığında: kare sınırı, düşük çözünürlük ve duraklayan kare üretimi, Geri Al ile.",
     },
   },
   {
@@ -287,11 +287,11 @@ export const statusCards: StatusCard[] = [
     ships: { project: "macos", version: "0.2.24" },
     en: {
       t: "Profiles",
-      d: "An offline or online choice on the first start, several profiles on one launcher, and Who's playing?",
+      d: "Several profiles on one launcher, Who's playing? and an offline or online choice on the first start.",
     },
     tr: {
       t: "Profiller",
-      d: "İlk açılışta çevrimdışı ya da çevrimiçi seçimi, tek launcher'da birden çok profil ve Kim oynuyor?",
+      d: "Tek launcher'da birden çok profil, Kim oynuyor? ve ilk açılışta çevrimdışı ya da çevrimiçi seçimi.",
     },
   },
   {
@@ -305,7 +305,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "DLC ve oyun güncellemeleri",
-      d: "Oyunun güncellemesi ve ek içerikleri kendi dump'larından; oyunun yanına konur ve onunla başlar.",
+      d: "Oyunun güncellemesi ve ek içerikleri kendi dump'larından, oyunun yanına konur ve onunla başlar.",
     },
   },
   {
@@ -314,12 +314,12 @@ export const statusCards: StatusCard[] = [
     platforms: desk,
     ships: { project: "macos", version: "0.2.24" },
     en: {
-      t: "Game Presets",
+      t: "Game presets",
       d: "Difficulty, inverted camera, subtitles, audio language and performance mode, set once for every game.",
     },
     tr: {
-      t: "Oyun Ön Ayarları",
-      d: "Zorluk, ters kamera, altyazılar, ses dili ve performans modu; her oyun için bir kez ayarlanır.",
+      t: "Oyun ön ayarları",
+      d: "Zorluk, ters kamera, altyazılar, ses dili ve performans modu, her oyun için bir kez ayarlanır.",
     },
   },
   {
@@ -328,11 +328,11 @@ export const statusCards: StatusCard[] = [
     platforms: ["mac"],
     en: {
       t: "Native arm64 engine",
-      d: "Games as arm64 code with no Rosetta; DOOM already plays E1M1 at its own 35 FPS.",
+      d: "Games as arm64 code with no Rosetta. DOOM already plays E1M1 at its own 35 FPS.",
     },
     tr: {
       t: "Yerel arm64 motoru",
-      d: "Oyunlar Rosetta olmadan arm64 kodu olarak; DOOM şimdiden E1M1'i kendi 35 FPS'iyle oynuyor.",
+      d: "Oyunlar Rosetta olmadan arm64 kodu olarak. DOOM şimdiden E1M1'i kendi 35 FPS'iyle oynuyor.",
     },
   },
 
@@ -344,7 +344,7 @@ export const statusCards: StatusCard[] = [
     en: { t: "Assist mode", d: "A second pad, or a friend, helps player 1 in the same seat." },
     tr: {
       t: "Yardım modu",
-      d: "İkinci bir kumanda ya da bir arkadaş, aynı koltukta 1. oyuncuya yardım eder.",
+      d: "İkinci bir kontrolcü ya da bir arkadaş, aynı koltukta 1. oyuncuya yardım eder.",
     },
   },
   {
@@ -357,7 +357,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "Her oyunda jiroskopla nişan",
-      d: "Hareketi hiç okumayan oyunlarda bile kumandanın ya da telefonun hareketiyle nişan al.",
+      d: "Hareketi hiç okumayan oyunlarda bile kontrolcünün ya da telefonun hareketiyle nişan al.",
     },
   },
   {
@@ -417,7 +417,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "Depolama ekranı",
-      d: "Her oyunun, kayıtlarının ve çekimlerinin diskte kapladığı yer; tek yerden yer aç.",
+      d: "Her oyunun, kayıtlarının ve çekimlerinin diskte kapladığı yer ve tek yerden yer açma.",
     },
   },
   {
@@ -433,11 +433,11 @@ export const statusCards: StatusCard[] = [
     platforms: ["mac", "iphone", "android"],
     en: {
       t: "Remote Play over the internet",
-      d: "The Mac's game on your phone away from home, not only on the same Wi-Fi.",
+      d: "The Mac's game on your phone away from home, as well as on the same Wi-Fi.",
     },
     tr: {
-      t: "İnternet üzerinden Uzaktan Oynatma",
-      d: "Mac'teki oyun yalnızca aynı Wi-Fi'da değil, evden uzaktayken de telefonunda.",
+      t: "İnternet üzerinden uzaktan oynatma",
+      d: "Mac'teki oyun aynı Wi-Fi'ın yanı sıra evden uzaktayken de telefonunda.",
     },
   },
   {
@@ -450,7 +450,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "İmzalı ve onaylı Mac sürümleri",
-      d: "Developer ID ve Apple onayı; zip, Gizlilik ve Güvenlik adımı olmadan açılır.",
+      d: "Developer ID ve Apple onayı, böylece zip Gizlilik ve Güvenlik adımı olmadan açılır.",
     },
   },
   {
@@ -481,7 +481,7 @@ export const statusCards: StatusCard[] = [
       t: "More languages",
       d: "Beyond English and Turkish, for the launchers, the phone and this website.",
     },
-    tr: { t: "Daha çok dil", d: "İngilizce ve Türkçenin ötesinde; launcher'lar, telefon ve bu site için." },
+    tr: { t: "Daha çok dil", d: "İngilizce ve Türkçenin ötesinde, launcher'lar, telefon ve bu site için." },
   },
   {
     id: "party-chat",
@@ -498,7 +498,7 @@ export const statusCards: StatusCard[] = [
       t: "The phone as a headset",
       d: "The party's voice through the phone while it is also the controller.",
     },
-    tr: { t: "Kulaklık olarak telefon", d: "Telefon kumandayken partinin sesi de onun üzerinden." },
+    tr: { t: "Kulaklık olarak telefon", d: "Telefon kontrolcüyken partinin sesi de onun üzerinden." },
   },
   {
     id: "e2ee",
@@ -523,7 +523,7 @@ export const statusCards: StatusCard[] = [
     },
     tr: {
       t: "Mağazalarda telefon uygulaması",
-      d: "AnyPS5 Remote App Store ve Google Play'de; yan yükleme yok.",
+      d: "AnyPS5 Remote, App Store ve Google Play'de, yan yükleme olmadan.",
     },
   },
   {

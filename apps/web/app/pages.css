@@ -759,17 +759,6 @@
   overflow: hidden;
   scroll-margin-top: 72px;
 }
-.rm-item::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 14px;
-  bottom: 14px;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--tone);
-  opacity: 0.7;
-}
 .rm-item h3 {
   font-size: 15px;
   font-weight: 600;
@@ -800,6 +789,50 @@
 .rm-shipped {
   color: var(--accent);
   background: oklch(76% 0.13 250 / 0.1);
+}
+/* The done column folds after a few items. */
+.rm-more {
+  margin-top: 10px;
+}
+.rm-more summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px var(--rule) inset;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.rm-more summary::-webkit-details-marker {
+  display: none;
+}
+.rm-more summary:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.rm-more summary .ico {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.25s var(--ease-out);
+}
+.rm-more[open] summary .ico {
+  transform: rotate(180deg);
+}
+.rm-more-close,
+.rm-more[open] .rm-more-open {
+  display: none;
+}
+.rm-more[open] .rm-more-close {
+  display: inline;
+}
+.rm-more[open] summary {
+  margin-bottom: 10px;
 }
 
 @media (max-width: 1000px) {

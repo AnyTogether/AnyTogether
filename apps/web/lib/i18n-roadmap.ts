@@ -10,7 +10,7 @@ const en = {
   },
   kicker: "Roadmap",
   title: ["Where it's going.", "And what's already there."],
-  lead: "What shipped, what is being built and what comes next, across the Mac launcher and its engine, AnyPS5 Desktop, the phone app and AnyTogether. Only things that are true.",
+  lead: "What shipped, what is being built and what comes next for the launchers, the phone app and AnyTogether.",
   statuses: {
     done: ["Done", "Shipped and in your hands."],
     progress: ["In progress", "Being built right now."],
@@ -19,7 +19,7 @@ const en = {
   } satisfies Record<Status, [string, string]>,
   areas: {
     mac: "Mac",
-    pc: "Windows · Linux",
+    pc: "Windows & Linux",
     phone: "Phone",
     online: "Online",
     engine: "Engine",
@@ -29,6 +29,7 @@ const en = {
   suggest: "Suggest something",
   changelog: "What each release brought",
   status: "Status at a glance, with every feature",
+  more: { open: "Show {n} more", close: "Show less" },
 };
 
 export type RoadmapStrings = typeof en;
@@ -41,7 +42,7 @@ const tr: RoadmapStrings = {
   },
   kicker: "Yol haritası",
   title: ["Nereye gidiyor.", "Ve şimdiden neler var."],
-  lead: "Mac launcher'ı ve motoru, AnyPS5 Desktop, telefon uygulaması ve AnyTogether genelinde çıkanlar, yapılanlar ve sırada olanlar. Yalnızca doğru olanlar.",
+  lead: "Launcher'lar, telefon uygulaması ve AnyTogether için çıkanlar, yapılanlar ve sırada olanlar.",
   statuses: {
     done: ["Bitti", "Çıktı, elinde."],
     progress: ["Yapılıyor", "Şu an üzerinde çalışılıyor."],
@@ -50,7 +51,7 @@ const tr: RoadmapStrings = {
   },
   areas: {
     mac: "Mac",
-    pc: "Windows · Linux",
+    pc: "Windows & Linux",
     phone: "Telefon",
     online: "Çevrimiçi",
     engine: "Motor",
@@ -60,6 +61,7 @@ const tr: RoadmapStrings = {
   suggest: "Bir öneride bulun",
   changelog: "Her sürümün getirdikleri",
   status: "Bir bakışta durum, tüm özelliklerle",
+  more: { open: "{n} tane daha göster", close: "Daha az göster" },
 };
 
 export const roadmapStrings = (language: Language): RoadmapStrings => (language === "tr" ? tr : en);
