@@ -170,6 +170,7 @@
 /* Segmented controls with 2–4 choices */
 .segmented.fam-seg {
   width: auto;
+  min-width: 0;
   max-width: 100%;
   grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
 }

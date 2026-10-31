@@ -7,7 +7,28 @@ export type ClientKind = (typeof clientKinds)[number];
 export const providers = ["apple", "google", "discord"] as const;
 export type Provider = (typeof providers)[number];
 
-export const EmailStart = z.object({ email: z.string().email().max(254) });
+/** The languages account mail is written in. */
+export const mailLanguages = ["en", "tr"] as const;
+export type MailLanguage = (typeof mailLanguages)[number];
+
+/** A language tag a client sends ("tr", "tr-TR", an Accept-Language list) as a mail language;
+ *  null when it names none of them. */
+export function mailLanguageOf(tag: string | null | undefined): MailLanguage | null {
+  for (const part of (tag ?? "").split(",")) {
+    const base = part.trim().split(";")[0]?.split("-")[0]?.toLowerCase();
+    if (base && (mailLanguages as readonly string[]).includes(base)) return base as MailLanguage;
+  }
+  return null;
+}
+
+/** The language the client shows (the website's <html lang>, a launcher's), for the account's
+ *  mail. Any tag is taken; one that names no mail language is ignored. */
+const Lang = z.string().max(35).optional();
+
+/** Changing the account's mail language (the website sends it when its language is switched). */
+export const LocaleSet = z.object({ lang: z.enum(mailLanguages) });
+
+export const EmailStart = z.object({ email: z.string().email().max(254), lang: Lang });
 export const EmailVerify = z
   .object({
     email: z.string().email().max(254),
@@ -16,6 +37,7 @@ export const EmailVerify = z
       .regex(/^\d{6}$/)
       .optional(),
     link: z.string().min(20).max(200).optional(),
+    lang: Lang,
   })
   .refine((value) => value.code || value.link, { message: "code or link" });
 
@@ -28,6 +50,7 @@ export const OidcSignIn = z
     redirectUri: z.string().url().optional(),
     nonce: z.string().max(200).optional(),
     deviceName: z.string().max(80).optional(),
+    lang: Lang,
   })
   .refine((value) => value.idToken || (value.code && value.codeVerifier && value.redirectUri), {
     message: "idToken, or code with codeVerifier and redirectUri",

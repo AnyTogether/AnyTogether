@@ -181,7 +181,7 @@ describe("mail failures", () => {
       familySummary: async () => {},
     };
     const mailer = reporting("smtp", broken, (line) => lines.push(line));
-    await expect(mailer.signInCode("utku@example.com", "123456", "https://x")).rejects.toBeInstanceOf(
+    await expect(mailer.signInCode("utku@example.com", "123456", "https://x", "en")).rejects.toBeInstanceOf(
       MailError,
     );
     expect(lines).toHaveLength(1);

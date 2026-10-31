@@ -15,7 +15,7 @@ import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
-import { rateLimiter } from "./ratelimit.js";
+import { rateLimiter, settingLimiter } from "./ratelimit.js";
 import { secret } from "./tokens.js";
 
 const steamLogin = "https://steamcommunity.com/openid/login";
@@ -68,6 +68,7 @@ export function connectionRoutes(deps: Deps) {
   app.use("*", requireUser(deps));
   const { db, valkey } = deps;
   const limit = rateLimiter(valkey, deps.limits);
+  const setting = settingLimiter(valkey, deps.limits);
   const discord = deps.providers.discord;
   const steamFetch = deps.steam?.fetch ?? fetch;
   const available = {
@@ -165,6 +166,7 @@ export function connectionRoutes(deps: Deps) {
   });
 
   app.patch("/me/connections/:provider", async (c) => {
+    await setting("connectionShown", c.get("userId"));
     const provider = providerOf(c.req.param("provider"));
     const { hidden } = await body(c, ConnectionUpdate);
     const [row] = await db

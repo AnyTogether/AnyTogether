@@ -2,6 +2,7 @@
 
 import type { UiStrings } from "@/lib/i18n";
 import { type NoticeKind, type NoticeSettings, type NoticeSetup, noticeKinds } from "@/lib/notify";
+import { rateLimitText } from "@/lib/rateLimit";
 import { social } from "@/lib/social";
 import { type ReactNode, useEffect, useState } from "react";
 
@@ -18,6 +19,7 @@ export function NotificationSettings({
 }) {
   const [settings, setSettings] = useState(setup.settings);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
     if (status !== "saved") return;
@@ -33,8 +35,10 @@ export function NotificationSettings({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ [key]: value }),
     });
-    if (!saved.body) {
+    if (!saved.ok || !saved.body) {
       setSettings(before);
+      const body = (saved.body ?? {}) as { code?: string; retryAfter?: number };
+      setProblem(body.code === "rate_limited" ? rateLimitText(body.retryAfter, texts) : texts.failed);
       return setStatus("error");
     }
     setSettings(saved.body.settings);
@@ -92,12 +96,11 @@ export function NotificationSettings({
       <div className="save-row">
         {status === "error" ? (
           <p className="error" role="alert">
-            {texts.failed}
+            {problem ?? texts.failed}
           </p>
         ) : (
-          <output className={`saved${status === "saved" ? " on" : ""}`}>
-            {status === "saved" ? texts.saved : ""}
-          </output>
+          // The switch shows the change; "Saved" is for screen readers.
+          <output className="visually-hidden">{status === "saved" ? texts.saved : ""}</output>
         )}
       </div>
     </div>

@@ -9,6 +9,7 @@ import {
   HandoffStart,
   OidcSignIn,
   TokenRequest,
+  mailLanguageOf,
   providers,
 } from "@anytogether/shared";
 import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
@@ -36,6 +37,16 @@ const maxCodeAttempts = 10;
 const maxDailyFailures = 30;
 const failuresKey = (address: string) => `signin-failures:${hash(address).toString("hex")}`;
 
+/** Keeps the language a client shows on an account that has none yet (made before languages
+ *  were kept, or by a client that sent none). */
+async function keepLocale(deps: Deps, accountId: string, lang: string | null) {
+  if (!lang) return;
+  await deps.db
+    .update(accounts)
+    .set({ locale: lang })
+    .where(and(eq(accounts.id, accountId), isNull(accounts.locale)));
+}
+
 export function authRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   const ctx = { db: deps.db, valkey: deps.valkey, tokens: deps.tokens };
@@ -56,8 +67,8 @@ export function authRoutes(deps: Deps) {
   });
 
   app.post("/email/start", async (c) => {
-    const { email } = await body(c, EmailStart);
-    const address = email.toLowerCase();
+    const input = await body(c, EmailStart);
+    const address = input.email.toLowerCase();
     // A banned address: refused, but when an account has it the code is still mailed, so its
     // owner can sign in to read why and appeal (the sign-in itself is refused with the details).
     const banned = await isBanned(deps.db, { email: address });
@@ -90,8 +101,19 @@ export function authRoutes(deps: Deps) {
     const url = new URL("/login/email", deps.publicUrl);
     url.searchParams.set("email", address);
     url.searchParams.set("token", link);
+    // One language: the page's the person is on, else their account's, else their browser's,
+    // else English.
+    const [account] = await deps.db
+      .select({ locale: accounts.locale })
+      .from(accounts)
+      .where(eq(accounts.email, address));
+    const lang =
+      mailLanguageOf(input.lang) ??
+      mailLanguageOf(account?.locale) ??
+      mailLanguageOf(c.req.header("accept-language")) ??
+      "en";
     try {
-      await deps.mailer.signInCode(address, code, url.toString());
+      await deps.mailer.signInCode(address, code, url.toString(), lang);
     } catch (error) {
       // Logged with its class where it failed; the person is told to try later.
       if (error instanceof MailError)
@@ -152,12 +174,15 @@ export function authRoutes(deps: Deps) {
       .where(and(eq(signInRequests.id, request.id), isNull(signInRequests.consumedAt)))
       .returning({ id: signInRequests.id });
     if (!consumed[0]) throw new HttpError(400, ErrorCode.codeExpired, "This code was already used");
+    const lang = mailLanguageOf(input.lang) ?? mailLanguageOf(c.req.header("accept-language"));
     const { accountId, created } = await findOrCreateAccount(deps.db, {
       provider: "email",
       subject: address,
       email: address,
       emailVerified: true,
+      locale: lang,
     });
+    await keepLocale(deps, accountId, lang);
     return c.json(await startSession(ctx, accountId, created, clientKind(c)));
   });
 
@@ -166,7 +191,9 @@ export function authRoutes(deps: Deps) {
     if (!providers.includes(provider)) throw new HttpError(404, ErrorCode.notFound, "Unknown provider");
     const input = await body(c, OidcSignIn);
     const identity = await verifyProvider(deps.providers, provider, input);
-    const { accountId, created } = await findOrCreateAccount(deps.db, identity);
+    const lang = mailLanguageOf(input.lang) ?? mailLanguageOf(c.req.header("accept-language"));
+    const { accountId, created } = await findOrCreateAccount(deps.db, { ...identity, locale: lang });
+    await keepLocale(deps, accountId, lang);
     return c.json(await startSession(ctx, accountId, created, clientKind(c), input.deviceName));
   });
 

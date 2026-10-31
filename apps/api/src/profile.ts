@@ -2,6 +2,7 @@ import { accounts, handleHistory, profiles } from "@anytogether/db";
 import {
   ErrorCode,
   HandleChange,
+  LocaleSet,
   PresenceModeUpdate,
   PrivacyUpdate,
   ProfileUpdate,
@@ -29,7 +30,7 @@ import { type AuthVariables, requireUser } from "./middleware.js";
 import { assertNotMuted, restrictionsOf } from "./moderation.js";
 import { type ProfileRow, handleProblem, skeletonClash } from "./people.js";
 import { identityOf } from "./privateIdentity.js";
-import { rateLimiter } from "./ratelimit.js";
+import { rateLimiter, settingLimiter } from "./ratelimit.js";
 import { lookOf } from "./showcase.js";
 
 const cooldown = handleCooldownDays * 86_400_000;
@@ -45,11 +46,10 @@ export function profileRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const { db } = deps;
+  // Each change counts against its own limit, in its own handler: a middleware on PATCH /me/*
+  // here would also run for every other PATCH /me/... mounted after these routes.
   const limit = rateLimiter(deps.valkey, deps.limits);
-  app.patch("/me/*", async (c, next) => {
-    await limit("profile", c.get("userId"));
-    await next();
-  });
+  const setting = settingLimiter(deps.valkey, deps.limits);
 
   const own = (profile: ProfileRow) => ({
     handle: profile.handle,
@@ -94,6 +94,7 @@ export function profileRoutes(deps: Deps) {
 
   app.patch("/me/profile", async (c) => {
     const userId = c.get("userId");
+    await limit("profile", userId);
     const input = await body(c, ProfileUpdate);
     // Clearing is always allowed; writing a name or bio is not while muted.
     if (input.displayName !== undefined || input.bio || input.privateName) await assertNotMuted(db, userId);
@@ -116,6 +117,7 @@ export function profileRoutes(deps: Deps) {
 
   app.patch("/me/handle", async (c) => {
     const userId = c.get("userId");
+    await limit("handle", userId);
     const { handle } = await body(c, HandleChange);
     const profile = await load(userId);
     if (profile.handle.toLowerCase() === handle) return c.json(own(profile));
@@ -166,6 +168,7 @@ export function profileRoutes(deps: Deps) {
 
   app.patch("/me/privacy", async (c) => {
     const userId = c.get("userId");
+    await setting("privacy", userId);
     const input = await body(c, PrivacyUpdate);
     const profile = await load(userId);
     const before = privacyOf(profile.privacy);
@@ -185,6 +188,7 @@ export function profileRoutes(deps: Deps) {
    *  nothing of the profile is open to everyone. A child in a family stays off. */
   app.patch("/me/public-profile", async (c) => {
     const userId = c.get("userId");
+    await setting("publicProfile", userId);
     const { publicProfile } = await body(c, PublicProfileSet);
     if (publicProfile) await mayGoPublic(deps, userId);
     await db.update(profiles).set({ publicProfile }).where(eq(profiles.accountId, userId));
@@ -195,6 +199,7 @@ export function profileRoutes(deps: Deps) {
    *  offline. Its other devices hear the change, and so does the gateway. */
   app.patch("/me/presence", async (c) => {
     const userId = c.get("userId");
+    await setting("presence", userId);
     const { appearOffline } = await body(c, PresenceModeUpdate);
     const profile = await load(userId);
     const privacy = privacyOf(profile.privacy);
@@ -210,10 +215,20 @@ export function profileRoutes(deps: Deps) {
     return c.json({ appearOffline });
   });
 
+  /** The language of the account's mail: the website sends it when its language is switched. */
+  app.patch("/me/locale", async (c) => {
+    const userId = c.get("userId");
+    await setting("locale", userId);
+    const { lang } = await body(c, LocaleSet);
+    await db.update(accounts).set({ locale: lang }).where(eq(accounts.id, userId));
+    return c.json({ lang });
+  });
+
   /** Read receipts on or off: off, nobody sees how far this person has read and they see nobody's
    *  (delivered marks and their own unread counts stay). Their other devices hear the change. */
   app.patch("/me/read-receipts", async (c) => {
     const userId = c.get("userId");
+    await setting("readReceipts", userId);
     const { readReceipts } = await body(c, ReadReceiptsSet);
     await db.update(profiles).set({ readReceipts }).where(eq(profiles.accountId, userId));
     await publish(deps.valkey, userId, { type: "messages.settings", data: { readReceipts } });

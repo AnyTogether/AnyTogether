@@ -25,8 +25,13 @@ export const defaultLimits = {
   friendRequest: { max: 50, seconds: 86_400 },
   /** People searches by one account (the friends page searches as you type). */
   search: { max: 120, seconds: 60 },
-  /** Changes to one's profile, handle and privacy. */
-  profile: { max: 30, seconds: 3600 },
+  /** Name, bio and country changes by one account (text others read, so kept tight). */
+  profile: { max: 60, seconds: 3600 },
+  /** Handle changes tried by one account (a change itself waits 30 days after the first). */
+  handle: { max: 30, seconds: 3600 },
+  /** One cheap setting switched by one account: each setting counts on its own (the caller names
+   *  it, see settingLimiter), so flipping one switch many times never locks the others. */
+  setting: { max: 150, seconds: 3600 },
   /** Avatar uploads per account. */
   avatar: { max: 10, seconds: 3600 },
   /** Reports sent by one account. */
@@ -111,15 +116,37 @@ export function rateLimiter(valkey: Redis, overrides: Partial<Limits> = {}) {
         .expire(key, seconds + 5)
         .exec()) ?? [];
     if (Number(count) <= max) return;
-    const retry = (window + 1) * seconds - Math.floor(Date.now() / 1000);
+    const retry = Math.max(1, (window + 1) * seconds - Math.floor(Date.now() / 1000));
+    // The wait is in the body too (`retryAfter`, seconds): the website's relay keeps the body.
     throw new HttpError(
       429,
       ErrorCode.rateLimited,
-      "Too many requests; try again later",
-      {},
-      { "retry-after": String(Math.max(1, retry)) },
+      `Too many requests; try again in ${retry} s`,
+      { retryAfter: retry, limit: name },
+      { "retry-after": String(retry) },
     );
   };
+}
+
+/** The cheap settings, each with a bucket of its own under the `setting` limit. */
+export type Setting =
+  | "presence"
+  | "readReceipts"
+  | "privacy"
+  | "publicProfile"
+  | "look"
+  | "showcase"
+  | "discovery"
+  | "notifications"
+  | "connectionShown"
+  | "playersMet"
+  | "locale";
+
+/** Counts one change of one setting for `who`: every setting has its own count, so many flips of
+ *  one never block a change to another. */
+export function settingLimiter(valkey: Redis, overrides: Partial<Limits> = {}) {
+  const limit = rateLimiter(valkey, overrides);
+  return (setting: Setting, who: string) => limit("setting", `${who}:${setting}`);
 }
 
 /** Counts one more of something done towards strangers, against the tighter limit when the account

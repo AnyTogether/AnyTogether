@@ -23,7 +23,7 @@ import type { LfgRoutes } from "./lfg.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import type { PartyService } from "./parties.js";
 import { type ProfileRow, noBlockBetween, sectionSetting } from "./people.js";
-import { rateLimiter } from "./ratelimit.js";
+import { rateLimiter, settingLimiter } from "./ratelimit.js";
 import type { SharePlayService } from "./sharePlays.js";
 
 /** SQL: the library of `p` is open to everyone (and the public profile switch is on). */
@@ -77,6 +77,7 @@ export function discoverRoutes(
   app.use("*", requireUser(deps));
   const { db, valkey } = deps;
   const limit = rateLimiter(valkey, deps.limits);
+  const setting = settingLimiter(valkey, deps.limits);
   const family = familyGuard(db);
   const noDiscovery = "Your family settings keep discovery off";
 
@@ -95,7 +96,7 @@ export function discoverRoutes(
 
   app.patch("/me/discovery", async (c) => {
     const me = c.get("userId");
-    await limit("profile", me);
+    await setting("discovery", me);
     const input = await body(c, DiscoveryUpdate);
     if (input.discoverable) await family.need(me, "discovery", noDiscovery);
     await db

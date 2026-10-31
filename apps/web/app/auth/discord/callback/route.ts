@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { language } from "@/lib/i18n";
 import { samePath } from "@/lib/paths";
 import {
   accessCookie,
@@ -39,6 +40,8 @@ export async function GET(request: Request) {
       codeVerifier: trip.verifier,
       redirectUri: `${await publicOrigin()}/auth/discord/callback`,
       deviceName: "Browser",
+      // The page's language, kept for the account's mail when this makes the account.
+      lang: await language(),
     }),
   }).catch(() => undefined);
   const body = (await response?.json().catch(() => ({}))) ?? {};

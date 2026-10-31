@@ -40,6 +40,7 @@ import {
 import {
   ErrorCode,
   friendsKey,
+  mailLanguageOf,
   notificationSettingsOf,
   presenceExtraKey,
   presenceHiddenKey,
@@ -486,7 +487,7 @@ export function accountRoutes(deps: Deps) {
       codeLifetime,
     );
     try {
-      await deps.mailer.deletionCode(account.email, code);
+      await deps.mailer.deletionCode(account.email, code, mailLanguageOf(account.locale) ?? "en");
     } catch (error) {
       if (error instanceof MailError)
         throw new HttpError(

@@ -2,16 +2,17 @@
 export const presenceEn = {
   presenceMode: "Your status",
   presenceOnline: "Online",
-  presenceAppearOffline: "Appear offline",
-  presenceModeHint: "Friends see you as offline. Messages, parties and cloud saves keep working.",
+  presenceAppearOffline: "Offline",
+  presenceModeHint:
+    "Pick Offline and friends see you as offline. Messages, parties and cloud saves keep working.",
   appearingOffline: "Appearing offline",
 };
 
 export const presenceTr: typeof presenceEn = {
   presenceMode: "Durumun",
   presenceOnline: "Çevrimiçi",
-  presenceAppearOffline: "Çevrimdışı görün",
+  presenceAppearOffline: "Çevrimdışı",
   presenceModeHint:
-    "Arkadaşların seni çevrimdışı görür. Mesajlar, partiler ve bulut kayıtları çalışmaya devam eder.",
+    "Çevrimdışı seçersen arkadaşların seni çevrimdışı görür. Mesajlar, partiler ve bulut kayıtları çalışmaya devam eder.",
   appearingOffline: "Çevrimdışı görünüyorsun",
 };

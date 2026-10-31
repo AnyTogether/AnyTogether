@@ -13,6 +13,7 @@ import {
   privacySections,
 } from "@/lib/people";
 import { appearOfflineAfter } from "@/lib/presenceMode";
+import { rateLimitText } from "@/lib/rateLimit";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
@@ -26,7 +27,10 @@ const json = (method: string, body: unknown): RequestInit => ({
 
 async function send(path: string, init: RequestInit) {
   const response = await fetch(path, init).catch(() => undefined);
-  const body = (await response?.json().catch(() => ({}))) as Record<string, unknown> & { code?: string };
+  const body = (await response?.json().catch(() => ({}))) as Record<string, unknown> & {
+    code?: string;
+    retryAfter?: number;
+  };
   return { ok: response?.ok ?? false, status: response?.status ?? 0, body: body ?? {} };
 }
 
@@ -39,13 +43,16 @@ function useSaved(status: Status, setStatus: (status: Status) => void) {
   }, [status, setStatus]);
 }
 
-function StatusLine({ status, texts }: { status: Status; texts: UiStrings }) {
+/** How a save went. `quiet`, for a switch saved as it moves: the switch itself shows the change,
+ *  so "Saved" is only said to screen readers; an error still shows. */
+function StatusLine({ status, texts, quiet }: { status: Status; texts: UiStrings; quiet?: boolean }) {
   if (status.kind === "error")
     return (
       <p className="error" role="alert">
         {status.text}
       </p>
     );
+  if (quiet) return <output className="visually-hidden">{status.kind === "saved" ? texts.saved : ""}</output>;
   return (
     <output className={`saved${status.kind === "saved" ? " on" : ""}`}>
       {status.kind === "saved" ? texts.saved : ""}
@@ -53,11 +60,11 @@ function StatusLine({ status, texts }: { status: Status; texts: UiStrings }) {
   );
 }
 
-const errorText = (code: string | undefined, texts: UiStrings) =>
+const errorText = (code: string | undefined, texts: UiStrings, retryAfter?: unknown) =>
   code === "links_not_allowed"
     ? texts.noLinks
     : code === "rate_limited"
-      ? texts.tooMany
+      ? rateLimitText(retryAfter, texts)
       : code === "handle_taken"
         ? texts.handleTaken
         : code === "handle_reserved"
@@ -98,7 +105,8 @@ export function ProfileForm({
           "/me/profile",
           json("PATCH", { displayName: name, bio: bio.trim() || null, country: country || null }),
         );
-        if (!saved.ok) return setStatus({ kind: "error", text: errorText(saved.body.code, texts) });
+        if (!saved.ok)
+          return setStatus({ kind: "error", text: errorText(saved.body.code, texts, saved.body.retryAfter) });
         setName(String(saved.body.displayName ?? name));
         setBio(String(saved.body.bio ?? ""));
         setStatus({ kind: "saved" });
@@ -180,7 +188,10 @@ export function HandleForm({ own, texts }: { own: Own; texts: UiStrings }) {
         if (!saved.ok)
           return setStatus({
             kind: "error",
-            text: saved.body.code === "bad_request" ? texts.handleInvalid : errorText(saved.body.code, texts),
+            text:
+              saved.body.code === "bad_request"
+                ? texts.handleInvalid
+                : errorText(saved.body.code, texts, saved.body.retryAfter),
           });
         setHandle(String(saved.body.handle));
         setLocked((saved.body.handleChangeAt as string | null) ?? null);
@@ -246,7 +257,7 @@ export function PresenceModeForm({
     const saved = await send("/me/presence", json("PATCH", { appearOffline: value }));
     if (!saved.ok) {
       setAppearOffline(!value);
-      return setStatus({ kind: "error", text: errorText(saved.body.code, texts) });
+      return setStatus({ kind: "error", text: errorText(saved.body.code, texts, saved.body.retryAfter) });
     }
     setAppearOffline(saved.body.appearOffline === true);
     setStatus({ kind: "saved" });
@@ -278,9 +289,7 @@ export function PresenceModeForm({
         </div>
         <p className="meta hint-line">{texts.presenceModeHint}</p>
       </fieldset>
-      <div className="save-row">
-        <StatusLine status={status} texts={texts} />
-      </div>
+      <StatusLine status={status} texts={texts} quiet />
     </div>
   );
 }
@@ -305,7 +314,7 @@ export function ReadReceiptsForm({
     const saved = await send("/me/read-receipts", json("PATCH", { readReceipts: value }));
     if (!saved.ok) {
       setOn(!value);
-      return setStatus({ kind: "error", text: errorText(saved.body.code, texts) });
+      return setStatus({ kind: "error", text: errorText(saved.body.code, texts, saved.body.retryAfter) });
     }
     setOn(saved.body.readReceipts !== false);
     setStatus({ kind: "saved" });
@@ -332,9 +341,7 @@ export function ReadReceiptsForm({
         </div>
         <p className="meta hint-line">{texts.readReceiptsHint}</p>
       </fieldset>
-      <div className="save-row">
-        <StatusLine status={status} texts={texts} />
-      </div>
+      <StatusLine status={status} texts={texts} quiet />
     </div>
   );
 }
@@ -361,7 +368,7 @@ export function PublicProfileForm({
         text:
           saved.body.code === "restricted_by_family"
             ? texts.publicProfileFamily
-            : errorText(saved.body.code, texts),
+            : errorText(saved.body.code, texts, saved.body.retryAfter),
       });
     }
     setOn(saved.body.publicProfile === true);
@@ -390,9 +397,7 @@ export function PublicProfileForm({
         <p className="meta hint-line">{texts.publicProfileHint}</p>
         {!on && <p className="meta hint-line">{texts.publicProfileOffNote}</p>}
       </fieldset>
-      <div className="save-row">
-        <StatusLine status={status} texts={texts} />
-      </div>
+      <StatusLine status={status} texts={texts} quiet />
     </div>
   );
 }
@@ -420,7 +425,7 @@ export function PrivacyForm({
     const saved = await send("/me/privacy", json("PATCH", { [section]: value }));
     if (!saved.ok) {
       setPrivacy(before);
-      return setStatus({ kind: "error", text: errorText(saved.body.code, texts) });
+      return setStatus({ kind: "error", text: errorText(saved.body.code, texts, saved.body.retryAfter) });
     }
     setPrivacy(saved.body as unknown as Privacy);
     setStatus({ kind: "saved" });
@@ -458,9 +463,7 @@ export function PrivacyForm({
           </fieldset>
         );
       })}
-      <div className="save-row">
-        <StatusLine status={status} texts={texts} />
-      </div>
+      <StatusLine status={status} texts={texts} quiet />
     </div>
   );
 }

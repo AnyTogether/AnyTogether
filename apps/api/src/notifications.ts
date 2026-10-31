@@ -8,6 +8,7 @@ import {
   PushUnsubscribe,
   devicePresenceKey,
   digestEveryMs,
+  mailLanguageOf,
   notificationSettingsOf,
   presenceDevicesKey,
   presenceHiddenKey,
@@ -23,9 +24,10 @@ import type { Deps } from "./app.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
-import type { DigestItem, Mailer } from "./mail.js";
+import type { DigestItem, MailLanguage, Mailer } from "./mail.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { people } from "./people.js";
+import { settingLimiter } from "./ratelimit.js";
 
 type Row = typeof notifications.$inferSelect;
 
@@ -465,6 +467,7 @@ export function notificationRoutes(deps: Deps, notes: Notifier) {
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const { db } = deps;
+  const setting = settingLimiter(deps.valkey, deps.limits);
 
   /** Newest first, 30 a page; `before` is the last ID of the page before. */
   app.get("/me/notifications", async (c) => {
@@ -526,6 +529,7 @@ export function notificationRoutes(deps: Deps, notes: Notifier) {
 
   app.patch("/me/notifications/settings", async (c) => {
     const me = c.get("userId");
+    await setting("notifications", me);
     const input = await body(c, NotificationSettingsUpdate);
     const row = await settingsOf(me);
     const settings = notificationSettingsOf({ ...notificationSettingsOf(row.settings), ...input });
@@ -582,7 +586,7 @@ export async function sendDigests(
 ) {
   const { db, valkey } = deps;
   const due = await db
-    .select({ notification: notifications, email: accounts.email })
+    .select({ notification: notifications, email: accounts.email, locale: accounts.locale })
     .from(notifications)
     .innerJoin(accounts, eq(accounts.id, notifications.accountId))
     .innerJoin(profiles, eq(profiles.accountId, notifications.accountId))
@@ -601,15 +605,19 @@ export async function sendDigests(
     )
     .orderBy(notifications.accountId, desc(notifications.updatedAt))
     .limit(2000);
-  const byAccount = new Map<string, { email: string; rows: Row[] }>();
-  for (const { notification, email } of due) {
-    const entry = byAccount.get(notification.accountId) ?? { email: email as string, rows: [] };
+  const byAccount = new Map<string, { email: string; lang: MailLanguage; rows: Row[] }>();
+  for (const { notification, email, locale } of due) {
+    const entry = byAccount.get(notification.accountId) ?? {
+      email: email as string,
+      lang: mailLanguageOf(locale) ?? "en",
+      rows: [],
+    };
     entry.rows.push(notification);
     byAccount.set(notification.accountId, entry);
   }
   const who = people(db);
   let sent = 0;
-  for (const [accountId, { email, rows }] of byAccount) {
+  for (const [accountId, { email, lang, rows }] of byAccount) {
     if (await hasLiveSocket(valkey, accountId)) continue;
     // Another API process may be mailing the same person.
     const lock = `digest-lock:${accountId}`;
@@ -625,7 +633,7 @@ export async function sendDigests(
           count: Number(data.count ?? 1),
         };
       });
-      await deps.mailer.digest(email, items, deps.publicUrl);
+      await deps.mailer.digest(email, items, deps.publicUrl, lang);
       await db
         .update(notifications)
         .set({ mailedAt: new Date(now) })

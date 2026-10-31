@@ -31,7 +31,11 @@ describe("appear offline on the website", () => {
       expect(text, key).not.toBe("");
       expect(presenceTr[key as keyof typeof presenceTr], key).not.toBe(text);
     }
-    expect(presenceEn.presenceAppearOffline).toBe("Appear offline");
-    expect(presenceTr.presenceAppearOffline).toBe("Çevrimdışı görün");
+    // One word each, as the switch's two sides.
+    expect([presenceEn.presenceOnline, presenceEn.presenceAppearOffline]).toEqual(["Online", "Offline"]);
+    expect([presenceTr.presenceOnline, presenceTr.presenceAppearOffline]).toEqual([
+      "Çevrimiçi",
+      "Çevrimdışı",
+    ]);
   });
 });

@@ -22,7 +22,7 @@ export const notifyEn = {
   openParty: "Open party",
   sectionNotifications: "Notifications",
   notifySettingsLead:
-    "Choose what you hear about. Everything shows under the bell; devices where you turn them on get browser notifications too.",
+    "Choose what you hear about. Everything shows under the bell. Devices where you turn them on get browser notifications too.",
   nk_friend_request: "Friend requests",
   nk_friend_accepted: "Accepted requests",
   nk_message: "Messages while you are away",
@@ -200,7 +200,7 @@ export const notifyTr: typeof notifyEn = {
   openParty: "Partiyi aç",
   sectionNotifications: "Bildirimler",
   notifySettingsLead:
-    "Neyi duymak istediğini seç. Hepsi zilin altında görünür; açtığın cihazlara tarayıcı bildirimi de gelir.",
+    "Neyi duymak istediğini seç. Hepsi zilin altında görünür. Açtığın cihazlara tarayıcı bildirimi de gelir.",
   nk_friend_request: "Arkadaşlık istekleri",
   nk_friend_accepted: "Kabul edilen istekler",
   nk_message: "Sen yokken gelen mesajlar",

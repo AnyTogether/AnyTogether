@@ -176,6 +176,13 @@
       "when": 1793035249499,
       "tag": "0024_compat_online",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793447342320,
+      "tag": "0025_account_locale",
+      "breakpoints": true
     }
   ]
 }

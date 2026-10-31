@@ -3,6 +3,7 @@
 import { type Connection, type ConnectionSetup, connectionProviders, providerName } from "@/lib/connections";
 import type { UiStrings } from "@/lib/i18n";
 import { fill } from "@/lib/people";
+import { rateLimitText } from "@/lib/rateLimit";
 import { useState } from "react";
 
 /** Steam and Discord linked to the profile: link one (off to Steam or Discord and back), show it
@@ -39,7 +40,10 @@ export function ConnectionList({
       return;
     }
     setBusy(null);
-    setNotice({ ok: false, text: done.body.code === "rate_limited" ? texts.tooMany : texts.failed });
+    setNotice({
+      ok: false,
+      text: done.body.code === "rate_limited" ? rateLimitText(done.body.retryAfter, texts) : texts.failed,
+    });
   }
 
   async function setHidden(connection: Connection, hidden: boolean) {
@@ -48,7 +52,11 @@ export function ConnectionList({
     setBusy(null);
     if (done.ok)
       setLinked((list) => list.map((c) => (c.provider === connection.provider ? done.body.connection : c)));
-    else setNotice({ ok: false, text: texts.failed });
+    else
+      setNotice({
+        ok: false,
+        text: done.body.code === "rate_limited" ? rateLimitText(done.body.retryAfter, texts) : texts.failed,
+      });
   }
 
   async function unlink(connection: Connection) {

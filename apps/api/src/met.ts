@@ -22,6 +22,7 @@ import { HttpError } from "./errors.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { noBlockBetween, people } from "./people.js";
+import { settingLimiter } from "./ratelimit.js";
 
 type Ctx = { db: Database; valkey: Redis };
 
@@ -117,6 +118,7 @@ export function metRoutes(deps: Deps) {
   app.use("*", requireUser(deps));
   const { db } = deps;
   const who = people(db);
+  const setting = settingLimiter(deps.valkey, deps.limits);
 
   const rememberOf = async (me: string) =>
     (await db.select({ remember: profiles.rememberMet }).from(profiles).where(eq(profiles.accountId, me)))[0]
@@ -182,6 +184,7 @@ export function metRoutes(deps: Deps) {
 
   app.patch("/me/players-met", async (c) => {
     const me = c.get("userId");
+    await setting("playersMet", me);
     const { remember } = await body(c, MetSettingsUpdate);
     await db.update(profiles).set({ rememberMet: remember }).where(eq(profiles.accountId, me));
     // Turned off: every meeting with the account goes, both ways.

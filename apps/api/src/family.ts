@@ -53,6 +53,7 @@ import {
   familyRequestStatuses,
   isGuardian,
   localClock,
+  mailLanguageOf,
   maxFamilyMembers,
   notificationSettingsOf,
   presenceHidden,
@@ -835,12 +836,16 @@ export function familyRoutes(deps: Deps, notes: Notifier) {
           hint: "link_code",
         },
       );
+    // The child's mail is in the manager's language until the child chooses one on the site.
+    const [maker] = await db.select({ locale: accounts.locale }).from(accounts).where(eq(accounts.id, me));
+    const lang = mailLanguageOf(maker?.locale) ?? "en";
     const { accountId, created } = await findOrCreateAccount(db, {
       provider: "email",
       subject: input.email,
       email: input.email,
       emailVerified: true,
       name: input.displayName,
+      locale: lang,
     });
     if (!created)
       throw new HttpError(
@@ -857,6 +862,7 @@ export function familyRoutes(deps: Deps, notes: Notifier) {
         input.email,
         { familyName: family.name, managerName: manager?.displayName ?? "" },
         deps.publicUrl,
+        lang,
       )
       .catch((error) => console.error("family mail failed", error));
     const view = await familyView(family, "manager");
@@ -1468,13 +1474,22 @@ export async function sendFamilySummaries(
           data: summary,
         });
         const [row] = await db
-          .select({ email: accounts.email, settings: profiles.notificationSettings })
+          .select({
+            email: accounts.email,
+            locale: accounts.locale,
+            settings: profiles.notificationSettings,
+          })
           .from(accounts)
           .innerJoin(profiles, eq(profiles.accountId, accounts.id))
           .where(and(eq(accounts.id, guardian), eq(accounts.status, "active")));
         if (row?.email && notificationSettingsOf(row.settings).familyMail)
           await deps.mailer
-            .familySummary(row.email, { familyName: family.name, ...summary }, deps.publicUrl)
+            .familySummary(
+              row.email,
+              { familyName: family.name, ...summary },
+              deps.publicUrl,
+              mailLanguageOf(row.locale) ?? "en",
+            )
             .catch((error) => console.error("family summary mail failed", error));
       }
       await db.update(families).set({ summaryAt: now }).where(eq(families.id, family.id));
