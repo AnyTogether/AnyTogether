@@ -39,7 +39,10 @@ const en = {
   share: {
     steps: [
       ["You start a game", "Your launcher shares it. Friends see it on your profile."],
-      ["A friend asks for a pad", "Mira wants controller 2; the game asks player 2 to press a button."],
+      [
+        "A friend asks for a controller",
+        "Mira wants controller 2. The game asks player 2 to press a button.",
+      ],
       ["She is player 2", "Her keyboard, gamepad or phone drives the second cat, from her browser."],
       ["Two on one couch", "Direct between you, 38 ms. Sol watches through a relay."],
     ],
@@ -106,7 +109,7 @@ const tr: typeof en = {
   },
   toasts: [
     { who: "Sol", what: "izlemeye başladı", seat: 3 },
-    { who: "Mira", what: "2. kolu aldı", seat: 2 },
+    { who: "Mira", what: "2. kontrolcüyü aldı", seat: 2 },
     { who: "4. koltuk", what: "bir arkadaşı bekliyor", seat: 4 },
   ],
   launcher: {
@@ -130,9 +133,12 @@ const tr: typeof en = {
   },
   share: {
     steps: [
-      ["Bir oyun başlatırsın", "Başlatıcın onu paylaşır; arkadaşların profilinde görür."],
-      ["Bir arkadaşın kol ister", "Mira 2. kolu istiyor; oyun 2. oyuncudan bir tuşa basmasını bekliyor."],
-      ["Artık o 2. oyuncu", "Klavyesi, oyun kolu ya da telefonu ikinci kediyi tarayıcısından yönetir."],
+      ["Bir oyun başlatırsın", "Launcher'ın onu paylaşır. Arkadaşların profilinde görür."],
+      [
+        "Bir arkadaşın kontrolcü ister",
+        "Mira 2. kontrolcüyü istiyor. Oyun 2. oyuncudan bir tuşa basmasını bekler.",
+      ],
+      ["Artık o 2. oyuncu", "Klavyesi, kontrolcüsü ya da telefonu ikinci kediyi tarayıcısından yönetir."],
       ["Aynı kanepede iki kişi", "Aranızda doğrudan, 38 ms. Sol relay üzerinden izliyor."],
     ],
     live: "Paylaşılıyor",

@@ -370,7 +370,7 @@
   }
 }
 
-/* The last call: the ribbons again, and the four face buttons lighting in turn */
+/* The last call: the ribbons again, and a controller whose face buttons light in turn */
 .l-final {
   isolation: isolate;
 }
@@ -381,58 +381,65 @@
   mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 68%, transparent 100%);
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 68%, transparent 100%);
 }
-.face {
-  position: relative;
-  width: 104px;
-  height: 104px;
-  margin: 0 auto 34px;
+.pad-art {
+  display: block;
+  width: clamp(168px, 22vw, 232px);
+  aspect-ratio: 1;
+  height: auto;
+  margin: 0 auto clamp(4px, 1vw, 12px);
+  overflow: visible;
+  filter: drop-shadow(0 24px 40px rgb(0 0 0 / 0.55));
 }
-.face-btn {
+.pad-body {
+  fill: var(--ink-2);
+  opacity: 0.9;
+}
+.pad-touch,
+.pad-stick {
+  fill: rgb(255 255 255 / 0.04);
+  stroke: var(--line-2);
+  stroke-width: 2;
+}
+.pad-dpad {
+  fill: rgb(255 255 255 / 0.1);
+}
+.pad-face {
   --key: var(--tri);
-  position: absolute;
-  width: 36px;
-  height: 36px;
-  padding: 10px;
-  border-radius: 50%;
-  border: 1px solid var(--line-2);
-  background: rgba(10, 12, 18, 0.6);
+  animation: pad-face 4.8s ease-in-out infinite;
   color: var(--mute);
-  animation: face 4.8s ease-in-out infinite;
 }
-.face-btn.triangle {
-  left: 34px;
-  top: 0;
+.pad-face circle:first-child {
+  fill: rgb(255 255 255 / 0.04);
+  stroke: currentColor;
+  stroke-width: 1.6;
 }
-.face-btn.circle {
+.pad-glyph {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pad-face.circle {
   --key: var(--cir);
-  right: 0;
-  top: 34px;
   animation-delay: 1.2s;
 }
-.face-btn.cross {
+.pad-face.cross {
   --key: var(--crs);
-  left: 34px;
-  bottom: 0;
   animation-delay: 2.4s;
 }
-.face-btn.square {
+.pad-face.square {
   --key: var(--sqr);
-  left: 0;
-  top: 34px;
   animation-delay: 3.6s;
 }
-@keyframes face {
+@keyframes pad-face {
   0%,
   30%,
   100% {
     color: var(--mute);
-    border-color: var(--line-2);
-    box-shadow: none;
   }
   6% {
     color: var(--key);
-    border-color: color-mix(in srgb, var(--key) 60%, transparent);
-    box-shadow: 0 0 28px -6px var(--key), 0 0 0 4px color-mix(in srgb, var(--key) 10%, transparent);
   }
 }
 
@@ -504,7 +511,7 @@
   .l-title .line,
   .wire::before,
   .terminal .caret,
-  .face-btn {
+  .pad-face {
     animation: none;
   }
   .l-title .line {

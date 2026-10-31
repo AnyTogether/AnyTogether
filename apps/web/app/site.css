@@ -131,12 +131,17 @@
 .ico {
   width: 18px;
   height: 18px;
+  aspect-ratio: 1;
   flex: none;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+.ico .brand {
+  fill: currentColor;
+  stroke: none;
 }
 .ico.arrow {
   width: 16px;
@@ -179,20 +184,26 @@
   color: var(--c);
 }
 
-/* Buttons */
+/* Buttons. Buttons side by side are always the same width (the widest one's), so a pair reads as
+   a pair: a grid of equal columns, as wide as its content. */
 .cta-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 10px;
+  width: max-content;
+  max-width: 100%;
   margin-top: 34px;
 }
 .cta-row.center {
-  justify-content: center;
+  margin-inline: auto;
 }
 .cta {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+  min-width: 0;
   min-height: 52px;
   padding: 0 22px;
   border-radius: 999px;
@@ -222,6 +233,11 @@
 .cta.ghost:hover {
   border-color: rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.05);
+}
+.cta-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .cta-fine {
   padding-left: 10px;
@@ -1069,7 +1085,8 @@ summary:focus-visible {
 .terminal pre {
   margin: 0;
   padding: 22px 22px 6px;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font: 400 13px / 1.9 var(--font-mono), monospace;
   color: var(--ink-2);
 }
@@ -1116,7 +1133,7 @@ summary:focus-visible {
 
 .l-final {
   position: relative;
-  margin-top: clamp(100px, 13vw, 180px);
+  margin-top: clamp(72px, 9vw, 128px);
   padding: clamp(30px, 6vw, 70px) 0 clamp(20px, 4vw, 40px);
   text-align: center;
 }
@@ -1347,7 +1364,7 @@ summary:focus-visible {
   scroll-margin-top: 72px;
 }
 .chapter {
-  margin-top: clamp(90px, 12vw, 150px);
+  margin-top: clamp(64px, 8vw, 112px);
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   grid-template-areas: "head art" "items items" "gallery gallery";
@@ -1365,6 +1382,20 @@ summary:focus-visible {
 .chapter-head {
   grid-area: head;
 }
+/* Long Turkish words ("kontrolcüyü", "Arkadaşların") must never break in the middle: the
+   chapter titles are a little smaller than the front page's, and wrap only between words. */
+.site .chapter-head .h-section {
+  font-size: clamp(32px, 4.2vw, 56px);
+  overflow-wrap: normal;
+}
+.site .install .h-section {
+  font-size: clamp(30px, 3.8vw, 48px);
+  overflow-wrap: normal;
+}
+/* The install box repeats the hero's buttons: the sizes were shown there already. */
+.install .cta-fine {
+  display: none;
+}
 .chapter-art {
   grid-area: art;
   display: grid;
@@ -1377,10 +1408,11 @@ summary:focus-visible {
   width: 78%;
   margin: -18% 0 0 auto;
 }
+/* Always three across (two, then one, on smaller screens): the lists hold 3, 6 or 9 items. */
 .items {
   grid-area: items;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 26px 32px;
   list-style: none;
   padding: 0;
@@ -1402,19 +1434,11 @@ summary:focus-visible {
 .gallery {
   display: flex;
   gap: 16px;
-  margin: 0 calc(50% - 50vw) 0 0;
-  padding: 4px calc(50vw - 50%) 12px 0;
-  list-style: none;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
-.gallery li {
-  flex: 0 0 min(400px, 78vw);
-  scroll-snap-align: start;
+.gallery .g-item {
+  flex: 0 1 min(400px, 78vw);
 }
-.gallery figure {
+.g-item {
   margin: 0;
 }
 .g-shot {
@@ -1428,13 +1452,64 @@ summary:focus-visible {
   width: 100%;
   height: auto;
 }
-.gallery figcaption {
+.g-item figcaption {
   margin-top: 10px;
   font: 400 12px / 1.4 var(--font-mono), monospace;
   color: var(--mute);
 }
+
+/* The endless strip (Strip.tsx): full width, starting at the text's left edge, moved by hand. */
+.strip {
+  --strip-gap: 16px;
+  margin: 0 calc(50% - 50vw);
+  padding: 4px 0 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-y;
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+.strip::-webkit-scrollbar {
+  display: none;
+}
+.strip[data-live] {
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.strip[data-live][data-dragging] {
+  cursor: grabbing;
+}
+.strip:focus-visible {
+  outline: 2px solid #8fb0ff;
+  outline-offset: 2px;
+  border-radius: 14px;
+}
+.strip-track {
+  display: flex;
+  width: max-content;
+  padding-left: max(16px, calc(50vw - 50% + 0px));
+  will-change: transform;
+}
+.strip[data-live] .strip-track {
+  padding-left: 0;
+}
+.strip-group {
+  display: flex;
+  gap: var(--strip-gap);
+  padding-right: var(--strip-gap);
+}
+.strip .g-item {
+  flex: 0 0 min(400px, 74vw);
+}
+.strip img {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
 .install {
-  margin-top: clamp(100px, 13vw, 160px);
+  margin-top: clamp(72px, 9vw, 120px);
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
   gap: clamp(32px, 5vw, 64px);
@@ -1446,6 +1521,19 @@ summary:focus-visible {
 }
 .install .h-section {
   font-size: clamp(30px, 3.8vw, 46px);
+  overflow-wrap: normal;
+  text-wrap: balance;
+}
+/* Running your own server: the terminal needs the room more than the title does. */
+.is-together .install {
+  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+}
+.install-note {
+  margin-top: 18px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 52ch;
 }
 .install-steps {
   display: grid;
@@ -1497,7 +1585,7 @@ summary:focus-visible {
   color: var(--mute);
 }
 .family {
-  margin-top: 80px;
+  margin-top: 64px;
 }
 .family-row {
   margin-top: 18px;
@@ -1542,6 +1630,9 @@ summary:focus-visible {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .plat-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .items {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
@@ -1648,11 +1739,15 @@ summary:focus-visible {
 }
 @media (max-width: 520px) {
   .cards.four,
-  .plat-grid {
+  .plat-grid,
+  .items {
     grid-template-columns: minmax(0, 1fr);
   }
+  .cta-row {
+    grid-auto-flow: row;
+    width: 100%;
+  }
   .cta-row .cta {
-    flex: 1 1 100%;
     flex-wrap: wrap;
     justify-content: center;
     row-gap: 5px;
@@ -1664,6 +1759,10 @@ summary:focus-visible {
     flex-basis: 100%;
     padding-left: 0;
     border-left: 0;
+  }
+  .terminal pre {
+    padding: 18px 16px 6px;
+    font-size: 12px;
   }
   .live-stats dl {
     gap: 18px 28px;

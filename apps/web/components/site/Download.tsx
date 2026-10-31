@@ -4,6 +4,7 @@ import type { SiteStrings } from "@/lib/i18n-site";
 import { fill } from "@/lib/people";
 import { fileSize } from "@/lib/themes";
 import type { JSX } from "react";
+import { brandPaths } from "./brandPaths";
 
 export const DownloadIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="ico">
@@ -11,39 +12,21 @@ export const DownloadIcon = () => (
   </svg>
 );
 
-/** The small mark of each platform, drawn in the site's line style. */
+/** The mark of each platform. The operating systems wear their own logos, filled (Apple, Android
+ *  and Tux from Simple Icons, CC0), so each is known at a glance; the web is the site's line globe.
+ *  Every mark sits in the same square box, so none can stretch or shift its neighbours. */
+const brand = (d: string) => () => <path d={d} className="brand" />;
 export const platformIcons: Record<Platform | "web", () => JSX.Element> = {
-  mac: () => (
-    <>
-      <rect x="3" y="4.5" width="18" height="12" rx="2" />
-      <path d="M8 20h8M12 16.5V20" />
-    </>
-  ),
+  mac: brand(brandPaths.apple),
   windows: () => (
-    <>
-      <path d="M3.5 5.5l7-1v7h-7zM12.5 4.2l8-1.2v8.5h-8zM3.5 12.5h7v7l-7-1zM12.5 12.5h8V21l-8-1.2z" />
-    </>
+    <path
+      className="brand"
+      d="M3 5.2l7.6-1.05v7.3H3zM11.6 4l9.4-1.3v8.75h-9.4zM3 12.5h7.6v7.35L3 18.8zM11.6 12.5H21v8.8L11.6 20z"
+    />
   ),
-  linux: () => (
-    <>
-      <rect x="3" y="4.5" width="18" height="15" rx="2.5" />
-      <path d="M7 9.5l3 2.5-3 2.5M12.5 15H17" />
-    </>
-  ),
-  iphone: () => (
-    <>
-      <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
-      <path d="M11 18.5h2" />
-    </>
-  ),
-  android: () => (
-    <>
-      <rect x="5" y="9" width="14" height="10" rx="2" />
-      <path d="M8 9a4 4 0 0 1 8 0M8.5 5.5l1 1.6M15.5 5.5l-1 1.6" />
-      <circle cx="9.5" cy="12" r=".6" fill="currentColor" />
-      <circle cx="14.5" cy="12" r=".6" fill="currentColor" />
-    </>
-  ),
+  linux: brand(brandPaths.linux),
+  iphone: brand(brandPaths.apple),
+  android: brand(brandPaths.android),
   web: () => (
     <>
       <circle cx="12" cy="12" r="9" />
@@ -60,7 +43,7 @@ export function PlatformIcon({ platform }: { platform: Platform | "web" }) {
   );
 }
 
-/** The big download button: the visitor's platform, its file's kind, size and version. An iPhone
+/** The big download button: the visitor's platform and its file's size. An iPhone
  *  gets the install steps, since an IPA needs AltStore or another signer first. */
 export function DownloadCta({
   platform,
@@ -69,6 +52,7 @@ export function DownloadCta({
   language,
   direct = false,
   quiet = false,
+  short = false,
 }: {
   platform: Platform | null;
   releases: Releases | null;
@@ -78,6 +62,8 @@ export function DownloadCta({
   direct?: boolean;
   /** The second button of a pair: outlined. */
   quiet?: boolean;
+  /** Just the platform's name, where the page already says what it is (the phone page). */
+  short?: boolean;
 }) {
   if (!platform)
     return (
@@ -88,16 +74,14 @@ export function DownloadCta({
     );
   const pick = pickDownload(platform, releases);
   const phone = platform === "iphone" || platform === "android";
-  const label = phone
-    ? fill(s.phoneFor, { platform: s.platform[platform] })
-    : fill(s.downloadFor, { platform: s.platform[platform] });
-  const fine = [
-    pick.kind,
-    pick.size ? fileSize(pick.size, language) : null,
-    pick.version ? fill(s.versionShort, { version: pick.version }) : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const label = short
+    ? s.platform[platform]
+    : phone
+      ? fill(s.phoneFor, { platform: s.platform[platform] })
+      : fill(s.downloadFor, { platform: s.platform[platform] });
+  // Only the file's size: the platform names the file, and the release is named at the top of the
+  // page. Kept short so a pair of buttons fits side by side at the same width.
+  const size = pick.size ? fileSize(pick.size, language) : null;
   return (
     <a
       href={platform === "iphone" && !direct ? "/phone#install" : pick.url}
@@ -105,7 +89,7 @@ export function DownloadCta({
     >
       <PlatformIcon platform={platform} />
       <span className="cta-label">{label}</span>
-      <span className="cta-fine">{fine}</span>
+      {size && <span className="cta-fine">{size}</span>}
     </a>
   );
 }

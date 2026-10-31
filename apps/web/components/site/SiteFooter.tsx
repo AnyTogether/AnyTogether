@@ -3,11 +3,11 @@ import { Mark } from "@/components/Mark";
 import type { SiteStrings } from "@/lib/i18n-site";
 import Link from "next/link";
 
-const gh = (repo: string) => `https://github.com/utkuhalis/${repo}`;
+const gh = (repo: string) => `https://github.com/AnyTogether/${repo}`;
 
 /** The footer of every page: the products, the project's pages (help, changelog, roadmap, open
- *  source), the community's repositories, the account, the privacy notice and terms, and the
- *  language. */
+ *  source, running your own server), the source code's repositories, the account, the privacy
+ *  notice and terms, and the language. */
 export function SiteFooter({
   s,
   signedIn,
@@ -80,6 +80,9 @@ export function SiteFooter({
               <Link href="/projects">{s.footer.openSource}</Link>
             </li>
             <li>
+              <Link href="/together#install">{s.footer.selfHosting}</Link>
+            </li>
+            <li>
               <a
                 href={`${gh("AnyPS5-ARM")}/blob/main/docs/user/GUIDE.md${language === "tr" ? "#türkçe" : ""}`}
               >
@@ -89,19 +92,16 @@ export function SiteFooter({
           </ul>
         </div>
         <div>
-          <h2>{s.footer.community}</h2>
+          <h2>{s.footer.sourceCode}</h2>
           <ul>
             <li>
-              <a href={gh("AnyTogether")}>GitHub · AnyTogether</a>
+              <a href={gh("AnyTogether")}>AnyTogether</a>
             </li>
             <li>
-              <a href={gh("AnyPS5-ARM")}>GitHub · AnyPS5-ARM</a>
+              <a href={gh("AnyPS5-ARM")}>AnyPS5-ARM</a>
             </li>
             <li>
-              <a href={gh("AnyPS5-Desktop")}>GitHub · AnyPS5-Desktop</a>
-            </li>
-            <li>
-              <a href={`${gh("AnyTogether")}/blob/main/docs/self-hosting.md`}>{s.footer.selfHosting}</a>
+              <a href={gh("AnyLauncher-Port")}>AnyPS5 Desktop</a>
             </li>
           </ul>
         </div>

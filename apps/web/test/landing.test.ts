@@ -13,7 +13,7 @@ describe("the front page", () => {
     }
     // What is not out yet says so.
     expect(en.find((card) => card.title === "Online play")?.tag).toBe("experimental");
-    expect(en.find((card) => card.title === "Play Together")?.tag).toBe("soon");
+    expect(en.find((card) => card.title === "Play together")?.tag).toBe("soon");
     expect(siteStrings("tr").soon).not.toBe(siteStrings("en").soon);
   });
 

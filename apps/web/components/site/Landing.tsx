@@ -9,18 +9,18 @@ import { motionStrings } from "@/lib/i18n-motion";
 import type { SiteStrings } from "@/lib/i18n-site";
 import { fill } from "@/lib/people";
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import "@/app/motion.css";
 import "@/app/live.css";
-import { Backdrop, GlyphShape } from "./Backdrop";
+import { Backdrop } from "./Backdrop";
+import { Controller } from "./Controller";
 import { DownloadCta, PlatformCard, PlatformIcon } from "./Download";
-import { LiveBoard, LiveCall, LiveChat, LiveFriends, LivePad, LiveParty, TrophyToast } from "./LiveBits";
+import { LiveCall, LiveChat, LiveFriends, LivePad, LiveParty } from "./LiveBits";
 import { LiveLauncher } from "./LiveLauncher";
 import { LiveShare } from "./LiveShare";
-import { LookSwitch } from "./LookSwitch";
 import { PromoFilm } from "./PromoFilm";
 import { Reveal } from "./Reveal";
 import { Shot } from "./Shot";
+import { SelfHostTerminal } from "./Terminal";
 import { wide } from "./fonts";
 
 const productHref: Record<string, string> = {
@@ -37,8 +37,9 @@ const Arrow = () => (
 );
 
 /** What signed-out visitors see at /: the AnyPS5 family, shown working rather than described. The
- *  launcher, share play, the phone pad, the party and the board are rebuilt live in HTML; real
- *  pictures appear inside them or beside them. */
+ *  launcher, share play, the phone pad and the party are rebuilt live in HTML; real pictures
+ *  appear inside them or beside them. Kept short on purpose: the visitor should have decided by
+ *  the friends section, and the details live on the product pages (see AGENTS.md). */
 export function Landing({
   s,
   language,
@@ -182,9 +183,6 @@ export function Landing({
               </li>
             ))}
           </ul>
-          <p className="proof">
-            {l.share.proof} <Link href="/together#share">{l.share.proofMore}</Link>
-          </p>
         </div>
       </section>
 
@@ -290,104 +288,16 @@ export function Landing({
         </div>
       </section>
 
-      <section className="l-sec l-find">
-        <div className="find-text" data-reveal>
-          <h2 className="h-section">{l.find.title}</h2>
-          <dl className="find-list">
-            {l.find.cards.map(([title, detail]) => (
-              <div key={title}>
-                <dt>{title}</dt>
-                <dd>{detail}</dd>
-              </div>
-            ))}
-          </dl>
-          <Link href="/find" className="text-link">
-            {l.find.cta}
-            <Arrow />
-          </Link>
-        </div>
-        <div data-reveal>
-          <LiveBoard t={m.board} cta={m.boardIn} />
-        </div>
-      </section>
-
-      <section className="l-sec l-progress">
-        <div className="progress-head" data-reveal>
-          <h2 className="h-section">{l.progress.title}</h2>
-          <p className="s-lead">{l.progress.lead}</p>
-        </div>
-        <div className="progress-art" data-reveal>
-          <figure className="shot-plain pr-main">
-            <Shot name="mac-profile" alt={l.progress.profileAlt} sizes="(max-width: 760px) 92vw, 820px" />
-          </figure>
-          <figure className="shot-plain pr-board">
-            <Shot name="mac-leaderboard" alt={l.progress.boardAlt} sizes="(max-width: 760px) 60vw, 380px" />
-          </figure>
-          <TrophyToast t={m.trophy} />
-        </div>
-        <dl className="progress-facts" data-reveal>
-          {l.progress.cards.map(([title, detail]) => (
-            <div key={title}>
-              <dt>{title}</dt>
-              <dd>{detail}</dd>
-            </div>
+      <section className="l-sec l-rules" data-reveal>
+        <h2 className="rules-title">{l.rules.title}</h2>
+        <ol className="rules">
+          {l.rules.points.map(([title, detail]) => (
+            <li key={title}>
+              <h3>{title}</h3>
+              <p>{detail}</p>
+            </li>
           ))}
-        </dl>
-        <p className="fine-note">{s.demoPeople}</p>
-      </section>
-
-      <section className="l-sec l-duo">
-        <article className="duo-card themes" data-reveal data-spot>
-          <Backdrop look="cosmic" className="duo-backdrop" gain={0.9} base={0.8} switchable />
-          <div className="duo-text">
-            <h2 className="h-card">{l.themes.title}</h2>
-            <p>{l.themes.lead}</p>
-            <LookSwitch t={m.looks} />
-            <Link href="/themes" className="text-link">
-              {l.themes.cta}
-              <Arrow />
-            </Link>
-          </div>
-        </article>
-        <article className="duo-card framegen" data-reveal data-spot>
-          <div className="duo-text">
-            <p className="duo-tag">
-              <span className="chip-tag experimental">{s.experimental}</span>
-            </p>
-            <h2 className="h-card">{l.framegen.title}</h2>
-            <p>{l.framegen.lead}</p>
-          </div>
-          <div className="frames" aria-hidden="true">
-            <div className="frame-row">
-              <span className="frame-label">60 · {l.framegen.from}</span>
-              <div className="ticks">
-                {Array.from({ length: 16 }, (_, i) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: a fixed row of marks
-                  <i key={i} className={i % 2 ? "gap" : ""} style={{ "--i": i } as CSSProperties} />
-                ))}
-              </div>
-            </div>
-            <div className="frame-row">
-              <span className="frame-label">120 · {l.framegen.to}</span>
-              <div className="ticks">
-                {Array.from({ length: 16 }, (_, i) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: a fixed row of marks
-                  <i key={i} className={i % 2 ? "made" : ""} style={{ "--i": i } as CSSProperties} />
-                ))}
-              </div>
-            </div>
-            <p className="frame-legend">
-              <span>
-                <i className="sw game" />
-                {l.framegen.legendGame}
-              </span>
-              <span>
-                <i className="sw made" />
-                {l.framegen.legendMade}
-              </span>
-            </p>
-          </div>
-        </article>
+        </ol>
       </section>
 
       <section className="l-sec l-platforms" id="platforms">
@@ -450,62 +360,12 @@ export function Landing({
             {l.open.built.split("{link}")[1]}
           </p>
         </div>
-        <div className="terminal" data-reveal>
-          <pre>
-            <code>
-              <span className="ln" style={{ "--i": 0 } as CSSProperties}>
-                <span className="c"># {l.open.guide}</span>
-              </span>
-              {"\n"}
-              <span className="ln" style={{ "--i": 1 } as CSSProperties}>
-                <span className="p">$</span> git clone https://github.com/AnyTogether/AnyTogether.git
-              </span>
-              {"\n"}
-              <span className="ln" style={{ "--i": 2 } as CSSProperties}>
-                <span className="p">$</span> cd AnyTogether/deploy && cp .env.example .env
-              </span>
-              {"\n"}
-              <span className="ln" style={{ "--i": 3 } as CSSProperties}>
-                <span className="p">$</span> docker compose up -d --build
-              </span>
-              {"\n"}
-              <span className="ln" style={{ "--i": 4 } as CSSProperties}>
-                <span className="ok">✓</span> caddy · web · api · realtime · postgres · valkey
-                <i className="caret" />
-              </span>
-            </code>
-          </pre>
-          <a
-            href="https://github.com/AnyTogether/AnyTogether/blob/main/docs/self-hosting.md"
-            className="text-link"
-          >
-            {l.open.guide}
-            <Arrow />
-          </a>
-        </div>
-      </section>
-
-      <section className="l-sec l-rules" data-reveal>
-        <h2 className="rules-title">{l.rules.title}</h2>
-        <ol className="rules">
-          {l.rules.points.map(([title, detail]) => (
-            <li key={title}>
-              <h3>{title}</h3>
-              <p>{detail}</p>
-            </li>
-          ))}
-        </ol>
+        <SelfHostTerminal guide={l.open.guide} />
       </section>
 
       <section className="l-final" data-reveal data-loop>
         <Backdrop look="cosmic" className="final-backdrop" gain={0.85} />
-        <div className="face" aria-hidden="true">
-          {(["triangle", "circle", "cross", "square"] as const).map((shape) => (
-            <span key={shape} className={`face-btn ${shape}`}>
-              <GlyphShape shape={shape} />
-            </span>
-          ))}
-        </div>
+        <Controller />
         <h2>{l.final.title}</h2>
         <p>{l.final.lead}</p>
         <div className="cta-row center">

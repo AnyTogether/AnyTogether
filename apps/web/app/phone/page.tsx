@@ -14,7 +14,9 @@ export default async function Phone() {
   const [releases, visitor] = await Promise.all([loadReleases(), visitorPlatform()]);
   const s = siteStrings(lang);
   const p = productStrings(lang);
-  const iphoneFirst = visitor === "iphone" || visitor === "mac";
+  // Android first: most people who use the phone controller are on Android. An iPhone visitor sees
+  // their own phone first. The two buttons are the same width either way.
+  const iphoneFirst = visitor === "iphone";
   return (
     <ProductPage
       page={p.phone}
@@ -29,6 +31,7 @@ export default async function Phone() {
             s={s}
             language={lang}
             direct
+            short
           />
           <DownloadCta
             platform={iphoneFirst ? "android" : "iphone"}
@@ -37,6 +40,7 @@ export default async function Phone() {
             language={lang}
             direct
             quiet
+            short
           />
         </>
       }
