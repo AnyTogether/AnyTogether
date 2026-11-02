@@ -101,7 +101,7 @@ export function SiteFooter({
               <a href={gh("AnyPS5-ARM")}>AnyPS5 ARM</a>
             </li>
             <li>
-              <a href={gh("AnyLauncher-Port")}>AnyPS5 Desktop</a>
+              <a href={gh("AnyPS5-Desktop")}>AnyPS5 Desktop</a>
             </li>
           </ul>
         </div>
