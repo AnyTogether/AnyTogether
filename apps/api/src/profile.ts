@@ -87,6 +87,8 @@ export function profileRoutes(deps: Deps) {
         rememberMet: profile.rememberMet,
         appearOffline: profile.appearOffline,
         presenceStatus: statusOf(profile),
+        // The same, under the name presence.mode events and the launchers read.
+        status: statusOf(profile),
         readReceipts: profile.readReceipts,
       },
       // What the account may not do now (a mute; a banned account has no session), and its
