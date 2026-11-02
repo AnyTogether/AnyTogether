@@ -9,7 +9,7 @@ import Link from "next/link";
 
 export const generateMetadata = () => productMetadata("mac");
 
-/** AnyPS5-ARM, the Mac launcher, and everything it does. */
+/** AnyPS5 ARM, the Mac launcher, and everything it does. */
 export default async function Mac() {
   const lang = await language();
   const [releases, s, p] = [await loadReleases(), siteStrings(lang), productStrings(lang)];

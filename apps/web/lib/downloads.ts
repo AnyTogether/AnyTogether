@@ -34,7 +34,7 @@ export const repos = {
   together: "AnyTogether/AnyTogether",
 } as const;
 
-/** The phone app's own version, which AnyPS5-ARM's release notes name ("**Phone controller
+/** The phone app's own version, which AnyPS5 ARM's release notes name ("**Phone controller
  *  1.16.0:**", "phone 1.16.0"); null when they do not. The APK and IPA ride on the Mac release, so
  *  its version would be the wrong one to show beside them. */
 export function phoneVersion(release: { notes?: string } | null | undefined): string | null {
@@ -283,7 +283,7 @@ const stableFiles: [Platform, string, string][] = [
 
 /** Every file of both latest releases, by platform: the visitor's platform first, then the usual
  *  order; within one, installers before the rest. AnyPS5 Desktop's own release goes first, so a
- *  Windows or Linux file AnyPS5-ARM's release carries too is listed once, with Desktop's version.
+ *  Windows or Linux file AnyPS5 ARM's release carries too is listed once, with Desktop's version.
  *  Files of no known platform are kept apart, so nothing a release offers is left out. */
 export function downloadGroups(
   releases: Releases | null,

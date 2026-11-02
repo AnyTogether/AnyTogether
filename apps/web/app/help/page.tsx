@@ -96,16 +96,12 @@ export default async function Help() {
                 </div>
               </header>
               <ol className="install-steps">
-                {d.guides[platform].steps.map((step) => (
+                {h.install.platforms[platform].steps.map((step) => (
                   <li key={step}>{step}</li>
                 ))}
               </ol>
               <p className="plat-req">
-                <span className="pg-label">{h.install.needs}</span>{" "}
-                {d.guides[platform].requirements
-                  .slice(0, 2)
-                  .map(([k, v]) => `${k}: ${v}`)
-                  .join(" · ")}
+                <span className="pg-label">{h.install.needs}</span> {h.install.platforms[platform].needs}
               </p>
               <Link href={`/download#${platform}`} className="file-link hp-files">
                 {h.install.files}

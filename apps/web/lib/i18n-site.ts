@@ -86,7 +86,7 @@ const en = {
     products: [
       {
         key: "mac",
-        name: "AnyPS5-ARM",
+        name: "AnyPS5 ARM",
         where: "Mac",
         line: "The launcher. A PS5-style home for your games.",
       },
@@ -219,8 +219,8 @@ const en = {
       kicker: "Ground rules",
       title: "Bring the games you own.",
       points: [
+        ["Only your own copies.", "You play your own dumps. We never hand out games or keys."],
         ["Sony stays out.", "We never touch Sony's servers, code or keys."],
-        ["Only your own copies.", "You play dumps of games you own. We never offer game files or keys."],
         ["Free and open source.", "Nothing is sold and nothing is tracked."],
       ],
     },
@@ -230,7 +230,7 @@ const en = {
       lead: "One AnyTogether account works on all of them.",
       cards: {
         mac: {
-          product: "AnyPS5-ARM",
+          product: "AnyPS5 ARM",
           req: "A Mac with M1 or newer and macOS 14 or later. Rosetta 2 is installed if missing.",
         },
         windows: {
@@ -259,7 +259,7 @@ const en = {
       lead: "Every line is on GitHub. AnyTogether runs on one server with Docker Compose.",
       repos: [
         ["AnyTogether", "AnyTogether/AnyTogether", "MIT", "The server and this website"],
-        ["AnyPS5-ARM", "AnyTogether/AnyPS5-ARM", "GPL-2.0", "The Mac launcher, the engine and the phone app"],
+        ["AnyPS5 ARM", "AnyTogether/AnyPS5-ARM", "GPL-2.0", "The Mac launcher, the engine and the phone app"],
         ["AnyPS5 Desktop", "AnyTogether/AnyLauncher-Port", "GPL-2.0", "The Windows and Linux launcher"],
       ],
       guide: "Self-hosting guide",
@@ -357,7 +357,7 @@ const tr: SiteStrings = {
     products: [
       {
         key: "mac",
-        name: "AnyPS5-ARM",
+        name: "AnyPS5 ARM",
         where: "Mac",
         line: "Launcher. Oyunların için PS5 tarzı bir ana ekran.",
       },
@@ -489,11 +489,8 @@ const tr: SiteStrings = {
       kicker: "Kurallar",
       title: "Sahip olduğun oyunlarla gel.",
       points: [
+        ["Yalnızca kendi kopyaların.", "Kendi dump'larını oynarsın. Oyun ya da anahtar vermeyiz."],
         ["Sony'den uzak dururuz.", "Sony'nin sunucularına, koduna ve anahtarlarına asla dokunmayız."],
-        [
-          "Yalnızca kendi kopyaların.",
-          "Sahip olduğun oyunların dump'larını oynarsın. Oyun dosyası ya da anahtar vermeyiz.",
-        ],
         ["Ücretsiz ve açık kaynak.", "Hiçbir şey satılmaz, hiçbir şey izlenmez."],
       ],
     },
@@ -503,7 +500,7 @@ const tr: SiteStrings = {
       lead: "Tek AnyTogether hesabı hepsinde çalışır.",
       cards: {
         mac: {
-          product: "AnyPS5-ARM",
+          product: "AnyPS5 ARM",
           req: "M1 ve sonrası bir Mac, macOS 14 ve sonrası. Rosetta 2 yoksa kurulur.",
         },
         windows: {
@@ -532,7 +529,7 @@ const tr: SiteStrings = {
       lead: "Her satırı GitHub'da. AnyTogether tek sunucuda Docker Compose ile çalışır.",
       repos: [
         ["AnyTogether", "AnyTogether/AnyTogether", "MIT", "Sunucu ve bu site"],
-        ["AnyPS5-ARM", "AnyTogether/AnyPS5-ARM", "GPL-2.0", "Mac launcher'ı, motor ve telefon uygulaması"],
+        ["AnyPS5 ARM", "AnyTogether/AnyPS5-ARM", "GPL-2.0", "Mac launcher'ı, motor ve telefon uygulaması"],
         ["AnyPS5 Desktop", "AnyTogether/AnyLauncher-Port", "GPL-2.0", "Windows ve Linux launcher'ı"],
       ],
       guide: "Kurulum rehberi",

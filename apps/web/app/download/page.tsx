@@ -33,7 +33,7 @@ const productPage: Record<Platform, string> = {
   android: "/phone",
 };
 
-/** Every file of AnyPS5-ARM's and AnyPS5 Desktop's latest releases, by platform (the visitor's
+/** Every file of AnyPS5 ARM's and AnyPS5 Desktop's latest releases, by platform (the visitor's
  *  first), each with its version, size, date and GitHub's SHA-256, and how to install it. */
 export default async function Download() {
   const lang = await language();
@@ -42,7 +42,7 @@ export default async function Download() {
   const d = downloadPageStrings(lang);
   const { groups, other } = downloadGroups(releases, visitor);
   const latest: [string, string, Release | null][] = [
-    ["AnyPS5-ARM", repos.mac, releases?.macos ?? null],
+    ["AnyPS5 ARM", repos.mac, releases?.macos ?? null],
     ["AnyPS5 Desktop", repos.desktop, releases?.desktop ?? null],
   ];
 
