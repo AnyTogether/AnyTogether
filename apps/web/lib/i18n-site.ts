@@ -260,7 +260,7 @@ const en = {
       repos: [
         ["AnyTogether", "AnyTogether/AnyTogether", "MIT", "The server and this website"],
         ["AnyPS5 ARM", "AnyTogether/AnyPS5-ARM", "GPL-2.0", "The Mac launcher, the engine and the phone app"],
-        ["AnyPS5 Desktop", "AnyTogether/AnyLauncher-Port", "GPL-2.0", "The Windows and Linux launcher"],
+        ["AnyPS5 Desktop", "AnyTogether/AnyPS5-Desktop", "GPL-2.0", "The Windows and Linux launcher"],
       ],
       guide: "Self-hosting guide",
       built: "Built on {link}, the open source PS5 compatibility layer.",
@@ -530,7 +530,7 @@ const tr: SiteStrings = {
       repos: [
         ["AnyTogether", "AnyTogether/AnyTogether", "MIT", "Sunucu ve bu site"],
         ["AnyPS5 ARM", "AnyTogether/AnyPS5-ARM", "GPL-2.0", "Mac launcher'ı, motor ve telefon uygulaması"],
-        ["AnyPS5 Desktop", "AnyTogether/AnyLauncher-Port", "GPL-2.0", "Windows ve Linux launcher'ı"],
+        ["AnyPS5 Desktop", "AnyTogether/AnyPS5-Desktop", "GPL-2.0", "Windows ve Linux launcher'ı"],
       ],
       guide: "Kurulum rehberi",
       built: "Açık kaynak PS5 uyumluluk katmanı {link} üzerine kurulu.",

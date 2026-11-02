@@ -2719,7 +2719,7 @@ export const repositories: Repo[] = [
     ],
   },
   {
-    repo: "AnyTogether/AnyLauncher-Port",
+    repo: "AnyTogether/AnyPS5-Desktop",
     name: "AnyPS5 Desktop",
     license: "GPL-2.0",
     project: "desktop",

@@ -19,8 +19,8 @@ const history = {
     release("AnyTogether/AnyPS5-ARM", "0.2.14", "2026-10-24T18:13:47Z"),
   ],
   desktop: [
-    release("AnyTogether/AnyLauncher-Port", "0.1.2", "2026-10-25T09:00:00Z", true),
-    release("AnyTogether/AnyLauncher-Port", "0.1.1", "2026-10-24T20:56:40Z"),
+    release("AnyTogether/AnyPS5-Desktop", "0.1.2", "2026-10-25T09:00:00Z", true),
+    release("AnyTogether/AnyPS5-Desktop", "0.1.1", "2026-10-24T20:56:40Z"),
   ],
 };
 
@@ -64,7 +64,7 @@ describe("the changelog's open releases", () => {
       release("AnyTogether/AnyPS5-ARM", v, `2026-10-2${8 - i}T10:00:00Z`),
     ),
     desktop: ["0.1.4", "0.1.3", "0.1.2", "0.1.1"].map((v, i) =>
-      release("AnyTogether/AnyLauncher-Port", v, `2026-10-1${8 - i}T10:00:00Z`),
+      release("AnyTogether/AnyPS5-Desktop", v, `2026-10-1${8 - i}T10:00:00Z`),
     ),
   };
   const entries = changelogEntries(many);

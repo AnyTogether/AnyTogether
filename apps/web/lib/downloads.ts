@@ -30,7 +30,7 @@ export interface Releases {
 
 export const repos = {
   mac: "AnyTogether/AnyPS5-ARM",
-  desktop: "AnyTogether/AnyLauncher-Port",
+  desktop: "AnyTogether/AnyPS5-Desktop",
   together: "AnyTogether/AnyTogether",
 } as const;
 
