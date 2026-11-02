@@ -32,7 +32,7 @@
 }
 .profile-sections a:focus-visible,
 .games-played .played:focus-visible,
-.profile-not-public a:focus-visible {
+.profile-scope:focus-visible {
   outline: 2px solid var(--a);
   outline-offset: 2px;
 }
@@ -97,14 +97,121 @@
   border: 1px dashed rgba(255, 255, 255, 0.14);
 }
 
-.profile-not-public {
-  margin-top: 14px;
-  font-size: 13.5px;
-  color: var(--mute);
+/* One's own profile: the pencil sits where a stranger's ⋯ menu would, on the cover, the same round
+   button; the bio becomes a text box right where it was. */
+.profile-pencil {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  justify-content: center;
+  background: rgba(7, 8, 12, 0.45);
+  backdrop-filter: blur(8px);
+  border-color: rgba(255, 255, 255, 0.14);
 }
-.profile-not-public a {
+.profile-pencil svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.profile-pencil[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.profile-pencil:focus-visible,
+.bio-own:focus-visible,
+.profile-scope:focus-visible,
+.bio-more:focus-visible {
+  outline: 2px solid rgba(79, 124, 255, 0.7);
+  outline-offset: 2px;
+}
+button.bio-own {
+  display: block;
+  margin: 18px auto 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: transparent;
   color: var(--ink);
+  font-weight: 400;
+  cursor: text;
+  transition: background 0.2s ease;
+}
+button.bio-own.none {
+  color: var(--mute);
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+}
+button.bio-own:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+button.bio-own:active {
+  transform: none;
+}
+.bio-edit {
+  margin: 16px auto 0;
+  max-width: 440px;
+  text-align: left;
+}
+.bio-edit textarea {
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 92px;
+}
+.bio-edit-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.bio-edit-row .counter {
+  margin-right: auto;
+}
+.bio-more {
+  font-size: 13px;
+  color: var(--mute);
   text-underline-offset: 3px;
+  margin-right: 6px;
+}
+.bio-more:hover {
+  color: var(--ink);
+}
+.bio-edit .error {
+  margin-top: 8px;
+}
+/* Shown only to the person while the profile is not public: where it is visible, on the cover */
+.profile-scope {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font: 500 11.5px / 1 var(--font-mono), monospace;
+  color: var(--ink);
+  text-decoration: none;
+  background: rgba(7, 8, 12, 0.45);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: border-color 0.2s ease;
+}
+.profile-scope:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.profile-scope svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
 }
 
 .profile.minimal .minimal-note {

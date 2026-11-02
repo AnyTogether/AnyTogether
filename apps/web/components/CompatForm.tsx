@@ -8,6 +8,8 @@ import {
   compatPlatforms as compatPlatformList,
   compatStatuses,
   platformNames,
+  upstreamPlatforms,
+  upstreamReportUrl,
 } from "@/lib/compat";
 import type { UiStrings } from "@/lib/i18n";
 import Link from "next/link";
@@ -19,10 +21,16 @@ export function CompatForm({
   texts,
   game,
   defaultVersion,
+  upstream = false,
+  thread,
 }: {
   texts: UiStrings;
   game?: { titleId: string; name: string | null };
   defaultVersion?: string;
+  /** Windows and Linux are read from the AnyPS5 project: their reports go there, not here. */
+  upstream?: boolean;
+  /** The game's thread there, when it has one. */
+  thread?: string | null;
 }) {
   const router = useRouter();
   const [titleId, setTitleId] = useState(game?.titleId ?? "");
@@ -40,13 +48,14 @@ export function CompatForm({
   const [error, setError] = useState<string | null>(null);
   const [sentFor, setSentFor] = useState<string | null>(null);
   const validId = /^[A-Z]{4}[0-9]{5}$/.test(titleId);
+  const elsewhere = upstream && upstreamPlatforms.includes(platform);
 
   return (
     <form
       className="form compat-form"
       onSubmit={async (event) => {
         event.preventDefault();
-        if (!status || !validId) return;
+        if (!status || !validId || elsewhere) return;
         setState("busy");
         setError(null);
         const response = await fetch("/me/compat", {
@@ -132,137 +141,169 @@ export function CompatForm({
         </div>
       </fieldset>
 
-      <fieldset className="field-group">
-        <legend>{texts.howFar}</legend>
-        <div className="reasons compat-statuses">
-          {compatStatuses.map((value) => (
-            <label key={value} className={status === value ? "on" : undefined}>
-              <input
-                type="radio"
-                name="status"
-                value={value}
-                checked={status === value}
-                onChange={() => setStatus(value)}
-              />
-              <span className={`compat-dot is-${value}`} aria-hidden="true" />
-              <span className="lines">
-                <span className="name">{texts[`status_${value}`]}</span>
-                <span className="meta">{texts[`statusHint_${value}`]}</span>
-              </span>
-            </label>
-          ))}
+      {elsewhere ? (
+        <div className="upstream-report">
+          <p className="name">{texts.upstreamReportTitle}</p>
+          <p className="hint-line">{texts.upstreamReportLead}</p>
+          <a
+            className="primary upstream-go"
+            href={upstreamReportUrl(validId ? titleId : null, thread)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {texts.upstreamReport}
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 16L16 8M10 8h6v6" />
+            </svg>
+          </a>
         </div>
-      </fieldset>
+      ) : (
+        <>
+          <fieldset className="field-group">
+            <legend>{texts.howFar}</legend>
+            <div className="reasons compat-statuses">
+              {compatStatuses.map((value) => (
+                <label key={value} className={status === value ? "on" : undefined}>
+                  <input
+                    type="radio"
+                    name="status"
+                    value={value}
+                    checked={status === value}
+                    onChange={() => setStatus(value)}
+                  />
+                  <span className={`compat-dot is-${value}`} aria-hidden="true" />
+                  <span className="lines">
+                    <span className="name">{texts[`status_${value}`]}</span>
+                    <span className="meta">{texts[`statusHint_${value}`]}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
-      <div className="compat-pair">
-        <div className="field-group">
-          <label htmlFor="compat-launcher">{texts.launcherVersion}</label>
-          <input
-            id="compat-launcher"
-            value={launcherVersion}
-            required
-            maxLength={40}
-            placeholder="0.2.14"
-            className="mono-input"
-            onChange={(event) => setLauncherVersion(event.target.value)}
-          />
-        </div>
-        <div className="field-group">
-          <label htmlFor="compat-engine">{texts.engineVersion}</label>
-          <input
-            id="compat-engine"
-            value={engineVersion}
-            maxLength={40}
-            placeholder="0.2.14-arm"
-            className="mono-input"
-            onChange={(event) => setEngineVersion(event.target.value)}
-          />
-        </div>
-        <div className="field-group">
-          <label htmlFor="compat-machine">{texts.machine}</label>
-          <input
-            id="compat-machine"
-            value={machine}
-            maxLength={120}
-            placeholder={texts.machinePlaceholder}
-            onChange={(event) => setMachine(event.target.value)}
-          />
-        </div>
-        <div className="field-group">
-          <label htmlFor="compat-os">{texts.os}</label>
-          <input
-            id="compat-os"
-            value={os}
-            maxLength={60}
-            placeholder={texts.osPlaceholder}
-            onChange={(event) => setOs(event.target.value)}
-          />
-        </div>
-        <div className="field-group">
-          <label htmlFor="compat-fps">{texts.fpsAverage}</label>
-          <input
-            id="compat-fps"
-            value={fps}
-            inputMode="decimal"
-            maxLength={6}
-            className="mono-input"
-            onChange={(event) => setFps(event.target.value.replace(/[^0-9.]/g, ""))}
-          />
-        </div>
-      </div>
-      <fieldset className="field-group">
-        <legend>{texts.onlineQuestion}</legend>
-        <div
-          className="segmented"
-          style={{ "--i": (["", "works", "broken"] as const).indexOf(online) } as React.CSSProperties}
-        >
-          <span className="thumb" aria-hidden="true" />
-          {(["", ...compatOnline] as const).map((value) => (
-            <label key={value || "none"}>
+          <div className="compat-pair">
+            <div className="field-group">
+              <label htmlFor="compat-launcher">{texts.launcherVersion}</label>
               <input
-                type="radio"
-                name="online"
-                value={value}
-                checked={online === value}
-                onChange={() => setOnline(value)}
+                id="compat-launcher"
+                value={launcherVersion}
+                required
+                maxLength={40}
+                placeholder="0.2.14"
+                className="mono-input"
+                onChange={(event) => setLauncherVersion(event.target.value)}
               />
-              {value === "works"
-                ? texts.onlineWorks
-                : value === "broken"
-                  ? texts.onlineBroken
-                  : texts.onlineNotTried}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <textarea
-        rows={3}
-        maxLength={500}
-        value={note}
-        placeholder={texts.notePlaceholder}
-        aria-label={texts.notePlaceholder}
-        onChange={(event) => setNote(event.target.value)}
-      />
-      {error && (
-        <p className="error" role="alert">
-          {error}
+            </div>
+            <div className="field-group">
+              <label htmlFor="compat-engine">{texts.engineVersion}</label>
+              <input
+                id="compat-engine"
+                value={engineVersion}
+                maxLength={40}
+                placeholder="0.2.14-arm"
+                className="mono-input"
+                onChange={(event) => setEngineVersion(event.target.value)}
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="compat-machine">{texts.machine}</label>
+              <input
+                id="compat-machine"
+                value={machine}
+                maxLength={120}
+                placeholder={texts.machinePlaceholder}
+                onChange={(event) => setMachine(event.target.value)}
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="compat-os">{texts.os}</label>
+              <input
+                id="compat-os"
+                value={os}
+                maxLength={60}
+                placeholder={texts.osPlaceholder}
+                onChange={(event) => setOs(event.target.value)}
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="compat-fps">{texts.fpsAverage}</label>
+              <input
+                id="compat-fps"
+                value={fps}
+                inputMode="decimal"
+                maxLength={6}
+                className="mono-input"
+                onChange={(event) => setFps(event.target.value.replace(/[^0-9.]/g, ""))}
+              />
+            </div>
+          </div>
+          <fieldset className="field-group">
+            <legend>{texts.onlineQuestion}</legend>
+            <div
+              className="segmented"
+              style={{ "--i": (["", "works", "broken"] as const).indexOf(online) } as React.CSSProperties}
+            >
+              <span className="thumb" aria-hidden="true" />
+              {(["", ...compatOnline] as const).map((value) => (
+                <label key={value || "none"}>
+                  <input
+                    type="radio"
+                    name="online"
+                    value={value}
+                    checked={online === value}
+                    onChange={() => setOnline(value)}
+                  />
+                  {value === "works"
+                    ? texts.onlineWorks
+                    : value === "broken"
+                      ? texts.onlineBroken
+                      : texts.onlineNotTried}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <textarea
+            rows={3}
+            maxLength={500}
+            value={note}
+            placeholder={texts.notePlaceholder}
+            aria-label={texts.notePlaceholder}
+            onChange={(event) => setNote(event.target.value)}
+          />
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          {state === "sent" && (
+            <output className="notice success">
+              {texts.compatSent}{" "}
+              {!game && sentFor && <Link href={`/compatibility/${sentFor}`}>{texts.openGame}</Link>}
+            </output>
+          )}
+          <div className="save-row">
+            <button
+              type="submit"
+              className="primary"
+              disabled={!status || !validId || !launcherVersion.trim() || state === "busy"}
+            >
+              {texts.sendCompat}
+            </button>
+          </div>
+        </>
+      )}
+      {!upstream && (
+        <p className="hint-line">
+          {texts.upstreamReportTitle}{" "}
+          <a
+            href={upstreamReportUrl(validId ? titleId : null, thread)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {texts.upstreamReport}
+          </a>
         </p>
       )}
-      {state === "sent" && (
-        <output className="notice success">
-          {texts.compatSent}{" "}
-          {!game && sentFor && <Link href={`/compatibility/${sentFor}`}>{texts.openGame}</Link>}
-        </output>
-      )}
-      <div className="save-row">
-        <button
-          type="submit"
-          className="primary"
-          disabled={!status || !validId || !launcherVersion.trim() || state === "busy"}
-        >
-          {texts.sendCompat}
-        </button>
-      </div>
     </form>
   );
 }

@@ -122,6 +122,8 @@ services:
     environment:
       PORT: "3000"
       API_URL: http://api:8080
+      # Optional: game art from SteamGridDB for games without an icon (asked by the website's server).
+      STEAMGRIDDB_API_KEY: ${STEAMGRIDDB_API_KEY:-}
     depends_on:
       api: { condition: service_healthy }
     healthcheck:

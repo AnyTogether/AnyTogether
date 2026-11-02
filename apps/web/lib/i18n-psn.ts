@@ -36,7 +36,7 @@ export const psnEn = {
   compareNotPlayed: "Not played",
   comparePrivate: "{name} keeps their trophies to themselves.",
 
-  sectionLook: "Look",
+  sectionLook: "Cover and colour",
   lookLead: "A cover and an accent for your profile, drawn in the launcher's colours. Nothing is uploaded.",
   coverLabel: "Cover",
   coverDefault: "Default",
@@ -221,7 +221,7 @@ export const psnTr: typeof psnEn = {
   compareNotPlayed: "Oynamadı",
   comparePrivate: "{name} kupalarını kendine saklıyor.",
 
-  sectionLook: "Görünüm",
+  sectionLook: "Kapak ve renk",
   lookLead: "Profilin için bir kapak ve vurgu rengi, launcher'ın renkleriyle çizilir. Hiçbir şey yüklenmez.",
   coverLabel: "Kapak",
   coverDefault: "Varsayılan",
@@ -246,7 +246,7 @@ export const psnTr: typeof psnEn = {
   pattern_stars: "yıldızlar",
   pattern_glow: "ışıltı",
 
-  playersMet: "Son oynadıkların",
+  playersMet: "Birlikte oynadıkların",
   playersMetLead: "Son zamanlarda aynı partide, paylaşımlı oyunda, oyunda ya da ilanda olduğun kişiler.",
   playersMetEmpty: "Henüz kimse yok. Oyuncu Bul'da bir partiye ya da ilana katıl, burada görünsünler.",
   playersMetOff: "Hatırlama kapalı: kimse tutulmuyor.",

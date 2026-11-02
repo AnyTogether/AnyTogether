@@ -1,7 +1,7 @@
 /** Strings of the public ID and the friends-only name and picture (settings, friend views, reports
  *  and the admin page), English and Turkish. */
 export const identityEn = {
-  sectionPrivate: "Friends only",
+  sectionPrivate: "Profile visibility",
   privateLead:
     "Your handle is your public ID: anyone can search for it, and games show it. Your name and picture above are public too. A private name and picture are seen only by you and your accepted friends.",
   privateNever:
@@ -30,7 +30,7 @@ export const identityEn = {
 };
 
 export const identityTr: typeof identityEn = {
-  sectionPrivate: "Yalnız arkadaşlar",
+  sectionPrivate: "Profil görünürlüğü",
   privateLead:
     "Kullanıcı adın herkese açık kimliğin: herkes onunla arayabilir, oyunlar onu gösterir. Yukarıdaki ismin ve resmin de herkese açık. Gizli isim ve resmi yalnız sen ve kabul ettiğin arkadaşların görür.",
   privateNever:

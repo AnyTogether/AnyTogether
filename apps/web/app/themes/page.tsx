@@ -3,7 +3,7 @@ import { wide } from "@/components/site/fonts";
 import { strings } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/product-page";
 import { currentUser, publicJson } from "@/lib/session";
-import { type ThemePage, type ThemeSort, themeSorts } from "@/lib/themes";
+import { type ThemeColors, type ThemePage, type ThemeSort, themeSorts } from "@/lib/themes";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -120,6 +120,64 @@ export default async function Themes({ searchParams }: Search) {
           </Link>
         </div>
       )}
+
+      <MakeOwn texts={texts} signedIn={Boolean(user)} palettes={list.slice(0, 4).map((t) => t.colors)} />
     </section>
+  );
+}
+
+/** The launcher's three built-in looks (Cosmic, Aurora, Sunset) and a fourth, for the swatches
+ *  when the gallery has fewer than four themes to lend its colours. */
+const fallbackPalettes: ThemeColors[] = [
+  { deep: "#05061a", middle: "#1b2a6b", bright: "#8fb0ff", accent: "#d4a6ff" },
+  { deep: "#03140f", middle: "#0d4a3a", bright: "#5fe0b4", accent: "#8af0de" },
+  { deep: "#1a0508", middle: "#6b1b22", bright: "#ff9a6b", accent: "#ffcf6b" },
+  { deep: "#0b0b12", middle: "#2a2a3a", bright: "#d6d6e6", accent: "#ffffff" },
+];
+
+/** Under the gallery: Theme Studio lives in the launcher, so this says where, with a fan of paint
+ *  swatches in the colours of the themes above. */
+function MakeOwn({
+  texts,
+  signedIn,
+  palettes,
+}: {
+  texts: Awaited<ReturnType<typeof strings>>;
+  signedIn: boolean;
+  palettes: ThemeColors[];
+}) {
+  const fan = [...palettes, ...fallbackPalettes].slice(0, 4);
+  return (
+    <article className="make-own in d4" aria-labelledby="make-own-title">
+      <div className="make-own-text">
+        <h3 id="make-own-title">{texts.makeOwnTitle}</h3>
+        <p>{texts.makeOwnLead}</p>
+        <div className="make-own-acts">
+          <Link href="/download" className="pill accent">
+            {texts.makeOwnGet}
+          </Link>
+          <Link href={signedIn ? "/themes/new" : "/login?next=/themes/new"} className="pill">
+            {texts.makeOwnShare}
+          </Link>
+        </div>
+      </div>
+      <div className="make-own-fan" aria-hidden="true">
+        {fan.map((colors, index) => (
+          <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: four fixed swatches
+            key={index}
+            className="swatch"
+            style={
+              {
+                "--n": index,
+                background: `linear-gradient(160deg, ${colors.bright}, ${colors.middle} 55%, ${colors.deep})`,
+              } as React.CSSProperties
+            }
+          >
+            <i style={{ background: colors.accent }} />
+          </span>
+        ))}
+      </div>
+    </article>
   );
 }

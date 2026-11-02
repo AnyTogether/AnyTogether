@@ -25,12 +25,24 @@ export function CompatVerdict({
         <span className={`compat-dot is-${summary?.status ?? "untested"}`} aria-hidden="true" />
         {summary ? texts[`status_${summary.status}`] : texts.notTested}
       </span>
-      {summary && (
+      {summary?.upstream ? (
         <span className="meta verdict-version">
-          {wide
-            ? `${fill(texts.testedWith, { version: summary.version, when: ago(summary.testedAt, texts.language) })} · ${fill(texts.reportsCount, { n: summary.reports })}`
-            : summary.version}
+          {wide ? (
+            <a href={summary.upstream} target="_blank" rel="noopener noreferrer">
+              {fill(texts.upstreamThread, { when: ago(summary.testedAt, texts.language) })}
+            </a>
+          ) : (
+            texts.upstreamShort
+          )}
         </span>
+      ) : (
+        summary && (
+          <span className="meta verdict-version">
+            {wide
+              ? `${fill(texts.testedWith, { version: summary.version, when: ago(summary.testedAt, texts.language) })} · ${fill(texts.reportsCount, { n: summary.reports })}`
+              : summary.version}
+          </span>
+        )
       )}
     </div>
   );

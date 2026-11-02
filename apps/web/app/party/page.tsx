@@ -4,10 +4,11 @@ import { strings, ui } from "@/lib/i18n";
 import type { Friend } from "@/lib/people";
 import { apiJson, currentUser } from "@/lib/session";
 import type { Party, PartyInvite } from "@/lib/social";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Party · AnyTogether" };
+export const generateMetadata = (): Promise<Metadata> => titled((t) => t.party);
 
 export default async function PartyPage() {
   const [texts, user] = await Promise.all([strings(), currentUser()]);

@@ -4,9 +4,12 @@ import { wide } from "@/components/site/fonts";
 import {
   type CompatGame,
   type CompatReportView,
+  type UpstreamList,
   compatPlatforms,
   isTitleId,
   platformNames,
+  upstreamByTitle,
+  withUpstream,
 } from "@/lib/compat";
 import { ago, localName } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
@@ -26,19 +29,26 @@ async function load(titleId: string) {
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const game = await load((await params).titleId);
-  return { title: `${game?.name ?? game?.titleId ?? "Compatibility"} · Compatibility · AnyTogether` };
+  const [game, texts] = await Promise.all([load((await params).titleId), strings()]);
+  return {
+    title: `${game?.name ?? game?.titleId ?? texts.compatibility} · ${texts.compatibility} · AnyTogether`,
+  };
 }
 
 /** One game: its verdict on each platform and the reports behind it. */
 export default async function CompatibilityGame({ params }: Params) {
-  const [texts, user, game, releases] = await Promise.all([
+  const [texts, user, found, releases, upstreamAnswer] = await Promise.all([
     strings(),
     currentUser(),
     load((await params).titleId),
     publicJson<{ macos: { version: string } | null }>("/releases"),
+    publicJson<UpstreamList>("/compat/upstream"),
   ]);
-  if (!game) notFound();
+  if (!found) notFound();
+  // Windows and Linux from the game's thread in the AnyPS5 project, when it has one.
+  const upstream = upstreamAnswer.body?.available ? upstreamAnswer.body : null;
+  const thread = upstreamByTitle(upstream).get(found.titleId);
+  const game = { ...withUpstream(found, thread), reports: found.reports };
   const { language } = texts;
   const name = localName(game.names, language) || game.titleId;
 
@@ -111,6 +121,8 @@ export default async function CompatibilityGame({ params }: Params) {
             texts={ui(texts)}
             game={{ titleId: game.titleId, name: game.name }}
             defaultVersion={releases.body?.macos?.version}
+            upstream={Boolean(upstream)}
+            thread={thread?.url ?? null}
           />
         ) : (
           <Link href={`/login?next=/compatibility/${game.titleId}%23report`} className="pill">

@@ -9,6 +9,8 @@
   --c: #2fe0c4;
   --danger: #ff6b7a;
   --away: #f5b84b;
+  --idle: #f5b84b;
+  --dnd: #f2545b;
   color-scheme: dark;
 }
 * {
@@ -433,8 +435,12 @@ button:disabled {
   background: var(--b);
   box-shadow: 0 0 10px rgba(182, 92, 255, 0.7);
 }
-.presence.is-away {
-  background: var(--away);
+.presence.is-away,
+.presence.is-idle {
+  background: var(--idle);
+}
+.presence.is-dnd {
+  background: var(--dnd);
 }
 .page {
   width: 100%;
@@ -546,6 +552,10 @@ button:disabled {
 .status.online {
   color: var(--c);
 }
+.status.dnd {
+  color: var(--dnd);
+}
+.status.idle,
 .status.away {
   color: var(--away);
 }
@@ -1518,6 +1528,12 @@ fieldset.privacy-row {
   opacity: 0;
   pointer-events: none;
 }
+/* In the settings every switch is as wide as the others, two choices or three, so their edges
+   line up down the page. */
+.privacy .segmented {
+  width: 300px;
+  min-width: 0;
+}
 /* Online / appear offline: two choices, each with the dot friends would see */
 .segmented.two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1551,15 +1567,136 @@ fieldset.privacy-row {
   position: relative;
   display: inline-flex;
 }
-.appear-offline-mark {
+/* The four statuses' marks, the same everywhere: a green dot, a yellow moon (idle), a red dot with
+   a bar (Do Not Disturb), a hollow ring (invisible). The moon is a dot with a bite out of it. */
+.status-glyph,
+.status-mark {
+  --dot: var(--c);
+  position: relative;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+.status-glyph.is-idle,
+.status-mark.is-idle {
+  --dot: var(--idle);
+}
+.status-glyph.is-dnd,
+.status-mark.is-dnd {
+  --dot: var(--dnd);
+}
+.status-glyph.is-idle {
+  -webkit-mask: radial-gradient(circle at 18% 18%, transparent 0 34%, #000 36%);
+  mask: radial-gradient(circle at 18% 18%, transparent 0 34%, #000 36%);
+}
+/* On a picture the bite is the ring's own colour, so the ring stays whole around the moon. */
+.status-mark.is-idle::after,
+.presence.is-idle::after {
+  content: "";
+  position: absolute;
+  top: -12%;
+  left: -12%;
+  width: 66%;
+  height: 66%;
+  border-radius: 50%;
+  background: #0c0e14;
+}
+.status-glyph.is-dnd::after,
+.status-mark.is-dnd::after,
+.presence.is-dnd::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 2px;
+  background: #0c0e14;
+}
+.status-glyph.is-invisible,
+.status-mark.is-invisible {
+  background: transparent;
+  box-shadow: inset 0 0 0 2.5px var(--mute);
+}
+.status-glyph.is-online {
+  box-shadow: 0 0 8px rgba(47, 224, 196, 0.55);
+}
+/* On one's own avatar in the header: the mark for any status but Online */
+.status-mark {
   position: absolute;
   right: -3px;
   bottom: -3px;
   width: 9px;
   height: 9px;
-  border-radius: 50%;
+  box-shadow: 0 0 0 2px #0c0e14;
+}
+.status-mark.is-invisible {
   background: #0c0e14;
   box-shadow: inset 0 0 0 2px var(--mute), 0 0 0 2px #0c0e14;
+}
+
+/* The status picker: four choices in a row (two by two on a phone), each with its mark */
+fieldset.privacy-row.status-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+.status-row legend {
+  float: none;
+  margin-bottom: 10px;
+}
+.status-choices {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 4px;
+}
+.status-choices label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  font: 500 13px / 1.2 var(--font-display), system-ui, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--mute);
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.status-choices label:hover {
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+.status-choices label.on {
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+.status-choices label:has(input:focus-visible) {
+  outline: 2px solid rgba(79, 124, 255, 0.7);
+  outline-offset: 2px;
+}
+.status-choices input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.status-choices label > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .status-choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Signed-in devices */
@@ -1624,7 +1761,8 @@ fieldset.privacy-row {
   fieldset.privacy-row {
     grid-template-columns: minmax(0, 1fr);
   }
-  .segmented {
+  .segmented,
+  .privacy .segmented {
     width: 100%;
   }
   .segmented label {

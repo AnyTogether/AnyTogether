@@ -46,9 +46,9 @@ describe("appear offline", () => {
     expect((await h.call("GET", `${v1}/me`, undefined, utku.token)).body.profile.appearOffline).toBe(false);
     const on = await appear(utku, true);
     expect(on.status).toBe(200);
-    expect(on.body).toEqual({ appearOffline: true });
+    expect(on.body).toEqual({ appearOffline: true, status: "invisible" });
     expect((await h.call("GET", `${v1}/me`, undefined, utku.token)).body.profile.appearOffline).toBe(true);
-    expect((await appear(utku, false)).body).toEqual({ appearOffline: false });
+    expect((await appear(utku, false)).body).toEqual({ appearOffline: false, status: "online" });
     expect((await h.call("GET", `${v1}/me`, undefined, utku.token)).body.profile.appearOffline).toBe(false);
   });
 
@@ -76,7 +76,7 @@ describe("appear offline", () => {
       expect.objectContaining({ type: "presence.updated", data: { userId: utku.id, state: "offline" } }),
     );
     expect(utkuHears.heard).toContainEqual(
-      expect.objectContaining({ type: "presence.mode", data: { appearOffline: true } }),
+      expect.objectContaining({ type: "presence.mode", data: { appearOffline: true, status: "invisible" } }),
     );
     // Turning it on twice tells no one twice.
     ayseHears.heard.length = 0;
@@ -121,7 +121,7 @@ describe("appear offline", () => {
     await settle();
     expect(await h.valkey.get(`presence-hidden:${utku.id}`)).toBeNull();
     expect(utkuHears.heard).toContainEqual(
-      expect.objectContaining({ type: "presence.mode", data: { appearOffline: false } }),
+      expect.objectContaining({ type: "presence.mode", data: { appearOffline: false, status: "online" } }),
     );
     utkuHears.stop();
 
@@ -162,6 +162,74 @@ describe("appear offline", () => {
     expect(after.body.playing).toEqual({ total: 0, people: [] });
     const hidden = await h.call("GET", `${v1}/discover/players?titleId=PPSA01284`, undefined, me.token);
     expect(hidden.body.players[0].presence).toBeUndefined();
+  });
+});
+
+const pick = (user: User, status: unknown) => h.call("PATCH", `${v1}/me/presence`, { status }, user.token);
+
+describe("the four statuses", () => {
+  it("keeps Idle and Do Not Disturb on the account, and an old client's switch still works", async () => {
+    const utku = await h.user("utku@example.com");
+    const me = async () => (await h.call("GET", `${v1}/me`, undefined, utku.token)).body.profile;
+    expect((await me()).presenceStatus).toBe("online");
+    expect((await pick(utku, "dnd")).body).toEqual({ appearOffline: false, status: "dnd" });
+    expect(await me()).toMatchObject({ presenceStatus: "dnd", appearOffline: false });
+    expect(await h.valkey.hget(`presence-extra:${utku.id}`, "status")).toBe('"dnd"');
+    expect((await pick(utku, "idle")).body).toEqual({ appearOffline: false, status: "idle" });
+    expect((await pick(utku, "invisible")).body).toEqual({ appearOffline: true, status: "invisible" });
+    expect(await me()).toMatchObject({ presenceStatus: "invisible", appearOffline: true });
+    expect(await h.valkey.hget(`presence-extra:${utku.id}`, "status")).toBeNull();
+    // An old client turning appear offline off goes back to Online.
+    expect((await appear(utku, false)).body).toEqual({ appearOffline: false, status: "online" });
+    expect((await pick(utku, "away")).status).toBe(400);
+  });
+
+  it("tells the user's devices and lets friends see the status, never Invisible", async () => {
+    const utku = await h.user("utku@example.com");
+    const ayse = await h.user("ayse@example.com");
+    await befriend(utku, ayse);
+    const utkuHears = await listen(utku.id);
+    await pick(utku, "dnd");
+    await settle();
+    expect(utkuHears.heard).toContainEqual(
+      expect.objectContaining({ type: "presence.mode", data: { appearOffline: false, status: "dnd" } }),
+    );
+    utkuHears.stop();
+    // What the gateway keeps once it worked the presence out again (withExtras).
+    const { withExtras } = await import("@anytogether/shared");
+    const merged = withExtras(
+      { state: "in_game", titleId: "PPSA01234" },
+      await h.valkey.hgetall(`presence-extra:${utku.id}`),
+    );
+    expect(merged).toEqual({ state: "in_game", titleId: "PPSA01234", status: "dnd" });
+    await h.valkey.set(`presence:${utku.id}`, JSON.stringify(merged), "EX", 60);
+    expect((await h.call("GET", `${v1}/me/friends`, undefined, ayse.token)).body.friends[0].presence).toEqual(
+      merged,
+    );
+    await pick(utku, "invisible");
+    await h.valkey.set(`presence:${utku.id}`, JSON.stringify(merged), "EX", 60);
+    expect((await h.call("GET", `${v1}/me/friends`, undefined, ayse.token)).body.friends[0].presence).toEqual(
+      {
+        state: "offline",
+      },
+    );
+  });
+
+  it("comes back after Valkey forgot, at the next sign-in", async () => {
+    const utku = await h.user("utku@example.com");
+    await pick(utku, "idle");
+    await h.valkey.flushdb();
+    await h.call("POST", `${v1}/auth/email/start`, { email: "utku@example.com" });
+    await h.call("POST", `${v1}/auth/email/verify`, {
+      email: "utku@example.com",
+      code: h.mailer.lastCode("utku@example.com"),
+    });
+    expect(await h.valkey.hget(`presence-extra:${utku.id}`, "status")).toBe('"idle"');
+  });
+
+  it("does not lock after many flips", async () => {
+    const utku = await h.user("utku@example.com");
+    for (let i = 0; i < 30; i++) expect((await pick(utku, i % 2 ? "idle" : "dnd")).status).toBe(200);
   });
 });
 

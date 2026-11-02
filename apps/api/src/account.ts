@@ -46,6 +46,7 @@ import {
   presenceHiddenKey,
   presenceKey,
   privacyOf,
+  statusOf,
   userEvents,
 } from "@anytogether/shared";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
@@ -149,6 +150,7 @@ export async function exportAccount(
       accent: profile.accent,
       showcase: profile.showcase,
       rememberMet: profile.rememberMet,
+      presenceStatus: statusOf(profile),
       readReceipts: profile.readReceipts,
     },
     playersMet: (await db.select().from(metPlayers).where(eq(metPlayers.accountId, accountId))).map(

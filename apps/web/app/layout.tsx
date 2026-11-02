@@ -1,4 +1,4 @@
-import { AppearingOfflineMark } from "@/components/AppearingOffline";
+import { StatusMark } from "@/components/AppearingOffline";
 import { Avatar } from "@/components/Avatar";
 import { CallProvider } from "@/components/Calls";
 import { AppWorker, installCatcher } from "@/components/InstallApp";
@@ -13,6 +13,7 @@ import { shareInviteStrings } from "@/lib/i18n-share";
 import { siteStrings } from "@/lib/i18n-site";
 import { callStrings } from "@/lib/i18n-social";
 import { fill } from "@/lib/people";
+import { statusFrom } from "@/lib/presenceMode";
 import { longDate } from "@/lib/restrictions";
 import { apiJson, currentUser, incomingRequests } from "@/lib/session";
 import type { Metadata, Viewport } from "next";
@@ -158,9 +159,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                     }}
                     size={20}
                   />
-                  <AppearingOfflineMark
-                    initial={user.profile.appearOffline === true}
-                    label={texts.appearingOffline}
+                  <StatusMark
+                    initial={statusFrom(user.profile)}
+                    labels={{
+                      idle: texts.statusMark_idle,
+                      dnd: texts.statusMark_dnd,
+                      invisible: texts.appearingOffline,
+                    }}
                   />
                 </span>
                 <span className="wide">@{user.profile.handle}</span>

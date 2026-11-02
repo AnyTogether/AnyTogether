@@ -14,6 +14,7 @@ import {
   fill,
   isUserId,
   playedFor,
+  presenceDot,
   shownName,
   withPresence,
 } from "@/lib/people";
@@ -379,7 +380,7 @@ function Who({
 }) {
   return (
     <Link href={`/u/${person.handle}`} className="who">
-      <Avatar person={person} presence={presence?.presence.state} />
+      <Avatar person={person} presence={presence ? presenceDot(presence.presence) : undefined} />
       <span className="lines">
         <span className="name">
           {shownName(person)}
@@ -442,9 +443,16 @@ function Status({ friend, now, texts }: { friend: Friend; now: number; texts: Ui
       </span>
     );
   }
+  const dot = presenceDot(friend.presence);
   const label =
-    state === "online" ? texts.stateOnline : state === "away" ? texts.stateAway : texts.stateOffline;
-  return <span className={`status ${state}`}>{label}</span>;
+    dot === "dnd"
+      ? texts.stateDnd
+      : dot === "idle"
+        ? texts.stateIdle
+        : state === "offline"
+          ? texts.stateOffline
+          : texts.stateOnline;
+  return <span className={`status ${dot === "offline" ? state : dot}`}>{label}</span>;
 }
 
 /** The ⋯ menu on a friend: their profile, remove, block (the last two ask first). */

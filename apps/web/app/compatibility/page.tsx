@@ -3,15 +3,23 @@ import { CompatVerdict } from "@/components/CompatVerdict";
 import { wide } from "@/components/site/fonts";
 import {
   type CompatGame,
+  type CompatRow,
   type CompatSort,
+  type UpstreamList,
   compatHref,
   compatPlatforms,
   compatQuery,
   compatSorts,
   compatStatuses,
   compatView,
+  mergedRows,
   onlineWorks,
   platformNames,
+  upstreamBringUp,
+  upstreamByTitle,
+  upstreamPlatforms,
+  upstreamView,
+  withUpstream,
 } from "@/lib/compat";
 import { localName } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
@@ -35,23 +43,41 @@ export default async function Compatibility({ searchParams }: Search) {
   const view = compatView(await searchParams);
   const { platform, status, online, sort, q, n: shown } = view;
   const params = compatQuery(view);
-  const [texts, user, first, releases] = await Promise.all([
+  const [texts, user, first, releases, upstreamAnswer] = await Promise.all([
     strings(),
     currentUser(),
     publicJson<{ games: CompatGame[]; total: number; next: string | null }>(`/compat?${params}`),
     publicJson<{ macos: { version: string } | null }>("/releases"),
+    publicJson<UpstreamList>("/compat/upstream"),
   ]);
+  // Windows and Linux from the AnyPS5 project, when the server can read it.
+  const upstream = upstreamAnswer.body?.available ? upstreamAnswer.body : null;
+  const fromUpstream = Boolean(upstream && platform && upstreamPlatforms.includes(platform));
+  // "All" with upstream on: our games and the upstream project's together, so every one of ours is
+  // asked for (the list is small) and merged in the page's order.
+  const merging = Boolean(upstream && !platform && !online);
   let games = first.body?.games ?? [];
   let next = first.body?.next ?? null;
-  while (next && games.length < shown) {
+  while (next && (merging ? games.length < 2000 : games.length < shown)) {
     params.set("cursor", next);
     const more = await publicJson<{ games: CompatGame[]; next: string | null }>(`/compat?${params}`);
     games = [...games, ...(more.body?.games ?? [])];
     next = more.body?.next ?? null;
   }
-  const total = first.body?.total ?? 0;
-  const hasMore = games.length > shown || Boolean(next);
-  games = games.slice(0, shown);
+  const upstreamRows = fromUpstream ? upstreamView(upstream, view) : [];
+  const threads = upstreamByTitle(upstream);
+  const allRows: CompatRow[] = merging
+    ? mergedRows(games, upstream, view)
+    : games.map((game) => ({
+        ...withUpstream(game, threads.get(game.titleId)),
+        href: `/compatibility/${game.titleId}`,
+        external: false,
+      }));
+  const total = fromUpstream ? upstreamRows.length : merging ? allRows.length : (first.body?.total ?? 0);
+  const hasMore = fromUpstream
+    ? upstreamRows.length > shown
+    : allRows.length > shown || (!merging && Boolean(next));
+  const rows = allRows.slice(0, shown);
   const href = (change: Parameters<typeof compatHref>[1] = {}) => compatHref(view, change);
   const columns = platform ? [platform] : compatPlatforms;
   const filtered = Boolean(platform || status || online || q);
@@ -66,7 +92,7 @@ export default async function Compatibility({ searchParams }: Search) {
       <div className="hub-head">
         <div>
           <h2 className="in d1">{texts.compatibility}</h2>
-          <p className="lead in d2">{texts.compatLead}</p>
+          <p className="lead in d2">{upstream ? texts.compatLeadUpstream : texts.compatLead}</p>
         </div>
       </div>
 
@@ -121,19 +147,21 @@ export default async function Compatibility({ searchParams }: Search) {
               {texts[`status_${value}`]}
             </Link>
           ))}
-          <span className="chip-gap" aria-hidden="true" />
-          <Link
-            href={href({ online: !online })}
-            aria-current={online ? "true" : undefined}
-            className="chip online-chip"
-            title={texts.onlineBadgeHint}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" className="chip-icon">
-              <circle cx="12" cy="12" r="8.5" />
-              <path d="M3.5 12h17M12 3.5c2.6 2.5 3.6 5.3 3.6 8.5s-1 6-3.6 8.5c-2.6-2.5-3.6-5.3-3.6-8.5s1-6 3.6-8.5z" />
-            </svg>
-            {texts.onlineWorksFilter}
-          </Link>
+          {!fromUpstream && <span className="chip-gap" aria-hidden="true" />}
+          {!fromUpstream && (
+            <Link
+              href={href({ online: !online })}
+              aria-current={online ? "true" : undefined}
+              className="chip online-chip"
+              title={texts.onlineBadgeHint}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="chip-icon">
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M3.5 12h17M12 3.5c2.6 2.5 3.6 5.3 3.6 8.5s-1 6-3.6 8.5c-2.6-2.5-3.6-5.3-3.6-8.5s1-6 3.6-8.5z" />
+              </svg>
+              {texts.onlineWorksFilter}
+            </Link>
+          )}
         </nav>
         <nav className="seg compat-sort" aria-label={texts.sortBy}>
           {compatSorts.map((value) => (
@@ -156,7 +184,47 @@ export default async function Compatibility({ searchParams }: Search) {
             </Link>
           )}
         </h3>
-        {games.length === 0 ? (
+        {fromUpstream && (
+          <p className="hint-line upstream-note">
+            {texts.upstreamLead}{" "}
+            <a href={upstream?.source ?? upstreamBringUp} target="_blank" rel="noopener noreferrer">
+              {texts.upstreamOpen}
+            </a>
+          </p>
+        )}
+        {fromUpstream ? (
+          upstreamRows.length === 0 ? (
+            <p className="empty">{texts.noGamesFound}</p>
+          ) : (
+            <ul className="compat-rows">
+              {upstreamRows.slice(0, shown).map((game) => (
+                <li key={game.titleId}>
+                  <a href={game.url} target="_blank" rel="noopener noreferrer" className="compat-row">
+                    <span className="compat-game">
+                      <span className="game-icon" aria-hidden="true">
+                        {game.name.slice(0, 1)}
+                      </span>
+                      <span className="lines">
+                        <span className="name">{game.name}</span>
+                        <span className="meta">{game.titleId}</span>
+                      </span>
+                    </span>
+                    <span className="compat-verdicts n1">
+                      <div className={`verdict is-${game.status ?? "untested"}`}>
+                        <span className="verdict-platform">{platformNames[platform ?? "windows"]}</span>
+                        <span className="verdict-status">
+                          <span className={`compat-dot is-${game.status ?? "reported"}`} aria-hidden="true" />
+                          {game.status ? texts[`status_${game.status}`] : texts.upstreamNoStatus}
+                        </span>
+                        <span className="meta verdict-version">{texts.upstreamShort}</span>
+                      </div>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : rows.length === 0 ? (
           <p className="empty">
             {online && !status && !q
               ? texts.noOnlineGames
@@ -166,11 +234,16 @@ export default async function Compatibility({ searchParams }: Search) {
           </p>
         ) : (
           <ul className="compat-rows">
-            {games.map((game) => {
+            {rows.map((game) => {
               const name = localName(game.names, texts.language) || game.titleId;
+              const Row = game.external ? "a" : Link;
               return (
                 <li key={game.titleId}>
-                  <Link href={`/compatibility/${game.titleId}`} className="compat-row">
+                  <Row
+                    href={game.href}
+                    className="compat-row"
+                    {...(game.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  >
                     <span className="compat-game">
                       <span className="game-icon" aria-hidden="true">
                         {game.iconUrl ? <img src={game.iconUrl} alt="" loading="lazy" /> : name.slice(0, 1)}
@@ -192,7 +265,7 @@ export default async function Compatibility({ searchParams }: Search) {
                         <CompatVerdict key={p} platform={p} summary={game.platforms[p]} texts={texts} />
                       ))}
                     </span>
-                  </Link>
+                  </Row>
                 </li>
               );
             })}
@@ -211,7 +284,11 @@ export default async function Compatibility({ searchParams }: Search) {
         <h3 className="sub">{texts.reportGame}</h3>
         <p className="hint-line compat-lead">{texts.reportGameLead}</p>
         {user ? (
-          <CompatForm texts={ui(texts)} defaultVersion={releases.body?.macos?.version} />
+          <CompatForm
+            texts={ui(texts)}
+            defaultVersion={releases.body?.macos?.version}
+            upstream={Boolean(upstream)}
+          />
         ) : (
           <Link href="/login?next=/compatibility%23report" className="pill">
             {texts.signInToReport}

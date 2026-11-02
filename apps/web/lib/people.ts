@@ -40,6 +40,20 @@ export interface Presence {
   };
   /** The game session they host or, for Play Together, play in (older API answers lack it). */
   game?: GamePresence;
+  /** While not offline: the status they picked, or idle when their devices are (older API answers
+   *  lack it). */
+  status?: "online" | "idle" | "dnd";
+}
+
+/** The dot on someone's picture: red for Do Not Disturb (even in a game, as on Discord), the game's
+ *  purple, the yellow moon for idle (picked, or away), green for online, none for offline. */
+export type PresenceDot = "online" | "idle" | "dnd" | "in_game" | "offline";
+export function presenceDot(presence: Pick<Presence, "state" | "status"> | undefined): PresenceDot {
+  if (!presence || presence.state === "offline") return "offline";
+  if (presence.status === "dnd") return "dnd";
+  if (presence.state === "in_game") return "in_game";
+  if (presence.status === "idle" || presence.state === "away") return "idle";
+  return "online";
 }
 
 export interface Friend extends Person {
@@ -133,6 +147,8 @@ export interface Own {
     trophyLevel?: TrophyLevel;
     rememberMet?: boolean;
     appearOffline?: boolean;
+    /** Online, idle, dnd or invisible (older API answers lack it: see appearOffline). */
+    presenceStatus?: string;
     readReceipts?: boolean;
     /** The public profile switch (older API answers lack it: off). */
     publicProfile?: boolean;

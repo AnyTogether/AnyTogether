@@ -3,11 +3,12 @@ import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
 import type { MetPlayers } from "@/lib/psn";
 import { apiJson, currentUser } from "@/lib/session";
+import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Recently played with · AnyTogether" };
+export const generateMetadata = (): Promise<Metadata> => titled((t) => t.playersMet);
 
 /** People the reader was in a party, share play, game or post with, the last 30 days. */
 export default async function Players() {

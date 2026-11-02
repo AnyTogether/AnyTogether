@@ -6,7 +6,7 @@ import { PartyListing } from "@/components/Discover";
 import { useLive, useLiveEvents } from "@/components/Live";
 import { Menu } from "@/components/MessagesBoard";
 import type { UiStrings } from "@/lib/i18n";
-import { type Friend, type Person, byPresence, fill, shownName } from "@/lib/people";
+import { type Friend, type Person, byPresence, fill, presenceDot, shownName } from "@/lib/people";
 import {
   type CallJoin,
   type Party,
@@ -368,7 +368,7 @@ export function PartyBoard({
               <ul className="people">
                 {openParties.map((friend) => (
                   <li key={friend.userId} className="person">
-                    <Avatar person={friend} presence={friend.presence.state} />
+                    <Avatar person={friend} presence={presenceDot(friend.presence)} />
                     <span className="lines">
                       <span className="name">{fill(texts.partyOf, { name: friend.displayName })}</span>
                       <span className="meta">
@@ -644,7 +644,7 @@ export function PartyBoard({
             <ul className="people">
               {invitable.map((friend) => (
                 <li key={friend.userId} className={`person ${friend.presence.state}`}>
-                  <Avatar person={friend} presence={friend.presence.state} />
+                  <Avatar person={friend} presence={presenceDot(friend.presence)} />
                   <span className="lines">
                     <span className="name">{friend.displayName}</span>
                     <span className="meta">@{friend.handle}</span>
@@ -728,7 +728,10 @@ function Segmented<T extends string>({
   small?: boolean;
 }) {
   return (
-    <div className={`segmented${small ? " small-seg" : ""}`}>
+    <div
+      className={`segmented${small ? " small-seg" : ""}`}
+      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+    >
       {options.map(([key, label]) => (
         <button
           key={key}
@@ -990,7 +993,7 @@ function CodeEntry({ texts }: { texts: UiStrings }) {
   const code = normalizeJoinCode(value);
   return (
     <form
-      className="card code-entry row start"
+      className="card code-entry"
       onSubmit={(event) => {
         event.preventDefault();
         if (isJoinCode(code)) router.push(`/join/${code}`);
@@ -999,18 +1002,20 @@ function CodeEntry({ texts }: { texts: UiStrings }) {
       <label className="sub" htmlFor="join-code">
         {texts.haveCode}
       </label>
-      <input
-        id="join-code"
-        autoComplete="off"
-        spellCheck={false}
-        placeholder={texts.codePlaceholder}
-        value={value}
-        maxLength={12}
-        onChange={(event) => setValue(event.target.value)}
-      />
-      <button type="submit" className="pill" disabled={!isJoinCode(code)}>
-        {texts.go}
-      </button>
+      <div className="code-entry-row">
+        <input
+          id="join-code"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder={texts.codePlaceholder}
+          value={value}
+          maxLength={12}
+          onChange={(event) => setValue(event.target.value)}
+        />
+        <button type="submit" className="primary" disabled={!isJoinCode(code)}>
+          {texts.go}
+        </button>
+      </div>
     </form>
   );
 }

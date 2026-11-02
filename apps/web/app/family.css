@@ -47,8 +47,16 @@
   flex: 1 1 200px;
   min-width: 0;
 }
+.fam-inline > input {
+  line-height: 22px;
+}
+/* Both forms on the page end in the same button, as wide in each. */
+.fam-inline > button {
+  flex: none;
+  min-width: 140px;
+}
 .fam-code-input {
-  font: 500 18px / 1 var(--font-mono), monospace;
+  font: 500 16px / 22px var(--font-mono), monospace;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }

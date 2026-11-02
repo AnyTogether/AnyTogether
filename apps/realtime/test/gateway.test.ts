@@ -359,11 +359,35 @@ describe("the gateway", () => {
     expect(JSON.parse((await valkey.get("presence:u1")) ?? "{}")).toEqual({
       state: "in_game",
       titleId: "PPSA01234",
+      status: "online",
       party: { id: "p1", size: 2, max: 8, open: false },
     });
     me.socket.close();
     const gone = await friend.waitFor((frame) => (frame.data as { state?: string })?.state === "offline");
     expect((gone.data as { party?: unknown }).party).toBeUndefined();
+    friend.socket.close();
+  });
+
+  it("tells friends the picked status at once, and shows a picked Idle as away to old clients", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    const friend = await signedIn("u2", "s2");
+    const me = await signedIn("u1", "s1");
+    const online = await friend.waitFor((frame) => frame.type === "presence.updated");
+    expect(online.data).toMatchObject({ userId: "u1", state: "online", status: "online" });
+    // What PATCH /me/presence does for Do Not Disturb: the extra, then presence.mode.
+    await valkey.hset("presence-extra:u1", "status", JSON.stringify("dnd"));
+    await publish("u1", { type: "presence.mode", data: { appearOffline: false, status: "dnd" } });
+    const dnd = await friend.waitFor((frame) => (frame.data as { status?: string })?.status === "dnd");
+    expect(dnd.data).toMatchObject({ userId: "u1", state: "online", status: "dnd" });
+    await valkey.hset("presence-extra:u1", "status", JSON.stringify("idle"));
+    await publish("u1", { type: "presence.mode", data: { appearOffline: false, status: "idle" } });
+    const idle = await friend.waitFor((frame) => (frame.data as { status?: string })?.status === "idle");
+    expect(idle.data).toMatchObject({ userId: "u1", state: "away", status: "idle" });
+    // In a game a picked Idle keeps the game.
+    me.send({ op: "heartbeat", presence: { state: "in_game", titleId: "PPSA01234" } });
+    const playing = await friend.waitFor((frame) => (frame.data as { state?: string })?.state === "in_game");
+    expect(playing.data).toMatchObject({ state: "in_game", titleId: "PPSA01234", status: "idle" });
+    me.socket.close();
     friend.socket.close();
   });
 

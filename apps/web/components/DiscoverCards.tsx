@@ -14,7 +14,7 @@ import {
 import { since } from "@/lib/feed";
 import { localName } from "@/lib/games";
 import type { Strings, UiStrings } from "@/lib/i18n";
-import { fill } from "@/lib/people";
+import { fill, presenceDot } from "@/lib/people";
 import Link from "next/link";
 
 /** The three Find players pages. */
@@ -251,7 +251,7 @@ export function PersonRow({
   ui: UiStrings;
   now: number;
 }) {
-  const state = card.presence?.state as "online" | "away" | "in_game" | undefined;
+  const state = card.presence ? presenceDot(card.presence as Parameters<typeof presenceDot>[0]) : undefined;
   const line = card.reasons?.length
     ? reasonText(card, texts)
     : card.lastPlayedAt

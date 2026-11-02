@@ -70,3 +70,11 @@ export function fileSize(bytes: number, language: string) {
 
 export const compact = (n: number, language: string) =>
   new Intl.NumberFormat(language, { notation: "compact", maximumFractionDigits: 1 }).format(n);
+
+/** A theme's description in the reader's language: the one sentence every theme brought over from
+ *  the first AnyPS5 hub carries (stored in English) is said again in the page's language; anything a
+ *  maker wrote is shown as written. */
+export function themeAbout(description: string, template: string) {
+  const imported = /^By (.+)\. One of the first themes on the AnyPS5 hub\.$/.exec(description.trim());
+  return imported ? template.replace("{name}", imported[1] ?? "") : description;
+}

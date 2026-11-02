@@ -7,6 +7,7 @@ import {
   privacyOf,
   revocationsLoadedKey,
   revokedKey,
+  statusOf,
 } from "@anytogether/shared";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import type { Redis } from "ioredis";
@@ -15,6 +16,7 @@ import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { isBanned, liftExpired, restrictedSignIn } from "./moderation.js";
 import { forgetPush } from "./notifications.js";
+import { keepPickedStatus } from "./presence.js";
 import { type TokenSigner, accessLifetime, hash, refreshLifetimeDays, secret } from "./tokens.js";
 
 interface Context {
@@ -160,6 +162,8 @@ async function tokensFor(
   if (presenceHidden(privacyOf(profile.privacy), profile.appearOffline))
     await ctx.valkey.set(presenceHiddenKey(accountId), "1");
   else await ctx.valkey.del(presenceHiddenKey(accountId));
+  // And the picked Idle or Do Not Disturb, which the gateway reads beside the devices' presence.
+  await keepPickedStatus(ctx.valkey, accountId, statusOf(profile));
   return {
     accessToken: await ctx.tokens.sign({ userId: accountId, sessionId }),
     expiresIn: accessLifetime,

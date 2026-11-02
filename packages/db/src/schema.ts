@@ -164,6 +164,9 @@ export const profiles = pgTable(
     /** Appear offline: signed in and working, but friends and everyone else see the account as
      *  offline (with privacy's presence "nobody", the gateway keeps its presence to itself). */
     appearOffline: boolean().notNull().default(false),
+    /** The picked status beside Online while visible: "idle" or "dnd" (null is Online). Invisible
+     *  is appearOffline, which wins over this (docs/presence.md). */
+    presenceStatus: text().$type<"idle" | "dnd">(),
     /** Read receipts: others in a conversation see how far this person has read, and this person
      *  sees theirs. Off hides both ways; delivered marks and one's own unread counts stay. */
     readReceipts: boolean().notNull().default(true),

@@ -1,4 +1,11 @@
-import { type Person, type PresenceState, initialOf, shownAvatar, shownName } from "@/lib/people";
+import {
+  type Person,
+  type PresenceDot,
+  type PresenceState,
+  initialOf,
+  shownAvatar,
+  shownName,
+} from "@/lib/people";
 import type { CSSProperties } from "react";
 
 /** A person's picture, or the first letter of their name on the brand gradient; a presence dot if
@@ -10,7 +17,7 @@ export function Avatar({
 }: {
   person: Pick<Person, "handle" | "displayName" | "avatar" | "privateName" | "privateAvatar">;
   size?: number;
-  presence?: PresenceState;
+  presence?: PresenceState | PresenceDot;
 }) {
   // Each person keeps the same angle of the gradient, so a list of letters does not look stamped.
   let hash = 0;

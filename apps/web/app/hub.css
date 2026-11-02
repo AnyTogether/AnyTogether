@@ -412,8 +412,10 @@
   text-transform: uppercase;
   color: var(--mute);
 }
+/* The label quiet, the value bright: the two never read as one grey line. */
 .facts dd {
   margin-top: 6px;
+  color: var(--ink);
   font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
@@ -1017,6 +1019,72 @@
 .compat-statuses .lines > span {
   white-space: normal;
 }
+/* Each status's meaning in the page's own type, not the code font: it reads as a sentence. */
+.compat-statuses .lines .meta {
+  margin-top: 3px;
+  font: 400 13.5px / 1.4 var(--font-display), system-ui, sans-serif;
+}
+/* Windows and Linux: reports go to the AnyPS5 project */
+.upstream-report {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.upstream-report .name {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.upstream-go {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 500;
+  color: #07080c;
+  text-decoration: none;
+  transition: filter 0.2s ease, transform 0.12s ease;
+}
+.upstream-go:hover {
+  filter: brightness(1.06);
+}
+.upstream-go:active {
+  transform: scale(0.98);
+}
+.upstream-go svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.upstream-go:focus-visible,
+.upstream-note a:focus-visible {
+  outline: 2px solid rgba(79, 124, 255, 0.7);
+  outline-offset: 2px;
+}
+.upstream-note {
+  margin: 4px 0 12px;
+  font-size: 13.5px;
+  color: var(--mute);
+}
+.upstream-note a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+/* A thread there that names no furthest point: reported, status unknown */
+.compat-dot.is-reported {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--mute);
+}
 .compat-pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1055,5 +1123,99 @@
 @media (max-width: 520px) {
   .compat-pair {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Under the gallery: make your own in Theme Studio */
+.make-own {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  align-items: center;
+  gap: 24px 40px;
+  padding: 30px 34px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: radial-gradient(120% 140% at 100% 50%, rgba(212, 166, 255, 0.09), transparent 60%),
+    rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+.make-own h3 {
+  font-size: clamp(24px, 3.2vw, 32px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  text-wrap: balance;
+}
+.make-own p {
+  margin-top: 10px;
+  max-width: 52ch;
+  color: var(--mute);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.make-own-acts {
+  margin-top: 18px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.make-own-acts .pill {
+  padding: 10px 16px;
+  font-size: 12.5px;
+}
+.make-own-acts .pill:focus-visible {
+  outline: 2px solid rgba(79, 124, 255, 0.7);
+  outline-offset: 2px;
+}
+/* Four paint swatches held in a fan; they open a little more when the card is pointed at. */
+.make-own-fan {
+  position: relative;
+  height: 150px;
+}
+.make-own-fan .swatch {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 64px;
+  height: 132px;
+  margin-left: -32px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 10px 26px rgba(0, 0, 0, 0.45);
+  transform-origin: 50% 100%;
+  transform: rotate(calc((var(--n) - 1.5) * 13deg));
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.make-own-fan .swatch i {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+}
+.make-own:hover .swatch {
+  transform: rotate(calc((var(--n) - 1.5) * 19deg));
+}
+@media (prefers-reduced-motion: reduce) {
+  .make-own-fan .swatch {
+    transition: none;
+  }
+}
+@media (max-width: 620px) {
+  .make-own {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px 20px;
+  }
+  .make-own-fan {
+    order: -1;
+    height: 120px;
+  }
+  .make-own-fan .swatch {
+    width: 52px;
+    height: 108px;
+    margin-left: -26px;
   }
 }

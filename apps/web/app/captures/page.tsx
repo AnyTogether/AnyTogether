@@ -22,7 +22,7 @@ export default async function Captures() {
     <section className="page home captures">
       <h2 className="in d1">{texts.captures}</h2>
       <p className="lead in d2">{texts.capturesLead}</p>
-      <nav className="switch in d2" aria-label={texts.home}>
+      <nav className="switch" aria-label={texts.home}>
         <Link href="/">{texts.home}</Link>
         <Link href="/captures" aria-current="page">
           {texts.captures}

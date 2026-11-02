@@ -13,9 +13,9 @@ export const profileEn = {
   profilePrivateSignIn: "Sign in and add {name} as a friend to see more.",
   profileNotPublicSelf: "Only your friends see this page. Strangers see your name and picture.",
   profileMakePublic: "Change in Settings",
+  profileFriendsOnly: "Friends only",
   profileSections: "On this profile",
   gamesPlayed: "Games played",
-  gamesPlayedCount: "{n} games · {time}",
   seeAllGames: "See all",
 };
 
@@ -32,8 +32,8 @@ export const profileTr: typeof profileEn = {
   profilePrivateSignIn: "Daha fazlasını görmek için giriş yap ve {name} ile arkadaş ol.",
   profileNotPublicSelf: "Bu sayfayı yalnızca arkadaşların görür. Başkaları adını ve resmini görür.",
   profileMakePublic: "Ayarlar'dan değiştir",
+  profileFriendsOnly: "Arkadaşlarına açık",
   profileSections: "Bu profilde",
   gamesPlayed: "Oynanan oyunlar",
-  gamesPlayedCount: "{n} oyun · {time}",
   seeAllGames: "Tümü",
 };
