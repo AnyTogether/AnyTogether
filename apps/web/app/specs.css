@@ -1037,3 +1037,11 @@
     position: static;
   }
 }
+
+/* The platform marks' one copy (PlatformMarks in the page): takes no room. */
+.sp-marks {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}

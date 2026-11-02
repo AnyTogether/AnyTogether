@@ -1024,17 +1024,28 @@ summary:focus-visible {
   mask-image: linear-gradient(90deg, #000 80%, transparent);
 }
 
+/* One grid for the whole list (each row a subgrid of it), so the licences start in one column
+ *  after the longest name and the descriptions in one column after them. */
 .repos {
   margin-top: 30px;
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0, 1fr) auto;
+  column-gap: 14px;
   list-style: none;
   padding: 0;
   border-top: 1px solid var(--line);
 }
+.repos li {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
 .repos a {
   display: grid;
-  grid-template-columns: auto auto 1fr auto;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: baseline;
-  gap: 4px 12px;
+  gap: 4px 14px;
   padding: 15px 0;
   border-bottom: 1px solid var(--line);
   text-decoration: none;
@@ -1340,10 +1351,31 @@ summary:focus-visible {
   padding: 0;
   overflow-x: auto;
   scrollbar-width: none;
-  mask-image: linear-gradient(90deg, #000 92%, transparent);
 }
 .toc ul::-webkit-scrollbar {
   display: none;
+}
+/* The links fade at the right edge only while more of them are hidden there: a row that fits
+ *  has no fade, and the fade goes as the row reaches its end. */
+@property --toc-fade {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes toc-fade {
+  from {
+    --toc-fade: 48px;
+  }
+  to {
+    --toc-fade: 0px;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  .toc ul {
+    mask-image: linear-gradient(90deg, #000 calc(100% - var(--toc-fade)), transparent);
+    animation: toc-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
 }
 .toc a {
   display: block;
@@ -1452,6 +1484,128 @@ summary:focus-visible {
   width: 100%;
   height: auto;
 }
+/* A small picture that opens large (Zoom.tsx). */
+.zoom-open {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+.zoom-open img {
+  transition: transform 0.4s var(--ease-out);
+}
+.zoom-open:hover img {
+  transform: scale(1.02);
+}
+.zoom-open:focus-visible {
+  outline: 2px solid #8fb0ff;
+  outline-offset: -2px;
+}
+.zoom-mark {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(7, 8, 12, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 0 0 1px var(--line-2) inset;
+  color: var(--ink);
+}
+.zoom-mark .ico {
+  width: 15px;
+  height: 15px;
+}
+.zoom {
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: clamp(16px, 4vw, 48px);
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.22s ease, display 0.22s allow-discrete, overlay 0.22s allow-discrete;
+}
+.zoom[open] {
+  display: grid;
+  opacity: 1;
+}
+.zoom::backdrop {
+  background: rgba(4, 5, 8, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.zoom-figure {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  transition: transform 0.32s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.zoom-figure img {
+  display: block;
+  width: auto;
+  max-width: min(92vw, 1600px);
+  height: auto;
+  max-height: 82dvh;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px var(--line-2), 0 40px 120px -40px rgba(0, 0, 0, 0.9);
+}
+.zoom-figure figcaption {
+  font: 400 12px / 1.4 var(--font-mono), monospace;
+  color: var(--ink-2);
+}
+.zoom-close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1px var(--line-2) inset;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.zoom-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+.zoom-close:focus-visible {
+  outline: 2px solid #8fb0ff;
+  outline-offset: 2px;
+}
+@starting-style {
+  .zoom[open] {
+    opacity: 0;
+  }
+  .zoom[open] .zoom-figure {
+    transform: scale(0.94);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zoom,
+  .zoom-figure,
+  .zoom-open img {
+    transition: none;
+  }
+  .zoom-open:hover img {
+    transform: none;
+  }
+}
 .g-item figcaption {
   margin-top: 10px;
   font: 400 12px / 1.4 var(--font-mono), monospace;
@@ -1466,8 +1620,9 @@ summary:focus-visible {
   overflow-x: auto;
   scrollbar-width: none;
   touch-action: pan-y;
-  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  /* A tenth of the width fades out on each side. */
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
 }
 .strip::-webkit-scrollbar {
   display: none;
@@ -1502,6 +1657,19 @@ summary:focus-visible {
 }
 .strip .g-item {
   flex: 0 0 min(400px, 74vw);
+}
+/* Every picture of a row in one box shape (the shape most of them have, set by the page), so
+ *  the pictures and their captions line up instead of stepping up and down. */
+.strip .g-shot,
+.gallery .g-shot {
+  aspect-ratio: var(--shot-ratio, auto);
+}
+.strip .g-shot img,
+.gallery .g-shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
 }
 .strip img {
   -webkit-user-drag: none;
@@ -1767,8 +1935,8 @@ summary:focus-visible {
   .live-stats dl {
     gap: 18px 28px;
   }
-  .repos a {
-    grid-template-columns: auto auto 1fr;
+  .repos {
+    grid-template-columns: max-content minmax(0, 1fr);
   }
   .repos .what {
     grid-column: 1 / -1;

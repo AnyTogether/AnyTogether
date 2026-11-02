@@ -6,15 +6,15 @@ const en = {
   meta: {
     title: "Changelog: every AnyPS5 release · AnyTogether",
     description:
-      "The release notes of AnyPS5-ARM (the Mac launcher, the engine and the phone app) and AnyPS5 Desktop (Windows and Linux), newest first, with each release's downloads.",
+      "The release notes of AnyPS5 ARM (the Mac launcher, the engine and the phone app) and AnyPS5 Desktop (Windows and Linux), newest first, with each release's downloads.",
   },
   kicker: "Changelog",
   title: ["What's new.", "Every release, newest first."],
-  lead: "The release notes of AnyPS5-ARM (the Mac launcher, the engine and the phone app) and AnyPS5 Desktop (Windows and Linux), as they are published on GitHub, with each release's files.",
+  lead: "The release notes of AnyPS5 ARM (the Mac launcher, the engine and the phone app) and AnyPS5 Desktop (Windows and Linux), as they are published on GitHub, with each release's files.",
   filter: "Show",
   all: "All",
   projects: {
-    macos: ["AnyPS5-ARM", "Mac & phone"],
+    macos: ["AnyPS5 ARM", "Mac & phone"],
     desktop: ["AnyPS5 Desktop", "Windows & Linux"],
   },
   latest: "Latest",
@@ -22,6 +22,7 @@ const en = {
   files: "Downloads",
   onGitHub: "On GitHub",
   showNotes: "Release notes",
+  notesOnGitHub: "Read these notes on GitHub",
   count: "{n} releases",
   englishOnly: "",
   down: "GitHub is not answering right now. Every release and its notes are on GitHub:",
@@ -36,15 +37,15 @@ const tr: ChangelogStrings = {
   meta: {
     title: "Sürüm notları: AnyPS5'in her sürümü · AnyTogether",
     description:
-      "AnyPS5-ARM (Mac launcher'ı, motor ve telefon uygulaması) ve AnyPS5 Desktop (Windows ve Linux) sürüm notları, en yenisi önce ve her sürümün indirmeleriyle.",
+      "AnyPS5 ARM (Mac launcher'ı, motor ve telefon uygulaması) ve AnyPS5 Desktop (Windows ve Linux) sürüm notları, en yenisi önce ve her sürümün indirmeleriyle.",
   },
   kicker: "Sürüm notları",
   title: ["Neler yeni.", "Her sürüm, en yenisi önce."],
-  lead: "AnyPS5-ARM (Mac launcher'ı, motor ve telefon uygulaması) ve AnyPS5 Desktop (Windows ve Linux) sürüm notları, GitHub'da yayımlandıkları gibi ve her sürümün dosyalarıyla.",
+  lead: "AnyPS5 ARM (Mac launcher'ı, motor ve telefon uygulaması) ve AnyPS5 Desktop (Windows ve Linux) sürüm notları, GitHub'da yayımlandıkları gibi ve her sürümün dosyalarıyla.",
   filter: "Göster",
   all: "Tümü",
   projects: {
-    macos: ["AnyPS5-ARM", "Mac ve telefon"],
+    macos: ["AnyPS5 ARM", "Mac ve telefon"],
     desktop: ["AnyPS5 Desktop", "Windows ve Linux"],
   },
   latest: "En yeni",
@@ -52,6 +53,7 @@ const tr: ChangelogStrings = {
   files: "İndirmeler",
   onGitHub: "GitHub'da",
   showNotes: "Sürüm notları",
+  notesOnGitHub: "Bu notları GitHub'da oku",
   count: "{n} sürüm",
   englishOnly: "Sürüm notları GitHub'da İngilizce yazılıyor.",
   down: "GitHub şu an yanıt vermiyor. Her sürüm ve notları GitHub'da:",

@@ -74,6 +74,7 @@ export default async function Specs() {
   return (
     <div className={`site pg sp-page ${wide.variable}`}>
       <Reveal />
+      <PlatformMarks />
       <PageHead kicker={t.kicker} title={t.title} lead={t.lead}>
         <div className="pg-links">
           <Link href="/download" className="text-link">
@@ -189,7 +190,7 @@ function TitleBlock({
   const rows: [string, string][] = [
     [t.block.label, t.block.sheet],
     [t.block.rev, day(checked, lang)],
-    [t.block.mac, `AnyPS5-ARM ${published.macos}`],
+    [t.block.mac, `AnyPS5 ARM ${published.macos}`],
     [t.block.desktop, `AnyPS5 Desktop ${published.desktop}`],
     [t.block.phone, phone ? `AnyPS5 Remote ${phone}` : "AnyPS5 Remote"],
     [t.block.features, String(total)],
@@ -220,10 +221,29 @@ function Platforms({ on, t }: { on: SpecPlatform[]; t: SpecsStrings }) {
           className={`ico${on.includes(p) ? " on" : ""}`}
           data-platform={p}
         >
-          {platformIcons[p]()}
+          <use href={`#sp-mark-${p}`} />
         </svg>
       ))}
     </span>
+  );
+}
+
+/** Each platform's mark, drawn once for the whole sheet. The rows point at these: about 1,500
+ *  marks, and a full copy of each (Tux alone is 5 kB) made the page 5 MB. */
+function PlatformMarks() {
+  return (
+    <svg width="0" height="0" aria-hidden="true" className="sp-marks">
+      <defs>
+        {specPlatforms.map((p) => (
+          <symbol key={p} id={`sp-mark-${p}`} viewBox="0 0 24 24">
+            {/* The marks are filled shapes; the rows' own .ico rules do not reach inside a symbol. */}
+            <g fill="currentColor" stroke="none">
+              {platformIcons[p]()}
+            </g>
+          </symbol>
+        ))}
+      </defs>
+    </svg>
   );
 }
 
@@ -356,7 +376,7 @@ function placed(
 ): { column: StatusColumn; release?: string; next: boolean } {
   if (card.ships) {
     const out = !stillNext({ project: card.ships.project, version: card.ships.version }, published);
-    const name = card.ships.project === "macos" ? "AnyPS5-ARM" : "AnyPS5 Desktop";
+    const name = card.ships.project === "macos" ? "AnyPS5 ARM" : "AnyPS5 Desktop";
     return out
       ? { column: "done", release: `${name} ${card.ships.version}`, next: false }
       : { column: card.column, release: undefined, next: true };
@@ -441,9 +461,13 @@ function SourceList({ t, lang, releases }: { t: SpecsStrings; lang: Language; re
         {repositories.map((repo) => {
           const release = repo.project ? releases?.[repo.project] : null;
           return (
-            <article key={repo.repo} className="sp-repo" aria-labelledby={`repo-${repo.name}`}>
+            <article
+              key={repo.repo}
+              className="sp-repo"
+              aria-labelledby={`repo-${repo.name.replace(/\s+/g, "-")}`}
+            >
               <header>
-                <h3 id={`repo-${repo.name}`}>
+                <h3 id={`repo-${repo.name.replace(/\s+/g, "-")}`}>
                   <a href={gh(repo.repo)}>{repo.repo}</a>
                 </h3>
                 <span className="sp-license">{repo.license}</span>

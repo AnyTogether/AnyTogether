@@ -12,9 +12,10 @@ import type {
 } from "@/lib/i18n-products";
 import { type SiteStrings, siteStrings } from "@/lib/i18n-site";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import "@/app/motion.css";
 import "@/app/live.css";
+import { shots } from "@/lib/shots";
 import { Backdrop } from "./Backdrop";
 import { LiveChat, LiveFriends, LivePad, LiveParty } from "./LiveBits";
 import { LiveLauncher } from "./LiveLauncher";
@@ -22,6 +23,7 @@ import { Reveal } from "./Reveal";
 import { BrowserFrame, MacFrame, PcFrame, PhoneFrame, Shot } from "./Shot";
 import { Strip } from "./Strip";
 import { SelfHostTerminal } from "./Terminal";
+import { Zoom } from "./Zoom";
 import { wide } from "./fonts";
 
 type Key = "mac" | "pc" | "phone" | "together";
@@ -81,7 +83,7 @@ export function ProductPage({
   const m = motionStrings(language);
   const href: Record<Key, string> = { mac: "/mac", pc: "/pc", phone: "/phone", together: "/together" };
   const names: Record<Key, [string, string]> = {
-    mac: ["AnyPS5-ARM", s.landing.products[0]?.where ?? ""],
+    mac: ["AnyPS5 ARM", s.landing.products[0]?.where ?? ""],
     pc: ["AnyPS5 Desktop", s.landing.products[1]?.where ?? ""],
     phone: ["AnyPS5 Remote", s.landing.products[2]?.where ?? ""],
     together: ["AnyTogether", s.landing.products[3]?.where ?? ""],
@@ -156,7 +158,7 @@ export function ProductPage({
       </nav>
 
       {page.chapters.map((chapter, index) => (
-        <ChapterBlock key={chapter.id} chapter={chapter} index={index} s={s} />
+        <ChapterBlock key={chapter.id} chapter={chapter} index={index} s={s} p={p} />
       ))}
 
       <section className="install" id="install" data-reveal data-spot>
@@ -224,7 +226,12 @@ export function ProductPage({
   );
 }
 
-function ChapterBlock({ chapter, index, s }: { chapter: Chapter; index: number; s: SiteStrings }) {
+function ChapterBlock({
+  chapter,
+  index,
+  s,
+  p,
+}: { chapter: Chapter; index: number; s: SiteStrings; p: ProductStrings }) {
   const [first, ...rest] = chapter.shots;
   return (
     <section className={`chapter${index % 2 ? " flip" : ""}${first ? "" : " no-art"}`} id={chapter.id}>
@@ -256,7 +263,11 @@ function ChapterBlock({ chapter, index, s }: { chapter: Chapter; index: number; 
         ))}
       </ul>
       {chapter.gallery && (
-        <div className="gallery-wrap" data-reveal>
+        <div
+          className="gallery-wrap"
+          data-reveal
+          style={{ "--shot-ratio": rowRatio(chapter.gallery) } as CSSProperties}
+        >
           {chapter.gallery.length >= 3 ? (
             <Strip label={chapter.title}>
               {chapter.gallery.map((shot) => (
@@ -264,9 +275,10 @@ function ChapterBlock({ chapter, index, s }: { chapter: Chapter; index: number; 
               ))}
             </Strip>
           ) : (
+            // One or two pictures sit small under the chapter, so each opens large.
             <div className="gallery">
               {chapter.gallery.map((shot) => (
-                <GalleryFigure key={shot.name} shot={shot} />
+                <GalleryFigure key={shot.name} shot={shot} zoom={p} />
               ))}
             </div>
           )}
@@ -277,11 +289,34 @@ function ChapterBlock({ chapter, index, s }: { chapter: Chapter; index: number; 
   );
 }
 
-function GalleryFigure({ shot }: { shot: GalleryShot }) {
+/** The shape most pictures of a row have ("16 / 9"): the row draws every picture in it. */
+export function rowRatio(gallery: GalleryShot[]): string {
+  const count = new Map<string, number>();
+  for (const shot of gallery) {
+    const { w, h } = shots[shot.name];
+    const ratio = `${w} / ${h}`;
+    count.set(ratio, (count.get(ratio) ?? 0) + 1);
+  }
+  return [...count.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "auto";
+}
+
+function GalleryFigure({ shot, zoom }: { shot: GalleryShot; zoom?: ProductStrings }) {
+  const picture = <Shot name={shot.name} alt={shot.alt} sizes="(max-width: 760px) 80vw, 420px" />;
   return (
     <figure className="g-item">
       <div className="g-shot">
-        <Shot name={shot.name} alt={shot.alt} sizes="(max-width: 760px) 80vw, 420px" />
+        {zoom ? (
+          <Zoom
+            label={zoom.enlarge.replace("{caption}", shot.caption)}
+            close={zoom.close}
+            caption={shot.caption}
+            large={<Shot name={shot.name} alt={shot.alt} sizes="92vw" />}
+          >
+            {picture}
+          </Zoom>
+        ) : (
+          picture
+        )}
       </div>
       <figcaption>{shot.caption}</figcaption>
     </figure>

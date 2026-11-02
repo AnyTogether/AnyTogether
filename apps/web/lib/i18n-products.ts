@@ -49,6 +49,9 @@ export interface ProductPage {
 
 export interface ProductStrings {
   onThisPage: string;
+  /** The small pictures under a chapter open large: the button's label and the close button. */
+  enlarge: string;
+  close: string;
   installTitle: string;
   requirements: string;
   family: string;
@@ -60,6 +63,8 @@ export interface ProductStrings {
 
 const en: ProductStrings = {
   onThisPage: "On this page",
+  enlarge: "Show larger: {caption}",
+  close: "Close",
   installTitle: "Install",
   requirements: "Requirements",
   family: "The rest of the family",
@@ -67,9 +72,9 @@ const en: ProductStrings = {
     meta: {
       title: "AnyPS5 for Mac · AnyTogether",
       description:
-        "AnyPS5-ARM is a PS5-style launcher for the Mac. Unlock and play the games you own, with trophies, clips, save sync and AnyTogether built in.",
+        "AnyPS5 ARM is a PS5-style launcher for the Mac. Unlock and play the games you own, with trophies, clips, save sync and AnyTogether built in.",
     },
-    kicker: "AnyPS5-ARM",
+    kicker: "AnyPS5 ARM",
     title: ["The PS5 home screen,", "on your Mac."],
     lead: "Point AnyPS5 at your folder of game dumps. It turns each one into a game you play on your Mac, with no Terminal and no build.",
     hero: {
@@ -498,7 +503,7 @@ const en: ProductStrings = {
           { t: "Keyboard layout", d: "Pick a button and press a key, for each game." },
           {
             t: "Overlay and frame generation",
-            d: "These work with an engine built from AnyPS5-ARM.",
+            d: "These work with an engine built from AnyPS5 ARM.",
             tag: "experimental",
           },
         ],
@@ -575,7 +580,7 @@ const en: ProductStrings = {
         nav: "Phone",
         kicker: "Phone",
         title: "Pair AnyPS5 Remote.",
-        lead: "The phone app finds the launcher on your network and pairs with a four-digit code. Using it as a controller in games needs an engine built from AnyPS5-ARM.",
+        lead: "The phone app finds the launcher on your network and pairs with a four-digit code. Using it as a controller in games needs an engine built from AnyPS5 ARM.",
         shots: [
           {
             name: "pc-pairing",
@@ -797,7 +802,7 @@ const en: ProductStrings = {
     },
     heroSide: { name: "web-phone", alt: "Messages on the AnyTogether website on a phone", frame: "tall" },
     facts: [
-      ["4", "places, one account: Mac, PC, phone and web"],
+      ["4", "platforms, one account: Mac, PC, phone and web"],
       ["MIT", "open source and self-hostable"],
       ["0", "passwords"],
     ],
@@ -977,6 +982,8 @@ const en: ProductStrings = {
 
 const tr: ProductStrings = {
   onThisPage: "Bu sayfada",
+  enlarge: "Büyük göster: {caption}",
+  close: "Kapat",
   installTitle: "Kurulum",
   requirements: "Gereksinimler",
   family: "Ailenin geri kalanı",
@@ -984,9 +991,9 @@ const tr: ProductStrings = {
     meta: {
       title: "Mac için AnyPS5 · AnyTogether",
       description:
-        "AnyPS5-ARM, Mac için PS5 tarzı bir launcher. Sahip olduğun oyunları aç ve oyna. Kupalar, klipler, kayıt senkronu ve AnyTogether içinde.",
+        "AnyPS5 ARM, Mac için PS5 tarzı bir launcher. Sahip olduğun oyunları aç ve oyna. Kupalar, klipler, kayıt senkronu ve AnyTogether içinde.",
     },
-    kicker: "AnyPS5-ARM",
+    kicker: "AnyPS5 ARM",
     title: ["PS5 ana ekranı,", "Mac'inde."],
     lead: "AnyPS5'e oyun dump'larının klasörünü göster. Her birini Mac'inde oynanan bir oyuna çevirir, Terminal ve derleme gerekmez.",
     hero: {
@@ -1397,7 +1404,7 @@ const tr: ProductStrings = {
           { t: "Klavye düzeni", d: "Her oyun için bir tuş seç ve bir tuşa bas." },
           {
             t: "Katman ve kare üretimi",
-            d: "AnyPS5-ARM'dan derlenmiş bir motorla çalışır.",
+            d: "AnyPS5 ARM'dan derlenmiş bir motorla çalışır.",
             tag: "experimental",
           },
         ],
@@ -1474,7 +1481,7 @@ const tr: ProductStrings = {
         nav: "Telefon",
         kicker: "Telefon",
         title: "AnyPS5 Remote'u eşleştir.",
-        lead: "Telefon uygulaması launcher'ı ağında bulur ve dört haneli bir kodla eşleşir. Oyunlarda kontrolcü olarak kullanmak için AnyPS5-ARM'dan derlenmiş bir motor gerekir.",
+        lead: "Telefon uygulaması launcher'ı ağında bulur ve dört haneli bir kodla eşleşir. Oyunlarda kontrolcü olarak kullanmak için AnyPS5 ARM'dan derlenmiş bir motor gerekir.",
         shots: [
           {
             name: "pc-pairing",
@@ -1690,7 +1697,7 @@ const tr: ProductStrings = {
     },
     heroSide: { name: "web-phone", alt: "Telefonda AnyTogether sitesinde mesajlar", frame: "tall" },
     facts: [
-      ["4", "yer, tek hesap: Mac, PC, telefon ve web"],
+      ["4", "platform, tek hesap: Mac, PC, telefon ve web"],
       ["MIT", "açık kaynak, kendi sunucunda da"],
       ["0", "şifre"],
     ],
@@ -1900,15 +1907,6 @@ const galleriesEn: Galleries = {
   "mac.settings": {
     shots: [{ name: "mac-gallery", alt: "A game's screenshots in a grid", caption: "Screenshots and clips" }],
   },
-  "mac.controls": {
-    shots: [
-      {
-        name: "mac-advanced",
-        alt: "Advanced settings: stick deadzones, mouse as the camera, keyboard, graphics and sharing",
-        caption: "Advanced settings",
-      },
-    ],
-  },
   "mac.trophies": {
     shots: [
       {
@@ -2057,15 +2055,6 @@ const galleriesTr: Galleries = {
         name: "mac-gallery",
         alt: "Bir oyunun ekran görüntüleri ızgarada",
         caption: "Ekran görüntüleri ve klipler",
-      },
-    ],
-  },
-  "mac.controls": {
-    shots: [
-      {
-        name: "mac-advanced",
-        alt: "Gelişmiş ayarlar: analog ölü bölgeleri, kamera olarak fare, klavye, grafik ve paylaşım",
-        caption: "Gelişmiş ayarlar",
       },
     ],
   },

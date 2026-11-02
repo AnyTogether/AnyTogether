@@ -48,3 +48,29 @@ export function changelogEntries(
   };
   return entries.sort((a, b) => time(b.release.publishedAt) - time(a.release.publishedAt));
 }
+
+/** How many releases at the top of the list show their notes open. */
+export const openFirst = 3;
+
+/** The releases whose notes come with the page: each project's newest few, so the top of the list
+ *  is complete under any filter. The others' notes load when they are opened. */
+export function eagerAnchors(entries: Entry[], perProject = openFirst): Set<string> {
+  const seen: Partial<Record<Project, number>> = {};
+  const eager = new Set<string>();
+  for (const entry of entries) {
+    const n = seen[entry.project] ?? 0;
+    if (n < perProject) eager.add(entry.anchor);
+    seen[entry.project] = n + 1;
+  }
+  return eager;
+}
+
+/** The releases shown open under a filter: the first few that match it. */
+export function openAnchors(entries: Entry[], only: Project | null, count = openFirst): Set<string> {
+  return new Set(
+    entries
+      .filter((entry) => !only || entry.project === only)
+      .slice(0, count)
+      .map((entry) => entry.anchor),
+  );
+}

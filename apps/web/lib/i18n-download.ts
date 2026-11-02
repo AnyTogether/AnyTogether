@@ -13,11 +13,11 @@ const en = {
   meta: {
     title: "Download AnyPS5 for Mac, Windows, Linux, iPhone and Android · AnyTogether",
     description:
-      "Every file of the latest AnyPS5-ARM and AnyPS5 Desktop releases, with version, size, date and SHA-256, grouped by platform with install steps and requirements.",
+      "Every file of the latest AnyPS5 ARM and AnyPS5 Desktop releases, with version, size, date and SHA-256, grouped by platform with install steps and requirements.",
   },
   kicker: "Download",
   title: ["Every file.", "Every screen you own."],
-  lead: "The latest releases of AnyPS5-ARM and AnyPS5 Desktop, straight from GitHub: each file with its version, size, date and checksum, and how to install it.",
+  lead: "The latest releases of AnyPS5 ARM and AnyPS5 Desktop, straight from GitHub: each file with its version, size, date and checksum, and how to install it.",
   allReleases: "All releases on GitHub",
   latestOf: "{name} {version}",
   releasedOn: "released {date}",
@@ -53,7 +53,7 @@ const en = {
     other: ["File", "Attached to the release."],
   } satisfies Record<FileKind, [string, string]>,
   products: {
-    mac: "AnyPS5-ARM",
+    mac: "AnyPS5 ARM",
     windows: "AnyPS5 Desktop",
     linux: "AnyPS5 Desktop",
     iphone: "AnyPS5 Remote",
@@ -145,11 +145,11 @@ const tr: DownloadPageStrings = {
   meta: {
     title: "Mac, Windows, Linux, iPhone ve Android için AnyPS5'i indir · AnyTogether",
     description:
-      "AnyPS5-ARM ve AnyPS5 Desktop'ın son sürümlerindeki her dosya, sürümü, boyutu, tarihi ve SHA-256'sıyla. Platforma göre gruplanmış, kurulum adımları ve gereksinimleriyle.",
+      "AnyPS5 ARM ve AnyPS5 Desktop'ın son sürümlerindeki her dosya, sürümü, boyutu, tarihi ve SHA-256'sıyla. Platforma göre gruplanmış, kurulum adımları ve gereksinimleriyle.",
   },
   kicker: "İndir",
   title: ["Her dosya.", "Sahip olduğun her ekran."],
-  lead: "AnyPS5-ARM ve AnyPS5 Desktop'ın son sürümleri, doğrudan GitHub'dan: her dosya sürümü, boyutu, tarihi ve sağlama toplamıyla, nasıl kurulacağıyla birlikte.",
+  lead: "AnyPS5 ARM ve AnyPS5 Desktop'ın son sürümleri, doğrudan GitHub'dan: her dosya sürümü, boyutu, tarihi ve sağlama toplamıyla, nasıl kurulacağıyla birlikte.",
   allReleases: "GitHub'da tüm sürümler",
   latestOf: "{name} {version}",
   releasedOn: "{date} tarihinde çıktı",
