@@ -9,6 +9,7 @@ import type { Restriction, RestrictionKind } from "./moderation.js";
 import type { NotificationEvent } from "./notifications.js";
 import type { PartyEvent, PartyPresence } from "./parties.js";
 import type { PostEvent } from "./posts.js";
+import type { PresenceStatus, ShownStatus } from "./presence.js";
 import type { SharePlayEvent, SharePresence } from "./sharePlays.js";
 
 /** What the realtime gateway pushes; the API publishes them for each recipient. */
@@ -28,11 +29,14 @@ export type GatewayEvent =
         party?: PartyPresence;
         game?: GamePresence;
         share?: SharePresence;
+        /** While not offline: Online, Idle or Do Not Disturb (docs/presence.md). */
+        status?: ShownStatus;
       };
     }
-  /** The user turned appear offline on or off (on any device): their other devices follow, and the
-   *  gateway works their presence out again for friends. */
-  | { type: "presence.mode"; data: { appearOffline: boolean } }
+  /** The user picked a status (on any device): their other devices follow, and the gateway works
+   *  their presence out again for friends. appearOffline stays for clients that know only it
+   *  (true exactly when the status is invisible). */
+  | { type: "presence.mode"; data: { appearOffline: boolean; status: PresenceStatus } }
   | { type: "auth.handoff"; data: { handoffId: string; deviceName: string; client: string } }
   | { type: "friend.request"; data: { userId: string; handle: string; displayName: string } }
   | { type: "friend.accepted"; data: { userId: string; handle: string; displayName: string } }

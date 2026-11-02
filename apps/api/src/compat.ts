@@ -25,6 +25,7 @@ import { HttpError } from "./errors.js";
 import { body } from "./http.js";
 import { type AuthVariables, optionalUser, requireUser } from "./middleware.js";
 import { rateLimiter } from "./ratelimit.js";
+import { upstreamCategoryUrl, upstreamCompat } from "./upstreamCompat.js";
 
 const rank = (status: string) => compatStatuses.indexOf(status as CompatStatus);
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -197,6 +198,18 @@ export function compatRoutes(deps: Deps) {
       sort,
       next: rows.length > size ? String(offset + size) : null,
     });
+  });
+
+  /** Windows and Linux, as the upstream AnyPS5 project's game bring-up threads say
+   *  (upstreamCompat.ts): available false when there is no GITHUB_TOKEN or GitHub never answered. */
+  app.get("/compat/upstream", async (c) => {
+    const list = await upstreamCompat(deps);
+    c.header("cache-control", "public, max-age=600");
+    return c.json(
+      list
+        ? { available: true, ...list }
+        : { available: false, source: upstreamCategoryUrl, fetchedAt: null, games: [] },
+    );
   });
 
   app.get("/compat/:titleId", maybe, async (c) => {

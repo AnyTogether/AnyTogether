@@ -1,8 +1,10 @@
 import {
   type PresenceExtra,
+  type PresenceStatus,
   friendsKey,
   presenceExtraKey,
   presenceKey,
+  presenceStatusField,
   withExtras,
 } from "@anytogether/shared";
 import type { Redis } from "ioredis";
@@ -27,4 +29,16 @@ export async function setPresenceExtra(
   await valkey.set(presenceKey(userId), next, "KEEPTTL");
   for (const friend of await valkey.smembers(friendsKey(userId)))
     await publish(valkey, friend, { type: "presence.updated", data: { userId, ...JSON.parse(next) } });
+}
+
+/** Keeps the picked Idle or Do Not Disturb where the gateway reads it (the extras hash), or clears
+ *  it for Online and Invisible. The gateway works the merged presence out again when it hears the
+ *  account's presence.mode event. */
+export async function keepPickedStatus(valkey: Redis, userId: string, status: PresenceStatus) {
+  const key = presenceExtraKey(userId);
+  if (status === "idle" || status === "dnd") {
+    const value = JSON.stringify(status);
+    if ((await valkey.hget(key, presenceStatusField)) !== value)
+      await valkey.hset(key, presenceStatusField, value);
+  } else await valkey.hdel(key, presenceStatusField);
 }

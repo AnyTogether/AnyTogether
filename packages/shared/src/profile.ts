@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type PresenceStatus, presenceStatuses } from "./presence.js";
 
 /** Handles: 3-20 of a-z 0-9 _ . (as accounts.handleFrom makes them), changeable once per 30 days. */
 export const handleLength = { min: 3, max: 20 } as const;
@@ -336,8 +337,27 @@ export const PrivacyUpdate = z.object(
   >,
 );
 
-/** PATCH /me/presence: appear offline (signed in, but shown to everyone as offline) or not. */
-export const PresenceModeUpdate = z.object({ appearOffline: z.boolean() });
+/** PATCH /me/presence: the status (Online, Idle, Do Not Disturb, Invisible), or, from clients
+ *  that know only the old switch, appear offline (Invisible) or not (Online). */
+export const PresenceModeUpdate = z
+  .object({
+    status: z.enum(presenceStatuses).optional(),
+    appearOffline: z.boolean().optional(),
+  })
+  .refine((input) => input.status !== undefined || input.appearOffline !== undefined, {
+    message: "status or appearOffline is required",
+  });
+
+/** The status kept for an account: invisible while it appears offline, else what it picked. */
+export const statusOf = (profile: {
+  appearOffline: boolean | null | undefined;
+  presenceStatus?: string | null | undefined;
+}): PresenceStatus =>
+  profile.appearOffline === true
+    ? "invisible"
+    : profile.presenceStatus === "idle" || profile.presenceStatus === "dnd"
+      ? profile.presenceStatus
+      : "online";
 
 /** Whether the gateway keeps a user's presence to itself: their privacy hides it from everyone, or
  *  they appear offline. */

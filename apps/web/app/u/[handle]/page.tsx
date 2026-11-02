@@ -4,8 +4,10 @@ import { FeedList } from "@/components/FeedList";
 import { FriendAction } from "@/components/FriendAction";
 import { Gallery } from "@/components/Gallery";
 import { LevelBadge, LevelCard } from "@/components/LevelBadge";
+import { ProfileBio } from "@/components/ProfileEdit";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { ProfileShowcase } from "@/components/ProfileShowcase";
+import { ProviderLogo } from "@/components/ProviderLogo";
 import { providerName } from "@/lib/connections";
 import { flag } from "@/lib/countries";
 import type { FeedPage } from "@/lib/feed";
@@ -20,11 +22,12 @@ import {
   trophyText,
 } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
-import { fill, isMinimalCard, shownName } from "@/lib/people";
+import { fill, isMinimalCard, presenceDot, shownName } from "@/lib/people";
 import type { Person, Profile, PublicProfile } from "@/lib/people";
 import type { PostPage } from "@/lib/posts";
 import { type LevelBadgeData, type Showcase, accents, localArt } from "@/lib/psn";
 import { api, currentUser, publicJson } from "@/lib/session";
+import { withArt } from "@/lib/steamgrid";
 import type { MediaItem, StorageInfo } from "@/lib/storage";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -146,6 +149,8 @@ export default async function UserProfile({ params }: Params) {
     [texts.statTrophies, countsHidden ? "–" : number.format(earned)],
     [texts.statPoints, countsHidden ? "–" : number.format(points)],
   ];
+  // The row of games played: art from SteamGridDB for those the launcher sent no icon for.
+  const art = await withArt((games ?? []).slice(0, 8), (game) => localName(game.names, "en"));
   const cover = profile.cover ? localArt(profile.cover.url) : null;
   const accent = profile.accent ? accents[profile.accent] : null;
   return (
@@ -195,7 +200,7 @@ export default async function UserProfile({ params }: Params) {
           )}
         </p>
         {presence && presence.state !== "offline" && (
-          <p className={`status in d2 ${presence.state === "in_game" ? "playing" : presence.state}`}>
+          <p className={`status in d2 ${presence.state === "in_game" ? "playing" : presenceDot(presence)}`}>
             {presence.state === "in_game"
               ? fill(texts.inGame, {
                   title:
@@ -205,9 +210,11 @@ export default async function UserProfile({ params }: Params) {
                     ) ||
                     (presence.titleId ?? "?"),
                 })
-              : presence.state === "online"
-                ? texts.stateOnline
-                : texts.stateAway}
+              : presenceDot(presence) === "dnd"
+                ? texts.stateDnd
+                : presenceDot(presence) === "idle"
+                  ? texts.stateIdle
+                  : texts.stateOnline}
           </p>
         )}
         {presence?.share && profile.friendship === "friends" && (
@@ -230,14 +237,17 @@ export default async function UserProfile({ params }: Params) {
                   rel="noopener noreferrer nofollow"
                   className={`badge-link is-${c.provider}`}
                 >
-                  <span className="provider-mark">{providerName[c.provider]}</span>
+                  <span className={`badge-logo is-${c.provider}`}>
+                    <ProviderLogo provider={c.provider} />
+                  </span>
+                  <span className="visually-hidden">{providerName[c.provider]}: </span>
                   {c.name ?? c.username ?? providerName[c.provider]}
                 </a>
               </li>
             ))}
           </ul>
         )}
-        <p className={`bio in d3${profile.bio ? "" : " none"}`}>{profile.bio || texts.noBio}</p>
+        <ProfileBio bio={profile.bio} self={self} texts={ui(texts)} />
         {games && (
           <dl className="stats in d3">
             {stats.map(([label, value]) => (
@@ -249,15 +259,22 @@ export default async function UserProfile({ params }: Params) {
           </dl>
         )}
         {profile.trophyLevel && <LevelCard level={profile.trophyLevel} texts={texts} language={language} />}
-        {games && games.length > 0 && <GamesPlayed games={games} seconds={seconds} texts={texts} />}
+        {games && games.length > 0 && <GamesPlayed games={games} art={art} texts={texts} />}
         {self && profile.publicProfile === false && (
-          <p className="profile-not-public in d3">
-            <span>{texts.profileNotPublicSelf}</span>{" "}
-            <Link href="/settings#public-profile">{texts.profileMakePublic}</Link>
-          </p>
+          <Link
+            href="/settings#public-profile"
+            className="profile-scope"
+            title={`${texts.profileNotPublicSelf} ${texts.profileMakePublic}`}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="10.5" width="14" height="10" rx="2.5" />
+              <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+            </svg>
+            {texts.profileFriendsOnly}
+          </Link>
         )}
         <div className="in d4">
-          {user ? (
+          {self ? null : user ? (
             <FriendAction profile={profile} texts={ui(texts)} />
           ) : (
             <div className="visitor-actions">
@@ -271,26 +288,14 @@ export default async function UserProfile({ params }: Params) {
             </div>
           )}
         </div>
-        {user && (self || (trophies && profile.trophyLevel)) && (
+        {user && !self && trophies && profile.trophyLevel && (
           <div className="profile-links in d4">
-            {!self && (
-              <Link href={`/u/${profile.handle}/compare`} className="pill">
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">
-                  <path d="M7 4h10v4a5 5 0 0 1-10 0zM12 13v4M8 20h8M3 12h4M17 12h4" />
-                </svg>
-                {texts.compareTrophies}
-              </Link>
-            )}
-            {self && (
-              <Link href="/players" className="pill">
-                {texts.playersMet}
-              </Link>
-            )}
-            {self && (
-              <Link href="/settings#look" className="pill">
-                {texts.sectionLook}
-              </Link>
-            )}
+            <Link href={`/u/${profile.handle}/compare`} className="pill">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">
+                <path d="M7 4h10v4a5 5 0 0 1-10 0zM12 13v4M8 20h8M3 12h4M17 12h4" />
+              </svg>
+              {texts.compareTrophies}
+            </Link>
           </div>
         )}
       </article>
@@ -518,17 +523,14 @@ function SectionLinks({ sections, texts }: { sections: [string, string, boolean]
 
 /** The games played, most recent first: their art in a row, how many and for how long, and a
  *  link down to the whole library. */
-function GamesPlayed({ games, seconds, texts }: { games: LibraryGame[]; seconds: number; texts: Texts }) {
-  const shown = games.slice(0, 8);
+function GamesPlayed({ games, art, texts }: { games: LibraryGame[]; art: LibraryGame[]; texts: Texts }) {
+  const shown = art;
   return (
     <section className="games-played in d3" aria-labelledby="games-played">
       <div className="games-played-head">
         <h3 id="games-played" className="sub">
           {texts.gamesPlayed}
         </h3>
-        <span className="meta">
-          {fill(texts.gamesPlayedCount, { n: games.length, time: totalTime(seconds, texts) })}
-        </span>
       </div>
       <ul>
         {shown.map((game) => {
@@ -537,7 +539,11 @@ function GamesPlayed({ games, seconds, texts }: { games: LibraryGame[]; seconds:
             <li key={game.titleId}>
               <Link href={`/games/${game.titleId}`} className="played" title={name}>
                 <span className="game-icon" aria-hidden="true">
-                  {game.iconUrl ? <img src={game.iconUrl} alt="" loading="lazy" /> : name.slice(0, 1)}
+                  {game.iconUrl ? (
+                    <img src={game.iconUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />
+                  ) : (
+                    name.slice(0, 1)
+                  )}
                 </span>
                 <span className="visually-hidden">{name}</span>
               </Link>

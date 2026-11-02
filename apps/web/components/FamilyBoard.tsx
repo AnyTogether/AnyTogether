@@ -258,7 +258,7 @@ function Start() {
           />
           <button
             type="submit"
-            className="pill"
+            className="primary"
             disabled={joining || code.replace(/[\s-]/g, "").length !== 8}
           >
             {texts.familyJoin}

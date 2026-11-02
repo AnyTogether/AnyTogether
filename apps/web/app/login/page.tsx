@@ -1,6 +1,7 @@
 import { AgreeLine } from "@/components/LegalLinks";
 import { LoginForm } from "@/components/LoginForm";
 import { PasskeySignIn } from "@/components/Passkeys";
+import { ProviderLogo } from "@/components/ProviderLogo";
 import { strings } from "@/lib/i18n";
 import { samePath } from "@/lib/paths";
 import { api } from "@/lib/session";
@@ -27,11 +28,8 @@ export default async function Login({
         </p>
         <PasskeySignIn texts={texts} next={target} autofill />
         {providers?.discord ? (
-          <a
-            className="pill provider-sign-in"
-            href={`/auth/discord/start?next=${encodeURIComponent(target)}`}
-          >
-            <span className="provider-mark is-discord">Discord</span>
+          <a className="discord-sign-in" href={`/auth/discord/start?next=${encodeURIComponent(target)}`}>
+            <ProviderLogo provider="discord" />
             {texts.signInWithDiscord}
           </a>
         ) : null}

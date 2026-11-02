@@ -1,5 +1,6 @@
 "use client";
 
+import { ProviderLogo } from "@/components/ProviderLogo";
 import { type Connection, type ConnectionSetup, connectionProviders, providerName } from "@/lib/connections";
 import type { UiStrings } from "@/lib/i18n";
 import { fill } from "@/lib/people";
@@ -79,7 +80,9 @@ export function ConnectionList({
           const connection = linked.find((c) => c.provider === provider);
           return (
             <li key={provider} className="person connection">
-              <span className={`provider-mark is-${provider}`}>{providerName[provider]}</span>
+              <span className={`provider-tile is-${provider}`}>
+                <ProviderLogo provider={provider} />
+              </span>
               <span className="lines">
                 {connection ? (
                   <>
@@ -124,11 +127,12 @@ export function ConnectionList({
                 ) : (
                   <button
                     type="button"
-                    className="pill accent"
+                    className="pill accent connect-button"
                     disabled={busy !== null}
+                    aria-label={fill(texts.linkAccount, { provider: providerName[provider] })}
                     onClick={() => link(provider)}
                   >
-                    {fill(texts.linkAccount, { provider: providerName[provider] })}
+                    {texts.linkShort}
                   </button>
                 )}
               </div>

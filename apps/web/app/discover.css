@@ -693,17 +693,25 @@ a.plain:hover {
 .discord-open {
   display: inline-flex;
 }
+/* Laid out like the card above it: the question, then the field and its button. */
 .code-entry {
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  gap: 14px;
+}
+.code-entry-row {
+  display: flex;
   gap: 10px;
 }
 .code-entry input {
-  flex: 1 1 140px;
-  max-width: 200px;
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: var(--font-mono), monospace;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.code-entry .primary {
+  flex: none;
+  min-width: 112px;
 }
 
 /* The page a join code opens. */

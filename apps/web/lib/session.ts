@@ -10,8 +10,14 @@ export const apiUrl = () => process.env.API_URL ?? "http://127.0.0.1:8080";
 
 export interface Me {
   account: { id: string; email: string | null; role?: string };
-  /** appearOffline: older API answers lack it. */
-  profile: { handle: string; displayName: string; avatar: string | null; appearOffline?: boolean };
+  /** appearOffline and presenceStatus: older API answers lack them. */
+  profile: {
+    handle: string;
+    displayName: string;
+    avatar: string | null;
+    appearOffline?: boolean;
+    presenceStatus?: string;
+  };
   /** A mute in force (older API answers have none). */
   restrictions?: Restriction[];
   appeal?: Appeal | null;

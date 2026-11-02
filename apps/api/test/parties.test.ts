@@ -177,7 +177,11 @@ describe("parties", () => {
     expect(await h.valkey.ttl(`presence:${a.id}`)).toBeGreaterThan(50);
     await h.call("POST", `/api/v1/parties/${body.id}/leave`, {}, a.token);
     await settle();
-    expect(JSON.parse((await h.valkey.get(`presence:${a.id}`)) ?? "{}")).toEqual({ state: "online" });
+    // The party is gone; the status the merged presence carries (docs/presence.md) stays.
+    expect(JSON.parse((await h.valkey.get(`presence:${a.id}`)) ?? "{}")).toEqual({
+      state: "online",
+      status: "online",
+    });
     bHears.stop();
   });
 });

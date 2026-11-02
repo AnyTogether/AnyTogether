@@ -4,7 +4,10 @@ import type { Strings } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type Texts = Pick<Strings, "email" | "sendCode" | "codeSent" | "code" | "verify" | "otherEmail" | "failed">;
+type Texts = Pick<
+  Strings,
+  "email" | "emailPlaceholder" | "sendCode" | "codeSent" | "code" | "verify" | "otherEmail" | "failed"
+>;
 
 /** Email, then the 6-digit code from the mail. */
 export function LoginForm({ texts, next }: { texts: Texts; next: string }) {
@@ -54,7 +57,7 @@ export function LoginForm({ texts, next }: { texts: Texts; next: string }) {
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@example.com"
+          placeholder={texts.emailPlaceholder}
         />
         <button type="submit" className="primary" disabled={busy}>
           {texts.sendCode}

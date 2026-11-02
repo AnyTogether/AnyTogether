@@ -26,14 +26,11 @@ export function AgreeLine({ texts }: { texts: Strings }) {
   );
 }
 
-/** In Settings, under "Your data": where the privacy notice and the terms are. */
-export function LegalLinks({ texts }: { texts: Strings }) {
+/** In Settings, under "Your data": the question, opening its answer in the help page's FAQ. */
+export function DataQuestion({ texts }: { texts: Strings }) {
   return (
-    <p className="legal-links">
-      {withLinks(texts.legalLinks, {
-        terms: <Link href="/terms">{texts.termsOfUse}</Link>,
-        privacy: <Link href="/privacy">{texts.privacyLink}</Link>,
-      })}
-    </p>
+    <Link className="data-question" href="/help#data">
+      {texts.dataQuestion}
+    </Link>
   );
 }

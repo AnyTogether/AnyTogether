@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { presenceEn, presenceTr } from "../lib/i18n-presence";
-import { appearOfflineAfter } from "../lib/presenceMode";
+import { appearOfflineAfter, statusAfter, statusFrom } from "../lib/presenceMode";
 
 const relayBody = vi.fn(async () => Response.json({ appearOffline: true }));
 vi.mock("@/lib/session", () => ({ relayBody }));
@@ -25,17 +25,36 @@ describe("appear offline on the website", () => {
     expect(appearOfflineAfter(false, { type: "presence.mode", data: null })).toBe(false);
   });
 
+  it("follows the status picked on another device, from an old API too", () => {
+    const mode = (data: unknown) => ({ type: "presence.mode", data });
+    expect(statusAfter("online", mode({ appearOffline: false, status: "dnd" }))).toBe("dnd");
+    expect(statusAfter("dnd", mode({ appearOffline: true }))).toBe("invisible");
+    expect(statusAfter("invisible", mode({ appearOffline: false }))).toBe("online");
+    expect(statusAfter("idle", mode({ appearOffline: false }))).toBe("idle");
+    expect(statusAfter("idle", { type: "presence.updated", data: { state: "online" } })).toBe("idle");
+    expect(statusFrom({ presenceStatus: "idle", appearOffline: false })).toBe("idle");
+    expect(statusFrom({ appearOffline: true })).toBe("invisible");
+    expect(statusFrom({})).toBe("online");
+  });
+
   it("has every text in English and Turkish", () => {
     expect(Object.keys(presenceTr).sort()).toEqual(Object.keys(presenceEn).sort());
     for (const [key, text] of Object.entries(presenceEn)) {
       expect(text, key).not.toBe("");
       expect(presenceTr[key as keyof typeof presenceTr], key).not.toBe(text);
     }
-    // One word each, as the switch's two sides.
-    expect([presenceEn.presenceOnline, presenceEn.presenceAppearOffline]).toEqual(["Online", "Offline"]);
-    expect([presenceTr.presenceOnline, presenceTr.presenceAppearOffline]).toEqual([
-      "Çevrimiçi",
-      "Çevrimdışı",
-    ]);
+    // Discord's four, which people know.
+    expect([
+      presenceEn.presenceOnline,
+      presenceEn.presenceIdle,
+      presenceEn.presenceDnd,
+      presenceEn.presenceAppearOffline,
+    ]).toEqual(["Online", "Idle", "Do Not Disturb", "Invisible"]);
+    expect([
+      presenceTr.presenceOnline,
+      presenceTr.presenceIdle,
+      presenceTr.presenceDnd,
+      presenceTr.presenceAppearOffline,
+    ]).toEqual(["Çevrimiçi", "Boşta", "Rahatsız etmeyin", "Görünmez"]);
   });
 });

@@ -409,21 +409,32 @@
   color: var(--mute);
   text-wrap: balance;
 }
-.agree-line a,
-.legal-links a {
+.agree-line a {
   color: var(--ink);
   text-decoration: underline;
   text-decoration-color: rgba(255, 255, 255, 0.25);
   text-underline-offset: 3px;
 }
-.agree-line a:hover,
-.legal-links a:hover {
+.agree-line a:hover {
   text-decoration-color: currentColor;
 }
-.legal-links {
-  margin-top: 14px;
-  font-size: 13px;
-  color: var(--mute);
+/* Settings, beside Download my data: one question, opening its answer in the FAQ */
+.data-question {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.25);
+  text-underline-offset: 4px;
+  transition: text-decoration-color 0.2s ease;
+}
+.data-question:hover {
+  text-decoration-color: currentColor;
+}
+.data-question:focus-visible {
+  outline: 2px solid rgba(79, 124, 255, 0.7);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 /* The footer's privacy and terms links, beside the copyright */

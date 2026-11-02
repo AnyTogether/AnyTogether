@@ -157,6 +157,14 @@ const en = {
           "No. Everything is free and open source, nothing is sold and nothing tracks you. Your AnyTogether data is yours to export or delete from Settings.",
         ],
       },
+      {
+        id: "data",
+        q: "How is my data handled?",
+        a: [
+          "AnyTogether keeps what your account needs to work. That is your email, your profile, the games and trophies your launcher syncs, your friends and your messages. There are no ads or trackers, and nothing is sold.",
+          "Settings lets you download all of it as one JSON file, or delete your account. The [privacy notice](/privacy) has the details. The [terms of use](/terms) say what you agree to.",
+        ],
+      },
     ] as Faq[],
   },
   trouble: {
@@ -346,6 +354,14 @@ const tr: HelpStrings = {
         q: "Ücretli mi?",
         a: [
           "Hayır. Her şey ücretsiz ve açık kaynak, hiçbir şey satılmaz ve hiçbir şey seni takip etmez. AnyTogether verilerin senin: Ayarlar'dan dışa aktar ya da sil.",
+        ],
+      },
+      {
+        id: "data",
+        q: "Verilerim nasıl işleniyor?",
+        a: [
+          "AnyTogether yalnızca hesabının çalışması için gerekeni tutar. Bunlar e-postan, profilin, launcher'ın eşitlediği oyunlar ve kupalar, arkadaşların ve mesajların. Reklam ya da izleyici yok ve hiçbir şey satılmaz.",
+          "Ayarlar'dan hepsini tek bir JSON dosyası olarak indirebilir ya da hesabını silebilirsin. Ayrıntılar [gizlilik bildiriminde](/privacy). Neyi kabul ettiğin [kullanım koşullarında](/terms) yazıyor.",
         ],
       },
     ],

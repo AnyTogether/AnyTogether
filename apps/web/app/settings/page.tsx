@@ -2,7 +2,7 @@ import { AvatarEditor } from "@/components/AvatarEditor";
 import { ConnectionList } from "@/components/Connections";
 import { DiscoverySettings } from "@/components/Discover";
 import { InstallApp } from "@/components/InstallApp";
-import { LegalLinks } from "@/components/LegalLinks";
+import { DataQuestion } from "@/components/LegalLinks";
 import { LookSettings } from "@/components/LookSettings";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PasskeyList, type PasskeyRow } from "@/components/Passkeys";
@@ -27,6 +27,7 @@ import type { LibraryGame } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
 import type { NoticeSetup } from "@/lib/notify";
 import { type Own, type SignedIn, fill, privacySectionsWithGallery } from "@/lib/people";
+import { statusFrom } from "@/lib/presenceMode";
 import { apiJson, currentUser } from "@/lib/session";
 import type { StorageOverview } from "@/lib/storage";
 import { titled } from "@/lib/titles";
@@ -139,6 +140,8 @@ export default async function Settings({
 
           <article className="card" id="private">
             <h3 className="sub">{texts.sectionPrivate}</h3>
+            <PublicProfileForm publicProfile={me.profile.publicProfile === true} texts={t} />
+            <hr />
             <PrivateIdentity own={me} texts={t} />
           </article>
 
@@ -157,10 +160,9 @@ export default async function Settings({
 
           <article className="card" id="privacy">
             <h3 className="sub">{texts.sectionPrivacy}</h3>
-            <PresenceModeForm appearOffline={me.profile.appearOffline === true} texts={t} />
+            <PresenceModeForm status={statusFrom(me.profile)} texts={t} />
             <ReadReceiptsForm readReceipts={me.profile.readReceipts !== false} texts={t} />
             <hr />
-            <PublicProfileForm publicProfile={me.profile.publicProfile === true} texts={t} />
             <p className="hint section-lead">{texts.privacyLead}</p>
             <PrivacyForm
               privacy={me.profile.privacy}
@@ -224,8 +226,8 @@ export default async function Settings({
           <article className="card" id="data">
             <h3 className="sub">{texts.sectionData}</h3>
             <p className="hint section-lead">{texts.dataLead}</p>
-            <div className="save-row">
-              <span />
+            <div className="save-row data-row">
+              <DataQuestion texts={texts} />
               <a className="pill" href="/me/export" download>
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">
                   <path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14" />
@@ -233,7 +235,6 @@ export default async function Settings({
                 {texts.download}
               </a>
             </div>
-            <LegalLinks texts={texts} />
           </article>
 
           <article className="card danger-zone" id="delete">

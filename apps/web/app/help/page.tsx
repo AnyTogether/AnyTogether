@@ -1,4 +1,5 @@
 import { PlatformIcon } from "@/components/site/Download";
+import { OpenFromHash } from "@/components/site/OpenFromHash";
 import { PageHead } from "@/components/site/PageHead";
 import { Reveal } from "@/components/site/Reveal";
 import { Rich } from "@/components/site/Rich";
@@ -49,6 +50,7 @@ export default async function Help() {
   return (
     <div className={`site pg hp-page ${wide.variable}`}>
       <Reveal />
+      <OpenFromHash />
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: JSON of the page's own fixed texts, < escaped */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqData }} />
       <PageHead kicker={h.kicker} title={h.title} lead={h.lead}>

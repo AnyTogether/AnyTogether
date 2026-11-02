@@ -34,7 +34,7 @@ async function Feed({ texts }: { texts: Strings }) {
     <section className="page home">
       <h2 className="in d1">{texts.home}</h2>
       <p className="lead in d2">{texts.homeLead}</p>
-      <nav className="switch in d2" aria-label={texts.home}>
+      <nav className="switch" aria-label={texts.home}>
         <Link href="/" aria-current="page">
           {texts.home}
         </Link>

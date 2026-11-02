@@ -17,6 +17,7 @@ import {
   presenceHiddenKey,
   presenceKey,
   privacyOf,
+  statusOf,
   trophyLevelOf,
 } from "@anytogether/shared";
 import { and, eq } from "drizzle-orm";
@@ -29,6 +30,7 @@ import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { assertNotMuted, restrictionsOf } from "./moderation.js";
 import { type ProfileRow, handleProblem, skeletonClash } from "./people.js";
+import { keepPickedStatus } from "./presence.js";
 import { identityOf } from "./privateIdentity.js";
 import { rateLimiter, settingLimiter } from "./ratelimit.js";
 import { lookOf } from "./showcase.js";
@@ -84,6 +86,7 @@ export function profileRoutes(deps: Deps) {
         showcase: profile.showcase,
         rememberMet: profile.rememberMet,
         appearOffline: profile.appearOffline,
+        presenceStatus: statusOf(profile),
         readReceipts: profile.readReceipts,
       },
       // What the account may not do now (a mute; a banned account has no session), and its
@@ -195,24 +198,30 @@ export function profileRoutes(deps: Deps) {
     return c.json({ publicProfile });
   });
 
-  /** Appear offline: the account stays signed in and keeps working, but everyone else sees it
-   *  offline. Its other devices hear the change, and so does the gateway. */
+  /** The status (docs/presence.md): Online, Idle, Do Not Disturb, or Invisible, where the account
+   *  stays signed in and keeps working but everyone else sees it offline. A client that knows only
+   *  the old switch sends appearOffline: true is Invisible, false is Online. Its other devices hear
+   *  the change, and so does the gateway. */
   app.patch("/me/presence", async (c) => {
     const userId = c.get("userId");
     await setting("presence", userId);
-    const { appearOffline } = await body(c, PresenceModeUpdate);
+    const input = await body(c, PresenceModeUpdate);
+    const status = input.status ?? (input.appearOffline ? "invisible" : "online");
+    const appearOffline = status === "invisible";
+    const presenceStatus = status === "idle" || status === "dnd" ? status : null;
     const profile = await load(userId);
     const privacy = privacyOf(profile.privacy);
-    if (appearOffline !== profile.appearOffline)
-      await db.update(profiles).set({ appearOffline }).where(eq(profiles.accountId, userId));
+    if (appearOffline !== profile.appearOffline || presenceStatus !== (profile.presenceStatus ?? null))
+      await db.update(profiles).set({ appearOffline, presenceStatus }).where(eq(profiles.accountId, userId));
+    await keepPickedStatus(deps.valkey, userId, status);
     await presenceShownChanged(
       deps,
       userId,
       presenceHidden(privacy, profile.appearOffline),
       presenceHidden(privacy, appearOffline),
     );
-    await publish(deps.valkey, userId, { type: "presence.mode", data: { appearOffline } });
-    return c.json({ appearOffline });
+    await publish(deps.valkey, userId, { type: "presence.mode", data: { appearOffline, status } });
+    return c.json({ appearOffline, status });
   });
 
   /** The language of the account's mail: the website sends it when its language is switched. */

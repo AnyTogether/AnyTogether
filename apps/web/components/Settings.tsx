@@ -12,7 +12,7 @@ import {
   fill,
   privacySections,
 } from "@/lib/people";
-import { appearOfflineAfter } from "@/lib/presenceMode";
+import { type PresenceStatus, presenceStatuses, statusAfter, statusFrom } from "@/lib/presenceMode";
 import { rateLimitText } from "@/lib/rateLimit";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
@@ -238,58 +238,70 @@ export function HandleForm({ own, texts }: { own: Own; texts: UiStrings }) {
   );
 }
 
-/** Online or appear offline: a two-way switch, saved as soon as it moves, that follows a change
- *  made on another device. */
-export function PresenceModeForm({
-  appearOffline: initial,
-  texts,
-}: { appearOffline: boolean; texts: UiStrings }) {
-  const router = useRouter();
-  const [appearOffline, setAppearOffline] = useState(initial);
-  const [status, setStatus] = useState<Status>({ kind: "idle" });
-  useSaved(status, setStatus);
-  useLiveEvents((event) => setAppearOffline((current) => appearOfflineAfter(current, event)));
+const statusChoices = presenceStatuses;
+const statusName = (status: PresenceStatus, texts: UiStrings) =>
+  ({
+    online: texts.presenceOnline,
+    idle: texts.presenceIdle,
+    dnd: texts.presenceDnd,
+    invisible: texts.presenceAppearOffline,
+  })[status];
 
-  async function change(value: boolean) {
-    if (value === appearOffline) return;
-    setAppearOffline(value);
-    setStatus({ kind: "busy" });
-    const saved = await send("/me/presence", json("PATCH", { appearOffline: value }));
+/** The status, as on Discord: Online, Idle, Do Not Disturb or Invisible, each with the mark friends
+ *  see. Saved as soon as one is picked, and it follows a change made on another device. */
+export function PresenceModeForm({ status: initial, texts }: { status: PresenceStatus; texts: UiStrings }) {
+  const router = useRouter();
+  const [status, setStatusValue] = useState(initial);
+  const [saving, setSaving] = useState<Status>({ kind: "idle" });
+  useSaved(saving, setSaving);
+  useLiveEvents((event) => setStatusValue((current) => statusAfter(current, event)));
+
+  async function change(value: PresenceStatus) {
+    if (value === status) return;
+    const before = status;
+    setStatusValue(value);
+    setSaving({ kind: "busy" });
+    // appearOffline too, for an API from before the four statuses.
+    const saved = await send(
+      "/me/presence",
+      json("PATCH", { status: value, appearOffline: value === "invisible" }),
+    );
     if (!saved.ok) {
-      setAppearOffline(!value);
-      return setStatus({ kind: "error", text: errorText(saved.body.code, texts, saved.body.retryAfter) });
+      setStatusValue(before);
+      return setSaving({ kind: "error", text: errorText(saved.body.code, texts, saved.body.retryAfter) });
     }
-    setAppearOffline(saved.body.appearOffline === true);
-    setStatus({ kind: "saved" });
+    setStatusValue(
+      statusFrom({ presenceStatus: saved.body.status, appearOffline: saved.body.appearOffline }),
+    );
+    setSaving({ kind: "saved" });
     // The mark on the avatar in the header follows.
     router.refresh();
   }
 
   return (
     <div className="privacy presence-mode">
-      <fieldset className="privacy-row">
+      <fieldset className="privacy-row status-row">
         <legend>{texts.presenceMode}</legend>
-        <div className="segmented two" style={{ "--i": appearOffline ? 1 : 0 } as CSSProperties}>
-          <span className="thumb" aria-hidden="true" />
-          {([false, true] as const).map((choice) => (
-            <label key={String(choice)}>
+        <div className="status-choices">
+          {statusChoices.map((choice) => (
+            <label key={choice} className={choice === status ? "on" : undefined}>
               <input
                 type="radio"
-                name="presence-mode"
-                value={choice ? "offline" : "online"}
-                checked={appearOffline === choice}
+                name="presence-status"
+                value={choice}
+                checked={status === choice}
                 onChange={() => change(choice)}
               />
-              <span>
-                <span className={choice ? "status-dot off" : "status-dot on"} aria-hidden="true" />
-                {choice ? texts.presenceAppearOffline : texts.presenceOnline}
-              </span>
+              <span className={`status-glyph is-${choice}`} aria-hidden="true" />
+              <span>{statusName(choice, texts)}</span>
             </label>
           ))}
         </div>
-        <p className="meta hint-line">{texts.presenceModeHint}</p>
+        <p className="meta hint-line" aria-live="polite">
+          {texts[`presenceHint_${status}`]}
+        </p>
       </fieldset>
-      <StatusLine status={status} texts={texts} quiet />
+      <StatusLine status={saving} texts={texts} quiet />
     </div>
   );
 }

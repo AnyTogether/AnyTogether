@@ -5,7 +5,14 @@ import { wide } from "@/components/site/fonts";
 import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
 import { currentUser, publicJson } from "@/lib/session";
-import { type ThemeColors, type ThemeDetail, fileSize, isThemeId, themeStyle } from "@/lib/themes";
+import {
+  type ThemeColors,
+  type ThemeDetail,
+  fileSize,
+  isThemeId,
+  themeAbout,
+  themeStyle,
+} from "@/lib/themes";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -18,12 +25,13 @@ async function load(id: string) {
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const theme = await load((await params).id);
-  if (!theme) return { title: "Themes · AnyTogether" };
+  const [theme, texts] = await Promise.all([load((await params).id), strings()]);
+  if (!theme) return { title: `${texts.themes} · AnyTogether` };
   return {
-    title: `${theme.name} · Themes · AnyTogether`,
-    description:
-      theme.description ?? `A theme for the AnyPS5 launcher by ${theme.maker?.displayName ?? "a player"}.`,
+    title: `${theme.name} · ${texts.themes} · AnyTogether`,
+    description: theme.description
+      ? themeAbout(theme.description, texts.importedAbout)
+      : fill(texts.metaDescription, { name: theme.maker?.displayName ?? texts.metaSomeone }),
     openGraph:
       theme.status === "published"
         ? { images: [{ url: theme.preview, width: 1280, height: 720 }] }
@@ -117,7 +125,7 @@ export default async function Theme({ params }: Params) {
       {theme.description && (
         <article className="card in d3">
           <h3 className="sub">{texts.aboutTheme}</h3>
-          <p className="theme-about">{theme.description}</p>
+          <p className="theme-about">{themeAbout(theme.description, texts.importedAbout)}</p>
         </article>
       )}
 

@@ -22,6 +22,8 @@ export interface CompatSummary {
   reports: number;
   /** What most said about online play; null (or missing, from an older API) when nobody tried. */
   online?: CompatOnline | null;
+  /** Set when the verdict is the upstream AnyPS5 project's thread for the game. */
+  upstream?: string;
 }
 
 export interface CompatGame {
@@ -109,3 +111,126 @@ export function compatQuery(view: CompatView) {
 /** Online play works on one of the platforms shown. */
 export const onlineWorks = (game: CompatGame, platforms: CompatPlatform[]) =>
   platforms.some((platform) => game.platforms[platform]?.online === "works");
+
+/** Windows and Linux from the upstream AnyPS5 project's game bring-up threads (GET
+ *  /compat/upstream): one thread per title ID, its "Furthest point" as the status. */
+export interface UpstreamGame {
+  titleId: string;
+  name: string;
+  url: string;
+  status: Exclude<CompatStatus, "playable"> | null;
+  platforms: ("windows" | "linux")[];
+  replies: number;
+  updatedAt: string;
+}
+export interface UpstreamList {
+  available: boolean;
+  source: string;
+  fetchedAt: string | null;
+  games: UpstreamGame[];
+}
+export const upstreamPlatforms: CompatPlatform[] = ["windows", "linux"];
+export const upstreamBringUp = "https://github.com/boykopovar/AnyPS5/discussions/categories/game-bring-up";
+
+/** Where a Windows or Linux report goes: the game's thread when there is one, else the category,
+ *  searched for its title ID (the form there asks to look first). */
+export function upstreamReportUrl(titleId: string | null, thread?: string | null) {
+  if (thread) return thread;
+  return isTitleId(titleId ?? "") ? `${upstreamBringUp}?discussions_q=${titleId}` : upstreamBringUp;
+}
+
+/** The upstream threads by title ID, for the platforms each one covers. */
+export function upstreamByTitle(list: UpstreamList | null) {
+  return new Map((list?.available ? list.games : []).map((game) => [game.titleId, game]));
+}
+
+/** A game's row with Windows and Linux taken from upstream where its thread covers them; our own
+ *  reports stay where upstream has nothing. */
+export function withUpstream(game: CompatGame, upstream: UpstreamGame | undefined): CompatGame {
+  if (!upstream?.status) return game;
+  const platforms = { ...game.platforms };
+  for (const p of upstream.platforms)
+    platforms[p] = {
+      status: upstream.status,
+      version: "AnyPS5",
+      testedAt: upstream.updatedAt,
+      reports: upstream.replies + 1,
+      online: null,
+      upstream: upstream.url,
+    };
+  return { ...game, platforms };
+}
+
+/** The upstream list as /compatibility shows it for Windows or Linux: that platform's threads,
+ *  searched, with a status filter, in the page's order. */
+export function upstreamView(
+  list: UpstreamList | null,
+  view: Pick<CompatView, "platform" | "status" | "sort" | "q">,
+): UpstreamGame[] {
+  const q = view.q.trim().toLowerCase();
+  const rank: Record<string, number> = { ingame: 0, menus: 1, boots: 2, nothing: 3 };
+  return (list?.games ?? [])
+    .filter((game) => !view.platform || game.platforms.includes(view.platform as "windows" | "linux"))
+    .filter((game) => !view.status || game.status === view.status)
+    .filter((game) => !q || game.name.toLowerCase().includes(q) || game.titleId.toLowerCase().includes(q))
+    .sort((a, b) =>
+      view.sort === "name"
+        ? a.name.localeCompare(b.name)
+        : view.sort === "status"
+          ? (rank[a.status ?? ""] ?? 4) - (rank[b.status ?? ""] ?? 4) || a.name.localeCompare(b.name)
+          : b.updatedAt.localeCompare(a.updatedAt),
+    );
+}
+
+/** A row of the list: our game (its page here), or one only the upstream project has (its thread
+ *  there). */
+export type CompatRow = CompatGame & { href: string; external: boolean };
+
+/** The "All" list with the upstream project's games added: our games with Windows and Linux from
+ *  upstream where it has them, then every game only upstream has, filtered and in the view's
+ *  order like the rest. */
+export function mergedRows(
+  ours: CompatGame[],
+  list: UpstreamList | null,
+  view: Pick<CompatView, "status" | "sort" | "q">,
+): CompatRow[] {
+  const threads = upstreamByTitle(list);
+  const known = new Set(ours.map((game) => game.titleId));
+  const rows: CompatRow[] = ours.map((game) => ({
+    ...withUpstream(game, threads.get(game.titleId)),
+    href: `/compatibility/${game.titleId}`,
+    external: false,
+  }));
+  for (const thread of upstreamView(list, { platform: null, status: null, sort: view.sort, q: view.q })) {
+    if (known.has(thread.titleId) || !thread.status) continue;
+    rows.push({
+      ...withUpstream(
+        {
+          titleId: thread.titleId,
+          name: thread.name,
+          names: { en: thread.name },
+          iconUrl: null,
+          platforms: {},
+        },
+        thread,
+      ),
+      href: thread.url,
+      external: true,
+    });
+  }
+  const order = ["nothing", "boots", "menus", "ingame", "playable"];
+  const best = (row: CompatRow) =>
+    Math.max(-1, ...Object.values(row.platforms).map((s) => order.indexOf(s?.status ?? "")));
+  const latest = (row: CompatRow) =>
+    Object.values(row.platforms).reduce((max, s) => (s && s.testedAt > max ? s.testedAt : max), "");
+  const name = (row: CompatRow) => (row.names.en ?? row.name ?? row.titleId).toLowerCase();
+  return rows
+    .filter((row) => !view.status || Object.values(row.platforms).some((s) => s?.status === view.status))
+    .sort((a, b) =>
+      view.sort === "name"
+        ? name(a).localeCompare(name(b))
+        : view.sort === "status"
+          ? best(b) - best(a) || latest(b).localeCompare(latest(a))
+          : latest(b).localeCompare(latest(a)),
+    );
+}

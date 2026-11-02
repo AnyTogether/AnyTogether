@@ -249,7 +249,8 @@ export const familyEn = {
   nk_family_alert: "Family alerts (limits reached, people joining)",
   nk_family_summary: "Weekly family summary",
   familyMail: "Weekly family summary by mail",
-  familyMailHint: "Each child's play time, games and new friends, once a week. No messages.",
+  familyMailHint:
+    "Once a week we mail what each child played, for how long, and who they added. Messages stay private.",
 };
 
 export const familyTr: typeof familyEn = {
@@ -494,5 +495,6 @@ export const familyTr: typeof familyEn = {
   nk_family_alert: "Aile uyarıları (dolan sınırlar, katılanlar)",
   nk_family_summary: "Haftalık aile özeti",
   familyMail: "Haftalık aile özeti e-postayla",
-  familyMailHint: "Her çocuğun oyun süresi, oyunları ve yeni arkadaşları, haftada bir. Mesajlar yok.",
+  familyMailHint:
+    "Haftada bir, her çocuğun ne oynadığını, ne kadar oynadığını ve kimi eklediğini yollarız. Mesajlar gizli kalır.",
 };
