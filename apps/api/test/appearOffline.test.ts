@@ -173,7 +173,7 @@ describe("the four statuses", () => {
     const me = async () => (await h.call("GET", `${v1}/me`, undefined, utku.token)).body.profile;
     expect((await me()).presenceStatus).toBe("online");
     expect((await pick(utku, "dnd")).body).toEqual({ appearOffline: false, status: "dnd" });
-    expect(await me()).toMatchObject({ presenceStatus: "dnd", appearOffline: false });
+    expect(await me()).toMatchObject({ presenceStatus: "dnd", status: "dnd", appearOffline: false });
     expect(await h.valkey.hget(`presence-extra:${utku.id}`, "status")).toBe('"dnd"');
     expect((await pick(utku, "idle")).body).toEqual({ appearOffline: false, status: "idle" });
     expect((await pick(utku, "invisible")).body).toEqual({ appearOffline: true, status: "invisible" });
