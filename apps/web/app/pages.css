@@ -439,6 +439,10 @@
 .cl-version:hover {
   color: var(--accent);
 }
+/* The project filter hides the other project's releases (the grid above would override hidden). */
+.cl-entry[hidden] {
+  display: none;
+}
 .cl-entry.folded {
   padding: clamp(24px, 3vw, 32px) 0;
 }
@@ -491,6 +495,21 @@
 }
 .cl-more summary:hover {
   border-color: rgba(255, 255, 255, 0.28);
+}
+.cl-more summary:focus-visible {
+  outline: 2px solid #8fb0ff;
+  outline-offset: 2px;
+}
+/* The newest releases read open, with no fold to click. */
+.cl-entry:not(.folded) .cl-more {
+  margin-top: 0;
+}
+.cl-entry:not(.folded) .cl-more > summary {
+  display: none;
+}
+.cl-elsewhere {
+  margin-top: 18px;
+  font-size: 14px;
 }
 .cl-files {
   margin-top: 26px;
@@ -1111,8 +1130,17 @@
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 14px;
 }
+/* Each card spans four rows of the grid (name, steps, needs, files) and shares them with its
+ *  neighbours, so the needs lines and the buttons sit at one height across a row. */
+.hp-plat {
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  row-gap: 18px;
+}
 .hp-plat .install-steps {
   gap: 12px;
+  align-content: start;
 }
 .hp-plat .install-steps li {
   grid-template-columns: 24px 1fr;
@@ -1126,7 +1154,6 @@
   font-size: 11px;
 }
 .hp-plat .plat-req {
-  margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }

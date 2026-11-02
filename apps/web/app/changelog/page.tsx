@@ -1,15 +1,15 @@
+import { ChangelogFilter, ReleaseNotes } from "@/components/site/ChangelogParts";
 import { DownloadIcon } from "@/components/site/Download";
-import { Notes } from "@/components/site/Notes";
 import { PageHead, day } from "@/components/site/PageHead";
 import { Reveal } from "@/components/site/Reveal";
 import { wide } from "@/components/site/fonts";
-import { changelogEntries, pickProject, projects } from "@/lib/changelog";
+import { eagerAnchors, openAnchors, pickProject, projects } from "@/lib/changelog";
+import { loadChangelog } from "@/lib/changelog-server";
 import { repos } from "@/lib/downloads";
 import { language } from "@/lib/i18n";
 import { changelogStrings } from "@/lib/i18n-changelog";
 import { fill } from "@/lib/people";
 import { pageMetadata } from "@/lib/product-page";
-import { loadHistory } from "@/lib/site";
 import { fileSize } from "@/lib/themes";
 import Link from "next/link";
 
@@ -18,11 +18,9 @@ export async function generateMetadata() {
   return pageMetadata(c.meta.title, c.meta.description, "/changelog");
 }
 
-/** The newest releases open; older ones fold away under their version. */
-const openFirst = 3;
-
 /** Both projects' release notes from GitHub, newest first, rendered from Markdown to sanitised
- *  HTML, each with its files. */
+ *  HTML, each with its files. The list is kept in memory (lib/changelog-server.ts), so a visit
+ *  waits for nothing, and the project chips filter it in the browser. */
 export default async function Changelog({
   searchParams,
 }: {
@@ -31,10 +29,16 @@ export default async function Changelog({
   const lang = await language();
   const c = changelogStrings(lang);
   const only = pickProject((await searchParams).project);
-  const history = await loadHistory();
-  const entries = changelogEntries(history, only);
-  const repoOf = { macos: repos.mac, desktop: repos.desktop } as const;
+  const data = await loadChangelog();
+  const entries = data?.entries ?? [];
+  const eager = eagerAnchors(entries);
+  const open = openAnchors(entries, only);
   const [before, after] = c.current.split("{link}");
+  const counts = {
+    all: fill(c.count, { n: entries.length }),
+    macos: fill(c.count, { n: entries.filter((e) => e.project === "macos").length }),
+    desktop: fill(c.count, { n: entries.filter((e) => e.project === "desktop").length }),
+  };
 
   return (
     <div className={`site pg cl-page ${wide.variable}`}>
@@ -43,47 +47,37 @@ export default async function Changelog({
         {c.englishOnly && <p className="fine-note">{c.englishOnly}</p>}
       </PageHead>
 
-      <nav className="cl-filter" aria-label={c.filter}>
-        <span className="pg-label">{c.filter}</span>
-        <ul>
-          <li>
-            <Link href="/changelog" className="cl-chip" aria-current={only ? undefined : "page"}>
-              {c.all}
-            </Link>
-          </li>
-          {projects.map((project) => (
-            <li key={project}>
-              <Link
-                href={`/changelog?project=${project}`}
-                className="cl-chip"
-                aria-current={only === project ? "page" : undefined}
-              >
-                {c.projects[project][0]}
-                <span className="meta">{c.projects[project][1]}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-        {entries.length > 0 && <span className="meta cl-count">{fill(c.count, { n: entries.length })}</span>}
-      </nav>
+      <ChangelogFilter
+        initial={only}
+        label={c.filter}
+        all={c.all}
+        projects={projects.map((id) => ({
+          id,
+          name: c.projects[id][0] ?? id,
+          detail: c.projects[id][1] ?? "",
+        }))}
+        counts={counts}
+      />
 
-      {!history?.macos && !history?.desktop && (
+      {!data && (
         <p className="pg-notice">
-          {c.down} <a href={`https://github.com/${repos.mac}/releases`}>AnyPS5-ARM</a> ·{" "}
-          <a href={`https://github.com/${repos.desktop}/releases`}>AnyPS5-Desktop</a>
+          {c.down} <a href={`https://github.com/${repos.mac}/releases`}>{c.projects.macos[0]}</a> &amp;{" "}
+          <a href={`https://github.com/${repos.desktop}/releases`}>{c.projects.desktop[0]}</a>
         </p>
       )}
-      {history && entries.length === 0 && <p className="pg-muted cl-none">{c.none}</p>}
+      {data && entries.length === 0 && <p className="pg-muted cl-none">{c.none}</p>}
 
       <ol className="cl-list">
         {entries.map((entry, index) => {
           const { release, project } = entry;
-          const notes = release.notes?.trim() ?? "";
           return (
             <li
               key={entry.anchor}
               id={entry.anchor}
-              className={`cl-entry${index < openFirst ? "" : " folded"}`}
+              className={`cl-entry${open.has(entry.anchor) ? "" : " folded"}`}
+              hidden={!!only && project !== only}
+              data-cl-entry
+              data-project={project}
               data-reveal={index > 1 ? "" : undefined}
             >
               <div className="cl-side">
@@ -105,15 +99,16 @@ export default async function Changelog({
                     {release.name && release.name !== release.tag ? release.name : ""}
                   </span>
                 </header>
-                {notes &&
-                  (index < openFirst ? (
-                    <Notes markdown={notes} repo={repoOf[project]} />
-                  ) : (
-                    <details className="cl-more">
-                      <summary>{c.showNotes}</summary>
-                      <Notes markdown={notes} repo={repoOf[project]} />
-                    </details>
-                  ))}
+                {entry.html && (
+                  <ReleaseNotes
+                    id={entry.anchor}
+                    label={c.showNotes}
+                    html={eager.has(entry.anchor) ? entry.html : null}
+                    open={open.has(entry.anchor)}
+                    github={release.url}
+                    githubLabel={c.notesOnGitHub}
+                  />
+                )}
                 <div className="cl-files">
                   {release.assets.length > 0 && <h3 className="pg-label">{c.files}</h3>}
                   <ul>

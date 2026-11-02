@@ -26,3 +26,19 @@ describe("the help page", () => {
     expect(helpStrings("tr").trouble.items).toHaveLength(helpStrings("en").trouble.items.length);
   });
 });
+
+describe("the help page's install cards", () => {
+  it("keep to three short steps and one needs line per platform, in both languages", () => {
+    for (const lang of ["en", "tr"] as const) {
+      const cards = helpStrings(lang).install.platforms;
+      expect(Object.keys(cards).sort()).toEqual(["android", "iphone", "linux", "mac", "windows"]);
+      for (const card of Object.values(cards)) {
+        expect(card.steps.length).toBeLessThanOrEqual(3);
+        for (const text of [...card.steps, card.needs]) {
+          expect(text.length).toBeLessThanOrEqual(90);
+          expect(text.endsWith(".")).toBe(true);
+        }
+      }
+    }
+  });
+});

@@ -1,7 +1,8 @@
+import type { Platform } from "./downloads";
 import type { Language } from "./i18n";
 
-/** The help page: first steps, questions and troubleshooting. Install steps per platform come from
- *  the downloads page's texts (i18n-download.ts). Answers may hold links as [text](href). English
+/** The help page: short install steps per platform (the downloads page has the full ones), first
+ *  steps, questions and troubleshooting. Answers may hold links as [text](href). English
  *  and Turkish. */
 
 export interface Faq {
@@ -40,13 +41,56 @@ const en = {
     lead: "Every file, with sizes and checksums, is on the downloads page.",
     files: "Files and checksums",
     needs: "Needs",
+    /** Short on purpose: the downloads page has the full steps and requirements. */
+    platforms: {
+      mac: {
+        steps: [
+          "Paste the one-line installer into Terminal.",
+          "Or open the app from the zip. If macOS stops it, allow it in Privacy & Security.",
+          "Choose the folder with your games.",
+        ],
+        needs: "A Mac with M1 or newer and macOS 14 or later.",
+      },
+      windows: {
+        steps: [
+          "Run the installer. No admin rights needed.",
+          "If SmartScreen warns you, click More info and then Run anyway.",
+          "On first start, download the engine and choose your games folder.",
+        ],
+        needs: "Windows 10 or 11 on a 64-bit PC.",
+      },
+      linux: {
+        steps: [
+          "Make the AppImage executable and run it.",
+          "Or install the .deb on Ubuntu and Debian.",
+          "On first start, download the engine and choose your games folder.",
+        ],
+        needs: "Ubuntu 24.04, Debian 13, Fedora 39 or newer to play games.",
+      },
+      iphone: {
+        steps: [
+          "Download the IPA on your computer.",
+          "Install it with AltStore, SideStore or Sideloadly.",
+          "Open the launcher on the same Wi-Fi and confirm the code.",
+        ],
+        needs: "iOS 15 or later and AnyPS5 on a computer.",
+      },
+      android: {
+        steps: [
+          "Open the APK on your phone.",
+          "Allow installing from your browser.",
+          "Open the launcher on the same Wi-Fi and confirm the code.",
+        ],
+        needs: "Android 7 or later and AnyPS5 on a computer.",
+      },
+    } as Record<Platform, { steps: string[]; needs: string }>,
   },
   start: {
     title: "From download to playing.",
     steps: [
       [
         "Install the launcher",
-        "AnyPS5-ARM on a Mac, AnyPS5 Desktop on Windows or Linux. On a PC, press Download the AnyPS5 engine on first start.",
+        "AnyPS5 ARM on a Mac, AnyPS5 Desktop on Windows or Linux. On a PC, press Download the AnyPS5 engine on first start.",
       ],
       [
         "Choose your games folder",
@@ -110,7 +154,7 @@ const en = {
         q: "How do I pair my phone?",
         a: [
           "Install AnyPS5 Remote, keep the phone on the same Wi-Fi as the computer and open the launcher: the phone finds it. The first time, both show the same four-digit code to confirm. After that it connects by itself. If nothing is found, type the computer's address.",
-          "On a Mac a cable works too: an iPhone connects through it by itself, an Android phone with USB debugging on and adb installed. Up to four phones play as four players. AnyPS5 Desktop pairs the phone as well. Playing Windows and Linux games with it needs an engine built from AnyPS5-ARM, which is [on the roadmap](/roadmap).",
+          "On a Mac a cable works too: an iPhone connects through it by itself, an Android phone with USB debugging on and adb installed. Up to four phones play as four players. AnyPS5 Desktop pairs the phone as well. Playing Windows and Linux games with it needs an engine built from AnyPS5 ARM, which is [on the roadmap](/roadmap).",
         ],
       },
       {
@@ -198,7 +242,7 @@ const en = {
   },
   more: {
     title: "Still stuck?",
-    lead: "The user guide has every setting and the details behind them. If something is broken, an issue with a crash report helps the most.",
+    lead: "The user guide explains every setting. If something crashes, send us the crash report.",
     guide: "Read the user guide",
     issue: "Report a crash",
     contribute: "Other ways to help",
@@ -216,7 +260,7 @@ const tr: HelpStrings = {
   kicker: "Yardım",
   title: ["Oynamaya başla.", "Takıldığın yerden kurtul."],
   lead: "Her platformda kurulum, ilk oyunun, en çok sorulanlar ve bir şeyler ters gittiğinde denenecekler. GitHub'daki kullanım rehberi daha ayrıntılı.",
-  guide: "Tüm kullanım rehberi",
+  guide: "Tam kullanım rehberi",
   guideHref: `${guide}#türkçe`,
   toc: {
     label: "Bu sayfada",
@@ -231,13 +275,55 @@ const tr: HelpStrings = {
     lead: "Boyutları ve sağlama toplamlarıyla her dosya indirme sayfasında.",
     files: "Dosyalar ve sağlama toplamları",
     needs: "Gerekenler",
+    platforms: {
+      mac: {
+        steps: [
+          "Tek satırlık kurulumu Terminal'e yapıştır.",
+          "Ya da uygulamayı zip'ten aç. macOS engellerse Gizlilik ve Güvenlik'ten izin ver.",
+          "Oyunlarının klasörünü seç.",
+        ],
+        needs: "M1 ya da daha yeni bir Mac ve macOS 14 ya da sonrası.",
+      },
+      windows: {
+        steps: [
+          "Kurulum dosyasını çalıştır. Yönetici izni gerekmez.",
+          "SmartScreen uyarırsa Ek bilgi'ye, sonra Yine de çalıştır'a tıkla.",
+          "İlk açılışta motoru indir ve oyun klasörünü seç.",
+        ],
+        needs: "64 bit bir PC'de Windows 10 ya da 11.",
+      },
+      linux: {
+        steps: [
+          "AppImage dosyasına çalıştırma izni ver ve aç.",
+          "Ya da Ubuntu ve Debian'da .deb paketini kur.",
+          "İlk açılışta motoru indir ve oyun klasörünü seç.",
+        ],
+        needs: "Oyunlar için Ubuntu 24.04, Debian 13, Fedora 39 ya da daha yenisi.",
+      },
+      iphone: {
+        steps: [
+          "IPA dosyasını bilgisayarına indir.",
+          "AltStore, SideStore ya da Sideloadly ile kur.",
+          "Launcher'ı aynı Wi-Fi'da aç ve kodu onayla.",
+        ],
+        needs: "iOS 15 ya da sonrası ve bir bilgisayarda AnyPS5.",
+      },
+      android: {
+        steps: [
+          "APK dosyasını telefonunda aç.",
+          "Tarayıcından kurmaya izin ver.",
+          "Launcher'ı aynı Wi-Fi'da aç ve kodu onayla.",
+        ],
+        needs: "Android 7 ya da sonrası ve bir bilgisayarda AnyPS5.",
+      },
+    },
   },
   start: {
     title: "İndirmekten oynamaya.",
     steps: [
       [
         "Launcher'ı kur",
-        "Mac'te AnyPS5-ARM, Windows ya da Linux'ta AnyPS5 Desktop. PC'de ilk açılışta AnyPS5 motorunu indir'e bas.",
+        "Mac'te AnyPS5 ARM, Windows ya da Linux'ta AnyPS5 Desktop. PC'de ilk açılışta AnyPS5 motorunu indir'e bas.",
       ],
       [
         "Oyun klasörünü seç",
@@ -301,7 +387,7 @@ const tr: HelpStrings = {
         q: "Telefonumu nasıl eşleştiririm?",
         a: [
           "AnyPS5 Remote'u kur, telefonu bilgisayarla aynı Wi-Fi'da tut ve launcher'ı aç: telefon onu bulur. İlk seferde ikisi de aynı dört haneli kodu gösterir ve onaylarsın. Sonra kendiliğinden bağlanır. Bir şey bulunmazsa bilgisayarın adresini yaz.",
-          "Mac'te kablo da olur: iPhone onunla kendiliğinden bağlanır, Android telefon USB hata ayıklama açık ve Mac'te adb kuruluyken. Dört telefona kadar dört oyuncu. AnyPS5 Desktop da telefonu eşleştirir. Windows ve Linux oyunlarında onunla oynamak için AnyPS5-ARM'dan derlenmiş bir motor gerekiyor ve bu [yol haritasında](/roadmap).",
+          "Mac'te kablo da olur: iPhone onunla kendiliğinden bağlanır, Android telefon USB hata ayıklama açık ve Mac'te adb kuruluyken. Dört telefona kadar dört oyuncu. AnyPS5 Desktop da telefonu eşleştirir. Windows ve Linux oyunlarında onunla oynamak için AnyPS5 ARM'dan derlenmiş bir motor gerekiyor ve bu [yol haritasında](/roadmap).",
         ],
       },
       {
@@ -389,7 +475,7 @@ const tr: HelpStrings = {
   },
   more: {
     title: "Hâlâ takıldın mı?",
-    lead: "Kullanım rehberinde her ayar ve arkasındaki ayrıntılar var. Bir şey bozuksa, çökme raporlu bir sorun en çok işe yarar.",
+    lead: "Rehber her ayarı anlatıyor. Bir şey çöktüyse çökme raporunu bize gönder.",
     guide: "Kullanım rehberini oku",
     issue: "Çökme bildir",
     contribute: "Yardım etmenin diğer yolları",

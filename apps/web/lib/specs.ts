@@ -1,4 +1,4 @@
-/** The full specs sheet (/specs): every feature of AnyPS5-ARM (the engine, the Mac launcher, the
+/** The full specs sheet (/specs): every feature of AnyPS5 ARM (the engine, the Mac launcher, the
  *  phone app), AnyPS5 Desktop and AnyTogether, grouped by product, in English and Turkish. Only
  *  what exists goes here: what is merely planned belongs on the roadmap (lib/roadmap.ts) and the
  *  status board (content/status.ts). Built from the READMEs, docs/ and release notes of the three
@@ -122,11 +122,11 @@ export const sections: SpecSection[] = [
             PC,
             [
               "Our own Windows and Linux engine",
-              "Releases carry AnyPS5-ARM's toolkit for Windows (WinLibs GCC) and Linux (Ubuntu 22.04, glibc 2.35), with the online bridge and the phone pad.",
+              "Releases carry AnyPS5 ARM's toolkit for Windows (WinLibs GCC) and Linux (Ubuntu 22.04, glibc 2.35), with the online bridge and the phone pad.",
             ],
             [
               "Kendi Windows ve Linux motorumuz",
-              "Sürümler AnyPS5-ARM'ın Windows (WinLibs GCC) ve Linux (Ubuntu 22.04, glibc 2.35) araç setini taşır; çevrimiçi köprü ve telefon kumandası dahil.",
+              "Sürümler AnyPS5 ARM'ın Windows (WinLibs GCC) ve Linux (Ubuntu 22.04, glibc 2.35) araç setini taşır; çevrimiçi köprü ve telefon kumandası dahil.",
             ],
           ),
           s(
@@ -1215,11 +1215,11 @@ export const sections: SpecSection[] = [
           s(
             PC,
             [
-              "The AnyPS5-ARM engine",
+              "The AnyPS5 ARM engine",
               "One switch to our signed Windows and Linux engine, which the phone pad and online play need.",
             ],
             [
-              "AnyPS5-ARM motoru",
+              "AnyPS5 ARM motoru",
               "Tek seçimle imzalı Windows ve Linux motorumuz; telefon kumandası ve çevrimiçi oyun ona ihtiyaç duyar.",
             ],
           ),
@@ -2653,7 +2653,7 @@ export interface Repo {
 export const repositories: Repo[] = [
   {
     repo: "AnyTogether/AnyPS5-ARM",
-    name: "AnyPS5-ARM",
+    name: "AnyPS5 ARM",
     license: "GPL-2.0",
     project: "macos",
     en: "The engine for Apple-silicon Macs, the Mac launcher, the phone app and the Windows and Linux engine builds.",

@@ -12,7 +12,7 @@ export interface RepoCard {
   /** What is in it, one line each. */
   parts: [string, string][];
   links: [string, string][];
-  /** Branches with one line each (AnyPS5-ARM). */
+  /** Branches with one line each (AnyPS5 ARM). */
   branches?: [string, string][];
   /** The last release shown from the release cache: which project. */
   release?: "macos" | "desktop";
@@ -24,7 +24,7 @@ const en = {
   meta: {
     title: "Open source: every AnyPS5 and AnyTogether repository · AnyTogether",
     description:
-      "AnyPS5-ARM (GPL-2.0), AnyPS5 Desktop (GPL-2.0), AnyTogether (MIT) and the upstream AnyPS5 engine: what each holds, its branches, licences and how to contribute.",
+      "AnyPS5 ARM (GPL-2.0), AnyPS5 Desktop (GPL-2.0), AnyTogether (MIT) and the upstream AnyPS5 engine: what each holds, its branches, licences and how to contribute.",
   },
   kicker: "Open source",
   title: ["Every line is public.", "Here is where it lives."],
@@ -36,7 +36,7 @@ const en = {
   repos: [
     {
       repo: "AnyTogether/AnyPS5-ARM",
-      name: "AnyPS5-ARM",
+      name: "AnyPS5 ARM",
       license: "GPL-2.0",
       role: "Engine, Mac launcher & phone app",
       lead: "The macOS port of AnyPS5 for Apple silicon, the PS5-style launcher AnyPS5.app, and AnyPS5 Remote, the phone app that is your DualSense. Releases carry every platform's files.",
@@ -81,7 +81,7 @@ const en = {
       name: "AnyPS5 Desktop",
       license: "GPL-2.0",
       role: "Windows & Linux launcher",
-      lead: "The AnyPS5-ARM launcher for PCs: the same PS5-style home screen, unlocking and starting games, per-game controls, trophies, saves and AnyTogether. Early preview.",
+      lead: "The AnyPS5 ARM launcher for PCs: the same PS5-style home screen, unlocking and starting games, per-game controls, trophies, saves and AnyTogether. Early preview.",
       parts: [
         [
           "Launcher",
@@ -126,9 +126,9 @@ const en = {
   ] as [RepoCard, RepoCard, RepoCard],
   upstream: {
     title: "AnyPS5, upstream.",
-    lead: "boykopovar/AnyPS5 is the open source PS5 compatibility layer everything here is built on: the relinker, the system libraries and the shader recompiler, for Linux and Windows. AnyPS5-ARM is its macOS port and merges its work back in.",
+    lead: "boykopovar/AnyPS5 is the open source PS5 compatibility layer everything here is built on: the relinker, the system libraries and the shader recompiler, for Linux and Windows. AnyPS5 ARM is its macOS port and merges its work back in.",
     credits:
-      "Also thanks to {link}, the community macOS port that added Mach-O output, merged into AnyPS5-ARM.",
+      "Also thanks to {link}, the community macOS port that added Mach-O output, merged into AnyPS5 ARM.",
     repo: "Repository",
     discussions: "Game bring-up discussions",
   },
@@ -136,7 +136,7 @@ const en = {
     title: "What you may do with it.",
     items: [
       [
-        "GPL-2.0: AnyPS5-ARM, AnyPS5 Desktop",
+        "GPL-2.0: AnyPS5 ARM, AnyPS5 Desktop",
         "Like the engine they are built on. Use, study, change and share them. What you share changed must stay GPL-2.0, with its source.",
       ],
       [
@@ -160,7 +160,7 @@ const en = {
       ],
       [
         "Open an issue",
-        "Bugs and performance problems have their own forms on AnyPS5-ARM. AnyPS5 Desktop and AnyTogether take plain issues.",
+        "Bugs and performance problems have their own forms on AnyPS5 ARM. AnyPS5 Desktop and AnyTogether take plain issues.",
         `${gh}/AnyTogether/AnyPS5-ARM/issues/new/choose`,
       ],
       [
@@ -190,7 +190,7 @@ const tr: ProjectsStrings = {
   meta: {
     title: "Açık kaynak: tüm AnyPS5 ve AnyTogether depoları · AnyTogether",
     description:
-      "AnyPS5-ARM (GPL-2.0), AnyPS5 Desktop (GPL-2.0), AnyTogether (MIT) ve upstream AnyPS5 motoru: her birinde ne var, dalları, lisansları ve nasıl katkıda bulunulur.",
+      "AnyPS5 ARM (GPL-2.0), AnyPS5 Desktop (GPL-2.0), AnyTogether (MIT) ve upstream AnyPS5 motoru: her birinde ne var, dalları, lisansları ve nasıl katkıda bulunulur.",
   },
   kicker: "Açık kaynak",
   title: ["Her satır açık.", "İşte nerede durduğu."],
@@ -239,7 +239,7 @@ const tr: ProjectsStrings = {
     {
       ...en.repos[1],
       role: "Windows ve Linux launcher'ı",
-      lead: "PC'ler için AnyPS5-ARM launcher'ı: aynı PS5 tarzı ana ekran, oyunların kilidini açıp başlatma, oyun başına kontroller, kupalar, kayıtlar ve AnyTogether. Erken sürüm.",
+      lead: "PC'ler için AnyPS5 ARM launcher'ı: aynı PS5 tarzı ana ekran, oyunların kilidini açıp başlatma, oyun başına kontroller, kupalar, kayıtlar ve AnyTogether. Erken sürüm.",
       parts: [
         [
           "Launcher",
@@ -284,9 +284,9 @@ const tr: ProjectsStrings = {
   ],
   upstream: {
     title: "Upstream AnyPS5.",
-    lead: "boykopovar/AnyPS5, buradaki her şeyin üzerine kurulduğu açık kaynak PS5 uyumluluk katmanı: Linux ve Windows için relinker, sistem kütüphaneleri ve gölgelendirici derleyicisi. AnyPS5-ARM onun macOS uyarlaması ve çalışmalarını birleştirir.",
+    lead: "boykopovar/AnyPS5, buradaki her şeyin üzerine kurulduğu açık kaynak PS5 uyumluluk katmanı: Linux ve Windows için relinker, sistem kütüphaneleri ve gölgelendirici derleyicisi. AnyPS5 ARM onun macOS uyarlaması ve çalışmalarını birleştirir.",
     credits:
-      "Mach-O çıktısını ekleyen ve AnyPS5-ARM'a birleştirilen topluluk macOS uyarlaması {link} için de teşekkürler.",
+      "Mach-O çıktısını ekleyen ve AnyPS5 ARM'a birleştirilen topluluk macOS uyarlaması {link} için de teşekkürler.",
     repo: "Depo",
     discussions: "Oyun çalıştırma tartışmaları",
   },
@@ -294,7 +294,7 @@ const tr: ProjectsStrings = {
     title: "Onunla ne yapabilirsin.",
     items: [
       [
-        "GPL-2.0: AnyPS5-ARM, AnyPS5 Desktop",
+        "GPL-2.0: AnyPS5 ARM, AnyPS5 Desktop",
         "Üzerine kuruldukları motor gibi. Kullan, incele, değiştir ve paylaş. Değiştirip paylaştığın da kaynağıyla birlikte GPL-2.0 kalmalı.",
       ],
       ["MIT: AnyTogether", "Sunucu ve bu site. Çalıştır, değiştir, üzerine kur ve telif bildirimini koru."],
@@ -315,7 +315,7 @@ const tr: ProjectsStrings = {
       ],
       [
         "Sorun aç",
-        "Hataların ve performans sorunlarının AnyPS5-ARM'da kendi formları var. AnyPS5 Desktop ve AnyTogether düz sorun kabul eder.",
+        "Hataların ve performans sorunlarının AnyPS5 ARM'da kendi formları var. AnyPS5 Desktop ve AnyTogether düz sorun kabul eder.",
         `${gh}/AnyTogether/AnyPS5-ARM/issues/new/choose`,
       ],
       [

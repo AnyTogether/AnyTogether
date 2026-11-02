@@ -1,7 +1,7 @@
-/** The public roadmap: what is done, in progress, next and later, across AnyPS5-ARM (the Mac
+/** The public roadmap: what is done, in progress, next and later, across AnyPS5 ARM (the Mac
  *  launcher, the engine and the phone app), AnyPS5 Desktop and AnyTogether. To update it, move an
  *  item to another status, add one, or change `updated`; the page reads nothing else. It follows the
- *  plan on AnyPS5-ARM's `anytogether` branch (docs/en/10-roadmap.md, 03-features.md,
+ *  plan on AnyPS5 ARM's `anytogether` branch (docs/en/10-roadmap.md, 03-features.md,
  *  11-open-questions.md) and what the releases shipped. Only what is true goes here. */
 
 export type Status = "done" | "progress" | "next" | "later";
@@ -11,7 +11,7 @@ export interface RoadmapItem {
   id: string;
   status: Status;
   areas: Area[];
-  /** The release it came in, for done items: "AnyPS5-ARM 0.2.15". */
+  /** The release it came in, for done items: "AnyPS5 ARM 0.2.15". */
   shipped?: string;
   en: { t: string; d: string };
   tr: { t: string; d: string };
@@ -33,7 +33,7 @@ export const roadmap: RoadmapItem[] = [
     id: "opus",
     status: "done",
     areas: ["mac", "online"],
-    shipped: "AnyPS5-ARM 0.2.17",
+    shipped: "AnyPS5 ARM 0.2.17",
     en: {
       t: "Opus game sound in share play",
       d: "The game's sound as a stereo Opus track, about 128 kbit/s instead of 1.5 Mbit/s, for hosts on slow uploads. The Mac launcher sends it and watching in a browser plays it. Viewers without it still get the old sound.",
@@ -47,7 +47,7 @@ export const roadmap: RoadmapItem[] = [
     id: "controllers",
     status: "done",
     areas: ["mac", "pc"],
-    shipped: "AnyPS5-ARM 0.2.21 · AnyPS5 Desktop 0.1.7",
+    shipped: "AnyPS5 ARM 0.2.21 · AnyPS5 Desktop 0.1.7",
     en: {
       t: "Controllers",
       d: "DualSense, DualShock 4, Xbox, Switch Pro and more over USB or Bluetooth (the DualShock 3 over USB on the Mac), with a screen that tests them and a troubleshooter.",
@@ -61,7 +61,7 @@ export const roadmap: RoadmapItem[] = [
     id: "steam",
     status: "done",
     areas: ["mac", "pc"],
-    shipped: "AnyPS5-ARM 0.2.21 · AnyPS5 Desktop 0.1.7",
+    shipped: "AnyPS5 ARM 0.2.21 · AnyPS5 Desktop 0.1.7",
     en: {
       t: "Add to Steam",
       d: "AnyPS5 and each unlocked game in your Steam library with their own art, starting straight into the game. On the Steam Deck too.",
@@ -75,7 +75,7 @@ export const roadmap: RoadmapItem[] = [
     id: "prepare",
     status: "done",
     areas: ["mac", "pc"],
-    shipped: "AnyPS5-ARM 0.2.21 · AnyPS5 Desktop 0.1.7",
+    shipped: "AnyPS5 ARM 0.2.21 · AnyPS5 Desktop 0.1.7",
     en: {
       t: "New games ready by themselves",
       d: "A game copied into the games folder shows up by itself and is prepared in the background, after a check that the drive has room.",
@@ -89,7 +89,7 @@ export const roadmap: RoadmapItem[] = [
     id: "messages-more",
     status: "done",
     areas: ["mac", "pc", "phone", "online"],
-    shipped: "AnyPS5-ARM 0.2.21 · AnyPS5 Remote 1.16",
+    shipped: "AnyPS5 ARM 0.2.21 · AnyPS5 Remote 1.16",
     en: {
       t: "Richer messages",
       d: "Photos, clips and voice notes, replies, reactions, edits, unsend, read receipts and pinned chats.",
@@ -103,7 +103,7 @@ export const roadmap: RoadmapItem[] = [
     id: "glass",
     status: "done",
     areas: ["mac", "pc"],
-    shipped: "AnyPS5-ARM 0.2.20 · AnyPS5 Desktop 0.1.6",
+    shipped: "AnyPS5 ARM 0.2.20 · AnyPS5 Desktop 0.1.6",
     en: {
       t: "Glass theme",
       d: "A see-through launcher window: the wallpaper glows through frosted panes (Liquid Glass on macOS 26, Acrylic on Windows).",
@@ -117,7 +117,7 @@ export const roadmap: RoadmapItem[] = [
     id: "find-in-apps",
     status: "done",
     areas: ["mac", "phone"],
-    shipped: "AnyPS5-ARM 0.2.16 · AnyPS5 Remote 1.12",
+    shipped: "AnyPS5 ARM 0.2.16 · AnyPS5 Remote 1.12",
     en: {
       t: "Finding players in the apps",
       d: "The looking-for-group board, public parties and game hubs in the Mac launcher and on the phone, as well as on the web.",
@@ -131,7 +131,7 @@ export const roadmap: RoadmapItem[] = [
     id: "share-play",
     status: "done",
     areas: ["mac", "phone", "online"],
-    shipped: "AnyPS5-ARM 0.2.15",
+    shipped: "AnyPS5 ARM 0.2.15",
     en: {
       t: "Share play",
       d: "Stream the game you play to friends in a browser, on the phone or in their launcher, and hand them controller 2, 3 or 4. Player 1 stays yours.",
@@ -145,7 +145,7 @@ export const roadmap: RoadmapItem[] = [
     id: "engine-picker",
     status: "done",
     areas: ["mac", "engine"],
-    shipped: "AnyPS5-ARM 0.2.15",
+    shipped: "AnyPS5 ARM 0.2.15",
     en: {
       t: "Engine picker",
       d: "Settings → Engine lists the engine builds from the releases, downloads and checks the one you pick, for every game or just one, or uses your own build.",
@@ -159,7 +159,7 @@ export const roadmap: RoadmapItem[] = [
     id: "crash-reports",
     status: "done",
     areas: ["mac"],
-    shipped: "AnyPS5-ARM 0.2.15",
+    shipped: "AnyPS5 ARM 0.2.15",
     en: {
       t: "Crash reports",
       d: "When a game stops, the launcher says why. Export Report saves the log and macOS's crash report in one file. Open Issue fills in a GitHub issue, personal details taken out.",
@@ -173,7 +173,7 @@ export const roadmap: RoadmapItem[] = [
     id: "upstream-merge",
     status: "done",
     areas: ["engine"],
-    shipped: "AnyPS5-ARM 0.2.15",
+    shipped: "AnyPS5 ARM 0.2.15",
     en: {
       t: "Fresh engine, upstream merged",
       d: "Upstream AnyPS5's latest work merged in: 1,465 commits of fixes and game support, tested on Cat Quest III, Silksong, Dreaming Sarah, Plants vs. Zombies: Replanted and DOOM.",
@@ -313,7 +313,7 @@ export const roadmap: RoadmapItem[] = [
     id: "framegen",
     status: "done",
     areas: ["mac"],
-    shipped: "AnyPS5-ARM",
+    shipped: "AnyPS5 ARM",
     en: {
       t: "Frame generation",
       d: "A frame made between each two of the game's, so 60 fps shows 120 on a 120 Hz display. It turns itself off where it would cost frames.",
@@ -345,11 +345,11 @@ export const roadmap: RoadmapItem[] = [
     areas: ["engine", "mac", "pc", "online"],
     en: {
       t: "Online play through the engine bridge",
-      d: "Each player runs their own copy and the games play together through AnyTogether, never through Sony. Experimental in the launchers since AnyPS5-ARM 0.2.19: Human Fall Flat lists and joins public lobbies, and no game plays a whole session yet.",
+      d: "Each player runs their own copy and the games play together through AnyTogether, never through Sony. Experimental in the launchers since AnyPS5 ARM 0.2.19: Human Fall Flat lists and joins public lobbies, and no game plays a whole session yet.",
     },
     tr: {
       t: "Motor köprüsüyle çevrimiçi oyun",
-      d: "Her oyuncu kendi kopyasını çalıştırır ve oyunlar AnyTogether üzerinden birlikte oynar, hiçbir zaman Sony üzerinden geçmez. AnyPS5-ARM 0.2.19'dan beri launcher'larda deneysel: Human Fall Flat herkese açık lobileri listeleyip katılabiliyor ve henüz hiçbir oyun baştan sona bir oturum oynamıyor.",
+      d: "Her oyuncu kendi kopyasını çalıştırır ve oyunlar AnyTogether üzerinden birlikte oynar, hiçbir zaman Sony üzerinden geçmez. AnyPS5 ARM 0.2.19'dan beri launcher'larda deneysel: Human Fall Flat herkese açık lobileri listeleyip katılabiliyor ve henüz hiçbir oyun baştan sona bir oturum oynamıyor.",
     },
   },
   {
@@ -409,14 +409,14 @@ export const roadmap: RoadmapItem[] = [
     id: "windows-pad",
     status: "done",
     areas: ["pc", "phone", "engine"],
-    shipped: "AnyPS5-ARM 0.2.22 · AnyPS5 Desktop 0.1.8",
+    shipped: "AnyPS5 ARM 0.2.22 · AnyPS5 Desktop 0.1.8",
     en: {
       t: "The phone controller in Windows games",
-      d: "AnyPS5 Remote plays Windows games with AnyPS5 Desktop, through the engine's Winsock bridge (AnyPS5-ARM 0.2.22, Desktop 0.1.8).",
+      d: "AnyPS5 Remote plays Windows games with AnyPS5 Desktop, through the engine's Winsock bridge (AnyPS5 ARM 0.2.22, Desktop 0.1.8).",
     },
     tr: {
       t: "Windows oyunlarında telefon kontrolcüsü",
-      d: "AnyPS5 Remote, motorun Winsock köprüsüyle AnyPS5 Desktop'ta Windows oyunlarını oynatıyor (AnyPS5-ARM 0.2.22, Desktop 0.1.8).",
+      d: "AnyPS5 Remote, motorun Winsock köprüsüyle AnyPS5 Desktop'ta Windows oyunlarını oynatıyor (AnyPS5 ARM 0.2.22, Desktop 0.1.8).",
     },
   },
   {

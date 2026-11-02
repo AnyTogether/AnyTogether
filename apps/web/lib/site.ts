@@ -38,8 +38,6 @@ export interface RepoStats {
   url: string;
 }
 
-/** Every release of both projects, for the changelog (GitHub can take a moment the first time). */
-export const loadHistory = () => quick<History>("/releases/history", 4000);
 /** The repositories' stars, forks and last push, for the projects page. */
 export const loadProjects = () =>
   quick<{ repos: Record<string, RepoStats | null> }>("/projects", 4000).then(

@@ -121,7 +121,7 @@ export const statusCards: StatusCard[] = [
     id: "play-together",
     column: "done",
     platforms: desk,
-    release: "AnyPS5-ARM 0.2.22 · Desktop 0.1.8",
+    release: "AnyPS5 ARM 0.2.22 · Desktop 0.1.8",
     en: {
       t: "Play together and online play",
       d: "The party's host starts a game for everyone, over a virtual LAN on WebRTC. Experimental.",
@@ -135,7 +135,7 @@ export const statusCards: StatusCard[] = [
     id: "hff",
     column: "done",
     platforms: desk,
-    release: "AnyPS5-ARM 0.2.22",
+    release: "AnyPS5 ARM 0.2.22",
     en: {
       t: "Human Fall Flat online",
       d: "Host Public and Join work, and stream P2P sockets carry games that talk TCP between players.",
@@ -149,7 +149,7 @@ export const statusCards: StatusCard[] = [
     id: "windows-pad",
     column: "done",
     platforms: ["windows", "iphone", "android"],
-    release: "AnyPS5-ARM 0.2.22 · Desktop 0.1.8",
+    release: "AnyPS5 ARM 0.2.22 · Desktop 0.1.8",
     en: {
       t: "The phone in Windows games",
       d: "The remote pad works over Winsock, so the phone is a controller in games on Windows too.",
@@ -177,7 +177,7 @@ export const statusCards: StatusCard[] = [
     id: "controllers",
     column: "done",
     platforms: desk,
-    release: "AnyPS5-ARM 0.2.21 · Desktop 0.1.7",
+    release: "AnyPS5 ARM 0.2.21 · Desktop 0.1.7",
     en: {
       t: "Controllers and a troubleshooter",
       d: "A screen for every pad with live tests, and a troubleshooter that says what keeps one away.",
@@ -191,7 +191,7 @@ export const statusCards: StatusCard[] = [
     id: "steam",
     column: "done",
     platforms: desk,
-    release: "AnyPS5-ARM 0.2.21 · Desktop 0.1.7",
+    release: "AnyPS5 ARM 0.2.21 · Desktop 0.1.7",
     en: {
       t: "Add to Steam",
       d: "AnyPS5 and every unlocked game in your Steam library with their own art. On the Steam Deck too.",
@@ -205,7 +205,7 @@ export const statusCards: StatusCard[] = [
     id: "glass",
     column: "done",
     platforms: desk,
-    release: "AnyPS5-ARM 0.2.20 · Desktop 0.1.7",
+    release: "AnyPS5 ARM 0.2.20 · Desktop 0.1.7",
     en: { t: "Glass", d: "A see-through theme with your desktop frosted behind it and an Ice accent." },
     tr: { t: "Cam", d: "Arkasında masaüstünün buzlu göründüğü saydam tema ve Buz vurgusu." },
   },
@@ -213,7 +213,7 @@ export const statusCards: StatusCard[] = [
     id: "levels",
     column: "done",
     platforms: all,
-    release: "AnyPS5-ARM 0.2.19 · Desktop 0.1.5",
+    release: "AnyPS5 ARM 0.2.19 · Desktop 0.1.5",
     en: {
       t: "Trophy levels and showcases",
       d: "Your level in its tier's hexagon, pinned trophies and games, Compare trophies and Appear offline.",
