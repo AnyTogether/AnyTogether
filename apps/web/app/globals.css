@@ -1638,7 +1638,6 @@ fieldset.privacy-row {
   box-shadow: inset 0 0 0 2px var(--mute), 0 0 0 2px #0c0e14;
 }
 
-
 /* The status picker: four choices in a row (two by two on a phone), each with its mark */
 fieldset.privacy-row.status-row {
   grid-template-columns: minmax(0, 1fr);
