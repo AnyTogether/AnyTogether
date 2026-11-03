@@ -11,9 +11,12 @@ export default async function Login({
 }: { searchParams: Promise<{ next?: string; error?: string }> }) {
   const texts = await strings();
   const { next, error } = await searchParams;
-  // Sign in with Discord, when this server has Discord set up.
+  // Sign in with Discord, when this server has Discord set up, and with Steam, for accounts that
+  // have Steam linked (an older API offers no Steam).
   const providers = await api("/auth/providers")
-    .then((response) => (response.ok ? (response.json() as Promise<{ discord: unknown }>) : null))
+    .then((response) =>
+      response.ok ? (response.json() as Promise<{ discord: unknown; steam?: unknown }>) : null,
+    )
     .catch(() => null);
   // Only paths on this site, never another address.
   const target = samePath(next ?? null);
@@ -33,9 +36,20 @@ export default async function Login({
             {texts.signInWithDiscord}
           </a>
         ) : null}
+        {providers?.steam === true ? (
+          <a className="steam-sign-in" href={`/auth/steam/start?next=${encodeURIComponent(target)}`}>
+            <ProviderLogo provider="steam" />
+            {texts.signInWithSteam}
+          </a>
+        ) : null}
         {error === "discord" && (
           <p className="error" role="alert">
             {texts.discordFailed}
+          </p>
+        )}
+        {(error === "steam" || error === "steam_unlinked") && (
+          <p className="error" role="alert">
+            {error === "steam" ? texts.steamFailed : texts.steamNotLinked}
           </p>
         )}
       </div>

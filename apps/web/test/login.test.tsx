@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/i18n", () => ({ strings: async () => ({}) }));
 vi.mock("@/components/LoginForm", () => ({ LoginForm: () => null }));
 vi.mock("@/components/Passkeys", () => ({ PasskeySignIn: () => null }));
-// The server offers Discord: its button goes back to the same safe path.
-vi.mock("@/lib/session", () => ({ api: async () => Response.json({ discord: { clientId: "1" } }) }));
+// The server offers Discord (and, unless told otherwise, Steam): their buttons go back to the same
+// safe path.
+let providers: Record<string, unknown> = { discord: { clientId: "1" }, steam: true };
+vi.mock("@/lib/session", () => ({ api: async () => Response.json(providers) }));
 
 /** Every href in a rendered tree. */
 function hrefs(node: unknown, found: string[] = []): string[] {
@@ -32,9 +34,20 @@ describe("the sign-in page", () => {
     for (const next of ["/\\evil.example", "//evil.example", "/\t/evil.example", "https://evil.example"]) {
       const page = await Login({ searchParams: Promise.resolve({ next }) });
       for (const target of nextProps(page)) expect(target).toBe("/");
-      expect(hrefs(page)).toEqual(["/auth/discord/start?next=%2F"]);
+      expect(hrefs(page)).toEqual(["/auth/discord/start?next=%2F", "/auth/steam/start?next=%2F"]);
     }
     const page = await Login({ searchParams: Promise.resolve({ next: "/friends?tab=asks" }) });
     expect(nextProps(page)).toContain("/friends?tab=asks");
+  });
+});
+
+describe("Sign in with Steam on the sign-in page", () => {
+  it("is offered only when the API says so (an older API does not)", async () => {
+    const { default: Login } = await import("@/app/login/page");
+    providers = { discord: null };
+    const page = await Login({ searchParams: Promise.resolve({}) });
+    expect(hrefs(page)).toEqual([]);
+    providers = { discord: null, steam: true };
+    expect(hrefs(await Login({ searchParams: Promise.resolve({}) }))).toEqual(["/auth/steam/start?next=%2F"]);
   });
 });

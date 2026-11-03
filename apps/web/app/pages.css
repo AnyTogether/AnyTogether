@@ -1260,9 +1260,6 @@
 .hp-a a:hover {
   text-decoration-color: currentColor;
 }
-.hp-trouble {
-  margin-top: 36px;
-}
 .hp-more {
   border-top: 1px solid var(--rule-2);
 }

@@ -227,6 +227,7 @@ describe("Discord", () => {
       discord: { clientId: "discord-client" },
       google: false,
       apple: false,
+      steam: true,
     });
     const utku = await h.user("utku@example.com");
     const start = await h.call("POST", `${v1}/me/connections/discord/start`, {}, utku.token);

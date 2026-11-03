@@ -7,6 +7,7 @@ import { LevelBadge, LevelCard } from "@/components/LevelBadge";
 import { ProfileBio } from "@/components/ProfileEdit";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { ProfileShowcase } from "@/components/ProfileShowcase";
+import { ProfileStatus } from "@/components/ProfileStatus";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { providerName } from "@/lib/connections";
 import { flag } from "@/lib/countries";
@@ -22,9 +23,10 @@ import {
   trophyText,
 } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
-import { fill, isMinimalCard, presenceDot, shownName } from "@/lib/people";
+import { fill, isMinimalCard, shownName } from "@/lib/people";
 import type { Person, Profile, PublicProfile } from "@/lib/people";
 import type { PostPage } from "@/lib/posts";
+import { statusFrom } from "@/lib/presenceMode";
 import { type LevelBadgeData, type Showcase, accents, localArt } from "@/lib/psn";
 import { api, currentUser, publicJson } from "@/lib/session";
 import { withArt } from "@/lib/steamgrid";
@@ -199,24 +201,16 @@ export default async function UserProfile({ params }: Params) {
             </span>
           )}
         </p>
-        {presence && presence.state !== "offline" && (
-          <p className={`status in d2 ${presence.state === "in_game" ? "playing" : presenceDot(presence)}`}>
-            {presence.state === "in_game"
-              ? fill(texts.inGame, {
-                  title:
-                    localName(
-                      games?.find((game) => game.titleId === presence.titleId)?.names ?? {},
-                      language,
-                    ) ||
-                    (presence.titleId ?? "?"),
-                })
-              : presenceDot(presence) === "dnd"
-                ? texts.stateDnd
-                : presenceDot(presence) === "idle"
-                  ? texts.stateIdle
-                  : texts.stateOnline}
-          </p>
-        )}
+        <ProfileStatus
+          userId={profile.userId}
+          self={self}
+          initial={presence}
+          picked={self && user ? statusFrom(user.profile) : "online"}
+          games={Object.fromEntries(
+            (games ?? []).map((game) => [game.titleId, localName(game.names, language) || game.titleId]),
+          )}
+          texts={ui(texts)}
+        />
         {presence?.share && profile.friendship === "friends" && (
           <Link href={`/watch/${presence.share.sharePlayId}`} className="pill watch-btn watch-link in d2">
             <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
@@ -260,19 +254,6 @@ export default async function UserProfile({ params }: Params) {
         )}
         {profile.trophyLevel && <LevelCard level={profile.trophyLevel} texts={texts} language={language} />}
         {games && games.length > 0 && <GamesPlayed games={games} art={art} texts={texts} />}
-        {self && profile.publicProfile === false && (
-          <Link
-            href="/settings#public-profile"
-            className="profile-scope"
-            title={`${texts.profileNotPublicSelf} ${texts.profileMakePublic}`}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="5" y="10.5" width="14" height="10" rx="2.5" />
-              <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
-            </svg>
-            {texts.profileFriendsOnly}
-          </Link>
-        )}
         <div className="in d4">
           {self ? null : user ? (
             <FriendAction profile={profile} texts={ui(texts)} />

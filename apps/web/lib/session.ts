@@ -161,6 +161,8 @@ export async function refusedSignIn(body: Record<string, unknown>, status: numbe
 
 /** Kept for a Discord sign-in's trip to Discord and back: the state and the PKCE verifier. */
 export const discordCookie = "at_discord";
+/** Kept for a Steam sign-in's trip to Steam and back: the state and where to go after. */
+export const steamCookie = "at_steam";
 
 /** A redirect to a path on this site (a relative Location: request.url is the address the server
  *  listens on, not the site's). */

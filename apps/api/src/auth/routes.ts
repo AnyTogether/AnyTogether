@@ -1,5 +1,5 @@
-import { randomInt, timingSafeEqual } from "node:crypto";
-import { accounts, sessions, signInRequests } from "@anytogether/db";
+import { createHash, randomInt, timingSafeEqual } from "node:crypto";
+import { accounts, connections, sessions, signInRequests } from "@anytogether/db";
 import {
   DeviceApprove,
   DeviceStart,
@@ -8,6 +8,7 @@ import {
   ErrorCode,
   HandoffStart,
   OidcSignIn,
+  SteamSignIn,
   TokenRequest,
   mailLanguageOf,
   providers,
@@ -26,6 +27,7 @@ import { bannedError, isBanned } from "../moderation.js";
 import { verifyProvider } from "../providers.js";
 import { perIp } from "../ratelimit.js";
 import { refresh, revoke, startSession } from "../sessions.js";
+import { steamSignInUrl, verifiedSteamId } from "../steam.js";
 import { hash, secret } from "../tokens.js";
 
 const minutes = (count: number) => new Date(Date.now() + count * 60_000);
@@ -36,6 +38,9 @@ const codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const maxCodeAttempts = 10;
 const maxDailyFailures = 30;
 const failuresKey = (address: string) => `signin-failures:${hash(address).toString("hex")}`;
+/** A started Sign in with Steam: one use, ten minutes. */
+const steamStateSeconds = 600;
+const steamStateKey = (state: string) => `steam-signin:${createHash("sha256").update(state).digest("hex")}`;
 
 /** Keeps the language a client shows on an account that has none yet (made before languages
  *  were kept, or by a client that sent none). */
@@ -51,7 +56,7 @@ export function authRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
   const ctx = { db: deps.db, valkey: deps.valkey, tokens: deps.tokens };
   const signIn = perIp(deps, "signIn");
-  for (const path of ["/email/start", "/email/verify", "/oidc/*", "/handoff/start", "/device"])
+  for (const path of ["/email/start", "/email/verify", "/oidc/*", "/steam/*", "/handoff/start", "/device"])
     app.post(path, signIn);
   app.post("/token", perIp(deps, "token"));
 
@@ -63,6 +68,8 @@ export function authRoutes(deps: Deps) {
       discord: discord.clientId && discord.clientSecret ? { clientId: discord.clientId } : null,
       google: deps.providers.google.clientIds.length > 0,
       apple: deps.providers.apple.clientIds.length > 0,
+      // Sign in with Steam needs no keys: it is for accounts that have Steam linked.
+      steam: true,
     });
   });
 
@@ -195,6 +202,48 @@ export function authRoutes(deps: Deps) {
     const { accountId, created } = await findOrCreateAccount(deps.db, { ...identity, locale: lang });
     await keepLocale(deps, accountId, lang);
     return c.json(await startSession(ctx, accountId, created, clientKind(c), input.deviceName));
+  });
+
+  /** Sign in with Steam, for an account that has its Steam account linked (Settings, linked
+   *  accounts). It makes no account: Steam gives no verified email, so a SteamID no account has
+   *  linked is turned away. The website keeps the state in a cookie of the browser that started,
+   *  and Steam comes back to its /auth/steam/callback with it. */
+  const steamReturnTo = (state: string) =>
+    `${new URL("/auth/steam/callback", deps.publicUrl).toString()}?state=${encodeURIComponent(state)}`;
+  app.post("/steam/start", async (c) => {
+    const state = secret(24);
+    await deps.valkey.set(steamStateKey(state), "1", "EX", steamStateSeconds);
+    return c.json({
+      url: steamSignInUrl(steamReturnTo(state), new URL(deps.publicUrl).origin),
+      state,
+      expiresIn: steamStateSeconds,
+    });
+  });
+
+  /** Steam's answer: the state once, Steam's own confirmation (check_authentication), then the
+   *  account that has this SteamID linked. */
+  app.post("/steam/finish", async (c) => {
+    const input = await body(c, SteamSignIn);
+    const rejected = () =>
+      new HttpError(401, ErrorCode.providerRejected, "Steam did not confirm this sign-in");
+    if (!(await deps.valkey.getdel(steamStateKey(input.state)))) throw rejected();
+    const steamId = await verifiedSteamId(
+      deps.steam?.fetch ?? fetch,
+      input.params,
+      steamReturnTo(input.state),
+    );
+    if (!steamId) throw rejected();
+    const [linked] = await deps.db
+      .select({ accountId: connections.accountId })
+      .from(connections)
+      .where(and(eq(connections.provider, "steam"), eq(connections.externalId, steamId)));
+    if (!linked)
+      throw new HttpError(
+        404,
+        ErrorCode.steamNotLinked,
+        "No account has this Steam account linked; sign in another way and link it in Settings",
+      );
+    return c.json(await startSession(ctx, linked.accountId, false, clientKind(c), input.deviceName));
   });
 
   app.post("/handoff/start", async (c) => {

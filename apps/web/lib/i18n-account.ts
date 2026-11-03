@@ -81,7 +81,8 @@ export const accountEn = {
   sectionConnections: "Linked accounts",
   connectionsLead:
     "Show your linked accounts on your profile so friends find you there too. We keep only the name and ID, never a password or token.",
-  connectionLead_steam: "You confirm it on its own sign-in page.",
+  connectionLead_steam:
+    "You confirm it on its own sign-in page. Once linked, you can also sign in with Steam.",
   connectionLead_discord: "You confirm it in the app. Your username shows on your profile.",
   linkAccount: "Link {provider}",
   linkShort: "Link",
@@ -96,6 +97,10 @@ export const accountEn = {
   linkFailed: "{provider} did not confirm the account. Try again.",
   signInWithDiscord: "Sign in with Discord",
   discordFailed: "Discord did not sign you in. Try again.",
+  signInWithSteam: "Sign in with Steam",
+  steamFailed: "Steam did not sign you in. Try again.",
+  steamNotLinked:
+    "No account has this Steam account linked. Sign in another way, then link Steam in Settings.",
 };
 
 export const accountTr: typeof accountEn = {
@@ -179,7 +184,8 @@ export const accountTr: typeof accountEn = {
   sectionConnections: "Bağlı hesaplar",
   connectionsLead:
     "Bağlı hesaplarını profilinde göster, arkadaşların seni orada da bulsun. Yalnızca hesabın adını ve kimliğini tutarız. Şifre ya da jeton asla tutmayız.",
-  connectionLead_steam: "Kendi giriş sayfasında onaylarsın.",
+  connectionLead_steam:
+    "Kendi giriş sayfasında onaylarsın. Bağladıktan sonra Steam ile giriş de yapabilirsin.",
   connectionLead_discord: "Uygulamada onaylarsın. Kullanıcı adın profilinde görünür.",
   linkAccount: "{provider} bağla",
   linkShort: "Bağla",
@@ -194,4 +200,8 @@ export const accountTr: typeof accountEn = {
   linkFailed: "{provider} hesabı doğrulamadı. Yeniden dene.",
   signInWithDiscord: "Discord ile giriş yap",
   discordFailed: "Discord ile giriş yapılamadı. Yeniden dene.",
+  signInWithSteam: "Steam ile giriş yap",
+  steamFailed: "Steam ile giriş yapılamadı. Yeniden dene.",
+  steamNotLinked:
+    "Bu Steam hesabı hiçbir hesaba bağlı değil. Başka bir yolla giriş yap, sonra Ayarlar'dan Steam'i bağla.",
 };

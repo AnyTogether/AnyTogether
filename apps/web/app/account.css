@@ -377,11 +377,50 @@ main.has-banner {
   height: 20px;
   flex: none;
 }
+/* Sign in with Steam: the Discord button's shape in Steam's own navy and light blue. */
+.steam-sign-in {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 12px;
+  font-weight: 500;
+  color: #fff;
+  text-decoration: none;
+  background: linear-gradient(100deg, rgba(42, 71, 94, 0.55), rgba(23, 26, 33, 0.6) 70%);
+  border: 1px solid rgba(102, 192, 244, 0.38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  transition: transform 0.12s ease, border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.steam-sign-in:hover {
+  background-color: rgba(42, 71, 94, 0.35);
+  border-color: rgba(102, 192, 244, 0.65);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 8px 28px rgba(102, 192, 244, 0.18);
+}
+.steam-sign-in:active {
+  transform: scale(0.98);
+}
+.steam-sign-in:focus-visible {
+  outline: 2px solid rgba(102, 192, 244, 0.9);
+  outline-offset: 2px;
+}
+.steam-sign-in .provider-logo {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: #c7e7fa;
+}
 @media (prefers-reduced-motion: reduce) {
-  .discord-sign-in {
+  .discord-sign-in,
+  .steam-sign-in {
     transition: none;
   }
-  .discord-sign-in:active {
+  .discord-sign-in:active,
+  .steam-sign-in:active {
     transform: none;
   }
 }

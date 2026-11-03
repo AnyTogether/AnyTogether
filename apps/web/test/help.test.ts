@@ -23,7 +23,10 @@ describe("the help page", () => {
     const ids = (lang: "en" | "tr") => helpStrings(lang).faq.items.map((item) => item.id);
     expect(ids("tr")).toEqual(ids("en"));
     expect(new Set(ids("en")).size).toBe(ids("en").length);
-    expect(helpStrings("tr").trouble.items).toHaveLength(helpStrings("en").trouble.items.length);
+    const fixes = (lang: "en" | "tr") => helpStrings(lang).trouble.items.map((item) => item.id);
+    expect(fixes("tr")).toEqual(fixes("en"));
+    // Every question and fix opens from its own address (/help#fix-linux), so no id twice.
+    expect(new Set([...ids("en"), ...fixes("en")]).size).toBe(ids("en").length + fixes("en").length);
   });
 });
 
