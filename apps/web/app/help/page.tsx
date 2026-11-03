@@ -7,7 +7,7 @@ import { wide } from "@/components/site/fonts";
 import { platformOrder } from "@/lib/downloads";
 import { language } from "@/lib/i18n";
 import { downloadPageStrings } from "@/lib/i18n-download";
-import { helpStrings } from "@/lib/i18n-help";
+import { type Faq, helpStrings } from "@/lib/i18n-help";
 import { siteStrings } from "@/lib/i18n-site";
 import { plainText } from "@/lib/inline";
 import { pageMetadata } from "@/lib/product-page";
@@ -24,6 +24,29 @@ const Arrow = () => (
     <path d="M5 12h14M13 6l6 6-6 6" />
   </svg>
 );
+
+/** Questions that open on a press, as the questions and the troubleshooting have them. A link to
+ *  /help#<id> opens one (OpenFromHash). */
+function Questions({ items }: { items: Faq[] }) {
+  return (
+    <div className="hp-qs" data-reveal>
+      {items.map((item) => (
+        <details key={item.id} id={item.id} className="hp-q">
+          <summary>
+            <h3>{item.q}</h3>
+          </summary>
+          <div className="hp-a">
+            {item.a.map((paragraph) => (
+              <p key={paragraph.slice(0, 40)}>
+                <Rich text={paragraph} />
+              </p>
+            ))}
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
 
 /** Install guides for every platform, first steps, questions and troubleshooting, pointing to
  *  the user guide on GitHub for depth. */
@@ -134,38 +157,16 @@ export default async function Help() {
             {h.faq.title}
           </h2>
         </div>
-        <div className="hp-qs" data-reveal>
-          {h.faq.items.map((item) => (
-            <details key={item.id} id={item.id} className="hp-q">
-              <summary>
-                <h3>{item.q}</h3>
-              </summary>
-              <div className="hp-a">
-                {item.a.map((paragraph) => (
-                  <p key={paragraph.slice(0, 40)}>
-                    <Rich text={paragraph} />
-                  </p>
-                ))}
-              </div>
-            </details>
-          ))}
-        </div>
+        <Questions items={h.faq.items} />
       </section>
 
-      <section className="pg-sec" id="trouble" aria-labelledby="trouble-title">
-        <div data-reveal>
+      <section className="pg-sec hp-faq" id="trouble" aria-labelledby="trouble-title">
+        <div className="hp-faq-head" data-reveal>
           <h2 className="h-card" id="trouble-title">
             {h.trouble.title}
           </h2>
         </div>
-        <ul className="items hp-trouble" data-reveal>
-          {h.trouble.items.map(([t, text]) => (
-            <li key={t}>
-              <h3>{t}</h3>
-              <p>{text}</p>
-            </li>
-          ))}
-        </ul>
+        <Questions items={h.trouble.items} />
       </section>
 
       <section className="l-final hp-more" id="more" data-reveal>

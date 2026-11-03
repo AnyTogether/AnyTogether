@@ -41,6 +41,15 @@ export const EmailVerify = z
   })
   .refine((value) => value.code || value.link, { message: "code or link" });
 
+/** Back from Steam's sign-in page: the state the sign-in started with and Steam's openid.* answer,
+ *  which the API has Steam confirm. */
+export const SteamSignIn = z.object({
+  state: z.string().min(16).max(128),
+  params: z.record(z.string().max(2048)),
+  deviceName: z.string().max(80).optional(),
+  lang: Lang,
+});
+
 /** A provider's answer: an ID token (Apple, Google native), or a code with its PKCE verifier. */
 export const OidcSignIn = z
   .object({

@@ -31,8 +31,7 @@
   border-color: rgba(255, 255, 255, 0.18);
 }
 .profile-sections a:focus-visible,
-.games-played .played:focus-visible,
-.profile-scope:focus-visible {
+.games-played .played:focus-visible {
   outline: 2px solid var(--a);
   outline-offset: 2px;
 }
@@ -97,26 +96,37 @@
   border: 1px dashed rgba(255, 255, 255, 0.14);
 }
 
-/* One's own profile: the pencil sits where a stranger's ⋯ menu would, on the cover, the same round
-   button; the bio becomes a text box right where it was. */
+/* One's own profile: Edit profile sits where a stranger's ⋯ menu would, on the cover, as a pill
+   with a pencil and its name; the bio becomes a text box right where it was. */
 .profile-pencil {
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 3;
-  width: 36px;
   height: 36px;
-  justify-content: center;
-  background: rgba(7, 8, 12, 0.45);
+  padding: 0 14px 0 11px;
+  gap: 7px;
+  background: rgba(7, 8, 12, 0.5);
   backdrop-filter: blur(8px);
-  border-color: rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(8px);
+  border-color: rgba(255, 255, 255, 0.16);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.profile-pencil:hover {
+  background: rgba(7, 8, 12, 0.68);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.profile-pencil:active {
+  transform: scale(0.97);
 }
 .profile-pencil svg {
+  flex: none;
   width: 16px;
   height: 16px;
+  aspect-ratio: 1;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.7;
+  stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -126,7 +136,6 @@
 }
 .profile-pencil:focus-visible,
 .bio-own:focus-visible,
-.profile-scope:focus-visible,
 .bio-more:focus-visible {
   outline: 2px solid rgba(79, 124, 255, 0.7);
   outline-offset: 2px;
@@ -184,36 +193,6 @@ button.bio-own:active {
 .bio-edit .error {
   margin-top: 8px;
 }
-/* Shown only to the person while the profile is not public: where it is visible, on the cover */
-.profile-scope {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 11px;
-  border-radius: 999px;
-  font: 500 11.5px / 1 var(--font-mono), monospace;
-  color: var(--ink);
-  text-decoration: none;
-  background: rgba(7, 8, 12, 0.45);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  transition: border-color 0.2s ease;
-}
-.profile-scope:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-}
-.profile-scope svg {
-  width: 12px;
-  height: 12px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-}
-
 .profile.minimal .minimal-note {
   margin-top: 18px;
   text-align: left;
@@ -229,7 +208,11 @@ button.bio-own:active {
     animation: none;
   }
   .games-played .played,
-  .profile-sections a {
+  .profile-sections a,
+  .profile-pencil {
     transition: none;
+  }
+  .profile-pencil:active {
+    transform: none;
   }
 }

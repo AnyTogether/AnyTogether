@@ -16,11 +16,9 @@ import { HttpError } from "./errors.js";
 import { body } from "./http.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
 import { rateLimiter, settingLimiter } from "./ratelimit.js";
+import { steamSignInUrl, verifiedSteamId } from "./steam.js";
 import { secret } from "./tokens.js";
 
-const steamLogin = "https://steamcommunity.com/openid/login";
-const openIdNs = "http://specs.openid.net/auth/2.0";
-const steamIdUrl = /^https:\/\/steamcommunity\.com\/openid\/id\/(7656119\d{10})$/;
 /** How long a started link waits for the provider's answer. */
 const stateSeconds = 600;
 const stateKey = (state: string) => `connect-state:${createHash("sha256").update(state).digest("hex")}`;
@@ -104,18 +102,11 @@ export function connectionRoutes(deps: Deps) {
     const state = secret(24);
     const verifier = provider === "discord" ? secret(48) : null;
     await valkey.set(stateKey(state), JSON.stringify({ userId: me, provider, verifier }), "EX", stateSeconds);
-    if (provider === "steam") {
-      const url = new URL(steamLogin);
-      url.search = new URLSearchParams({
-        "openid.ns": openIdNs,
-        "openid.mode": "checkid_setup",
-        "openid.return_to": steamReturnTo(state),
-        "openid.realm": new URL(deps.publicUrl).origin,
-        "openid.identity": `${openIdNs}/identifier_select`,
-        "openid.claimed_id": `${openIdNs}/identifier_select`,
-      }).toString();
-      return c.json({ url: url.toString(), expiresIn: stateSeconds });
-    }
+    if (provider === "steam")
+      return c.json({
+        url: steamSignInUrl(steamReturnTo(state), new URL(deps.publicUrl).origin),
+        expiresIn: stateSeconds,
+      });
     const url = new URL("https://discord.com/oauth2/authorize");
     url.search = new URLSearchParams({
       response_type: "code",
@@ -186,35 +177,10 @@ export function connectionRoutes(deps: Deps) {
     return c.body(null, 204);
   });
 
-  /** Steam's OpenID 2.0 answer: for our return address exactly, from Steam's endpoint, a SteamID
-   *  claimed, and confirmed by Steam itself (check_authentication). */
+  /** Steam's OpenID 2.0 answer, confirmed by Steam (steam.ts), as the account to link. */
   async function steamIdentity(params: Record<string, string>, returnTo: string) {
-    const claimed = params["openid.claimed_id"] ?? "";
-    const signed = (params["openid.signed"] ?? "").split(",");
-    const steamId = claimed.match(steamIdUrl)?.[1];
-    if (
-      params["openid.ns"] !== openIdNs ||
-      params["openid.mode"] !== "id_res" ||
-      params["openid.op_endpoint"] !== steamLogin ||
-      params["openid.return_to"] !== returnTo ||
-      params["openid.identity"] !== claimed ||
-      !steamId ||
-      !["op_endpoint", "claimed_id", "identity", "return_to", "response_nonce"].every((f) =>
-        signed.includes(f),
-      )
-    )
-      throw failed("Steam's answer is not one this site asked for");
-    const check = new URLSearchParams();
-    for (const [key, value] of Object.entries(params)) if (key.startsWith("openid.")) check.set(key, value);
-    check.set("openid.mode", "check_authentication");
-    const answer = await steamFetch(steamLogin, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: check,
-      signal: AbortSignal.timeout(10_000),
-    }).catch(() => undefined);
-    const text = answer?.ok ? await answer.text() : "";
-    if (!/^is_valid\s*:\s*true\s*$/m.test(text)) throw failed("Steam did not confirm this sign-in");
+    const steamId = await verifiedSteamId(steamFetch, params, returnTo);
+    if (!steamId) throw failed("Steam did not confirm this account");
     return { externalId: steamId, name: await steamPersona(steamId), username: null };
   }
 

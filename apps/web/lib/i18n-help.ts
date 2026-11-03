@@ -214,39 +214,59 @@ const en = {
   trouble: {
     title: "When something goes wrong.",
     items: [
-      [
-        "macOS says the app can't be opened",
-        "Open System Settings → Privacy & Security and click Open Anyway. Or install with the Terminal one-liner: what curl downloads is not quarantined, so there is no warning.",
-      ],
-      [
-        "A game says it is encrypted",
-        "AnyPS5 needs a decrypted copy of the game. An encrypted dump is reported instead of converted.",
-      ],
-      [
-        "A game stops at start or on a black screen",
-        "Read the reason the launcher shows, then check the compatibility list. Try another engine version in Settings → Engine, and send a crash report.",
-      ],
-      [
-        "Stutters the first time",
-        "Shaders are being compiled. Later runs load them from the cache. Clear Shader Cache only when a game misbehaves.",
-      ],
-      [
-        "The phone does not find the computer",
-        "Same Wi-Fi on both, allow local network access if the phone asks, and allow the firewall prompt on Windows. Or type the computer's address in the phone app.",
-      ],
-      [
-        "Windows protected your PC",
-        "SmartScreen does not know the installer yet: click More info → Run anyway.",
-      ],
-      [
-        "Linux: the launcher runs but games do not",
-        "Games run through AnyPS5's current Linux engine, which needs glibc 2.38 or newer (Ubuntu 24.04, Debian 13, Fedora 39 or newer).",
-      ],
-      [
-        "Share play viewers see nothing",
-        "Allow AnyPS5 in System Settings → Privacy & Security → Screen Recording, then start share play again.",
-      ],
-    ] as [string, string][],
+      {
+        id: "fix-mac-blocked",
+        q: "macOS says the app can't be opened",
+        a: [
+          "Open System Settings → Privacy & Security and click Open Anyway. Or install with the Terminal one-liner: what curl downloads is not quarantined, so there is no warning.",
+        ],
+      },
+      {
+        id: "fix-encrypted",
+        q: "A game says it is encrypted",
+        a: ["AnyPS5 needs a decrypted copy of the game. An encrypted dump is reported instead of converted."],
+      },
+      {
+        id: "fix-black-screen",
+        q: "A game stops at start or on a black screen",
+        a: [
+          "Read the reason the launcher shows, then check the compatibility list. Try another engine version in Settings → Engine, and send a crash report.",
+        ],
+      },
+      {
+        id: "fix-stutter",
+        q: "Stutters the first time",
+        a: [
+          "Shaders are being compiled. Later runs load them from the cache. Clear Shader Cache only when a game misbehaves.",
+        ],
+      },
+      {
+        id: "fix-phone",
+        q: "The phone does not find the computer",
+        a: [
+          "Same Wi-Fi on both, allow local network access if the phone asks, and allow the firewall prompt on Windows. Or type the computer's address in the phone app.",
+        ],
+      },
+      {
+        id: "fix-smartscreen",
+        q: "Windows protected your PC",
+        a: ["SmartScreen does not know the installer yet: click More info → Run anyway."],
+      },
+      {
+        id: "fix-linux",
+        q: "Linux: the launcher runs but games do not",
+        a: [
+          "Games run through AnyPS5's current Linux engine, which needs glibc 2.38 or newer (Ubuntu 24.04, Debian 13, Fedora 39 or newer).",
+        ],
+      },
+      {
+        id: "fix-share-play",
+        q: "Share play viewers see nothing",
+        a: [
+          "Allow AnyPS5 in System Settings → Privacy & Security → Screen Recording, then start share play again.",
+        ],
+      },
+    ] as Faq[],
   },
   more: {
     title: "Still stuck?",
@@ -455,38 +475,60 @@ const tr: HelpStrings = {
   trouble: {
     title: "Bir şeyler ters gittiğinde.",
     items: [
-      [
-        "macOS uygulamanın açılamayacağını söylüyor",
-        "Sistem Ayarları → Gizlilik ve Güvenlik'i aç ve Yine de Aç'a tıkla. Ya da Terminal'deki tek satırla kur: curl'ün indirdiği karantinaya alınmaz, uyarı çıkmaz.",
-      ],
-      [
-        "Oyun şifreli olduğunu söylüyor",
-        "AnyPS5, oyunun şifresi çözülmüş bir kopyasına ihtiyaç duyar. Şifreli bir dump dönüştürülmek yerine bildirilir.",
-      ],
-      [
-        "Oyun açılışta ya da siyah ekranda duruyor",
-        "Launcher'ın gösterdiği nedeni oku, sonra uyumluluk listesine bak. Ayarlar → Motor'dan başka bir motor sürümü dene ve bir çökme raporu gönder.",
-      ],
-      [
-        "İlk seferde takılıyor",
-        "Gölgelendiriciler derleniyor. Sonraki açılışlar önbellekten yükler. Gölgelendirici önbelleğini yalnızca oyun tuhaf davranırsa temizle.",
-      ],
-      [
-        "Telefon bilgisayarı bulamıyor",
-        "İkisi de aynı Wi-Fi'da olsun, telefon sorarsa yerel ağ erişimine izin ver, Windows'ta güvenlik duvarı sorusuna izin ver. Ya da telefon uygulamasına bilgisayarın adresini yaz.",
-      ],
-      [
-        "Windows bilgisayarınızı korudu",
-        "SmartScreen kurulumu henüz tanımıyor: Ek bilgi → Yine de çalıştır'a tıkla.",
-      ],
-      [
-        "Linux: launcher çalışıyor ama oyunlar çalışmıyor",
-        "Oyunlar AnyPS5'in güncel Linux motoruyla çalışır ve glibc 2.38 ya da sonrası gerekir (Ubuntu 24.04, Debian 13, Fedora 39 ve sonrası).",
-      ],
-      [
-        "Birlikte oynamada izleyiciler bir şey görmüyor",
-        "Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı'nda AnyPS5'e izin ver, sonra birlikte oynamayı yeniden başlat.",
-      ],
+      {
+        id: "fix-mac-blocked",
+        q: "macOS uygulamanın açılamayacağını söylüyor",
+        a: [
+          "Sistem Ayarları → Gizlilik ve Güvenlik'i aç ve Yine de Aç'a tıkla. Ya da Terminal'deki tek satırla kur: curl'ün indirdiği karantinaya alınmaz, uyarı çıkmaz.",
+        ],
+      },
+      {
+        id: "fix-encrypted",
+        q: "Oyun şifreli olduğunu söylüyor",
+        a: [
+          "AnyPS5, oyunun şifresi çözülmüş bir kopyasına ihtiyaç duyar. Şifreli bir dump dönüştürülmek yerine bildirilir.",
+        ],
+      },
+      {
+        id: "fix-black-screen",
+        q: "Oyun açılışta ya da siyah ekranda duruyor",
+        a: [
+          "Launcher'ın gösterdiği nedeni oku, sonra uyumluluk listesine bak. Ayarlar → Motor'dan başka bir motor sürümü dene ve bir çökme raporu gönder.",
+        ],
+      },
+      {
+        id: "fix-stutter",
+        q: "İlk seferde takılıyor",
+        a: [
+          "Gölgelendiriciler derleniyor. Sonraki açılışlar önbellekten yükler. Gölgelendirici önbelleğini yalnızca oyun tuhaf davranırsa temizle.",
+        ],
+      },
+      {
+        id: "fix-phone",
+        q: "Telefon bilgisayarı bulamıyor",
+        a: [
+          "İkisi de aynı Wi-Fi'da olsun, telefon sorarsa yerel ağ erişimine izin ver, Windows'ta güvenlik duvarı sorusuna izin ver. Ya da telefon uygulamasına bilgisayarın adresini yaz.",
+        ],
+      },
+      {
+        id: "fix-smartscreen",
+        q: "Windows bilgisayarınızı korudu",
+        a: ["SmartScreen kurulumu henüz tanımıyor: Ek bilgi → Yine de çalıştır'a tıkla."],
+      },
+      {
+        id: "fix-linux",
+        q: "Linux: launcher çalışıyor ama oyunlar çalışmıyor",
+        a: [
+          "Oyunlar AnyPS5'in güncel Linux motoruyla çalışır ve glibc 2.38 ya da sonrası gerekir (Ubuntu 24.04, Debian 13, Fedora 39 ve sonrası).",
+        ],
+      },
+      {
+        id: "fix-share-play",
+        q: "Birlikte oynamada izleyiciler bir şey görmüyor",
+        a: [
+          "Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı'nda AnyPS5'e izin ver, sonra birlikte oynamayı yeniden başlat.",
+        ],
+      },
     ],
   },
   more: {

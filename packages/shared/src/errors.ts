@@ -58,6 +58,9 @@ export const ErrorCode = {
   connectionTaken: "connection_taken",
   /** Steam or Discord did not confirm the account (a stale or forged answer, or they are down). */
   connectionFailed: "connection_failed",
+  /** Sign in with Steam: Steam confirmed the account, but no AnyTogether account has it linked.
+   *  Sign in another way and link Steam in Settings first. */
+  steamNotLinked: "steam_not_linked",
   /** Mail could not be sent now (the mail server refused or could not be reached). */
   mailUnavailable: "mail_unavailable",
   /** A passkey's challenge was used already or is too old: ask for a new one. */

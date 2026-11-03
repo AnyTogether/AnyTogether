@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 type Texts = Pick<
   UiStrings,
   | "editBio"
+  | "editProfile"
   | "editProfileMore"
   | "noBio"
   | "addBio"
@@ -24,7 +25,7 @@ type Texts = Pick<
   | "tooManyWait"
 >;
 
-/** The bio on one's own profile, changed right there: the pencil at the top of the card (or a
+/** The bio on one's own profile, changed right there: Edit profile at the top of the card (or a
  *  press on the bio) turns it into a text box with Save and Cancel. Esc cancels, ⌘/Ctrl+Enter
  *  saves. Anyone else's bio is plain text. */
 export function ProfileBio({
@@ -94,16 +95,17 @@ export function ProfileBio({
       <button
         ref={pencil}
         type="button"
-        className="pill icon profile-pencil"
-        aria-label={texts.editBio}
+        className="pill profile-pencil"
         title={texts.editBio}
         aria-expanded={editing}
+        aria-controls={editing ? "profile-bio" : undefined}
         onClick={() => (editing ? stop() : start())}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z" />
-          <path d="M13.5 6.5l4 4" />
+          <path d="M4.5 19.5l1-4.4L15.4 5.2a1.9 1.9 0 0 1 2.7 0l.7.7a1.9 1.9 0 0 1 0 2.7L8.9 18.5z" />
+          <path d="M13.6 7l3.4 3.4M5.5 15.1l3.4 3.4M13 19.5h6.5" />
         </svg>
+        <span>{texts.editProfile}</span>
       </button>
       {editing ? (
         <form
