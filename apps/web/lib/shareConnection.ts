@@ -33,7 +33,8 @@ export interface LinkStats {
   /** Share of packets lost in the last second, 0-1. */
   lossRate: number;
   bitrateKbps: number | null;
-  path: "direct" | "relay" | null;
+  /** "server": through the media server. */
+  path: "direct" | "relay" | "server" | null;
   codec: string | null;
   framesDecoded: number;
   /** The game's sound: "opus" once it comes as the track, else "pcm" (the data channel). */
@@ -78,19 +79,14 @@ const askEveryMs = 5000;
  *  on the "audio" channel), and sends the pad on the "pad" channel (both channels unordered, no
  *  retransmits, made by the host). */
 export class ShareConnection {
+  readonly route = "mesh" as const;
   private pc: RTCPeerConnection | null = null;
   private queued: RTCIceCandidateInit[] = [];
   private chain: Promise<void> = Promise.resolve();
   private pad: RTCDataChannel | null = null;
   private asker: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
-  private previous: {
-    at: number;
-    bytes: number;
-    lost: number;
-    received: number;
-    track: TrackStats | null;
-  } | null = null;
+  private previous: StatsSample | null = null;
   state: LinkState = "waiting";
   stream: MediaStream | null = null;
   stats: LinkStats = emptyStats();
@@ -259,68 +255,10 @@ export class ShareConnection {
     if (!pc) return this.stats;
     const report = await pc.getStats().catch(() => null);
     if (!report) return this.stats;
-    const next = emptyStats();
-    let pair: RTCIceCandidatePairStats | undefined;
-    const byId = new Map<string, Record<string, unknown>>();
-    for (const entry of report.values()) byId.set(entry.id, entry);
-    let bytes = 0;
-    let received = 0;
-    let track: TrackStats | null = null;
-    for (const entry of report.values()) {
-      if (entry.type === "transport" && entry.selectedCandidatePairId)
-        pair = byId.get(entry.selectedCandidatePairId) as RTCIceCandidatePairStats | undefined;
-      if (entry.type === "inbound-rtp" && entry.kind === "video") {
-        next.fps = entry.framesPerSecond ?? null;
-        next.width = entry.frameWidth ?? null;
-        next.height = entry.frameHeight ?? null;
-        next.lost = entry.packetsLost ?? 0;
-        next.framesDecoded = entry.framesDecoded ?? 0;
-        received = entry.packetsReceived ?? 0;
-        bytes = entry.bytesReceived ?? 0;
-        if (entry.jitterBufferEmittedCount)
-          next.jitterMs = (entry.jitterBufferDelay / entry.jitterBufferEmittedCount) * 1000;
-        const codec = entry.codecId ? byId.get(entry.codecId) : undefined;
-        next.codec = typeof codec?.mimeType === "string" ? codec.mimeType.replace(/^video\//, "") : null;
-      }
-      if (entry.type === "inbound-rtp" && entry.kind === "audio") {
-        track = trackFrom(entry);
-        const codec = entry.codecId ? byId.get(entry.codecId) : undefined;
-        if (typeof codec?.mimeType === "string" && /opus/i.test(codec.mimeType) && track.samples > 0)
-          next.audio = "opus";
-        next.audioChannels = typeof codec?.channels === "number" ? codec.channels : null;
-        next.audioSamples = track.samples - track.concealed;
-      }
-    }
-    if (!pair)
-      for (const entry of report.values())
-        if (entry.type === "candidate-pair" && entry.nominated && entry.state === "succeeded") pair = entry;
-    if (pair) {
-      next.rttMs = typeof pair.currentRoundTripTime === "number" ? pair.currentRoundTripTime * 1000 : null;
-      const local = byId.get(pair.localCandidateId);
-      const remote = byId.get(pair.remoteCandidateId);
-      next.path = local?.candidateType === "relay" || remote?.candidateType === "relay" ? "relay" : "direct";
-    }
-    const now = performance.now();
-    if (this.previous && now > this.previous.at) {
-      const seconds = (now - this.previous.at) / 1000;
-      next.bitrateKbps = Math.max(0, ((bytes - this.previous.bytes) * 8) / seconds / 1000);
-      const lostNow = Math.max(0, next.lost - this.previous.lost);
-      const gotNow = Math.max(0, received - this.previous.received);
-      next.lossRate = lostNow + gotNow ? lostNow / (lostNow + gotNow) : 0;
-    }
-    if (track) {
-      const rates = trackRates(
-        track,
-        this.previous?.track ?? null,
-        this.previous ? (now - this.previous.at) / 1000 : 0,
-      );
-      next.audioKbps = rates.kbps;
-      next.audioBufferMs = rates.bufferMs;
-      next.audioConcealed = rates.concealed;
-    }
-    this.previous = { at: now, bytes, lost: next.lost, received, track };
-    this.stats = next;
-    return next;
+    const { stats, sample } = readLinkStats(report.values(), this.previous);
+    this.previous = sample;
+    this.stats = stats;
+    return stats;
   }
 
   private set(state: LinkState) {
@@ -350,4 +288,79 @@ export class ShareConnection {
     this.drop();
     this.state = "closed";
   }
+}
+
+/** What the last measure saw, to turn totals into rates. */
+export interface StatsSample {
+  at: number;
+  bytes: number;
+  lost: number;
+  received: number;
+  track: TrackStats | null;
+}
+
+/** The quality line's figures from a WebRTC statistics report (a peer connection's, or the media
+ *  server's receivers' together) and the sample before it. */
+export function readLinkStats(
+  // biome-ignore lint/suspicious/noExplicitAny: RTCStatsReport entries are untyped dictionaries
+  entries: Iterable<any>,
+  previous: StatsSample | null,
+  now = performance.now(),
+): { stats: LinkStats; sample: StatsSample } {
+  const next = emptyStats();
+  let pair: RTCIceCandidatePairStats | undefined;
+  const byId = new Map<string, Record<string, unknown>>();
+  const all = [...entries];
+  for (const entry of all) byId.set(entry.id, entry);
+  let bytes = 0;
+  let received = 0;
+  let track: TrackStats | null = null;
+  for (const entry of all) {
+    if (entry.type === "transport" && entry.selectedCandidatePairId)
+      pair = byId.get(entry.selectedCandidatePairId) as RTCIceCandidatePairStats | undefined;
+    if (entry.type === "inbound-rtp" && entry.kind === "video") {
+      next.fps = entry.framesPerSecond ?? null;
+      next.width = entry.frameWidth ?? null;
+      next.height = entry.frameHeight ?? null;
+      next.lost = entry.packetsLost ?? 0;
+      next.framesDecoded = entry.framesDecoded ?? 0;
+      received = entry.packetsReceived ?? 0;
+      bytes = entry.bytesReceived ?? 0;
+      if (entry.jitterBufferEmittedCount)
+        next.jitterMs = (entry.jitterBufferDelay / entry.jitterBufferEmittedCount) * 1000;
+      const codec = entry.codecId ? byId.get(entry.codecId) : undefined;
+      next.codec = typeof codec?.mimeType === "string" ? codec.mimeType.replace(/^video\//, "") : null;
+    }
+    if (entry.type === "inbound-rtp" && entry.kind === "audio") {
+      track = trackFrom(entry);
+      const codec = entry.codecId ? byId.get(entry.codecId) : undefined;
+      if (typeof codec?.mimeType === "string" && /opus/i.test(codec.mimeType) && track.samples > 0)
+        next.audio = "opus";
+      next.audioChannels = typeof codec?.channels === "number" ? codec.channels : null;
+      next.audioSamples = track.samples - track.concealed;
+    }
+  }
+  if (!pair)
+    for (const entry of all)
+      if (entry.type === "candidate-pair" && entry.nominated && entry.state === "succeeded") pair = entry;
+  if (pair) {
+    next.rttMs = typeof pair.currentRoundTripTime === "number" ? pair.currentRoundTripTime * 1000 : null;
+    const local = byId.get(pair.localCandidateId);
+    const remote = byId.get(pair.remoteCandidateId);
+    next.path = local?.candidateType === "relay" || remote?.candidateType === "relay" ? "relay" : "direct";
+  }
+  if (previous && now > previous.at) {
+    const seconds = (now - previous.at) / 1000;
+    next.bitrateKbps = Math.max(0, ((bytes - previous.bytes) * 8) / seconds / 1000);
+    const lostNow = Math.max(0, next.lost - previous.lost);
+    const gotNow = Math.max(0, received - previous.received);
+    next.lossRate = lostNow + gotNow ? lostNow / (lostNow + gotNow) : 0;
+  }
+  if (track) {
+    const rates = trackRates(track, previous?.track ?? null, previous ? (now - previous.at) / 1000 : 0);
+    next.audioKbps = rates.kbps;
+    next.audioBufferMs = rates.bufferMs;
+    next.audioConcealed = rates.concealed;
+  }
+  return { stats: next, sample: { at: now, bytes, lost: next.lost, received, track } };
 }

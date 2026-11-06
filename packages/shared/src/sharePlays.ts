@@ -3,6 +3,7 @@ import type { IceServer } from "./calls.js";
 import { type GameSignalKind, gameSignalKinds } from "./gameSessions.js";
 import { LanguageCode, TitleId } from "./games.js";
 import type { JoinCode } from "./joinCodes.js";
+import { type MediaRoute, type SfuAccess, maxSfuShareViewers } from "./media.js";
 import type { MemberView } from "./messages.js";
 import { type PublicJoin, publicJoins } from "./parties.js";
 
@@ -11,7 +12,8 @@ import { type PublicJoin, publicJoins } from "./parties.js";
  *  the signalling and keeps who watches and who holds which pad; the picture, the sound and the
  *  pad never pass through it. State lives in Valkey only: a share play lasts as long as the game. */
 
-/** The host uploads one stream per viewer, so a handful at most. */
+/** The host uploads one stream per viewer, so a handful at most. More need the server's media
+ *  server (media.ts), up to its own limit. */
 export const maxShareViewers = 4;
 /** Player 1 is the host; a viewer may be handed one of these. */
 export const sharePadSlots = [2, 3, 4] as const;
@@ -38,7 +40,8 @@ export const SharePlayStart = z.object({
   title: GameName.optional(),
   /** Friends may walk in without an invite. */
   open: z.boolean().default(true),
-  maxViewers: z.number().int().min(1).max(maxShareViewers).default(2),
+  /** Above `maxShareViewers` only on a server with a media server (GET /media-server says how many). */
+  maxViewers: z.number().int().min(1).max(maxSfuShareViewers).default(2),
   /** In the public list; null or left out keeps it to friends and invites. */
   public: ShareListing.nullable().optional(),
 });
@@ -48,7 +51,7 @@ export const SharePlayUpdate = z
     titleId: TitleId.optional(),
     title: GameName.nullable().optional(),
     open: z.boolean().optional(),
-    maxViewers: z.number().int().min(1).max(maxShareViewers).optional(),
+    maxViewers: z.number().int().min(1).max(maxSfuShareViewers).optional(),
     public: ShareListing.nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, "nothing to change");
@@ -78,6 +81,11 @@ export interface SharePlayView {
   title: string | null;
   open: boolean;
   maxViewers: number;
+  /** "mesh": the host streams to each viewer. "sfu": the host publishes once to the media server
+   *  and viewers without a pad watch from there; viewers holding a pad keep a direct connection
+   *  to the host (the mesh, at most three). It turns "sfu" when maxViewers goes above
+   *  `maxShareViewers`, and stays so. */
+  media: MediaRoute;
   viewers: SharePlayViewer[];
   /** In the public list, and how; null when it is not listed. */
   public: { join: PublicJoin; language: string | null; live: boolean } | null;
@@ -96,6 +104,9 @@ export interface SharePlayJoin {
   iceServers: IceServer[];
   /** When the TURN credentials stop working. */
   expiresAt: string | null;
+  /** The media server room while the share play is "sfu": the host may publish, viewers only
+   *  watch. Null on the mesh. */
+  sfu: SfuAccess | null;
 }
 
 export interface SharePlayInviteView {

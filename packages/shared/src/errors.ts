@@ -9,6 +9,9 @@ export const ErrorCode = {
   unknownTrophy: "unknown_trophy",
   /** A party, group or game session has no room left. */
   full: "full",
+  /** More viewers or a bigger party than a peer-to-peer mesh holds, on a server without a media
+   *  server (or past its limit): the answer has `max`. */
+  mediaServerOff: "media_server_off",
   /** Only a party's leader may do this for the party (e.g. let a looking-for-group player in). */
   notPartyLeader: "not_party_leader",
   /** Joining a game session needs the same game version and engine build. */

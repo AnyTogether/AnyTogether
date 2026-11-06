@@ -1,6 +1,7 @@
 # Your own AnyTogether on one machine: cp .env.example .env, fill it in, docker compose up -d.
 # See docs/self-hosting.md. The optional TURN relay for calls starts with --profile turn, the
-# backup service with --profile backup.
+# media server for big share plays and parties with --profile sfu, the backup service with
+# --profile backup.
 name: anytogether
 
 x-node: &node
@@ -62,6 +63,13 @@ services:
       WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-}
       TURN_SECRET: ${TURN_SECRET:-}
       TURN_URLS: ${TURN_URLS:-}
+      # The media server (--profile sfu): off until LIVEKIT_URL and the key and secret are set.
+      LIVEKIT_URL: ${LIVEKIT_URL:-}
+      LIVEKIT_API_URL: ${LIVEKIT_API_URL:-http://livekit:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+      SFU_MAX_SHARE_VIEWERS: ${SFU_MAX_SHARE_VIEWERS:-}
+      SFU_MAX_PARTY_SIZE: ${SFU_MAX_PARTY_SIZE:-}
       GAME_ICON_HOSTS: ${GAME_ICON_HOSTS:-}
       CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-cf-connecting-ip}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
@@ -271,6 +279,32 @@ services:
       - --denied-peer-ip=::1
       - --denied-peer-ip=fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
       - --denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+
+  # The media server (docker compose --profile sfu up -d): LiveKit, for share plays above four
+  # viewers and party calls above eight voices. Its WebSocket goes through Caddy (/livekit); the
+  # media take 7881/tcp and 7882/udp straight to this machine. See docs/self-hosting.md.
+  livekit:
+    image: livekit/livekit-server:v1.13.10
+    profiles: [sfu]
+    restart: unless-stopped
+    command: ["--config", "/etc/livekit.yaml"]
+    environment:
+      # "key: secret", as LiveKit reads its keys from the environment.
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-}: ${LIVEKIT_API_SECRET:-}"
+    # Without a key and secret anyone could make rooms on this machine.
+    entrypoint:
+      - sh
+      - -c
+      - 'key=$${LIVEKIT_KEYS%%:*}; secret=$${LIVEKIT_KEYS#*: }; [ -n "$$key" ] && [ $${#secret} -ge 32 ] || { echo "livekit: set LIVEKIT_API_KEY and LIVEKIT_API_SECRET (32 or more characters) in .env first" >&2; exit 1; }; exec /livekit-server "$$@"'
+      - livekit-server
+    ports:
+      - "7881:7881/tcp"
+      - "7882:7882/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
 
 volumes:
   postgres:

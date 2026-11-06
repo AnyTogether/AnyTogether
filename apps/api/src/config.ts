@@ -59,6 +59,21 @@ export function config(env = process.env) {
     providers,
     /** TURN REST: the secret shared with the relay, and the STUN/TURN URLs handed to clients. */
     turn: { secret: env.TURN_SECRET ?? "", urls: list(env.TURN_URLS) },
+    /** The media server (LiveKit) for share plays above four viewers and party calls above eight
+     *  voices: the WebSocket URL clients connect to (LIVEKIT_URL), where the API reaches its server
+     *  API (LIVEKIT_API_URL, from LIVEKIT_URL when empty), its key and secret, and the limits
+     *  (SFU_MAX_SHARE_VIEWERS, SFU_MAX_PARTY_SIZE). Off unless the URL, key and secret are set. */
+    sfu:
+      env.LIVEKIT_URL && env.LIVEKIT_API_KEY && env.LIVEKIT_API_SECRET
+        ? {
+            url: env.LIVEKIT_URL,
+            apiUrl: env.LIVEKIT_API_URL ?? "",
+            apiKey: env.LIVEKIT_API_KEY,
+            apiSecret: env.LIVEKIT_API_SECRET,
+            maxShareViewers: Number(env.SFU_MAX_SHARE_VIEWERS) || undefined,
+            maxPartySize: Number(env.SFU_MAX_PARTY_SIZE) || undefined,
+          }
+        : undefined,
     /** Where the caller's address is read from for per-address limits (CLIENT_IP_HEADER). */
     clientIpHeader: ipHeader as ClientIpHeader,
     /** Hosts game icons may come from (GAME_ICON_HOSTS); launchers load them for everyone who
