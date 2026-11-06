@@ -1,6 +1,7 @@
 import type { CallEvent, SignalKind } from "./calls.js";
 import type { CommunityEvent } from "./communities.js";
 import type { DiscoverEvent } from "./discover.js";
+import type { E2eeEvent } from "./e2ee.js";
 import type { FeedEvent } from "./feed.js";
 import type { GamePresence, GameSessionEvent, GameSignalKind } from "./gameSessions.js";
 import type { LevelTier } from "./level.js";
@@ -68,6 +69,7 @@ export type GatewayEvent =
       };
     }
   | MessageEvent
+  | E2eeEvent
   | PartyEvent
   | CallEvent
   | GameSessionEvent

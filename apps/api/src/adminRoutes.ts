@@ -264,6 +264,7 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
         version?: number;
         title?: string;
         description?: string | null;
+        sealed?: unknown;
       } | null;
       const theme = r.targetKind === "theme" ? themeRows.get(r.targetId) : undefined;
       return {
@@ -279,6 +280,9 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
                 text: snapshot?.text ?? null,
                 sentAt: snapshot?.createdAt ?? null,
                 removed: removed.has(r.targetId),
+                // End-to-end encrypted: opened with the key the reporter sent and checked against
+                // its author's signature.
+                ...(snapshot?.sealed ? { encrypted: true } : {}),
               }
             : null,
         post:
@@ -465,7 +469,7 @@ export function adminRoutes(deps: Deps, notes: Notifier) {
           .where(and(eq(messages.id, report.targetId), isNull(messages.deletedAt)));
         const [removed] = await db
           .update(messages)
-          .set({ text: null, attachments: [], deletedAt: new Date() })
+          .set({ text: null, sealed: null, attachments: [], deletedAt: new Date() })
           .where(and(eq(messages.id, report.targetId), isNull(messages.deletedAt)))
           .returning();
         if (removed) {

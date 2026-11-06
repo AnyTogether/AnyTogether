@@ -22,6 +22,8 @@ export default {
   output: "standalone",
   outputFileTracingRoot: fileURLToPath(new URL("../..", import.meta.url)),
   poweredByHeader: false,
+  // The end-to-end encryption shared with the API, as TypeScript source.
+  transpilePackages: ["@anytogether/e2ee"],
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

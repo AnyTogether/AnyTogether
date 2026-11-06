@@ -4,7 +4,8 @@ import { apiUrl, forwardedFor } from "@/lib/session";
 /** Passes a body on to the API without reading it whole, refusing one that says it is too big. */
 export async function stream(request: Request, path: string, method: string, token: string, maxMb: number) {
   const length = request.headers.get("content-length");
-  if (Number(length ?? 0) > maxMb * 1024 * 1024)
+  // A sealed file is its tag (16 bytes) bigger than the limit; the API checks it exactly.
+  if (Number(length ?? 0) > maxMb * 1024 * 1024 + 16)
     return Response.json({ code: "payload_too_large", title: `At most ${maxMb} MB` }, { status: 413 });
   const response = await fetch(`${apiUrl()}/api/v1${path}`, {
     method,
