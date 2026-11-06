@@ -223,14 +223,21 @@ privacy page says so.
 
 ## Voice calls
 
-Calls and party voice are peer-to-peer WebRTC on every client: one `RTCPeerConnection` per other
-person (`apps/web/lib/voice.ts`, the launcher's `PartyVoice.swift`, the Dart `voice_webrtc.dart`),
-with the API handing out STUN and TURN credentials (`apps/api/src/calls.ts`) and the gateway
-relaying offers, answers and candidates (`apps/realtime/src/gateway.ts`). There is no media server.
-WebRTC always encrypts media with DTLS-SRTP between the two devices, and a TURN relay only forwards
-those encrypted packets. So the audio is end-to-end encrypted against anyone who only watches or
-relays, the TURN relay and the server's operator included.
+A call between two people is peer-to-peer WebRTC on every client: one `RTCPeerConnection` per
+other person (`apps/web/lib/voice.ts`, the launcher's `PartyVoice.swift`, the Dart
+`voice_webrtc.dart`). The API hands out STUN and TURN credentials (`apps/api/src/calls.ts`) and
+the gateway relays offers, answers and candidates (`apps/realtime/src/gateway.ts`). WebRTC always
+encrypts media with DTLS-SRTP between the two devices, and a TURN relay only forwards those
+encrypted packets. So the audio of a 1:1 call is end-to-end encrypted against anyone who only
+watches or relays, the TURN relay and the server's operator included.
 
-The caveat: the DTLS fingerprints that tie the encryption to the two devices travel in the
-offer and answer, through the gateway. A server that rewrites them could put itself in the middle
-of a call. Binding the fingerprints to the device keys would close that. It is not in v1.
+Two caveats:
+
+- The server-side media path. A party call with more than eight voices moves to the media server
+  (LiveKit, `apps/api/src/sfu.ts`, `outgrown` in `calls.ts`) when the server has one. A media
+  server ends the encryption and forwards the audio, so it can hear that call. A direct call never
+  moves there (`outgrown` returns early without a party).
+- The DTLS fingerprints that tie the encryption to the two devices travel in the offer and answer,
+  through the gateway. A server that rewrites them could put itself in the middle of a call.
+  Binding the fingerprints to the device keys would close that. It is not in v1: it changes the
+  call signalling on all four clients, so it is not cheap.
