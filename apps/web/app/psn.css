@@ -420,10 +420,10 @@
   background: var(--line);
   transition: background 0.2s ease, width 0.2s ease;
 }
-.pin-dots i.trophy {
+.pin-dots i.is-trophy {
   background: #e8c15a;
 }
-.pin-dots i.game {
+.pin-dots i.is-game {
   background: var(--a);
 }
 .pick-head {
