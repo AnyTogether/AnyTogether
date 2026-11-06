@@ -81,6 +81,20 @@ describe("export", () => {
       { targetKind: "user", targetId: ayse.id, reason: "spam" },
       utku.token,
     );
+    const challenge = await h.call(
+      "POST",
+      `${v1}/challenges`,
+      {
+        title: "Weekend race",
+        titleId: "PPSA01234",
+        metric: "points",
+        audience: "friends",
+        startsAt: new Date(Date.now() + 60_000).toISOString(),
+        endsAt: new Date(Date.now() + 86_400_000).toISOString(),
+      },
+      utku.token,
+    );
+    await h.call("POST", `${v1}/me/api-tokens`, { name: "Bot", scopes: ["profiles:read"] }, utku.token);
     const response = await h.app.request(`${v1}/me/export`, {
       headers: { authorization: `Bearer ${utku.token}` },
     });
@@ -105,7 +119,12 @@ describe("export", () => {
     expect(data.reportsSent).toEqual([
       expect.objectContaining({ targetKind: "user", targetId: ayse.id, reason: "spam", status: "open" }),
     ]);
-    expect(text).not.toMatch(/refreshHash|previousHash|codeHash|linkHash|secretHash/);
+    expect(data.challengesMade).toEqual([
+      expect.objectContaining({ id: challenge.body.id, title: "Weekend race" }),
+    ]);
+    expect(data.challengesJoined).toEqual([expect.objectContaining({ challengeId: challenge.body.id })]);
+    expect(data.apiTokens).toEqual([expect.objectContaining({ name: "Bot", scopes: ["profiles:read"] })]);
+    expect(text).not.toMatch(/refreshHash|previousHash|codeHash|linkHash|secretHash|tokenHash/);
   });
 });
 

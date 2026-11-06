@@ -1,0 +1,1402 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AnyTogether public API",
+    "version": "1.0.0",
+    "summary": "Read-only access to what AnyTogether already shows everyone.",
+    "description": "Public profiles and the parts their owners opened to everyone, the global leaderboards, and challenges made for everyone. Every request needs a personal API token, made in the account settings on anytogether.net. A token reads as a stranger would: being friends with someone never shows more. People blocked either way with the token's owner are left out. Answers carry handles, never account IDs. There are no write endpoints in this version.",
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://anytogether.net/api/v1/public"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Token",
+      "description": "The token itself."
+    },
+    {
+      "name": "Profiles",
+      "description": "Scope `profiles:read`."
+    },
+    {
+      "name": "Leaderboards",
+      "description": "Scope `leaderboards:read`."
+    },
+    {
+      "name": "Challenges",
+      "description": "Scope `challenges:read`."
+    }
+  ],
+  "security": [
+    {
+      "token": []
+    }
+  ],
+  "paths": {
+    "/token": {
+      "get": {
+        "summary": "The token in use",
+        "description": "Its name, scopes and when it was made. Needs no scope.",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The token in use",
+            "headers": {
+              "RateLimit-Limit": {
+                "description": "Requests this token may make per minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the minute starts again.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not valid (revoked, or its account is no longer active).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token lacks the scope (`scope` names it), or the part asked for is private (`section`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over a rate limit. `Retry-After` says how many seconds to wait; `limit` names which one.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Token"]
+      }
+    },
+    "/users/{handle}": {
+      "get": {
+        "summary": "A profile card",
+        "description": "The card a signed-out reader sees. With the person's public profile switch off it is the minimal card: name and picture, nothing else.",
+        "security": [
+          {
+            "token": ["profiles:read"]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The person's handle, without the @."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A profile card",
+            "headers": {
+              "RateLimit-Limit": {
+                "description": "Requests this token may make per minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the minute starts again.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileCard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not valid (revoked, or its account is no longer active).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token lacks the scope (`scope` names it), or the part asked for is private (`section`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No one with that handle, or a block either way.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over a rate limit. `Retry-After` says how many seconds to wait; `limit` names which one.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Profiles"]
+      }
+    },
+    "/users/{handle}/library": {
+      "get": {
+        "summary": "A library",
+        "description": "Games played, with play time. Only when the person opened their library to everyone. Trophy counts follow their trophies setting.",
+        "security": [
+          {
+            "token": ["profiles:read"]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The person's handle, without the @."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A library",
+            "headers": {
+              "RateLimit-Limit": {
+                "description": "Requests this token may make per minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the minute starts again.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Library"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not valid (revoked, or its account is no longer active).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token lacks the scope (`scope` names it), or the part asked for is private (`section`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No one with that handle, or a block either way.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over a rate limit. `Retry-After` says how many seconds to wait; `limit` names which one.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Profiles"]
+      }
+    },
+    "/users/{handle}/trophies": {
+      "get": {
+        "summary": "Trophies",
+        "description": "One game's trophy list with what the person earned (with `titleId`), or their newest 200. Only when they opened their trophies to everyone. Texts of hidden trophies are left out.",
+        "security": [
+          {
+            "token": ["profiles:read"]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The person's handle, without the @."
+          },
+          {
+            "name": "titleId",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/TitleId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trophies",
+            "headers": {
+              "RateLimit-Limit": {
+                "description": "Requests this token may make per minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the minute starts again.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A titleId that is not a title ID.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not valid (revoked, or its account is no longer active).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token lacks the scope (`scope` names it), or the part asked for is private (`section`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No one with that handle, or a block either way.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over a rate limit. `Retry-After` says how many seconds to wait; `limit` names which one.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Profiles"]
+      }
+    },
+    "/games/{titleId}": {
+      "get": {
+        "summary": "A game",
+        "description": "Its names by language and its icon.",
+        "security": [
+          {
+            "token": ["leaderboards:read"]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "titleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TitleId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A game",
+            "headers": {
+              "RateLimit-Limit": {
+                "description": "Requests this token may make per minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the minute starts again.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Game"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not valid (revoked, or its account is no longer active).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token lacks the scope (`scope` names it), or the part asked for is private (`section`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such game.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over a rate limit. `Retry-After` says how many seconds to wait; `limit` names which one.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Leaderboards"]
+      }
+    },
+    "/games/{titleId}/leaderboard": {
+      "get": {
+        "summary": "A game's global leaderboard",
+        "description": "By trophy points, play time (seconds) or completion (percent). Only people who opened their library (and, for points and completion, their trophies) to everyone are on it. Kept for a minute.",
+        "security": [
+          {
+            "token": ["leaderboards:read"]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "titleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TitleId"
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["points", "time", "completion"],
+              "default": "points"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A game's global leaderboard",
+            "headers": {
+              "RateLimit-Limit": {
+                "description": "Requests this token may make per minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the minute starts again.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Leaderboard"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An unknown `by`, a `limit` out of range, or a `scope` other than global.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not valid (revoked, or its account is no longer active).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token lacks the scope (`scope` names it), or the part asked for is private (`section`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such game.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over a rate limit. `Retry-After` says how many seconds to wait; `limit` names which one.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Leaderboards"]
+      }
+    },
+    "/leaderboards/points": {
+      "get": {
+        "summary": "The overall leaderboard",
+        "description": "Everyone by trophy points over all games, among people who opened their trophies to everyone. Kept for a minute.",
+        "security": [
+          {
+            "token": ["leaderboards:read"]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The overall leaderboard",
+            "headers": {
+              "RateLimit-Limit": {
+                "description": "Requests this token may make per minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the minute starts again.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Leaderboard"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A `limit` out of range.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not valid (revoked, or its account is no longer active).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token lacks the scope (`scope` names it), or the part asked for is private (`section`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over a rate limit. `Retry-After` says how many seconds to wait; `limit` names which one.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Leaderboards"]
+      }
+    },
+    "/challenges": {
+      "get": {
+        "summary": "Challenges made for everyone",
+        "description": "Running and coming ones by default, soonest first; `state=ended` lists those over, latest first. At most 50.",
+        "security": [
+          {
+            "token": ["challenges:read"]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["upcoming", "active", "ended"]
+            }
+          },
+          {
+            "name": "titleId",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/TitleId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Challenges made for everyone",
+            "headers": {
+              "RateLimit-Limit": {
+                "description": "Requests this token may make per minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the minute starts again.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "challenges": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Challenge"
+                      }
+                    }
+                  },
+                  "required": ["challenges"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An unknown state or a titleId that is not a title ID.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not valid (revoked, or its account is no longer active).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token lacks the scope (`scope` names it), or the part asked for is private (`section`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over a rate limit. `Retry-After` says how many seconds to wait; `limit` names which one.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Challenges"]
+      }
+    },
+    "/challenges/{id}": {
+      "get": {
+        "summary": "A challenge and its standings",
+        "description": "The first 100 places. Someone who keeps that part of their profile from everyone (the library for play time, trophies otherwise) keeps their place with `user` null.",
+        "security": [
+          {
+            "token": ["challenges:read"]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A challenge and its standings",
+            "headers": {
+              "RateLimit-Limit": {
+                "description": "Requests this token may make per minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the minute starts again.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not valid (revoked, or its account is no longer active).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token lacks the scope (`scope` names it), or the part asked for is private (`section`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such challenge, or not one made for everyone.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over a rate limit. `Retry-After` says how many seconds to wait; `limit` names which one.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Challenges"]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "token": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "A personal API token (it starts with `atp_`). Each token may make 60 requests a minute and 10,000 a day, and all tokens of one account 120 a minute together."
+      }
+    },
+    "schemas": {
+      "TitleId": {
+        "type": "string",
+        "pattern": "^[A-Z]{4}[0-9]{5}$",
+        "examples": ["PPSA01234"]
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string",
+            "examples": ["unauthorized", "forbidden", "not_found", "rate_limited"]
+          },
+          "scope": {
+            "type": "string",
+            "description": "The scope a token lacks."
+          },
+          "section": {
+            "type": "string",
+            "description": "The private part: profile, library or trophies."
+          },
+          "limit": {
+            "type": "string",
+            "description": "The rate limit reached."
+          },
+          "retryAfter": {
+            "type": "integer"
+          }
+        },
+        "required": ["status", "code"]
+      },
+      "Token": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["profiles:read", "leaderboards:read", "challenges:read"]
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["name", "scopes", "createdAt"]
+      },
+      "Person": {
+        "type": "object",
+        "properties": {
+          "handle": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": ["string", "null"],
+            "format": "uri"
+          }
+        },
+        "required": ["handle", "displayName", "avatar"]
+      },
+      "ProfileCard": {
+        "type": "object",
+        "properties": {
+          "handle": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": ["string", "null"]
+          },
+          "bio": {
+            "type": ["string", "null"]
+          },
+          "country": {
+            "type": ["string", "null"]
+          },
+          "publicProfile": {
+            "type": "boolean"
+          },
+          "visible": {
+            "type": "object",
+            "properties": {
+              "library": {
+                "type": "boolean"
+              },
+              "trophies": {
+                "type": "boolean"
+              },
+              "friends": {
+                "type": "boolean"
+              },
+              "presence": {
+                "type": "boolean"
+              }
+            }
+          },
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "trophyCounts": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "trophyLevel": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          },
+          "cover": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          },
+          "accent": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["handle", "displayName", "avatar", "publicProfile", "visible"]
+      },
+      "Library": {
+        "type": "object",
+        "properties": {
+          "games": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "titleId": {
+                  "$ref": "#/components/schemas/TitleId"
+                },
+                "names": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "iconUrl": {
+                  "type": ["string", "null"]
+                },
+                "firstPlayedAt": {
+                  "type": ["string", "null"],
+                  "format": "date-time"
+                },
+                "lastPlayedAt": {
+                  "type": ["string", "null"],
+                  "format": "date-time"
+                },
+                "secondsPlayed": {
+                  "type": "integer"
+                },
+                "trophiesEarned": {
+                  "type": ["integer", "null"]
+                },
+                "trophiesTotal": {
+                  "type": ["integer", "null"]
+                },
+                "progress": {
+                  "type": ["integer", "null"]
+                },
+                "points": {
+                  "type": ["integer", "null"]
+                }
+              }
+            }
+          }
+        },
+        "required": ["games"]
+      },
+      "Game": {
+        "type": "object",
+        "properties": {
+          "titleId": {
+            "$ref": "#/components/schemas/TitleId"
+          },
+          "names": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "By language code."
+          },
+          "iconUrl": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["titleId", "names", "iconUrl"]
+      },
+      "Leaderboard": {
+        "type": "object",
+        "properties": {
+          "board": {
+            "type": "string",
+            "enum": ["points", "time", "completion"]
+          },
+          "game": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Game"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rank": {
+                  "type": "integer",
+                  "description": "Shared by equal values (1, 2, 2, 4)."
+                },
+                "user": {
+                  "$ref": "#/components/schemas/Person"
+                },
+                "value": {
+                  "type": "integer",
+                  "description": "Points, seconds played or completion percent."
+                },
+                "level": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "required": ["rank", "user", "value"]
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "How many people are on the board."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["board", "game", "entries", "total", "updatedAt"]
+      },
+      "Standing": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "type": "integer"
+          },
+          "user": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Person"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for someone who keeps that part of their profile private."
+          },
+          "value": {
+            "type": "integer"
+          }
+        },
+        "required": ["rank", "user", "value"]
+      },
+      "Challenge": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "game": {
+            "$ref": "#/components/schemas/Game"
+          },
+          "metric": {
+            "type": "string",
+            "enum": ["points", "trophies", "time"],
+            "description": "Trophy points, trophies or seconds played between startsAt and endsAt."
+          },
+          "audience": {
+            "type": "string",
+            "enum": ["public"]
+          },
+          "community": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          },
+          "creator": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Person"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["upcoming", "active", "ended"]
+          },
+          "final": {
+            "type": "boolean",
+            "description": "Over, and the standings will not change (an hour after the end)."
+          },
+          "entrants": {
+            "type": "integer"
+          },
+          "leader": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Standing"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First place, or the winner once it ended."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "game",
+          "metric",
+          "startsAt",
+          "endsAt",
+          "state",
+          "final",
+          "entrants",
+          "leader"
+        ]
+      },
+      "ChallengeDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Challenge"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "standings": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Standing"
+                }
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": ["standings", "updatedAt"]
+          }
+        ]
+      }
+    }
+  }
+}

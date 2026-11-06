@@ -77,6 +77,11 @@ function Mark({ kind }: { kind: Notice["kind"] }) {
             <path d="M3.5 10h17M8 3v4M16 3v4" />
             {kind === "event_started" && <path d="M10.5 13l3.5 2-3.5 2z" />}
           </>
+        ) : kind.startsWith("challenge_") ? (
+          <>
+            <path d="M6 21V4M6 4.5h11l-2.2 3.7L17 12H6" />
+            {kind === "challenge_ended" && <path d="M10 8l1.5 1.5L14 7" />}
+          </>
         ) : kind.startsWith("family_") ? (
           <>
             <path d="M4 11.5L12 5l8 6.5V20h-5.5v-5h-5v5H4z" />
@@ -217,6 +222,24 @@ function Item({
       line = rich(count > 1 ? texts.n_comment_replies : texts.n_comment_reply, { name, n: count });
       detail = notice.data.text ?? null;
       break;
+    case "challenge_invite":
+    case "challenge_started":
+      line = rich(notice.kind === "challenge_invite" ? texts.n_challenge_invite : texts.n_challenge_started, {
+        name,
+        title,
+      });
+      break;
+    case "challenge_ended": {
+      const won = notice.data.rank === 1 && (notice.data.value ?? 0) > 0;
+      line = rich(won ? texts.n_challenge_won : texts.n_challenge_ended, {
+        title,
+        rank: notice.data.rank ?? "?",
+        n: notice.data.entrants ?? "?",
+      });
+      if (!won && notice.data.winner)
+        detail = fill(texts.n_challenge_winner, { name: notice.data.winner.displayName });
+      break;
+    }
     case "warning":
       line = texts.n_warning;
       detail = notice.data.reason ? fill(texts.n_warning_reason, { reason: notice.data.reason }) : null;

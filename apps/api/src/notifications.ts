@@ -109,6 +109,10 @@ const pushTexts = {
     post_comments: ["{name}", "{n} new comments on your capture · {text}"],
     comment_reply: ["{name}", "replied to your comment: {text}"],
     comment_replies: ["{name}", "{n} new replies to your comment · {text}"],
+    challenge_invite: ["{name}", "challenged you: {event} in {game}."],
+    challenge_started: ["{event}", "The challenge in {game} has started."],
+    challenge_ended: ["{event}", "The challenge is over. You placed {rank} of {entrants}."],
+    challenge_won: ["{event}", "The challenge is over. You won."],
   },
   tr: {
     friend_request: ["{name}", "arkadaşın olmak istiyor."],
@@ -151,6 +155,10 @@ const pushTexts = {
     post_comments: ["{name}", "Çekimine {n} yeni yorum · {text}"],
     comment_reply: ["{name}", "yorumunu yanıtladı: {text}"],
     comment_replies: ["{name}", "Yorumuna {n} yeni yanıt · {text}"],
+    challenge_invite: ["{name}", "sana meydan okudu: {game} oyununda {event}."],
+    challenge_started: ["{event}", "{game} meydan okuması başladı."],
+    challenge_ended: ["{event}", "Meydan okuma bitti. {entrants} kişi içinde {rank}. oldun."],
+    challenge_won: ["{event}", "Meydan okuma bitti. Kazandın."],
   },
 } as const;
 
@@ -195,6 +203,10 @@ export function notificationPath(n: Pick<NotificationView, "kind" | "subjectId" 
       return `/communities/${n.subjectId}`;
     case "event_reminder":
       return `/events/${n.subjectId}`;
+    case "challenge_invite":
+    case "challenge_started":
+    case "challenge_ended":
+      return `/challenges/${n.subjectId}`;
     case "event_started": {
       const link = (n.data as { link?: { kind?: string; id?: string } | null }).link;
       return link?.kind === "share_play" && link.id
@@ -236,17 +248,19 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
           ? "messages"
           : n.kind === "lfg_request" && count > 1
             ? "lfg_requests"
-            : n.kind === "post_like" && count > 2
-              ? "post_likes"
-              : n.kind === "post_like" && count === 2
-                ? "post_likes_two"
-                : n.kind === "post_comment" && count > 1
-                  ? "post_comments"
-                  : n.kind === "comment_reply" && count > 1
-                    ? "comment_replies"
-                    : n.kind === "family_request" || n.kind === "family_answer" || n.kind === "family_alert"
-                      ? "family_summary"
-                      : n.kind
+            : n.kind === "challenge_ended" && data.rank === 1 && Number(data.value ?? 0) > 0
+              ? "challenge_won"
+              : n.kind === "post_like" && count > 2
+                ? "post_likes"
+                : n.kind === "post_like" && count === 2
+                  ? "post_likes_two"
+                  : n.kind === "post_comment" && count > 1
+                    ? "post_comments"
+                    : n.kind === "comment_reply" && count > 1
+                      ? "comment_replies"
+                      : n.kind === "family_request" || n.kind === "family_answer" || n.kind === "family_alert"
+                        ? "family_summary"
+                        : n.kind
   ) as keyof typeof texts;
   const name =
     n.kind === "message" && data.group
@@ -267,6 +281,8 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
     level: String(data.level ?? ""),
     community: String(data.community ?? data.name ?? ""),
     event: String(data.title ?? ""),
+    rank: String(data.rank ?? ""),
+    entrants: String(data.entrants ?? ""),
   };
   const [title, text] = texts[key];
   return {

@@ -25,7 +25,7 @@ type Section = "library" | "trophies";
 type Row = { id: string; value: number };
 
 /** What a board ranks: an overall total, or one game's library rows. */
-interface Board {
+export interface Board {
   /** Its name in Valkey keys: "points", "game:PPSA01234:time". */
   key: string;
   board: Leaderboard["board"];
@@ -58,7 +58,7 @@ const pick = <T extends string>(
 };
 
 /** Ranks shared by equal values (1, 2, 2, 4). */
-function ranked(rows: Row[], first = 1, before?: number): (Row & { rank: number })[] {
+export function ranked(rows: Row[], first = 1, before?: number): (Row & { rank: number })[] {
   let rank = first;
   let last = before;
   return rows.map((row, index) => {
@@ -68,14 +68,26 @@ function ranked(rows: Row[], first = 1, before?: number): (Row & { rank: number 
   });
 }
 
-/** Leaderboards: overall trophy points and per game points, play time and completion, among
- *  friends or everyone whose trophies (and, per game, library) are public. Global boards are kept
- *  in Valkey sorted sets for a minute, friends boards for half a minute per reader. */
-export function leaderboardRoutes(deps: Deps) {
-  const app = new Hono<{ Variables: AuthVariables }>();
-  app.use("*", requireUser(deps));
+/** The overall board, or one game's board by points, play time or completion. */
+export const pointsBoard: Board = {
+  key: "points",
+  board: "points",
+  titleId: null,
+  sections: ["trophies"],
+  value: sql`l.points`,
+};
+export const gameBoard = (titleId: string, by: GameBoard): Board => ({
+  key: `game:${titleId}:${by}`,
+  board: by,
+  titleId,
+  sections: by === "time" ? ["library"] : ["library", "trophies"],
+  value: gameValue[by],
+});
+
+/** The global boards: everyone whose trophies (and, per game, library) are open to everyone,
+ *  kept in Valkey sorted sets for a minute. The leaderboards and the public API both read them. */
+export function globalBoards(deps: Pick<Deps, "db" | "valkey">) {
   const { db, valkey } = deps;
-  const { cards } = people(db);
 
   /** (account, value) for everyone the condition lets in, with a value above zero. */
   const rows = async (board: Board, who: SQL): Promise<Row[]> => {
@@ -97,14 +109,6 @@ export function leaderboardRoutes(deps: Deps) {
       sql` and `,
     )} and not exists (select 1 from earned_trophies e where e.account_id = l.account_id and e.flagged
       ${board.titleId ? sql`and e.title_id = ${board.titleId}` : sql``})`;
-
-  const friendsWho = (board: Board, me: string) => sql`(l.account_id = ${me}::uuid or (
-    l.account_id in (select case when f.user_a = ${me}::uuid then f.user_b else f.user_a end
-      from friendships f where f.state = 'accepted' and (f.user_a = ${me}::uuid or f.user_b = ${me}::uuid))
-    and ${sql.join(
-      board.sections.map((section) => sql`${setting(section)} <> 'nobody'`),
-      sql` and `,
-    )}))`;
 
   /** The global board's sorted set, worked out again when it has expired; when it was made. */
   const globalSet = async (board: Board) => {
@@ -129,6 +133,37 @@ export function leaderboardRoutes(deps: Deps) {
       list.push({ id: flat[i] as string, value: Number(flat[i + 1]) });
     return list;
   };
+
+  /** The first `limit` of the global board, and how many are on it. */
+  async function top(board: Board, limit: number) {
+    const { key, at } = await globalSet(board);
+    const [total, flat] = await Promise.all([
+      valkey.zcard(key),
+      valkey.zrevrange(key, 0, limit - 1, "WITHSCORES"),
+    ]);
+    return { entries: ranked(pairs(flat)), total, at };
+  }
+
+  return { rows, globalSet, pairs, top };
+}
+
+/** Leaderboards: overall trophy points and per game points, play time and completion, among
+ *  friends or everyone whose trophies (and, per game, library) are public. Global boards are kept
+ *  in Valkey sorted sets for a minute, friends boards for half a minute per reader. */
+export function leaderboardRoutes(deps: Deps) {
+  const app = new Hono<{ Variables: AuthVariables }>();
+  app.use("*", requireUser(deps));
+  const { db, valkey } = deps;
+  const { cards } = people(db);
+  const { rows, globalSet, pairs } = globalBoards(deps);
+
+  const friendsWho = (board: Board, me: string) => sql`(l.account_id = ${me}::uuid or (
+    l.account_id in (select case when f.user_a = ${me}::uuid then f.user_b else f.user_a end
+      from friendships f where f.state = 'accepted' and (f.user_a = ${me}::uuid or f.user_b = ${me}::uuid))
+    and ${sql.join(
+      board.sections.map((section) => sql`${setting(section)} <> 'nobody'`),
+      sql` and `,
+    )}))`;
 
   async function global(board: Board, me: string, limit: number) {
     const { key, at } = await globalSet(board);
@@ -213,13 +248,7 @@ export function leaderboardRoutes(deps: Deps) {
   }
 
   app.get("/leaderboards/points", async (c) =>
-    c.json(
-      await answer(
-        { key: "points", board: "points", titleId: null, sections: ["trophies"], value: sql`l.points` },
-        c.get("userId"),
-        (name) => c.req.query(name),
-      ),
-    ),
+    c.json(await answer(pointsBoard, c.get("userId"), (name) => c.req.query(name))),
   );
 
   app.get("/games/:titleId/leaderboard", async (c) => {
@@ -229,19 +258,7 @@ export function leaderboardRoutes(deps: Deps) {
     const [game] = await db.select({ titleId: games.titleId }).from(games).where(eq(games.titleId, titleId));
     if (!game) throw new HttpError(404, ErrorCode.notFound, "No such game");
     const by = pick<GameBoard>(c.req.query("by"), gameBoards, "points", "by");
-    return c.json(
-      await answer(
-        {
-          key: `game:${titleId}:${by}`,
-          board: by,
-          titleId,
-          sections: by === "time" ? ["library"] : ["library", "trophies"],
-          value: gameValue[by],
-        },
-        c.get("userId"),
-        (name) => c.req.query(name),
-      ),
-    );
+    return c.json(await answer(gameBoard(titleId, by), c.get("userId"), (name) => c.req.query(name)));
   });
 
   /** Games to pick a board from: the reader's own first, then the most played. */

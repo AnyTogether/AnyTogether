@@ -99,11 +99,30 @@ export const defaultLimits = {
   post: { max: 30, seconds: 86_400 },
   postLike: { max: 300, seconds: 3600 },
   postComment: { max: 120, seconds: 3600 },
+  /** Challenges made by one account, and joining, leaving and inviting. */
+  challengeCreate: { max: 20, seconds: 86_400 },
+  challenge: { max: 300, seconds: 3600 },
+  /** Personal API tokens made or revoked by one account. */
+  apiToken: { max: 30, seconds: 3600 },
+  /** The public API: each token on its own, every token of one account together, and each token's
+   *  day. */
+  publicApi: { max: 60, seconds: 60 },
+  publicApiAccount: { max: 120, seconds: 60 },
+  publicApiDay: { max: 10_000, seconds: 86_400 },
 };
 export type Limits = { [name in keyof typeof defaultLimits]: { max: number; seconds: number } };
 
 /** Counts one more for `who` and refuses with 429 and Retry-After past the limit. */
 export function rateLimiter(valkey: Redis, overrides: Partial<Limits> = {}) {
+  const count = rateCounter(valkey, overrides);
+  return async (name: keyof Limits, who: string) => {
+    await count(name, who);
+  };
+}
+
+/** The same count, saying how it stands: the limit, what is left and the seconds until the
+ *  window starts again (the public API sends them as RateLimit-* headers). */
+export function rateCounter(valkey: Redis, overrides: Partial<Limits> = {}) {
   const limits: Limits = { ...defaultLimits, ...overrides };
   return async (name: keyof Limits, who: string) => {
     const { max, seconds } = limits[name];
@@ -115,8 +134,8 @@ export function rateLimiter(valkey: Redis, overrides: Partial<Limits> = {}) {
         .incr(key)
         .expire(key, seconds + 5)
         .exec()) ?? [];
-    if (Number(count) <= max) return;
     const retry = Math.max(1, (window + 1) * seconds - Math.floor(Date.now() / 1000));
+    if (Number(count) <= max) return { limit: max, remaining: max - Number(count), reset: retry };
     // The wait is in the body too (`retryAfter`, seconds): the website's relay keeps the body.
     throw new HttpError(
       429,

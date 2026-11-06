@@ -177,6 +177,17 @@ setInterval(
   60_000,
 );
 
+// Challenges that started tell the people in them, and those over (and past the grace hour) are
+// written down and tell everyone who won, looked at every minute.
+setInterval(
+  () =>
+    app
+      .sweepChallenges()
+      .then((count) => count && console.log(`handled ${count} challenge(s)`))
+      .catch((error) => console.error("challenge sweep failed", error)),
+  60_000,
+);
+
 // Looking-for-group posts whose time ran out leave the board, looked at every minute.
 setInterval(
   () =>

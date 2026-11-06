@@ -26,6 +26,9 @@ export const notificationKinds = [
   "post_like",
   "post_comment",
   "comment_reply",
+  "challenge_invite",
+  "challenge_started",
+  "challenge_ended",
 ] as const;
 export type NotificationKind = (typeof notificationKinds)[number];
 export const optionalNotificationKinds = notificationKinds.filter(
@@ -55,8 +58,12 @@ export interface NotificationView {
    *  community_invite: {communityId, name, icon}; event_reminder: {eventId, communityId, title,
    *  startsAt, titleId, gameNames}; event_started: the same and {link: {kind, id}};
    *  post_like: {postId, count (everyone else who likes it now)}; post_comment: {postId, text,
-   *  count}; comment_reply: {postId, commentId, text, count}. The latest liker or commenter is the
-   *  actor; subjectId is the post (the comment answered, for a reply). */
+   *  count}; comment_reply: {postId, commentId, text, count};
+   *  challenge_invite, challenge_started: {challengeId, title, titleId, gameNames, metric, endsAt};
+   *  challenge_ended: the same and {rank, value, entrants, winner: {displayName, handle, value} |
+   *  null}; rank is null for someone who left nothing to rank. The latest liker or commenter is
+   *  the actor; subjectId is the post (the comment answered, for a reply), the challenge for a
+   *  challenge. */
   data: Record<string, unknown>;
   read: boolean;
   createdAt: string;
@@ -97,6 +104,9 @@ export const defaultNotificationSettings: NotificationSettings = {
   post_like: true,
   post_comment: true,
   comment_reply: true,
+  challenge_invite: true,
+  challenge_started: true,
+  challenge_ended: true,
   digest: false,
   familyMail: false,
 };
