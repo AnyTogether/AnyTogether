@@ -194,8 +194,15 @@
     {
       "idx": 27,
       "version": "7",
-      "when": 1793927734923,
-      "tag": "0027_phone_push",
+      "when": 1793927489307,
+      "tag": "0027_profile_theme",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793934928848,
+      "tag": "0028_phone_push",
       "breakpoints": true
     }
   ]

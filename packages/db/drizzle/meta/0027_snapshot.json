@@ -1,5 +1,5 @@
 {
-  "id": "7da901c5-5951-45a8-9389-1a8101cfe100",
+  "id": "cac570df-f10e-4923-bbc3-8cad378aad36",
   "prevId": "10235198-ddd9-4671-b4f5-fd6dacaa643f",
   "version": "7",
   "dialect": "postgresql",
@@ -6641,6 +6641,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "theme_id": {
+          "name": "theme_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "remember_met": {
           "name": "remember_met",
           "type": "boolean",
@@ -6706,6 +6712,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "profiles_theme": {
+          "name": "profiles_theme",
+          "columns": [
+            {
+              "expression": "theme_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -6720,6 +6741,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "profiles_theme_id_themes_id_fk": {
+          "name": "profiles_theme_id_themes_id_fk",
+          "tableFrom": "profiles",
+          "tableTo": "themes",
+          "columnsFrom": [
+            "theme_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -6738,147 +6772,6 @@
         "bio_length": {
           "name": "bio_length",
           "value": "length(\"profiles\".\"bio\") <= 160"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.push_devices": {
-      "name": "push_devices",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "session_id": {
-          "name": "session_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "platform": {
-          "name": "platform",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "token": {
-          "name": "token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "app": {
-          "name": "app",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sandbox": {
-          "name": "sandbox",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "lang": {
-          "name": "lang",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'en'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "push_devices_account_id_index": {
-          "name": "push_devices_account_id_index",
-          "columns": [
-            {
-              "expression": "account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "push_devices_session_id_index": {
-          "name": "push_devices_session_id_index",
-          "columns": [
-            {
-              "expression": "session_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "push_devices_account_id_accounts_id_fk": {
-          "name": "push_devices_account_id_accounts_id_fk",
-          "tableFrom": "push_devices",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "push_devices_session_id_sessions_id_fk": {
-          "name": "push_devices_session_id_sessions_id_fk",
-          "tableFrom": "push_devices",
-          "tableTo": "sessions",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "push_devices_token_unique": {
-          "name": "push_devices_token_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "push_device_platform": {
-          "name": "push_device_platform",
-          "value": "\"push_devices\".\"platform\" in ('apns', 'fcm')"
         }
       },
       "isRLSEnabled": false
