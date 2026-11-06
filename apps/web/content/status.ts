@@ -24,7 +24,7 @@ export interface StatusCard {
 }
 
 /** When the board was last checked. */
-export const updated = "2026-11-06";
+export const updated = "2026-11-07";
 
 const desk: SpecPlatform[] = ["mac", "windows", "linux"];
 const pc: SpecPlatform[] = ["windows", "linux"];
