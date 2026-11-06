@@ -204,6 +204,13 @@
       "when": 1793934197446,
       "tag": "0028_e2ee_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793935328532,
+      "tag": "0029_challenges_public_api",
+      "breakpoints": true
     }
   ]
 }
