@@ -93,6 +93,17 @@ export function config(env = process.env) {
       privateKey: env.VAPID_PRIVATE_KEY ?? "",
       subject: env.VAPID_SUBJECT ?? "",
     },
+    /** Push to the phone app. APNs: the token-based key from the Apple Developer account (its key
+     *  ID, the team ID, and the .p8 file's text, `\n` allowed for line breaks) and the bundle IDs
+     *  of the iPhone apps to push to. FCM: the Firebase project's service account key (the JSON, or
+     *  base64 of it). Each stays off while any of its parts is missing. */
+    apns: {
+      keyId: env.APNS_KEY_ID ?? "",
+      teamId: env.APNS_TEAM_ID ?? "",
+      privateKey: (env.APNS_PRIVATE_KEY ?? "").replace(/\\n/g, "\n"),
+      topics: list(env.APNS_BUNDLE_IDS),
+    },
+    fcmServiceAccount: env.FCM_SERVICE_ACCOUNT ?? "",
     /** Cloud saves and media: a folder (STORAGE_DIR) or an S3-compatible bucket (S3_*); neither
      *  keeps them off. STORAGE_QUOTA_MB per account for both, SAVE_MAX_MB per save archive. */
     storage: {

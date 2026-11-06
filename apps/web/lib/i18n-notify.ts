@@ -40,6 +40,10 @@ export const notifyEn = {
   pushUnsupported:
     "This browser cannot show notifications. On iPhone and iPad, add AnyTogether to the Home Screen first.",
   pushUnavailable: "This server does not send browser notifications.",
+  pushPreview: "Show what was written",
+  pushPreviewHint: "When off, a push names who wrote or commented and leaves out the words.",
+  pushCalls: "Ring my phone for calls",
+  pushCallsHint: "A friend's call rings the AnyPS5 Remote app, even when the phone is locked.",
   digest: "Mail digest",
   digestHint:
     "A mail about unread messages and friend requests while you are away, at most every 6 hours. Message text is never mailed.",
@@ -218,6 +222,10 @@ export const notifyTr: typeof notifyEn = {
     "Bu tarayıcı AnyTogether bildirimlerini engelliyor. Site ayarlarından izin ver, sonra yeniden dene.",
   pushUnsupported: "Bu tarayıcı bildirim gösteremiyor. iPhone ve iPad'de önce AnyTogether'ı Ana Ekrana ekle.",
   pushUnavailable: "Bu sunucu tarayıcı bildirimi göndermiyor.",
+  pushPreview: "Yazılanı göster",
+  pushPreviewHint: "Kapalıyken bildirim yalnızca kimin yazdığını ya da yorum yaptığını söyler.",
+  pushCalls: "Aramalarda telefonum çalsın",
+  pushCallsHint: "Bir arkadaşın araması, telefon kilitliyken bile AnyPS5 Remote uygulamasında çalar.",
   digest: "E-posta özeti",
   digestHint:
     "Sen yokken okunmamış mesajlar ve arkadaşlık istekleri için en fazla 6 saatte bir e-posta. Mesaj metni asla gönderilmez.",

@@ -170,6 +170,35 @@ notification list but offers no push. The optional mail digest of missed message
 requests (each person turns it on in Settings; at most one mail per 6 hours) uses the sign-in mail
 settings above.
 
+### Push to the phone app
+
+The phone app, AnyPS5 Remote, gets the same notifications on a locked phone, and a friend's call
+rings it. iPhones are reached through Apple's push service (APNs) and Android phones through
+Firebase Cloud Messaging (FCM). Each is off until its settings are there, and the app shows no
+push switch for a platform the server does not push to.
+
+**iPhone (APNs).** In the Apple Developer account (the paid program; a free Apple ID cannot push):
+
+1. Certificates, Identifiers & Profiles → Identifiers: the app's App ID (`org.anyps5.anyps5Remote`
+   for the official build) with Push Notifications ticked.
+2. Keys: a new key with Apple Push Notifications service (APNs). Download the `.p8` once and note
+   its Key ID. One key works for every app of the team, in development and production.
+3. Your Team ID is at the top right of the account page (Membership).
+
+Put the Key ID in `APNS_KEY_ID`, the Team ID in `APNS_TEAM_ID`, the `.p8` file's text in
+`APNS_PRIVATE_KEY` (`\n` for its line breaks, or the whole file in quotes) and the bundle IDs the
+server pushes to, comma separated, in `APNS_BUNDLE_IDS`. The app says whether its build uses
+Apple's development or production service, and the server follows it.
+
+**Android (FCM).** In the Firebase console, a project with an Android app for the package name
+(`org.anyps5.anyps5_remote` for the official build). Project settings → Service accounts →
+Generate new private key gives a JSON file: put its content (on one line, or base64) in
+`FCM_SERVICE_ACCOUNT`. The app itself needs that project's `google-services.json` when it is built
+(see `mobile/README.md` in AnyPS5-ARM).
+
+A person chooses in Settings whether a push shows what was written and whether calls ring the
+phone. Tokens the push services no longer know are forgotten, and signing a phone out ends its push.
+
 ### Cloud saves and media
 
 Launchers can keep game saves in the cloud, and people can send photos, clips and voice notes in
@@ -241,6 +270,10 @@ rest.
 | `GAME_ICON_HOSTS` | api | `.env` | hosts (and their subdomains) a game's icon URL may point at, comma separated; launchers load icons for everyone who sees the game, so empty keeps none |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | api | `.env` | the Web Push key pair (`npx web-push generate-vapid-keys`); empty: no push notifications |
 | `VAPID_SUBJECT` | api | `.env` | a `mailto:` (or `https:`) contact for the push services |
+| `APNS_KEY_ID`, `APNS_TEAM_ID` | api | `.env` | the APNs key's ID and the Apple team ID; empty: no push to iPhones |
+| `APNS_PRIVATE_KEY` | api | `.env` | the APNs `.p8` key's text, `\n` allowed for line breaks |
+| `APNS_BUNDLE_IDS` | api | `.env` | the iPhone apps' bundle IDs to push to, comma separated |
+| `FCM_SERVICE_ACCOUNT` | api | `.env` | the Firebase service account key (JSON on one line, or base64); empty: no push to Android |
 | `STORAGE_DIR` | api | `.env` | the folder for cloud saves and media (`/data/files`, the `files` volume); with the S3 settings empty, cloud saves and media are off without it |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | api | `.env` | an S3-compatible bucket for them instead (all four, or S3 stays off) |
 | `S3_REGION` | api | `.env`, `auto` | the bucket's region (`auto` for R2) |

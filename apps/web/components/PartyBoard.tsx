@@ -235,6 +235,23 @@ export function PartyBoard({
       case "call.joined":
       case "call.updated":
         return reload();
+      case "call.moved":
+        // You joined the voice on another device (the phone): this page goes quiet and stays in.
+        if (data.callId === callIdRef.current) {
+          const voiceHere = mesh.current;
+          // The mesh says no goodbye: the other device talks to everyone now. On the media server
+          // the other device took this one's place already.
+          if (voiceHere?.route === "mesh") voiceHere.close(false);
+          else voiceHere?.close();
+          mesh.current = null;
+          setVoice(null);
+          setCallId(null);
+          setNotice({
+            kind: "success",
+            text: data.client === "phone" ? texts.voiceMovedPhone : texts.voiceMoved,
+          });
+        }
+        return reload();
       case "call.ended":
         if (data.callId === callIdRef.current) stopVoice(false);
         return reload();

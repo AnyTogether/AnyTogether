@@ -1,9 +1,19 @@
-import { type Database, accounts, notifications, profiles, pushSubscriptions } from "@anytogether/db";
+import {
+  type Database,
+  accounts,
+  notifications,
+  profiles,
+  pushDevices,
+  pushSubscriptions,
+} from "@anytogether/db";
 import {
   ErrorCode,
+  type MemberView,
   type NotificationKind,
   NotificationSettingsUpdate,
   type NotificationView,
+  PushDeviceInput,
+  PushDeviceRemove,
   PushSubscriptionInput,
   PushUnsubscribe,
   devicePresenceKey,
@@ -26,6 +36,7 @@ import { publish } from "./events.js";
 import { body } from "./http.js";
 import type { DigestItem, MailLanguage, Mailer } from "./mail.js";
 import { type AuthVariables, requireUser } from "./middleware.js";
+import { type PhoneMessage, PushGone } from "./nativePush.js";
 import { people } from "./people.js";
 import { settingLimiter } from "./ratelimit.js";
 
@@ -109,6 +120,14 @@ const pushTexts = {
     post_comments: ["{name}", "{n} new comments on your capture · {text}"],
     comment_reply: ["{name}", "replied to your comment: {text}"],
     comment_replies: ["{name}", "{n} new replies to your comment · {text}"],
+    // What a push says when the person keeps what was written off their lock screen.
+    message_hidden: ["{name}", "New message."],
+    messages_hidden: ["{name}", "{n} new messages."],
+    post_comment_hidden: ["{name}", "commented on your capture."],
+    post_comments_hidden: ["{name}", "{n} new comments on your capture."],
+    comment_reply_hidden: ["{name}", "replied to your comment."],
+    comment_replies_hidden: ["{name}", "{n} new replies to your comment."],
+    call: ["{name}", "is calling you."],
     challenge_invite: ["{name}", "challenged you: {event} in {game}."],
     challenge_started: ["{event}", "The challenge in {game} has started."],
     challenge_ended: ["{event}", "The challenge is over. You placed {rank} of {entrants}."],
@@ -155,12 +174,20 @@ const pushTexts = {
     post_comments: ["{name}", "Çekimine {n} yeni yorum · {text}"],
     comment_reply: ["{name}", "yorumunu yanıtladı: {text}"],
     comment_replies: ["{name}", "Yorumuna {n} yeni yanıt · {text}"],
+    message_hidden: ["{name}", "Yeni mesaj."],
+    messages_hidden: ["{name}", "{n} yeni mesaj."],
+    post_comment_hidden: ["{name}", "çekimine yorum yaptı."],
+    post_comments_hidden: ["{name}", "Çekimine {n} yeni yorum."],
+    comment_reply_hidden: ["{name}", "yorumunu yanıtladı."],
+    comment_replies_hidden: ["{name}", "Yorumuna {n} yeni yanıt."],
+    call: ["{name}", "seni arıyor."],
     challenge_invite: ["{name}", "sana meydan okudu: {game} oyununda {event}."],
     challenge_started: ["{event}", "{game} meydan okuması başladı."],
     challenge_ended: ["{event}", "Meydan okuma bitti. {entrants} kişi içinde {rank}. oldun."],
     challenge_won: ["{event}", "Meydan okuma bitti. Kazandın."],
   },
 } as const;
+type PushTextKey = keyof (typeof pushTexts)["en"];
 
 const fillIn = (text: string, values: Record<string, string | number>) =>
   text.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
@@ -220,8 +247,9 @@ export function notificationPath(n: Pick<NotificationView, "kind" | "subjectId" 
   }
 }
 
-/** The push message for one notification: {title, body, url, tag, unread}. */
-export function pushPayload(n: NotificationView, lang: string, unread: number) {
+/** The push message for one notification: {title, body, url, tag, unread}. Without `preview` it
+ *  says that someone wrote, not what. */
+export function pushPayload(n: NotificationView, lang: string, unread: number, preview = true) {
   const texts = lang === "tr" ? pushTexts.tr : pushTexts.en;
   const data = n.data as Record<string, unknown>;
   const count = Number(data.count ?? 1);
@@ -261,7 +289,9 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
                       : n.kind === "family_request" || n.kind === "family_answer" || n.kind === "family_alert"
                         ? "family_summary"
                         : n.kind
-  ) as keyof typeof texts;
+  ) as PushTextKey;
+  const hidden = `${key}_hidden` as PushTextKey;
+  const shownKey = !preview && hidden in texts ? hidden : key;
   const name =
     n.kind === "message" && data.group
       ? `${String(data.title ?? "")}${data.title ? " · " : ""}${n.actor?.displayName ?? ""}`
@@ -284,13 +314,119 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
     rank: String(data.rank ?? ""),
     entrants: String(data.entrants ?? ""),
   };
-  const [title, text] = texts[key];
+  const [title, text] = texts[shownKey];
   return {
     title: fillIn(title, values),
     body: fillIn(text, values),
     url: notificationPath(n),
     tag: `${n.kind}:${n.subjectId}`,
     unread,
+  };
+}
+
+/** The phones that rang for a call (push_devices IDs), so its end reaches them. */
+const rangKey = (callId: string) => `call:${callId}:rang`;
+
+/** The routing part of a notification, small enough for a push (APNs and FCM take 4 KB): what a
+ *  tap on the phone opens. What was written stays out without `preview`. */
+function noticeForPhone(n: NotificationView, preview: boolean) {
+  const data = n.data as Record<string, unknown>;
+  const keep = [
+    "conversationId",
+    "postId",
+    "commentId",
+    "partyId",
+    "sessionId",
+    "titleId",
+    "invite",
+    "link",
+    "communityId",
+    "eventId",
+    "callId",
+    "count",
+    "group",
+    ...(preview ? ["text", "title"] : []),
+  ];
+  const actor = n.actor
+    ? {
+        userId: n.actor.userId,
+        handle: n.actor.handle,
+        displayName: n.actor.displayName,
+        avatar: n.actor.avatar,
+      }
+    : null;
+  return {
+    id: n.id,
+    kind: n.kind,
+    subjectId: n.subjectId,
+    actor,
+    data: Object.fromEntries(Object.entries(data).filter(([key]) => keep.includes(key))),
+    read: false,
+    createdAt: n.createdAt,
+    updatedAt: n.updatedAt,
+  };
+}
+
+/** A notification as a phone push: the words in the phone's language, the badge, and the
+ *  notification itself for where a tap leads. */
+export function phoneNotice(
+  n: NotificationView,
+  lang: string,
+  unread: number,
+  preview: boolean,
+): PhoneMessage {
+  const shown = pushPayload(n, lang, unread, preview);
+  let notice = JSON.stringify(noticeForPhone(n, preview));
+  // Never near the 4 KB a push may carry: long texts are cut.
+  if (notice.length > 2500) notice = JSON.stringify({ ...noticeForPhone(n, false), data: {} });
+  return {
+    type: "notice",
+    title: shown.title.slice(0, 120),
+    body: shown.body.slice(0, 300),
+    tag: shown.tag,
+    badge: unread,
+    data: { kind: n.kind, url: shown.url, notice },
+  };
+}
+
+const callTag = (callId: string) => `missed_call:${callId}`;
+const caller = (from: MemberView) =>
+  JSON.stringify({
+    userId: from.userId,
+    handle: from.handle,
+    displayName: from.displayName,
+    avatar: from.avatar,
+  });
+
+/** A friend calling, as a phone push: it rings, and answering opens the call. The caller goes
+ *  under `caller`: FCM keeps `from` for itself. */
+export function phoneCall(call: { callId: string; from: MemberView }, lang: string): PhoneMessage {
+  const texts = lang === "tr" ? pushTexts.tr : pushTexts.en;
+  const [title, body] = texts.call;
+  const values = { name: call.from.displayName };
+  return {
+    type: "call",
+    title: fillIn(title, values),
+    body: fillIn(body, values),
+    tag: callTag(call.callId),
+    data: { kind: "call", callId: call.callId, caller: caller(call.from) },
+  };
+}
+
+/** The ringing is over: a missed call from `from`, or nothing to show. */
+export function phoneCallOver(
+  callId: string,
+  from: MemberView | null,
+  lang: string,
+  unread: number,
+): PhoneMessage {
+  const texts = lang === "tr" ? pushTexts.tr : pushTexts.en;
+  const [title, body] = texts.missed_call;
+  return {
+    type: "call_over",
+    tag: callTag(callId),
+    missed: from ? { title: fillIn(title, { name: from.displayName }), body, badge: unread } : null,
+    data: { kind: from ? "missed_call" : "call_over", callId, ...(from ? { caller: caller(from) } : {}) },
   };
 }
 
@@ -303,7 +439,7 @@ export interface NotifyInput {
 
 /** Storing notifications, telling the person's sockets, and pushing to their browsers when none is
  *  open. Pushes go out in the background; `flush` waits for them (the tests use it). */
-export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
+export function notifier(deps: Pick<Deps, "db" | "valkey" | "push" | "nativePush">) {
   const { db, valkey } = deps;
   const who = people(db);
   const pending = new Set<Promise<unknown>>();
@@ -330,19 +466,45 @@ export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
     }));
   };
 
-  async function pushTo(accountId: string, view: NotificationView, unread: number) {
+  const forget = (id: string) => db.delete(pushDevices).where(eq(pushDevices.id, id));
+
+  /** One message to one phone; a token its push service no longer knows is forgotten. */
+  async function toPhone(device: typeof pushDevices.$inferSelect, message: PhoneMessage) {
+    try {
+      await deps.nativePush?.send(
+        {
+          platform: device.platform as "apns" | "fcm",
+          token: device.token,
+          app: device.app,
+          sandbox: device.sandbox,
+        },
+        message,
+      );
+    } catch (error) {
+      if (error instanceof PushGone) await forget(device.id);
+      else console.error("phone push failed", (error as { statusCode?: number }).statusCode ?? error);
+    }
+  }
+
+  async function pushTo(accountId: string, view: NotificationView, unread: number, preview: boolean) {
     const sender = deps.push;
-    if (!sender) return;
-    const devices = await db
-      .select()
-      .from(pushSubscriptions)
-      .where(eq(pushSubscriptions.accountId, accountId));
-    await Promise.all(
-      devices.map(async (device) => {
+    const devices = sender
+      ? await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.accountId, accountId))
+      : [];
+    const phones = deps.nativePush
+      ? await db.select().from(pushDevices).where(eq(pushDevices.accountId, accountId))
+      : [];
+    // A phone that rang for this call shows the missed call itself, as the ringing ends.
+    const rang =
+      view.kind === "missed_call" && view.subjectId
+        ? new Set(await valkey.smembers(rangKey(view.subjectId)))
+        : new Set<string>();
+    await Promise.all([
+      ...devices.map(async (device) => {
         try {
-          await sender.send(
+          await sender?.send(
             { endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } },
-            JSON.stringify(pushPayload(view, device.lang, unread)),
+            JSON.stringify(pushPayload(view, device.lang, unread, preview)),
           );
         } catch (error) {
           const status = (error as { statusCode?: number }).statusCode;
@@ -352,6 +514,71 @@ export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
           else console.error("push failed", status ?? error);
         }
       }),
+      ...phones
+        .filter((phone) => !rang.has(phone.id))
+        .map((phone) => toPhone(phone, phoneNotice(view, phone.lang, unread, preview))),
+    ]);
+  }
+
+  const background = (work: Promise<unknown>) => {
+    const sending = work.catch((error) => console.error("push failed", error));
+    pending.add(sending);
+    sending.finally(() => pending.delete(sending));
+  };
+
+  const pushSettings = async (accountId: string) => {
+    const [profile] = await db
+      .select({ settings: profiles.notificationSettings })
+      .from(profiles)
+      .where(eq(profiles.accountId, accountId));
+    return profile ? notificationSettingsOf(profile.settings) : null;
+  };
+
+  /** A friend calls: the person's phones ring, each one whose app has no socket open (an open app
+   *  rings by itself), unless they turned calls on the phone off. */
+  function ring(accountId: string, call: { callId: string; from: MemberView }) {
+    if (!deps.nativePush) return;
+    background(
+      (async () => {
+        const settings = await pushSettings(accountId);
+        if (!settings?.pushCalls) return;
+        const phones = await db.select().from(pushDevices).where(eq(pushDevices.accountId, accountId));
+        const live = phones.length
+          ? await valkey.mget(...phones.map((p) => devicePresenceKey(accountId, p.sessionId)))
+          : [];
+        const ringing = phones.filter((_, index) => !live[index]);
+        if (!ringing.length) return;
+        await valkey
+          .multi()
+          .sadd(rangKey(call.callId), ...ringing.map((p) => p.id))
+          .expire(rangKey(call.callId), 600)
+          .exec();
+        await Promise.all(ringing.map((phone) => toPhone(phone, phoneCall(call, phone.lang))));
+      })(),
+    );
+  }
+
+  /** The ringing is over on the phones that rang: answered or declined somewhere, it goes away;
+   *  not answered, it becomes a missed call (unless missed calls are turned off). */
+  function ringOver(accountId: string, call: { callId: string; from: MemberView | null; missed: boolean }) {
+    if (!deps.nativePush) return;
+    background(
+      (async () => {
+        const rang = await valkey.smembers(rangKey(call.callId));
+        if (!rang.length) return;
+        const phones = await db
+          .select()
+          .from(pushDevices)
+          .where(and(eq(pushDevices.accountId, accountId), inArray(pushDevices.id, rang)));
+        const settings = await pushSettings(accountId);
+        const missed = call.missed && Boolean(settings?.missed_call);
+        const unread = missed ? await unreadCount(accountId) : 0;
+        await Promise.all(
+          phones.map((phone) =>
+            toPhone(phone, phoneCallOver(call.callId, missed ? call.from : null, phone.lang, unread)),
+          ),
+        );
+      })(),
     );
   }
 
@@ -411,13 +638,15 @@ export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
       type: "notification",
       data: { notification: view as NotificationView, unread },
     });
-    if (!online && deps.push) {
-      const sending = pushTo(accountId, view as NotificationView, unread).catch((error) =>
-        console.error("push failed", error),
+    if (!online && (deps.push || deps.nativePush))
+      background(
+        pushTo(
+          accountId,
+          view as NotificationView,
+          unread,
+          notificationSettingsOf(profile.settings).pushPreview,
+        ),
       );
-      pending.add(sending);
-      sending.finally(() => pending.delete(sending));
-    }
     return view as NotificationView;
   }
 
@@ -479,7 +708,7 @@ export function notifier(deps: Pick<Deps, "db" | "valkey" | "push">) {
     while (pending.size) await Promise.all([...pending]);
   };
 
-  return { notify, markRead, settle, withdraw, unreadCount, views, flush };
+  return { notify, markRead, settle, withdraw, unreadCount, views, flush, ring, ringOver };
 }
 
 export type Notifier = ReturnType<typeof notifier>;
@@ -546,6 +775,7 @@ export function notificationRoutes(deps: Deps, notes: Notifier) {
     return {
       settings: notificationSettingsOf(row.settings),
       push: deps.push ? { publicKey: deps.push.publicKey } : null,
+      native: deps.nativePush ? { apns: deps.nativePush.apns, fcm: deps.nativePush.fcm } : null,
       canMail: row.email !== null,
     };
   };
@@ -589,12 +819,46 @@ export function notificationRoutes(deps: Deps, notes: Notifier) {
     return c.body(null, 204);
   });
 
+  /** This phone's push token, tied to its sign-in (signing out ends it). A token seen before moves
+   *  to this sign-in: the phone signed in again or as someone else. */
+  app.post("/me/push/device", async (c) => {
+    const native = deps.nativePush;
+    const input = await body(c, PushDeviceInput);
+    if (!native || (input.platform === "apns" ? !native.apns.length : !native.fcm))
+      throw new HttpError(404, ErrorCode.notFound, "This server sends no push notifications to this phone");
+    if (input.platform === "apns" && !(input.app && native.apns.includes(input.app)))
+      throw new HttpError(400, ErrorCode.badRequest, "This server sends no push notifications to this app");
+    const values = {
+      accountId: c.get("userId"),
+      sessionId: c.get("sessionId"),
+      platform: input.platform,
+      app: input.platform === "apns" ? (input.app ?? null) : null,
+      sandbox: input.platform === "apns" && input.sandbox === true,
+      lang: input.lang ?? "en",
+    };
+    const [made] = await db
+      .insert(pushDevices)
+      .values({ id: uuidv7(), token: input.token, ...values })
+      .onConflictDoUpdate({ target: pushDevices.token, set: values })
+      .returning({ id: pushDevices.id });
+    return c.json({ id: made?.id }, 201);
+  });
+
+  app.delete("/me/push/device", async (c) => {
+    const { token } = await body(c, PushDeviceRemove);
+    await db
+      .delete(pushDevices)
+      .where(and(eq(pushDevices.accountId, c.get("userId")), eq(pushDevices.token, token)));
+    return c.body(null, 204);
+  });
+
   return app;
 }
 
-/** Ends the push subscriptions of a sign-in that ended. */
+/** Ends the push subscriptions and phone push tokens of a sign-in that ended. */
 export async function forgetPush(db: Database, sessionId: string) {
   await db.delete(pushSubscriptions).where(eq(pushSubscriptions.sessionId, sessionId));
+  await db.delete(pushDevices).where(eq(pushDevices.sessionId, sessionId));
 }
 
 /** The kinds a digest mails about. */

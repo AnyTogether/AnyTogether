@@ -68,6 +68,12 @@ export type CallEvent =
   | { type: "call.answered"; data: { callId: string; userId: string; device: string } }
   | { type: "call.joined"; data: { callId: string; partyId: string | null; userId: string; device: string } }
   | { type: "call.left"; data: { callId: string; partyId: string | null; userId: string } }
+  /** To the one device of yours that was in the party's voice: you joined it on another device
+   *  (`device`, a `client` such as "phone"), so this one stops its voice without leaving. */
+  | {
+      type: "call.moved";
+      data: { callId: string; partyId: string | null; userId: string; device: string; client: string | null };
+    }
   /** A member muted or unmuted, deafened or undeafened themselves. */
   | {
       type: "call.updated";

@@ -211,8 +211,10 @@ export class VoiceMesh {
     this.options.onChange();
   }
 
-  close() {
-    for (const userId of [...this.peers.keys()]) this.drop(userId);
+  /** Out of the voice; without `sayBye` the others are not told (the voice moved to another of
+   *  your devices, which talks to them now). */
+  close(sayBye = true) {
+    for (const userId of [...this.peers.keys()]) this.drop(userId, sayBye);
     clearInterval(this.timer);
     for (const track of this.stream?.getTracks() ?? []) track.stop();
     this.context?.close().catch(() => {});
