@@ -4,10 +4,13 @@ import {
   accounts,
   activities,
   activityReactions,
+  apiTokens,
   appeals,
   auditLog,
   avatars,
   blocks,
+  challengeEntries,
+  challenges,
   childRestrictions,
   communities,
   communityEvents,
@@ -173,6 +176,16 @@ export async function exportAccount(
     ),
     eventRsvps: (await db.select().from(eventRsvps).where(eq(eventRsvps.accountId, accountId))).map(
       ({ accountId: _, ...rsvp }) => rsvp,
+    ),
+    challengesMade: (await db.select().from(challenges).where(eq(challenges.creatorId, accountId))).map(
+      ({ creatorId: _, ...challenge }) => challenge,
+    ),
+    challengesJoined: (
+      await db.select().from(challengeEntries).where(eq(challengeEntries.accountId, accountId))
+    ).map(({ accountId: _, ...entry }) => entry),
+    // The tokens' names and scopes; the tokens themselves are never kept.
+    apiTokens: (await db.select().from(apiTokens).where(eq(apiTokens.accountId, accountId))).map(
+      ({ accountId: _, tokenHash: __, ...token }) => token,
     ),
     avatar: avatar ? `data:image/jpeg;base64,${Buffer.from(avatar.bytes).toString("base64")}` : null,
     privateAvatar: privateAvatar

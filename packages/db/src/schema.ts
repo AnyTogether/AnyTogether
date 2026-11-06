@@ -909,7 +909,7 @@ export const notifications = pgTable(
       .where(sql`${table.readAt} is null`),
     check(
       "notification_kind",
-      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning', 'family_invite', 'family_request', 'family_answer', 'family_alert', 'family_summary', 'appeal', 'level_up', 'community_invite', 'event_reminder', 'event_started', 'post_like', 'post_comment', 'comment_reply')`,
+      sql`${table.kind} in ('friend_request', 'friend_accepted', 'message', 'party_invite', 'game_invite', 'missed_call', 'lfg_request', 'lfg_accepted', 'warning', 'family_invite', 'family_request', 'family_answer', 'family_alert', 'family_summary', 'appeal', 'level_up', 'community_invite', 'event_reminder', 'event_started', 'post_like', 'post_comment', 'comment_reply', 'challenge_invite', 'challenge_started', 'challenge_ended')`,
     ),
   ],
 );
@@ -1674,5 +1674,91 @@ export const postComments = pgTable(
     index("post_comments_by_post").on(table.postId, table.parentId, table.id),
     index().on(table.authorId),
     check("post_comment_text", sql`length(${table.text}) between 1 and 500`),
+  ],
+);
+
+/** Challenges: a time-boxed race on one game's leaderboard (trophy points, trophies or play time
+ *  between two dates), made for the maker's friends, a community or everyone. */
+export const challenges = pgTable(
+  "challenges",
+  {
+    id: uuid().primaryKey(),
+    creatorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    title: text().notNull(),
+    description: text(),
+    titleId: text()
+      .notNull()
+      .references(() => games.titleId),
+    /** points | trophies | time */
+    metric: text().notNull(),
+    /** friends | community | public */
+    audience: text().notNull(),
+    communityId: uuid().references(() => communities.id, { onDelete: "cascade" }),
+    startsAt: timestamp({ withTimezone: true }).notNull(),
+    endsAt: timestamp({ withTimezone: true }).notNull(),
+    /** scheduled | cancelled */
+    status: text().notNull().default("scheduled"),
+    /** When the people in it were told it started (or that there was nobody to tell). */
+    startedNoticeAt: timestamp({ withTimezone: true }),
+    /** When the standings were written down for good and the people in it were told. */
+    finalizedAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  (table) => [
+    index("challenges_by_audience").on(table.audience, table.endsAt),
+    index("challenges_by_game").on(table.titleId, table.endsAt),
+    index().on(table.communityId),
+    index().on(table.creatorId),
+    index("challenges_due")
+      .on(table.endsAt)
+      .where(sql`${table.status} = 'scheduled' and ${table.finalizedAt} is null`),
+    check("challenge_metric", sql`${table.metric} in ('points', 'trophies', 'time')`),
+    check("challenge_audience", sql`${table.audience} in ('friends', 'community', 'public')`),
+    check("challenge_status", sql`${table.status} in ('scheduled', 'cancelled')`),
+    check("challenge_community", sql`(${table.audience} = 'community') = (${table.communityId} is not null)`),
+    check("challenge_title", sql`length(${table.title}) between 3 and 80`),
+    check("challenge_description", sql`length(${table.description}) <= 500`),
+    check("challenge_ends_after_starts", sql`${table.endsAt} > ${table.startsAt}`),
+  ],
+);
+
+/** Who is in a challenge; the final value and place are written once it is over. */
+export const challengeEntries = pgTable(
+  "challenge_entries",
+  {
+    challengeId: uuid()
+      .notNull()
+      .references(() => challenges.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    joinedAt: now(),
+    finalValue: bigint({ mode: "number" }),
+    finalRank: integer(),
+  },
+  (table) => [primaryKey({ columns: [table.challengeId, table.accountId] }), index().on(table.accountId)],
+);
+
+/** Personal API tokens for the read-only public API: kept only as a hash, with the scopes they
+ *  read. Revoking one deletes it. */
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: uuid().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    tokenHash: bytea().notNull().unique(),
+    /** The first characters of the token, shown to tell tokens apart. */
+    start: text().notNull(),
+    scopes: jsonb().$type<string[]>().notNull(),
+    lastUsedAt: timestamp({ withTimezone: true }),
+    createdAt: now(),
+  },
+  (table) => [
+    index().on(table.accountId),
+    check("api_token_name", sql`length(${table.name}) between 1 and 60`),
   ],
 );
