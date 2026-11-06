@@ -24,7 +24,7 @@ export interface StatusCard {
 }
 
 /** When the board was last checked. */
-export const updated = "2026-10-26";
+export const updated = "2026-11-06";
 
 const desk: SpecPlatform[] = ["mac", "windows", "linux"];
 const pc: SpecPlatform[] = ["windows", "linux"];
@@ -33,6 +33,20 @@ const all: SpecPlatform[] = ["mac", "windows", "linux", "iphone", "android", "we
 
 export const statusCards: StatusCard[] = [
   // Done, newest first.
+  {
+    id: "public-api",
+    column: "done",
+    platforms: ["web"],
+    release: "Website",
+    en: {
+      t: "Challenges and a public API",
+      d: "Races on a game between two dates, and a read-only API for community tools.",
+    },
+    tr: {
+      t: "Meydan okumalar ve açık API",
+      d: "Bir oyunda iki tarih arasında yarışlar ve topluluk araçları için salt okunur bir API.",
+    },
+  },
   {
     id: "public-profile",
     column: "done",
@@ -455,15 +469,22 @@ export const statusCards: StatusCard[] = [
   },
   {
     id: "phone-push",
-    column: "planned",
+    column: "progress",
     platforms: phone,
-    en: { t: "Push notifications on the phone", d: "Messages, invites and calls on a locked phone." },
-    tr: { t: "Telefonda anlık bildirimler", d: "Kilitli telefonda mesajlar, davetler ve aramalar." },
+    en: {
+      t: "Push notifications on the phone",
+      d: "Messages, invites and calls on a locked phone. The code is ready, and it waits for the Apple and Firebase keys.",
+    },
+    tr: {
+      t: "Telefonda anlık bildirimler",
+      d: "Kilitli telefonda mesajlar, davetler ve aramalar. Kod hazır ve Apple ile Firebase anahtarlarını bekliyor.",
+    },
   },
   {
     id: "desktop-together",
-    column: "planned",
+    column: "progress",
     platforms: pc,
+    ships: { project: "desktop", version: "0.1.20" },
     en: {
       t: "Share play and the feed on PC",
       d: "Hosting and watching share play, the activity feed and leaderboards on Windows and Linux.",
@@ -485,32 +506,58 @@ export const statusCards: StatusCard[] = [
   },
   {
     id: "party-chat",
-    column: "planned",
+    column: "progress",
     platforms: all,
-    en: { t: "Party chat", d: "A text chat beside a party's voice, everywhere." },
-    tr: { t: "Parti sohbeti", d: "Bir partinin sesinin yanında yazılı sohbet, her yerde." },
+    ships: { project: "macos", version: "0.2.35" },
+    en: {
+      t: "Party chat",
+      d: "A text chat beside a party's voice, everywhere.",
+    },
+    tr: {
+      t: "Parti sohbeti",
+      d: "Bir partinin sesinin yanında yazılı sohbet, her yerde.",
+    },
+  },
+  {
+    id: "profile-themes",
+    column: "progress",
+    platforms: all,
+    ships: { project: "macos", version: "0.2.35" },
+    en: {
+      t: "Profile themes and showcase",
+      d: "A theme for your profile, and up to six games or trophies pinned to its top.",
+    },
+    tr: {
+      t: "Profil temaları ve vitrin",
+      d: "Profilin için bir tema ve en üstüne sabitlenen en fazla altı oyun ya da kupa.",
+    },
   },
   {
     id: "headset",
-    column: "planned",
+    column: "progress",
     platforms: phone,
+    ships: { project: "macos", version: "0.2.35" },
     en: {
       t: "The phone as a headset",
       d: "The party's voice through the phone while it is also the controller.",
     },
-    tr: { t: "Kulaklık olarak telefon", d: "Telefon kontrolcüyken partinin sesi de onun üzerinden." },
+    tr: {
+      t: "Kulaklık olarak telefon",
+      d: "Telefon kontrolcüyken partinin sesi de onun üzerinden.",
+    },
   },
   {
     id: "e2ee",
-    column: "planned",
+    column: "progress",
     platforms: all,
+    ships: { project: "macos", version: "0.2.35" },
     en: {
       t: "End-to-end encrypted messages",
-      d: "Direct messages and voice only the two of you can read and hear.",
+      d: "Direct messages only the two of you can read.",
     },
     tr: {
       t: "Uçtan uca şifreli mesajlar",
-      d: "Yalnızca ikinizin okuyup duyabileceği doğrudan mesajlar ve ses.",
+      d: "Yalnızca ikinizin okuyabileceği doğrudan mesajlar.",
     },
   },
   {
@@ -528,28 +575,15 @@ export const statusCards: StatusCard[] = [
   },
   {
     id: "big-rooms",
-    column: "planned",
+    column: "progress",
     platforms: all,
     en: {
       t: "Share play for many viewers",
-      d: "More than four viewers, and parties with more than eight people talking.",
+      d: "More than four viewers, and parties with more than eight people talking. The media server is being set up.",
     },
     tr: {
       t: "Çok izleyicili Share play",
-      d: "Dörtten fazla izleyici ve sekizden fazla kişinin konuştuğu partiler.",
-    },
-  },
-  {
-    id: "public-api",
-    column: "planned",
-    platforms: ["web"],
-    en: {
-      t: "Challenges and a public API",
-      d: "Tournaments and challenges on the leaderboards, and an API for community tools.",
-    },
-    tr: {
-      t: "Meydan okumalar ve açık API",
-      d: "Sıralamalarda turnuvalar ve meydan okumalar, topluluk araçları için bir API.",
+      d: "Dörtten fazla izleyici ve sekizden fazla kişinin konuştuğu partiler. Medya sunucusu kuruluyor.",
     },
   },
 ];

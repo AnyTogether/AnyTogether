@@ -20,7 +20,7 @@ export interface RoadmapItem {
 export const statuses: Status[] = ["done", "progress", "next", "later"];
 
 /** When the list was last checked against the plan and the releases. */
-export const updated = "2026-10-30";
+export const updated = "2026-11-06";
 
 export const planDocs = {
   en: "https://github.com/AnyTogether/AnyPS5-ARM/blob/anytogether/docs/en/10-roadmap.md",
@@ -29,6 +29,20 @@ export const planDocs = {
 
 export const roadmap: RoadmapItem[] = [
   // Done, newest first.
+  {
+    id: "public-api",
+    status: "done",
+    areas: ["online"],
+    shipped: "AnyTogether",
+    en: {
+      t: "Challenges and a public API",
+      d: "Races on a game between two dates, among friends, a community or everyone, scored by trophy points, trophies or play time. A read-only API with personal tokens for community tools.",
+    },
+    tr: {
+      t: "Meydan okumalar ve açık API",
+      d: "Bir oyunda iki tarih arasında yarış, arkadaşlar, bir topluluk ya da herkes arasında, kupa puanı, kupa sayısı ya da oynama süresiyle. Topluluk araçları için kişisel anahtarlarla salt okunur bir API.",
+    },
+  },
   {
     id: "opus",
     status: "done",
@@ -394,15 +408,15 @@ export const roadmap: RoadmapItem[] = [
   },
   {
     id: "phone-push",
-    status: "next",
+    status: "progress",
     areas: ["phone", "online"],
     en: {
       t: "Push notifications on the phone",
-      d: "Messages, invites and calls on a locked phone, through APNs and FCM.",
+      d: "Messages, invites and calls on a locked phone, through APNs and FCM. The code is ready, and it waits for the Apple and Firebase keys.",
     },
     tr: {
       t: "Telefonda anlık bildirimler",
-      d: "Kilitli telefonda mesajlar, davetler ve aramalar, APNs ve FCM üzerinden.",
+      d: "Kilitli telefonda mesajlar, davetler ve aramalar, APNs ve FCM üzerinden. Kod hazır ve Apple ile Firebase anahtarlarını bekliyor.",
     },
   },
   {
@@ -421,15 +435,15 @@ export const roadmap: RoadmapItem[] = [
   },
   {
     id: "desktop-together",
-    status: "next",
+    status: "progress",
     areas: ["pc", "online"],
     en: {
       t: "Share play and the feed in AnyPS5 Desktop",
-      d: "Hosting and watching share play, the activity feed and leaderboards on Windows and Linux, as on the Mac.",
+      d: "Hosting and watching share play, the activity feed and leaderboards on Windows and Linux, as on the Mac. It comes with the next AnyPS5 Desktop.",
     },
     tr: {
       t: "AnyPS5 Desktop'ta birlikte oynama ve akış",
-      d: "Windows ve Linux'ta birlikte oynamayı yayınlamak ve izlemek, etkinlik akışı ve liderlik tabloları, Mac'teki gibi.",
+      d: "Windows ve Linux'ta birlikte oynamayı yayınlamak ve izlemek, etkinlik akışı ve liderlik tabloları, Mac'teki gibi. Bir sonraki AnyPS5 Desktop ile geliyor.",
     },
   },
   {
@@ -449,54 +463,54 @@ export const roadmap: RoadmapItem[] = [
   // Later
   {
     id: "party-chat",
-    status: "later",
-    areas: ["online"],
+    status: "progress",
+    areas: ["mac", "pc", "phone", "online"],
     en: {
       t: "Party chat",
-      d: "A text chat beside a party's voice, in the launchers, on the phone and on the web.",
+      d: "A text chat beside a party's voice. It works on the web, and the launchers and the phone get it in their next releases.",
     },
     tr: {
       t: "Parti sohbeti",
-      d: "Bir partinin sesinin yanında yazılı sohbet, launcher'larda, telefonda ve web'de.",
+      d: "Bir partinin sesinin yanında yazılı sohbet. Web'de çalışıyor. Launcher'lar ve telefon sonraki sürümlerinde alıyor.",
     },
   },
   {
     id: "profile-themes",
-    status: "later",
-    areas: ["online"],
+    status: "progress",
+    areas: ["mac", "pc", "phone", "online"],
     en: {
       t: "Profile themes and showcase",
-      d: "Your profile wearing a theme you choose, and up to six games or trophies pinned to its top.",
+      d: "Your profile wearing a theme you choose, and up to six games or trophies pinned to its top. It works on the web, and the launchers and the phone get it in their next releases.",
     },
     tr: {
       t: "Profil temaları ve vitrin",
-      d: "Profilin seçtiğin bir temayı giyer ve en üstüne en fazla altı oyun ya da kupa sabitlenir.",
+      d: "Profilin seçtiğin bir temayı giyer ve en üstüne en fazla altı oyun ya da kupa sabitlenir. Web'de çalışıyor. Launcher'lar ve telefon sonraki sürümlerinde alıyor.",
     },
   },
   {
     id: "headset",
-    status: "later",
+    status: "progress",
     areas: ["phone"],
     en: {
       t: "The phone as a headset",
-      d: "The party's voice through the phone while it is also the controller.",
+      d: "The party's voice through the phone while it is also the controller. It is finished and comes with the next phone app.",
     },
     tr: {
       t: "Kulaklık olarak telefon",
-      d: "Telefon kontrolcüyken partinin sesi de onun üzerinden.",
+      d: "Telefon kontrolcüyken partinin sesi de onun üzerinden. Hazır ve bir sonraki telefon uygulamasıyla geliyor.",
     },
   },
   {
     id: "e2ee",
-    status: "later",
-    areas: ["online"],
+    status: "progress",
+    areas: ["mac", "pc", "phone", "online"],
     en: {
       t: "End-to-end encrypted messages",
-      d: "Direct messages and voice only the two of you can read and hear.",
+      d: "Direct messages only the two of you can read, with a safety number to compare. It works on the web, and the launchers and the phone get it in their next releases.",
     },
     tr: {
       t: "Uçtan uca şifreli mesajlar",
-      d: "Yalnızca ikinizin okuyup duyabileceği doğrudan mesajlar ve ses.",
+      d: "Yalnızca ikinizin okuyabileceği doğrudan mesajlar ve karşılaştırmak için bir güvenlik numarası. Web'de çalışıyor. Launcher'lar ve telefon sonraki sürümlerinde alıyor.",
     },
   },
   {
@@ -514,28 +528,15 @@ export const roadmap: RoadmapItem[] = [
   },
   {
     id: "big-rooms",
-    status: "later",
+    status: "progress",
     areas: ["online"],
     en: {
       t: "Share play for many viewers",
-      d: "More than four viewers through a media server, and parties with more than eight talking.",
+      d: "More than four viewers and parties with more than eight talking, through a media server. The code is ready, and the server is being set up.",
     },
     tr: {
       t: "Çok izleyicili birlikte oynama",
-      d: "Bir medya sunucusuyla dörtten fazla izleyici ve sekizden fazla konuşanlı partiler.",
-    },
-  },
-  {
-    id: "public-api",
-    status: "later",
-    areas: ["online"],
-    en: {
-      t: "Challenges and a public API",
-      d: "Tournaments and challenges on the leaderboards, and an API for community tools.",
-    },
-    tr: {
-      t: "Meydan okumalar ve açık API",
-      d: "Liderlik tablolarında turnuvalar ve meydan okumalar, topluluk araçları için bir API.",
+      d: "Bir medya sunucusuyla dörtten fazla izleyici ve sekizden fazla konuşanlı partiler. Kod hazır ve sunucu kuruluyor.",
     },
   },
 ];
