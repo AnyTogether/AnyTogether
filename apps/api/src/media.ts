@@ -75,7 +75,11 @@ async function makeImage(input: string, maxSide?: number) {
   }
 }
 
-const contentTypeOf = (row: Media, variant: Variant) => (variant === "file" ? row.contentType : "image/webp");
+/** Sealed media is ChaCha20-Poly1305 ciphertext: its 16-byte tag on top of the kind's limit. */
+const sealedOverhead = 16;
+const sealedType = "application/octet-stream";
+const contentTypeOf = (row: Media, variant: Variant) =>
+  row.sealed ? sealedType : variant === "file" ? row.contentType : "image/webp";
 const shaOf = (row: Media, variant: Variant) =>
   variant === "file" ? row.sha256 : variant === "thumb" ? row.thumbSha256 : row.posterSha256;
 
@@ -105,6 +109,7 @@ export function mediaService(deps: Deps) {
       poster: row.posterSha256 ? at("poster") : null,
       ...(row.status === "hidden" ? { hidden: true } : {}),
       ...(options.owner ? { gallery: row.galleryPosition } : {}),
+      ...(row.sealed ? { sealed: true as const } : {}),
       createdAt: row.createdAt.toISOString(),
     };
   };
@@ -154,16 +159,30 @@ export function mediaService(deps: Deps) {
     return result;
   }
 
-  /** The sender's own media for a message: active, and now in use. */
-  async function attachable(me: string, ids: string[]) {
+  /** The sender's own media for a message: active, sealed exactly when the message is, and now in
+   *  use. */
+  async function attachable(me: string, ids: string[], sealed = false) {
     if (!ids.length) return [];
     needFiles(deps.files);
     const rows = await db
       .select()
       .from(media)
-      .where(and(inArray(media.id, ids), eq(media.accountId, me), eq(media.status, "active")));
+      .where(
+        and(
+          inArray(media.id, ids),
+          eq(media.accountId, me),
+          eq(media.status, "active"),
+          eq(media.sealed, sealed),
+        ),
+      );
     if (rows.length !== new Set(ids).size)
-      throw new HttpError(400, ErrorCode.badRequest, "attachments: only your own media, uploaded first");
+      throw new HttpError(
+        400,
+        ErrorCode.badRequest,
+        sealed
+          ? "attachments: only your own sealed media (POST /me/media/sealed) in a sealed message"
+          : "attachments: only your own media, uploaded first",
+      );
     await db
       .update(media)
       .set({ usedAt: new Date() })
@@ -284,7 +303,7 @@ export type MediaService = ReturnType<typeof mediaService>;
 
 /** Uploads that stream past the API's usual body limit. */
 export const isStreamedUpload = (method: string, path: string) =>
-  (method === "POST" && /^\/api\/v1\/me\/media\/?$/.test(path)) ||
+  (method === "POST" && /^\/api\/v1\/me\/media(\/sealed)?\/?$/.test(path)) ||
   (method === "PUT" && /^\/api\/v1\/me\/media\/[0-9a-f-]{36}\/poster$/i.test(path));
 
 /** GET /storage for anyone; uploads, lists, deletes and the gallery for the signed-in; the signed
@@ -426,7 +445,43 @@ export function mediaRoutes(deps: Deps, service: MediaService) {
     }
   });
 
-  /** The still shown before a clip plays: a picture from the client, replacing any before it. */
+  /** A photo, clip or voice note encrypted on the sender's device for an end-to-end encrypted
+   *  message (docs/e2ee.md): POST /me/media/sealed?kind=image|clip|voice with the ciphertext as the
+   *  body. Kept as it came, since the server cannot open it: no re-encoding and no thumbnail. */
+  app.post("/me/media/sealed", async (c) => {
+    const f = files();
+    const me = c.get("userId");
+    await assertNotMuted(deps.db, me);
+    const kind = c.req.query("kind") as MediaKind;
+    if (!mediaKinds.includes(kind))
+      throw new HttpError(400, ErrorCode.badRequest, "kind: image, clip or voice");
+    await limit("mediaUpload", me);
+    const max = mediaLimits[kind] + sealedOverhead;
+    const tooBig = `${kind === "image" ? "A picture" : kind === "clip" ? "A clip" : "A voice note"} is at most ${Math.round(mediaLimits[kind] / 1048576)} MB`;
+    if (Number(c.req.header("content-length") ?? 0) > max)
+      throw new HttpError(413, ErrorCode.payloadTooLarge, tooBig, { max: mediaLimits[kind] });
+    const id = uuidv7();
+    const upload = await f.stagingFile(`${id}.sealed`);
+    try {
+      const got = await receive(c.req.raw.body, upload, max, { tooBig });
+      if (got.size <= sealedOverhead) throw new HttpError(400, ErrorCode.badRequest, "The upload is empty");
+      const row = await keep(
+        f,
+        me,
+        [{ path: upload, sha256: got.sha256, size: got.size, contentType: sealedType }],
+        { id, kind, sha256: got.sha256, contentType: sealedType, sealed: true },
+      );
+      return c.json(
+        { media: service.view(f, row, { owner: true, expires: ownerWindow(f) }), usage: await f.usage(me) },
+        201,
+      );
+    } finally {
+      await rm(upload, { force: true });
+    }
+  });
+
+  /** The still shown before a clip plays: a picture from the client, replacing any before it. For a
+   *  sealed clip, the poster's ciphertext, kept as it came. */
   app.put("/me/media/:id/poster", async (c) => {
     const f = files();
     const me = c.get("userId");
@@ -435,29 +490,36 @@ export function mediaRoutes(deps: Deps, service: MediaService) {
     if (!row || row.accountId !== me) throw new HttpError(404, ErrorCode.notFound, "No such media");
     if (row.kind !== "clip") throw new HttpError(400, ErrorCode.badRequest, "Only a clip has a poster");
     const tooBig = "A poster is at most 2 MB";
-    if (Number(c.req.header("content-length") ?? 0) > mediaLimits.poster)
+    const max = mediaLimits.poster + (row.sealed ? sealedOverhead : 0);
+    if (Number(c.req.header("content-length") ?? 0) > max)
       throw new HttpError(413, ErrorCode.payloadTooLarge, tooBig, { max: mediaLimits.poster });
     const upload = await f.stagingFile(`${uuidv7()}.poster`);
     const made = [upload];
     try {
-      await receive(c.req.raw.body, upload, mediaLimits.poster, { tooBig });
-      const head = Buffer.alloc(16);
-      const file = await open(upload, "r");
-      await file.read(head, 0, 16, 0);
-      await file.close();
-      if (!["png", "jpeg", "webp"].includes(sniff(head) ?? ""))
-        throw new HttpError(415, ErrorCode.unsupportedMedia, "A poster is PNG, JPEG or WebP");
-      const picture = await makeImage(upload, 1280);
-      const path = `${upload}.webp`;
-      made.push(path);
-      await writeFile(path, picture.file);
-      const { createHash } = await import("node:crypto");
-      const staged: StagedFile = {
-        path,
-        sha256: createHash("sha256").update(picture.file).digest("hex"),
-        size: picture.file.length,
-        contentType: "image/webp",
-      };
+      const got = await receive(c.req.raw.body, upload, max, { tooBig });
+      let staged: StagedFile;
+      if (row.sealed) {
+        if (got.size <= sealedOverhead) throw new HttpError(400, ErrorCode.badRequest, "The upload is empty");
+        staged = { path: upload, sha256: got.sha256, size: got.size, contentType: sealedType };
+      } else {
+        const head = Buffer.alloc(16);
+        const file = await open(upload, "r");
+        await file.read(head, 0, 16, 0);
+        await file.close();
+        if (!["png", "jpeg", "webp"].includes(sniff(head) ?? ""))
+          throw new HttpError(415, ErrorCode.unsupportedMedia, "A poster is PNG, JPEG or WebP");
+        const picture = await makeImage(upload, 1280);
+        const path = `${upload}.webp`;
+        made.push(path);
+        await writeFile(path, picture.file);
+        const { createHash } = await import("node:crypto");
+        staged = {
+          path,
+          sha256: createHash("sha256").update(picture.file).digest("hex"),
+          size: picture.file.length,
+          contentType: "image/webp",
+        };
+      }
       await f.prepare(me, [staged]);
       const updated = await f.within(me, async (tx, used) => {
         const [current] = await tx.select().from(media).where(eq(media.id, row.id)).for("update");
@@ -562,11 +624,14 @@ export function mediaRoutes(deps: Deps, service: MediaService) {
     await f.within(me, async (tx) => {
       const rows = items.length
         ? await tx
-            .select({ id: media.id, kind: media.kind, status: media.status })
+            .select({ id: media.id, kind: media.kind, status: media.status, sealed: media.sealed })
             .from(media)
             .where(and(eq(media.accountId, me), inArray(media.id, items)))
         : [];
-      if (rows.length !== items.length || rows.some((r) => r.status !== "active" || r.kind === "voice"))
+      if (
+        rows.length !== items.length ||
+        rows.some((r) => r.status !== "active" || r.kind === "voice" || r.sealed)
+      )
         throw new HttpError(400, ErrorCode.badRequest, "items: your own photos and clips");
       await tx
         .update(media)

@@ -29,6 +29,9 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^lfg/${id}$`),
     /^(parties|share-plays)\/public$/,
     /^discover\/(players|suggestions)$/,
+    // End-to-end encrypted messages: this browser's device and the devices it seals for.
+    /^me\/e2ee\/device$/,
+    /^e2ee\/devices$/,
     /^me\/discovery$/,
     new RegExp(`^games/${title}/hub$`),
     /^me\/(players-met|communities|events)$/,
@@ -68,12 +71,14 @@ const allowed: Record<string, RegExp[]> = {
   ],
   PUT: [
     /^me\/showcase$/,
+    /^me\/e2ee\/device$/,
     new RegExp(`^conversations/${id}/(mute|pin)$`),
     new RegExp(`^conversations/${id}/messages/${seq}/reactions/${reaction}$`),
     new RegExp(`^communities/${id}/members/${id}/role$`),
     new RegExp(`^events/${id}/rsvp$`),
   ],
   DELETE: [
+    /^me\/e2ee\/devices\/[0-9a-f]{32}$/,
     new RegExp(`^conversations/${id}/messages/${seq}$`),
     new RegExp(`^conversations/${id}/messages/${seq}/reactions/${reaction}$`),
     new RegExp(`^conversations/${id}/members/${id}$`),
@@ -98,6 +103,7 @@ const queries = [
   "q",
   "days",
   "when",
+  "users",
 ];
 
 async function pass(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
@@ -111,12 +117,19 @@ async function pass(request: Request, { params }: { params: Promise<{ path: stri
   const search = new URLSearchParams();
   for (const key of queries) {
     const value = url.searchParams.get(key);
-    // A search may hold words in any language; everything else is plain.
-    const shape = key === "q" ? /^[\p{L}\p{N} ._'-]{1,40}$/u : /^[0-9A-Za-z:.+-]{1,40}$/;
+    // A search may hold words in any language; the people whose devices are asked for are up to
+    // 20 user IDs; everything else is plain.
+    const shape =
+      key === "q"
+        ? /^[\p{L}\p{N} ._'-]{1,40}$/u
+        : key === "users"
+          ? /^[0-9a-f-]{36}(,[0-9a-f-]{36}){0,19}$/
+          : /^[0-9A-Za-z:.+-]{1,40}$/;
     if (value !== null && shape.test(value)) search.set(key, value);
   }
   const body = request.method === "GET" || request.method === "DELETE" ? undefined : await request.text();
-  if (body && body.length > 16_384)
+  // A sealed message carries its ciphertext and a key for each device: more than plain text.
+  if (body && body.length > 49_152)
     return Response.json({ code: "bad_request", title: "Too big" }, { status: 413 });
   return relay(`/${path}${search.size ? `?${search}` : ""}`, {
     method: request.method,

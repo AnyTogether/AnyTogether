@@ -290,6 +290,8 @@ export async function exportAccount(
       conversationId: m.conversationId,
       seq: m.seq,
       text: m.text,
+      // End-to-end encrypted: the server only has ciphertext, and leaves it out.
+      ...(m.sealed ? { encrypted: true } : {}),
       createdAt: m.createdAt,
       editedAt: m.editedAt,
       editCount: m.editCount,
@@ -416,7 +418,7 @@ export async function purgeDeletedAccounts(
       // Their messages go too: emptied, so the others' threads keep their order.
       await tx
         .update(messages)
-        .set({ text: null, attachments: [], deletedAt: now })
+        .set({ text: null, sealed: null, attachments: [], deletedAt: now })
         .where(and(eq(messages.authorId, id), isNull(messages.deletedAt)));
       await tx.delete(accounts).where(and(eq(accounts.id, id), eq(accounts.status, "deleting")));
       // The codes mailed to the address name it; they go with the account.

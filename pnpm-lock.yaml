@@ -20,6 +20,9 @@ importers:
       '@anytogether/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@anytogether/e2ee':
+        specifier: workspace:*
+        version: link:../../packages/e2ee
       '@anytogether/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -137,6 +140,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@anytogether/e2ee':
+        specifier: workspace:*
+        version: link:../../packages/e2ee
       '@simplewebauthn/browser':
         specifier: ^13.3.0
         version: 13.3.0

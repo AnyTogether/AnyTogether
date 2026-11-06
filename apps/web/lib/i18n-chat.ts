@@ -33,6 +33,35 @@ export const chatEn = {
   readReceiptsOff: "Off",
   readReceiptsHint:
     "When off, people don't see when you've read their messages, and you don't see theirs. Delivered still shows.",
+  e2eeOn: "End-to-end encrypted",
+  e2eeOnDetail:
+    "Only your devices and {name}'s can read the messages and attachments here. Not even the server can.",
+  e2eeOff: "Not end-to-end encrypted",
+  e2eeOffDetail: "{name} uses an app that does not support it yet. Messages here work as before.",
+  e2eeNoDevice:
+    "{name} is not signed in on a device that can read encrypted messages. They need an up-to-date app.",
+  e2eeNoBrowser:
+    "This browser cannot keep encryption keys. Try another browser or a window that is not private.",
+  e2eeSafetyNumber: "Safety number",
+  e2eeSafetyHow:
+    "Compare these numbers with {name} in person or on a call. If they match, nobody is in between.",
+  e2eeMarkCompared: "We compared them",
+  e2eeCompared: "Compared",
+  e2eeDevicesChanged: "{name}'s devices changed. Compare the safety number again.",
+  e2eeMyDevicesChanged: "Your devices changed. Compare the safety number again.",
+  e2eeCompare: "Compare",
+  e2eeDismiss: "OK",
+  e2eeDevices: "Devices",
+  e2eeYou: "You",
+  e2eeNewDeviceNote: "A new device cannot read messages sent before it was added.",
+  e2eeBeforeDevice: "Sent before this device was added.",
+  e2eeUndecryptable: "This message could not be decrypted.",
+  e2eePreview: "Encrypted message",
+  e2eeReportNote: "Reporting sends this message to the moderators so they can read it.",
+  e2eeClose: "Close",
+  reportMessage: "Report",
+  reportMessageTitle: "Report this message",
+  reportMessageLead: "A moderator will look at it. Nobody is told who reported it.",
 };
 
 export const chatTr: typeof chatEn = {
@@ -69,4 +98,34 @@ export const chatTr: typeof chatEn = {
   readReceiptsOff: "Kapalı",
   readReceiptsHint:
     "Kapalıyken mesajlarını okuduğunu kimse görmez, sen de onlarınkini görmezsin. İletildi bilgisi yine görünür.",
+  e2eeOn: "Uçtan uca şifreli",
+  e2eeOnDetail:
+    "Buradaki mesajları ve ekleri yalnızca sen ve {name} cihazlarınızda okuyabilirsiniz. Sunucu bile okuyamaz.",
+  e2eeOff: "Uçtan uca şifreli değil",
+  e2eeOffDetail:
+    "{name} bunu henüz desteklemeyen bir uygulama kullanıyor. Buradaki mesajlar eskisi gibi çalışır.",
+  e2eeNoDevice:
+    "{name} şifreli mesajları okuyabilen bir cihazda oturum açmamış. Güncel bir uygulama gerekiyor.",
+  e2eeNoBrowser:
+    "Bu tarayıcı şifreleme anahtarlarını saklayamıyor. Başka bir tarayıcı ya da gizli olmayan bir pencere dene.",
+  e2eeSafetyNumber: "Güvenlik numarası",
+  e2eeSafetyHow:
+    "Bu numaraları {name} ile yüz yüze ya da bir aramada karşılaştırın. Aynıysa aranızda kimse yok.",
+  e2eeMarkCompared: "Karşılaştırdık",
+  e2eeCompared: "Karşılaştırıldı",
+  e2eeDevicesChanged: "{name} cihazlarını değiştirdi. Güvenlik numarasını yeniden karşılaştırın.",
+  e2eeMyDevicesChanged: "Cihazların değişti. Güvenlik numarasını yeniden karşılaştırın.",
+  e2eeCompare: "Karşılaştır",
+  e2eeDismiss: "Tamam",
+  e2eeDevices: "Cihazlar",
+  e2eeYou: "Sen",
+  e2eeNewDeviceNote: "Yeni bir cihaz, eklenmeden önce gönderilen mesajları okuyamaz.",
+  e2eeBeforeDevice: "Bu cihaz eklenmeden önce gönderildi.",
+  e2eeUndecryptable: "Bu mesajın şifresi çözülemedi.",
+  e2eePreview: "Şifreli mesaj",
+  e2eeReportNote: "Bildirirsen bu mesaj, okuyabilmeleri için moderatörlere gönderilir.",
+  e2eeClose: "Kapat",
+  reportMessage: "Bildir",
+  reportMessageTitle: "Bu mesajı bildir",
+  reportMessageLead: "Bir moderatör bakacak. Kimin bildirdiği kimseye söylenmez.",
 };
