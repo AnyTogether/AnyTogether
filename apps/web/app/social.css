@@ -1186,6 +1186,70 @@ svg.hang-up {
   opacity: 0.55;
 }
 
+/* Party chat: beside the voice on wide screens, under it on narrow ones. */
+.page.party-page.with-chat {
+  max-width: 1120px;
+}
+.party-page.with-chat .party-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  grid-template-areas:
+    "voice chat"
+    "rest chat";
+  grid-template-rows: auto 1fr;
+  column-gap: 16px;
+  align-items: start;
+}
+.party-layout > .voice {
+  grid-area: voice;
+}
+.party-layout > .party-rest {
+  grid-area: rest;
+}
+.party-layout > .party-rest > .card:first-of-type,
+.party-layout > .party-rest > .notice:first-child {
+  margin-top: 16px;
+}
+.page .card.party-chat {
+  grid-area: chat;
+  position: sticky;
+  top: 24px;
+  margin-top: 28px;
+  height: min(640px, calc(100dvh - 140px));
+  min-height: 420px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.thread-head.embedded {
+  padding: 18px 20px 14px;
+}
+.party-chat .messages {
+  padding: 8px 14px 14px;
+}
+.party-chat .thread-start {
+  margin: auto 8px;
+  text-align: center;
+  font-size: 13px;
+  text-wrap: balance;
+}
+@media (max-width: 960px) {
+  .party-page.with-chat .party-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "voice"
+      "chat"
+      "rest";
+  }
+  .page .card.party-chat {
+    position: static;
+    margin-top: 16px;
+    height: min(520px, 70dvh);
+    min-height: 360px;
+  }
+}
+
 /* End-to-end encryption: the lock in the thread's head, its sheet with the safety number, the
    notice when someone's devices changed, and sealed media while it opens. */
 .e2ee-lock.on {

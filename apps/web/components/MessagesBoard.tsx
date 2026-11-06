@@ -76,11 +76,11 @@ import {
   useState,
 } from "react";
 
-interface Thread {
+export interface Thread {
   messages: Message[];
   more: boolean;
 }
-interface Pending {
+export interface Pending {
   clientId: string;
   text: string;
   failed: boolean;
@@ -141,7 +141,7 @@ function uploadRefusal(
 }
 
 /** Why a message was refused, in the reader's words. */
-const refusal = (texts: UiStrings, status: number, code: string | undefined, side?: string) =>
+export const refusal = (texts: UiStrings, status: number, code: string | undefined, side?: string) =>
   familyRefusal({ code, side }, texts) ??
   (code === "link_blocked" ? texts.linkBlocked : status === 403 ? texts.cannotMessage : texts.failed);
 /** A run: messages by the same person within five minutes stay together. */
@@ -304,9 +304,12 @@ export function MessagesBoard({
     if (location.pathname + location.search !== target) history.replaceState(null, "", target);
   }, [selected]);
 
+  /** Conversations that are not in the list (a party's chat): their messages reload nothing. */
+  const unlisted = useRef(new Set<string>());
   const reloadList = useCallback(async () => {
     const { body } = await social<{ conversations: Conversation[] }>("me/conversations");
     if (body) setConversations(body.conversations.sort(byUpdated));
+    return body?.conversations;
   }, []);
 
   const loadThread = useCallback(async (id: string, before?: number) => {
@@ -413,7 +416,11 @@ export function MessagesBoard({
         });
         return next.sort(byUpdated);
       });
-      if (created && !known) reloadList();
+      const id = message.conversationId;
+      if (created && !known && !unlisted.current.has(id))
+        reloadList().then((list) => {
+          if (list && !list.some((c) => c.id === id)) unlisted.current.add(id);
+        });
     },
     [me, reloadList],
   );
@@ -963,7 +970,11 @@ function dayLabel(iso: string, now: number, texts: UiStrings, locale: string) {
   return day.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
 }
 
-function ThreadView({
+/** A conversation's thread with its composer. `embedded` shows it inside another page (a party's
+ *  chat): a plain heading in place of the conversation's head, its own placeholder, and a line while
+ *  it is empty. */
+export function ThreadView({
+  embedded,
   texts,
   locale,
   me,
@@ -990,6 +1001,7 @@ function ThreadView({
   mode,
   shown,
 }: {
+  embedded?: { title: string; placeholder: string; empty: string };
   e2ee: E2ee;
   mode: ChatMode | null;
   shown: (message: Message) => Message;
@@ -1116,53 +1128,59 @@ function ThreadView({
 
   return (
     <>
-      <div className="thread-head">
-        <button type="button" className="pill icon back" aria-label={texts.back} onClick={onBack}>
-          <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
-            <path d="M15 5l-7 7 7 7" />
-          </svg>
-        </button>
-        <Faces conversation={conversation} me={me} />
-        <span className="lines">
-          <span className="name">{name}</span>
-          <span className="meta">
-            {group
-              ? fill(texts.membersCount, { n: conversation.members.length })
-              : others[0]
-                ? `@${others[0].handle}`
-                : ""}
+      {embedded ? (
+        <div className="thread-head embedded">
+          <h3 className="sub">{embedded.title}</h3>
+        </div>
+      ) : (
+        <div className="thread-head">
+          <button type="button" className="pill icon back" aria-label={texts.back} onClick={onBack}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+          </button>
+          <Faces conversation={conversation} me={me} />
+          <span className="lines">
+            <span className="name">{name}</span>
+            <span className="meta">
+              {group
+                ? fill(texts.membersCount, { n: conversation.members.length })
+                : others[0]
+                  ? `@${others[0].handle}`
+                  : ""}
+            </span>
           </span>
-        </span>
-        {other && (mode === "sealed" || mode === "plain" || mode === "stuck") && (
-          <LockButton texts={texts} sealed={mode !== "plain"} onOpen={() => sheet.current?.showModal()} />
-        )}
-        {!group && others[0] && (
-          <CallButton person={others[0]} label={fill(texts.callFriend, { name: others[0].displayName })} />
-        )}
-        {group && conversation.communityId && (
-          <Link href={`/communities/${conversation.communityId}`} className="pill">
-            {texts.communities}
-          </Link>
-        )}
-        <Menu label={texts.conversationOptions}>
-          {(close) => (
-            <ConversationActions
-              texts={texts}
-              conversation={conversation}
-              name={name}
-              canLeave={group && !conversation.communityId}
-              onSetting={(change, value) => {
-                close();
-                onSetting(change, value);
-              }}
-              onLeave={() => {
-                close();
-                onLeave();
-              }}
-            />
+          {other && (mode === "sealed" || mode === "plain" || mode === "stuck") && (
+            <LockButton texts={texts} sealed={mode !== "plain"} onOpen={() => sheet.current?.showModal()} />
           )}
-        </Menu>
-      </div>
+          {!group && others[0] && (
+            <CallButton person={others[0]} label={fill(texts.callFriend, { name: others[0].displayName })} />
+          )}
+          {group && conversation.communityId && (
+            <Link href={`/communities/${conversation.communityId}`} className="pill">
+              {texts.communities}
+            </Link>
+          )}
+          <Menu label={texts.conversationOptions}>
+            {(close) => (
+              <ConversationActions
+                texts={texts}
+                conversation={conversation}
+                name={name}
+                canLeave={group && !conversation.communityId}
+                onSetting={(change, value) => {
+                  close();
+                  onSetting(change, value);
+                }}
+                onLeave={() => {
+                  close();
+                  onLeave();
+                }}
+              />
+            )}
+          </Menu>
+        </div>
+      )}
 
       <div
         className={`messages${dragging ? " dragging" : ""}`}
@@ -1226,7 +1244,7 @@ function ThreadView({
                 )}
                 <div className="msg-body">
                   {group && !mine && runStart && (
-                    <span className="msg-author">{author?.displayName ?? "?"}</span>
+                    <span className="msg-author">{author?.displayName ?? texts.formerMember}</span>
                   )}
                   {!message.deletedAt && message.replyTo ? (
                     <ReplyQuote texts={texts} names={names} target={replyTarget(messages, message.replyTo)} />
@@ -1373,6 +1391,9 @@ function ThreadView({
             </div>
           </div>
         ))}
+        {embedded && thread && messages.length === 0 && pending.length === 0 && (
+          <p className="hint thread-start">{embedded.empty}</p>
+        )}
         {typists.length > 0 && (
           <p className="typing" aria-live="polite">
             <span className="typing-dots" aria-hidden="true">
@@ -1431,7 +1452,11 @@ function ThreadView({
               : null
           }
           onCancelReply={() => setReplying(null)}
-          placeholder={staged ? texts.captionPlaceholder : fill(texts.composerPlaceholder, { name })}
+          placeholder={
+            staged
+              ? texts.captionPlaceholder
+              : (embedded?.placeholder ?? fill(texts.composerPlaceholder, { name }))
+          }
           editing={editing}
           media={media}
           staged={staged}

@@ -181,6 +181,22 @@ describe("texts", () => {
     for (const [key, text] of Object.entries(chatEn)) expect(text, key).not.toBe("");
     expect(chatTr.readReceipts).toBe("Okundu bilgisi gönder");
   });
+
+  it("for the party's chat follow the copy rules", () => {
+    for (const texts of [chatEn, chatTr]) {
+      for (const key of [
+        "partyChat",
+        "partyChatPlaceholder",
+        "partyChatEmpty",
+        "reportMessageLead",
+      ] as const) {
+        expect(texts[key], key).not.toMatch(/[;·]/);
+      }
+      expect(texts.partyChatEmpty).toMatch(/\.$/);
+      expect(texts.reportMessageLead).toMatch(/\.$/);
+    }
+    expect(chatTr.partyChat).toBe("Sohbet");
+  });
 });
 
 describe("the read-receipts setting on the website", () => {
