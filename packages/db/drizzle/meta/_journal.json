@@ -215,8 +215,15 @@
     {
       "idx": 30,
       "version": "7",
-      "when": 1793935811242,
-      "tag": "0030_phone_push",
+      "when": 1793935712884,
+      "tag": "0030_challenges_public_api",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793936792317,
+      "tag": "0031_phone_push",
       "breakpoints": true
     }
   ]

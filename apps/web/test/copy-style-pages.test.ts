@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { statusCards } from "../content/status";
 import { languages } from "../lib/i18n";
+import { challengesEn, challengesTr } from "../lib/i18n-challenges";
 import { changelogStrings } from "../lib/i18n-changelog";
+import { developerStrings } from "../lib/i18n-developers";
 import { downloadPageStrings } from "../lib/i18n-download";
 import { helpStrings } from "../lib/i18n-help";
 import { projectsStrings } from "../lib/i18n-projects";
@@ -26,6 +28,8 @@ function pageTexts(language: "en" | "tr"): [string, string][] {
     ...texts(changelogStrings(language), "changelog"),
     ...texts(specsStrings(language), "specs"),
     ...texts(helpStrings(language), "help"),
+    ...texts(developerStrings(language), "developers"),
+    ...texts(language === "tr" ? challengesTr : challengesEn, "challenges"),
     ...roadmap.flatMap((item) => texts(item[language], `roadmap.${item.id}`)),
     ...statusCards.flatMap((card) => texts(card[language], `status.${card.id}`)),
   ];

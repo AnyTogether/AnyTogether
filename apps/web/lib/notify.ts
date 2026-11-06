@@ -25,7 +25,10 @@ export interface Notice {
     | "event_started"
     | "post_like"
     | "post_comment"
-    | "comment_reply";
+    | "comment_reply"
+    | "challenge_invite"
+    | "challenge_started"
+    | "challenge_ended";
   actor: Person | null;
   subjectId: string;
   data: {
@@ -60,6 +63,14 @@ export interface Notice {
     link?: { kind: "party" | "share_play"; id: string } | null;
     /** comment_reply: the comment answered. */
     commentId?: string;
+    /** Challenges: which, and (challenge_ended) the reader's place and the winner. */
+    challengeId?: string;
+    metric?: string;
+    endsAt?: string;
+    rank?: number;
+    value?: number;
+    entrants?: number;
+    winner?: { displayName: string; handle: string; value: number } | null;
   };
   read: boolean;
   createdAt: string;
@@ -94,6 +105,9 @@ export const noticeKinds = [
   "post_like",
   "post_comment",
   "comment_reply",
+  "challenge_invite",
+  "challenge_started",
+  "challenge_ended",
 ] as const;
 export type NoticeKind = (typeof noticeKinds)[number];
 /** familyMail: the weekly family summary by mail; pushPreview: what was written shows in a push;
@@ -154,6 +168,10 @@ export function noticeHref(notice: Notice) {
     case "post_comment":
     case "comment_reply":
       return notice.data.postId ? `/p/${notice.data.postId}` : null;
+    case "challenge_invite":
+    case "challenge_started":
+    case "challenge_ended":
+      return `/challenges/${notice.subjectId}`;
     default:
       return null;
   }

@@ -39,6 +39,7 @@ import "./psn.css";
 import "./profile.css";
 import "./compat.css";
 import "./voice.css";
+import "./challenges.css";
 
 const display = Space_Grotesk({
   subsets: ["latin", "latin-ext"],

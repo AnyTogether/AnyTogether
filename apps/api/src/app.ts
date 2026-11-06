@@ -11,6 +11,7 @@ import { passkeyRoutes } from "./auth/passkeys.js";
 import { authRoutes } from "./auth/routes.js";
 import { avatarRoutes } from "./avatars.js";
 import { callRoutes } from "./calls.js";
+import { challengeRoutes, challengeService } from "./challenges.js";
 import { type ClientGate, clientGate } from "./clientGate.js";
 import { communityRoutes } from "./communities.js";
 import { compatRoutes } from "./compat.js";
@@ -40,6 +41,7 @@ import { postRoutes } from "./posts.js";
 import { revealMiddleware, revealedPaths } from "./privateIdentity.js";
 import { profileRoutes } from "./profile.js";
 import type { ProviderConfig } from "./providers.js";
+import { apiTokenRoutes, publicApiRoutes } from "./publicApi.js";
 import { profileGate, publicProfileRoutes } from "./publicProfiles.js";
 import { type ClientIpHeader, type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
@@ -169,6 +171,10 @@ export function createApp(deps: Deps) {
   // Restrictions and appeals: a banned account comes with an appeal token, not a session.
   v1.route("/", appealRoutes(deps));
   const notes = notifier(deps);
+  // The read-only public API, with personal API tokens in place of a session: before every
+  // signed-in route, so none of their sign-in checks sees its requests.
+  const challengesKept = challengeService(deps, notes);
+  v1.route("/", publicApiRoutes(deps, challengesKept));
   const partyPieces = partyService(deps, notes);
   const shares = sharePlayRoutes(deps);
   const gameSessions = gameSessionRoutes(deps, notes, partyPieces);
@@ -187,6 +193,8 @@ export function createApp(deps: Deps) {
   v1.route("/", feedRoutes(deps));
   v1.route("/", postRoutes(deps, notes, media));
   v1.route("/", leaderboardRoutes(deps));
+  v1.route("/", challengeRoutes(deps, notes, challengesKept));
+  v1.route("/", apiTokenRoutes(deps));
   v1.route("/", reportRoutes(deps));
   v1.route("/", e2eeRoutes(deps));
   v1.route("/", messageRoutes(deps, notes));
@@ -224,5 +232,8 @@ export function createApp(deps: Deps) {
     media,
     /** Events starting within 15 minutes remind the people going. */
     sweepEvents: communities.sweepEvents,
+    /** Challenges that started tell the people in them; those past their grace hour are
+     *  written down and tell everyone who won. */
+    sweepChallenges: (now?: Date) => challengesKept.sweep(now),
   });
 }

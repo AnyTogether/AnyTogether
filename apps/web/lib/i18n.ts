@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { accountEn, accountTr } from "./i18n-account";
+import { challengesEn, challengesTr } from "./i18n-challenges";
 import { chatEn, chatTr } from "./i18n-chat";
 import { compatEn, compatTr } from "./i18n-compat";
 import { discoverEn, discoverTr } from "./i18n-discover";
@@ -457,6 +458,7 @@ const tr: typeof en = {
 };
 
 export type Strings = typeof en &
+  typeof challengesEn &
   typeof socialEn &
   typeof feedEn &
   typeof shareEn &
@@ -509,6 +511,7 @@ export async function strings(): Promise<Strings> {
         ...postsTr,
         ...profileTr,
         ...voiceTr,
+        ...challengesTr,
       }
     : {
         ...en,
@@ -531,5 +534,6 @@ export async function strings(): Promise<Strings> {
         ...postsEn,
         ...profileEn,
         ...voiceEn,
+        ...challengesEn,
       };
 }
