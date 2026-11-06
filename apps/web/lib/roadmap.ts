@@ -20,7 +20,7 @@ export interface RoadmapItem {
 export const statuses: Status[] = ["done", "progress", "next", "later"];
 
 /** When the list was last checked against the plan and the releases. */
-export const updated = "2026-11-06";
+export const updated = "2026-11-07";
 
 export const planDocs = {
   en: "https://github.com/AnyTogether/AnyPS5-ARM/blob/anytogether/docs/en/10-roadmap.md",
@@ -29,6 +29,76 @@ export const planDocs = {
 
 export const roadmap: RoadmapItem[] = [
   // Done, newest first.
+  {
+    id: "party-chat",
+    status: "done",
+    areas: ["mac", "pc", "phone", "online"],
+    shipped: "AnyPS5 ARM 0.2.35 · AnyPS5 Desktop 0.1.20",
+    en: {
+      t: "Party chat",
+      d: "A text chat beside a party's voice, on the web, the Mac, Windows, Linux and the phone.",
+    },
+    tr: {
+      t: "Parti sohbeti",
+      d: "Bir partinin sesinin yanında yazılı sohbet. Web'de, Mac'te, Windows'ta, Linux'ta ve telefonda.",
+    },
+  },
+  {
+    id: "e2ee",
+    status: "done",
+    areas: ["mac", "pc", "phone", "online"],
+    shipped: "AnyPS5 ARM 0.2.35 · AnyPS5 Desktop 0.1.20",
+    en: {
+      t: "End-to-end encrypted messages",
+      d: "Direct messages only the two of you can read, with a safety number to compare, on the web, the launchers and the phone.",
+    },
+    tr: {
+      t: "Uçtan uca şifreli mesajlar",
+      d: "Yalnızca ikinizin okuyabileceği doğrudan mesajlar ve karşılaştırmak için bir güvenlik numarası. Web'de, launcher'larda ve telefonda.",
+    },
+  },
+  {
+    id: "profile-themes",
+    status: "done",
+    areas: ["mac", "pc", "phone", "online"],
+    shipped: "AnyPS5 ARM 0.2.35 · AnyPS5 Desktop 0.1.20",
+    en: {
+      t: "Profile themes and showcase",
+      d: "Your profile wearing a theme you choose, and up to six games or trophies pinned to its top, on the web, the launchers and the phone.",
+    },
+    tr: {
+      t: "Profil temaları ve vitrin",
+      d: "Profilin seçtiğin bir temayı giyer ve en üstüne en fazla altı oyun ya da kupa sabitlenir. Web'de, launcher'larda ve telefonda.",
+    },
+  },
+  {
+    id: "headset",
+    status: "done",
+    areas: ["phone"],
+    shipped: "AnyPS5 ARM 0.2.35 · AnyPS5 Remote 1.23",
+    en: {
+      t: "The phone as a headset",
+      d: "The party's voice through the phone while it is also the controller, and the Mac goes quiet until you take it back.",
+    },
+    tr: {
+      t: "Kulaklık olarak telefon",
+      d: "Telefon kontrolcüyken partinin sesi de onun üzerinden. Mac sen geri alana kadar sessiz kalır.",
+    },
+  },
+  {
+    id: "desktop-together",
+    status: "done",
+    areas: ["pc", "online"],
+    shipped: "AnyPS5 Desktop 0.1.20",
+    en: {
+      t: "Share play and the feed in AnyPS5 Desktop",
+      d: "Hosting and watching share play, friends' recent activity and challenges on the leaderboards on Windows and Linux, as on the Mac.",
+    },
+    tr: {
+      t: "AnyPS5 Desktop'ta birlikte oynama ve akış",
+      d: "Windows ve Linux'ta birlikte oynamayı yayınlamak ve izlemek, arkadaşların son etkinlikleri ve liderlik tablolarında yarışmalar, Mac'teki gibi.",
+    },
+  },
   {
     id: "public-api",
     status: "done",
@@ -434,19 +504,6 @@ export const roadmap: RoadmapItem[] = [
     },
   },
   {
-    id: "desktop-together",
-    status: "progress",
-    areas: ["pc", "online"],
-    en: {
-      t: "Share play and the feed in AnyPS5 Desktop",
-      d: "Hosting and watching share play, the activity feed and leaderboards on Windows and Linux, as on the Mac. It comes with the next AnyPS5 Desktop.",
-    },
-    tr: {
-      t: "AnyPS5 Desktop'ta birlikte oynama ve akış",
-      d: "Windows ve Linux'ta birlikte oynamayı yayınlamak ve izlemek, etkinlik akışı ve liderlik tabloları, Mac'teki gibi. Bir sonraki AnyPS5 Desktop ile geliyor.",
-    },
-  },
-  {
     id: "languages",
     status: "next",
     areas: ["mac", "pc", "phone", "online"],
@@ -461,58 +518,6 @@ export const roadmap: RoadmapItem[] = [
   },
 
   // Later
-  {
-    id: "party-chat",
-    status: "progress",
-    areas: ["mac", "pc", "phone", "online"],
-    en: {
-      t: "Party chat",
-      d: "A text chat beside a party's voice. It works on the web, and the launchers and the phone get it in their next releases.",
-    },
-    tr: {
-      t: "Parti sohbeti",
-      d: "Bir partinin sesinin yanında yazılı sohbet. Web'de çalışıyor. Launcher'lar ve telefon sonraki sürümlerinde alıyor.",
-    },
-  },
-  {
-    id: "profile-themes",
-    status: "progress",
-    areas: ["mac", "pc", "phone", "online"],
-    en: {
-      t: "Profile themes and showcase",
-      d: "Your profile wearing a theme you choose, and up to six games or trophies pinned to its top. It works on the web, and the launchers and the phone get it in their next releases.",
-    },
-    tr: {
-      t: "Profil temaları ve vitrin",
-      d: "Profilin seçtiğin bir temayı giyer ve en üstüne en fazla altı oyun ya da kupa sabitlenir. Web'de çalışıyor. Launcher'lar ve telefon sonraki sürümlerinde alıyor.",
-    },
-  },
-  {
-    id: "headset",
-    status: "progress",
-    areas: ["phone"],
-    en: {
-      t: "The phone as a headset",
-      d: "The party's voice through the phone while it is also the controller. It is finished and comes with the next phone app.",
-    },
-    tr: {
-      t: "Kulaklık olarak telefon",
-      d: "Telefon kontrolcüyken partinin sesi de onun üzerinden. Hazır ve bir sonraki telefon uygulamasıyla geliyor.",
-    },
-  },
-  {
-    id: "e2ee",
-    status: "progress",
-    areas: ["mac", "pc", "phone", "online"],
-    en: {
-      t: "End-to-end encrypted messages",
-      d: "Direct messages only the two of you can read, with a safety number to compare. It works on the web, and the launchers and the phone get it in their next releases.",
-    },
-    tr: {
-      t: "Uçtan uca şifreli mesajlar",
-      d: "Yalnızca ikinizin okuyabileceği doğrudan mesajlar ve karşılaştırmak için bir güvenlik numarası. Web'de çalışıyor. Launcher'lar ve telefon sonraki sürümlerinde alıyor.",
-    },
-  },
   {
     id: "stores",
     status: "later",
