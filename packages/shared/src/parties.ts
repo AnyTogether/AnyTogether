@@ -2,9 +2,12 @@ import { z } from "zod";
 import type { PartyTogether } from "./gameSessions.js";
 import { LanguageCode, TitleId } from "./games.js";
 import { DiscordLink, type JoinCode } from "./joinCodes.js";
+import type { MediaRoute } from "./media.js";
 import type { MemberView } from "./messages.js";
 
-/** Voice in a party is a peer-to-peer mesh, so a party holds at most eight people. */
+/** Voice in a party is a peer-to-peer mesh, so a party holds at most eight people, and a call this
+ *  many voices. A server with a media server (media.ts) holds bigger parties, whose call moves to
+ *  it when a ninth voice comes in. */
 export const maxPartySize = 8;
 
 /** invite: only people a member invited may join; friends: the leader's friends may join too. */
@@ -58,7 +61,10 @@ export interface PartyView {
   invited: MemberView[];
   /** The party's voice call while one runs: its ID, who is in it, who of them is muted and who
    *  deafened (hears no one; always muted too). */
-  call: { id: string; in: string[]; muted: string[]; deafened: string[] } | null;
+  call: { id: string; in: string[]; muted: string[]; deafened: string[]; media: MediaRoute } | null;
+  /** How many people the party may hold on this server: `maxPartySize`, or more with a media
+   *  server. */
+  max: number;
   /** The party's Play Together game while one runs. */
   together: PartyTogether | null;
   /** In the public list, and how; null when it is not listed. */

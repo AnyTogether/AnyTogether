@@ -28,8 +28,10 @@ import { strings, ui } from "@/lib/i18n";
 import type { NoticeSetup } from "@/lib/notify";
 import { type Own, type SignedIn, fill, privacySectionsWithGallery } from "@/lib/people";
 import { statusFrom } from "@/lib/presenceMode";
+import type { ProfileTheme } from "@/lib/psn";
 import { apiJson, currentUser } from "@/lib/session";
 import type { StorageOverview } from "@/lib/storage";
+import type { ThemePage } from "@/lib/themes";
 import { titled } from "@/lib/titles";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -56,9 +58,19 @@ export default async function Settings({
   const files = storage.body?.enabled ? storage.body : null;
   if (!own.body) redirect("/login?next=/settings");
   const me = own.body;
-  const library = await apiJson<{ games: LibraryGame[] }>(
-    `/users/${encodeURIComponent(me.profile.handle)}/library`,
-  );
+  const [library, hub] = await Promise.all([
+    apiJson<{ games: LibraryGame[] }>(`/users/${encodeURIComponent(me.profile.handle)}/library`),
+    apiJson<ThemePage>("/themes?sort=popular&limit=11"),
+  ]);
+  // Themes to wear: the Hub's most installed (the "None" tile makes the grid an even twelve).
+  const themes: ProfileTheme[] = (hub.body?.themes ?? []).map((theme) => ({
+    id: theme.id,
+    name: theme.name,
+    colors: theme.colors,
+    preview: theme.preview,
+    thumb: theme.thumb,
+    maker: theme.maker ? { handle: theme.maker.handle, displayName: theme.maker.displayName } : null,
+  }));
   const withArt = (library.body?.games ?? []).flatMap((game) =>
     game.iconUrl ? [{ titleId: game.titleId, names: game.names, iconUrl: game.iconUrl }] : [],
   );
@@ -152,6 +164,8 @@ export default async function Settings({
               texts={t}
               cover={me.profile.cover ?? null}
               accent={me.profile.accent ?? null}
+              theme={me.profile.theme ?? null}
+              themes={themes}
               games={withArt}
               person={me.profile}
               level={me.profile.trophyLevel}

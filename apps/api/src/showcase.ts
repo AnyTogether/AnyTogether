@@ -4,6 +4,7 @@ import {
   games,
   library,
   profiles,
+  themes,
   trophies,
   trophySets,
 } from "@anytogether/db";
@@ -16,6 +17,7 @@ import {
   ErrorCode,
   type Grade,
   LookUpdate,
+  type ProfileTheme,
   type ShowcaseGame,
   type ShowcaseStored,
   type ShowcaseTrophy,
@@ -25,6 +27,7 @@ import {
   accentNames,
   coverPresets,
   levelBadge,
+  maxShowcasePins,
   rarityLabel,
   shownPrivacy,
 } from "@anytogether/shared";
@@ -44,13 +47,38 @@ const roundRarity = (rarity: number | null) =>
 const progressOf = (earned: number, total: number | null) =>
   total ? Math.min(100, Math.floor((earned * 100) / total)) : null;
 
-/** The cover and accent a profile shows: a preset's picture, or a game's artwork while the server
- *  still knows its icon. */
+/** The Theme Hub theme a profile wears, while it is published. */
+async function themeOf(
+  db: Pick<Database, "select">,
+  publicUrl: string,
+  id: string | null,
+): Promise<ProfileTheme | null> {
+  if (!id) return null;
+  const [row] = await db
+    .select({ theme: themes, handle: profiles.handle, displayName: profiles.displayName })
+    .from(themes)
+    .leftJoin(profiles, eq(profiles.accountId, themes.makerId))
+    .where(and(eq(themes.id, id), eq(themes.status, "published")));
+  if (!row) return null;
+  const still = (kind: "preview" | "thumb") =>
+    new URL(`/api/v1/themes/${row.theme.id}/${kind}.webp?v=${row.theme.version}`, publicUrl).toString();
+  return {
+    id: row.theme.id,
+    name: row.theme.name,
+    colors: row.theme.colors,
+    preview: still("preview"),
+    thumb: still("thumb"),
+    maker: row.handle && row.displayName ? { handle: row.handle, displayName: row.displayName } : null,
+  };
+}
+
+/** The cover, accent and theme a profile shows: a preset's picture, or a game's artwork while the
+ *  server still knows its icon, and a Theme Hub theme while it is published. */
 export async function lookOf(
   db: Pick<Database, "select">,
   publicUrl: string,
-  profile: Pick<ProfileRow, "cover" | "accent">,
-): Promise<{ cover: CoverView | null; accent: AccentName | null }> {
+  profile: Pick<ProfileRow, "cover" | "accent" | "themeId">,
+): Promise<{ cover: CoverView | null; accent: AccentName | null; theme: ProfileTheme | null }> {
   const accent = accentNames.includes(profile.accent as AccentName) ? (profile.accent as AccentName) : null;
   const [kind, id] = (profile.cover ?? "").split(":") as [string, string | undefined];
   let cover: CoverView | null = null;
@@ -60,7 +88,7 @@ export async function lookOf(
     const [game] = await db.select({ iconUrl: games.iconUrl }).from(games).where(eq(games.titleId, id));
     if (game?.iconUrl) cover = { kind, id, url: game.iconUrl };
   }
-  return { cover, accent };
+  return { cover, accent, theme: await themeOf(db, publicUrl, profile.themeId) };
 }
 
 /** The showcase as `viewer` may see it. */
@@ -76,8 +104,12 @@ export async function showcaseOf(
   const libraryShown = canSee(privacy.library, relation);
   const view: ShowcaseView = { trophies: null, games: null };
 
+  // Six pins in all, trophies first (a showcase saved before the shared limit may hold more).
+  const pinnedTrophies = (stored.trophies ?? []).slice(0, maxShowcasePins);
+  const pinnedGames = (stored.games ?? []).slice(0, maxShowcasePins - pinnedTrophies.length);
+
   if (trophiesShown) {
-    const pinned = (stored.trophies ?? []).slice(0, 6);
+    const pinned = pinnedTrophies;
     const rows = pinned.length
       ? await db
           .select({ earned: earnedTrophies, trophy: trophies, names: games.names })
@@ -136,7 +168,7 @@ export async function showcaseOf(
   }
 
   if (libraryShown) {
-    const pinned = (stored.games ?? []).slice(0, 4);
+    const pinned = pinnedGames;
     const rows = pinned.length
       ? await db
           .select({ entry: library, game: games })
@@ -190,7 +222,19 @@ export function showcaseRoutes(deps: Deps) {
     const me = c.get("userId");
     await setting("look", me);
     const input = await body(c, LookUpdate);
-    const changes: { cover?: string | null; accent?: string | null } = {};
+    const changes: { cover?: string | null; accent?: string | null; themeId?: string | null } = {};
+    if (input.theme === null) changes.themeId = null;
+    else if (input.theme) {
+      const [theme] = await db
+        .select({ id: themes.id })
+        .from(themes)
+        .where(and(eq(themes.id, input.theme), eq(themes.status, "published")));
+      if (!theme) throw new HttpError(400, ErrorCode.badRequest, "theme: no such theme in the Theme Hub");
+      // The theme shows whole: a cover and accent from before come off with it.
+      changes.themeId = theme.id;
+      changes.cover = null;
+      changes.accent = null;
+    }
     if (input.accent !== undefined) changes.accent = input.accent;
     if (input.cover === null) changes.cover = null;
     else if (input.cover?.kind === "preset") changes.cover = `preset:${input.cover.id}`;
@@ -245,6 +289,8 @@ export function showcaseRoutes(deps: Deps) {
         throw new HttpError(400, ErrorCode.badRequest, "games: only games in your library");
       stored.games = input.games;
     }
+    if ((stored.trophies?.length ?? 0) + (stored.games?.length ?? 0) > maxShowcasePins)
+      throw new HttpError(400, ErrorCode.badRequest, "showcase: up to six pins, trophies and games together");
     await db.update(profiles).set({ showcase: stored }).where(eq(profiles.accountId, me));
     return c.json(await showcaseOf(db, me, { ...profile, showcase: stored }, "me"));
   });

@@ -13,6 +13,7 @@ import { mailerFor } from "./mail.js";
 import { pruneMeetings } from "./met.js";
 import { pruneNotifications, sendDigests, webPushSender } from "./notifications.js";
 import { restoreRevocations } from "./sessions.js";
+import { sfuService } from "./sfu.js";
 import { sweepThemeFiles } from "./themes.js";
 import { createTokenSigner } from "./tokens.js";
 
@@ -60,6 +61,12 @@ if (store) {
   console.log(
     "cloud saves and media: off (STORAGE_DIR or S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY)",
   );
+const sfu = settings.sfu ? sfuService(settings.sfu) : undefined;
+console.log(
+  sfu
+    ? `media server: on (up to ${sfu.limits.maxShareViewers} viewers, parties of ${sfu.limits.maxPartySize})`
+    : "media server: off (LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET)",
+);
 const app = createApp({
   db,
   valkey,
@@ -69,6 +76,7 @@ const app = createApp({
   publicUrl: settings.publicUrl,
   rpName: settings.rpName,
   turn: settings.turn,
+  ...(sfu ? { sfu } : {}),
   blockedLinkDomains: settings.blockedLinkDomains,
   gameIconHosts: settings.gameIconHosts,
   clientIpHeader: settings.clientIpHeader,

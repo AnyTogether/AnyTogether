@@ -117,6 +117,7 @@ describe("the public profile switch", () => {
       trophyLevel: null,
       cover: null,
       accent: null,
+      theme: null,
     });
     expect(card.cache).toBe("private, no-store");
     for (const part of parts) {

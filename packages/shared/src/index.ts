@@ -8,6 +8,7 @@ export * from "./messages.js";
 export * from "./parties.js";
 export * from "./presence.js";
 export * from "./calls.js";
+export * from "./media.js";
 export * from "./gameSessions.js";
 export * from "./feed.js";
 export * from "./sharePlays.js";

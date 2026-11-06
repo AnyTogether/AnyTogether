@@ -159,6 +159,9 @@ export const profiles = pgTable(
     cover: text(),
     /** One of the launcher's accents. */
     accent: text(),
+    /** A Theme Hub theme the profile wears: its still is the cover and its colours the look,
+     *  under a cover or accent picked on top. Gone with the theme. */
+    themeId: uuid().references((): AnyPgColumn => themes.id, { onDelete: "set null" }),
     /** Players met in parties, share plays, game sessions and posts are remembered. */
     rememberMet: boolean().notNull().default(true),
     /** Appear offline: signed in and working, but friends and everyone else see the account as
@@ -180,6 +183,7 @@ export const profiles = pgTable(
     check("bio_length", sql`length(${table.bio}) <= 160`),
     uniqueIndex("profiles_handle_skeleton").on(table.handleSkeleton),
     index("profiles_by_level").on(table.trophyLevel.desc()),
+    index("profiles_theme").on(table.themeId),
   ],
 );
 

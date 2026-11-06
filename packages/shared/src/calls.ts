@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { MediaRoute, SfuAccess } from "./media.js";
 import type { MemberView } from "./messages.js";
 
 /** A call to a friend, or the voice of the party you are in. */
@@ -41,6 +42,10 @@ export interface CallView {
   /** The person called, for a direct call. */
   calleeId: string | null;
   in: CallPeer[];
+  /** "mesh": every voice talks to every other. "sfu": everyone talks through the media server; a
+   *  party call moves there when more than `maxPartySize` are in it (on a server with one), and
+   *  stays there. Direct calls are always the mesh. */
+  media: MediaRoute;
   startedAt: string;
   answeredAt: string | null;
   endedAt: string | null;
@@ -52,6 +57,8 @@ export interface CallJoin {
   iceServers: IceServer[];
   /** When the TURN credentials stop working. */
   expiresAt: string | null;
+  /** The media server room while the call is "sfu"; null on the mesh. */
+  sfu: SfuAccess | null;
 }
 
 export type CallEvent =
@@ -66,6 +73,9 @@ export type CallEvent =
       type: "call.updated";
       data: { callId: string; partyId: string | null; userId: string; muted: boolean; deafened: boolean };
     }
+  /** The call moved to the media server: close the mesh connections and join the room with GET
+   *  /calls/:id/sfu. */
+  | { type: "call.media"; data: { callId: string; partyId: string | null; media: MediaRoute } }
   | {
       type: "call.ended";
       data: { callId: string; partyId: string | null; reason: "ended" | "declined" | "party_ended" };

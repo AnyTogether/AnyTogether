@@ -19,17 +19,36 @@ export interface SharePlay {
   title: string | null;
   open: boolean;
   maxViewers: number;
+  /** "sfu": viewers without a pad watch from the server's media server (older API answers lack
+   *  it: the mesh). */
+  media?: "mesh" | "sfu";
   viewers: ShareViewer[];
   /** Listed in public, and how (older API answers lack it). */
   public?: { join: "request" | "open"; language: string | null; live: boolean } | null;
   startedAt: string;
 }
 
+/** A room on the server's media server (LiveKit) and the token into it. */
+export interface SfuAccess {
+  url: string;
+  token: string;
+  room: string;
+  identity: string;
+  expiresAt: string;
+}
+
 export interface SharePlayJoin {
   sharePlay: SharePlay;
   iceServers: RTCIceServer[];
   expiresAt: string | null;
+  /** The media server room while the share play goes through it (older API answers lack it). */
+  sfu?: SfuAccess | null;
 }
+
+/** How this viewer watches: from the media server while the share play goes through it and they
+ *  hold no pad; straight from the host otherwise (with a pad, the players keep the short path). */
+export const watchRoute = (share: Pick<SharePlay, "media" | "viewers">, me: string): "mesh" | "sfu" =>
+  share.media === "sfu" && !share.viewers.find((viewer) => viewer.user.userId === me)?.slot ? "sfu" : "mesh";
 
 export interface ShareInvite {
   sharePlayId: string;

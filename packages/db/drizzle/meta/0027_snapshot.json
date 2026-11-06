@@ -1,5 +1,5 @@
 {
-  "id": "4546fd03-a835-4290-bd24-a28dc052de62",
+  "id": "cac570df-f10e-4923-bbc3-8cad378aad36",
   "prevId": "10235198-ddd9-4671-b4f5-fd6dacaa643f",
   "version": "7",
   "dialect": "postgresql",
@@ -2289,12 +2289,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
-        },
-        "party_id": {
-          "name": "party_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {},
@@ -2324,19 +2318,6 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        },
-        "conversations_party_id_parties_id_fk": {
-          "name": "conversations_party_id_parties_id_fk",
-          "tableFrom": "conversations",
-          "tableTo": "parties",
-          "columnsFrom": [
-            "party_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2353,13 +2334,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "community_id"
-          ]
-        },
-        "conversations_partyId_unique": {
-          "name": "conversations_partyId_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "party_id"
           ]
         }
       },
@@ -6667,6 +6641,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "theme_id": {
+          "name": "theme_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "remember_met": {
           "name": "remember_met",
           "type": "boolean",
@@ -6732,6 +6712,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "profiles_theme": {
+          "name": "profiles_theme",
+          "columns": [
+            {
+              "expression": "theme_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -6746,6 +6741,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "profiles_theme_id_themes_id_fk": {
+          "name": "profiles_theme_id_themes_id_fk",
+          "tableFrom": "profiles",
+          "tableTo": "themes",
+          "columnsFrom": [
+            "theme_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

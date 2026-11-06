@@ -1,0 +1,16 @@
+# The media server (LiveKit) for docker compose --profile sfu. Keys come from LIVEKIT_KEYS, which
+# compose.yaml fills from LIVEKIT_API_KEY and LIVEKIT_API_SECRET in .env.
+port: 7880
+rtc:
+  # ICE over TCP for networks that block UDP, and every UDP stream on one port.
+  tcp_port: 7881
+  udp_port: 7882
+  # Finds this machine's public address by STUN. Behind a NAT that hides it, set node_ip instead.
+  use_external_ip: true
+room:
+  # The API closes a room when its share play or call ends; this is the backstop.
+  empty_timeout: 60
+  departure_timeout: 20
+  max_participants: 60
+logging:
+  level: info

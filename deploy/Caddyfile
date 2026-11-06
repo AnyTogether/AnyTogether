@@ -21,6 +21,11 @@
 			header_up -Cf-Connecting-Ip
 		}
 	}
+	# The media server's WebSocket (docker compose --profile sfu), with LIVEKIT_URL set to
+	# wss://<domain>/livekit. Without the profile it answers 502 and nothing asks it.
+	handle_path /livekit/* {
+		reverse_proxy livekit:7880
+	}
 	handle {
 		reverse_proxy web:3000 {
 			header_up X-Real-IP {remote_host}
