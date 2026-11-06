@@ -3,6 +3,7 @@ import { TitleId } from "./games.js";
 import type { Grade, RarityLabel } from "./games.js";
 import type { LevelBadge, TrophyLevel } from "./level.js";
 import type { MemberView } from "./messages.js";
+import type { ThemeColors } from "./themes.js";
 
 /** The launcher's three looks, as deep, middle and bright tones (from its Theme.palette) and the
  *  accent each one starts with. Covers and community icons are drawn in these. */
@@ -70,33 +71,53 @@ export interface CoverView {
   url: string;
 }
 
-/** PATCH /me/look: only what is sent changes; null goes back to the default. */
+/** A Theme Hub theme a profile wears: its still is the profile's cover and its colours its look
+ *  (a cover or accent picked on top of it wins). Only a published theme is worn. */
+export interface ProfileTheme {
+  id: string;
+  name: string;
+  colors: ThemeColors;
+  /** 1280x720 and 640x360 WebP stills, as the Hub serves them. */
+  preview: string;
+  thumb: string;
+  maker: { handle: string; displayName: string } | null;
+}
+
+/** PATCH /me/look: only what is sent changes; null goes back to the default. Putting a theme on
+ *  clears the cover and accent (unless they are sent too), so the theme shows whole. */
 export const LookUpdate = z.object({
   cover: CoverChoice.nullable().optional(),
   accent: z
     .enum(accentNames as [AccentName, ...AccentName[]])
     .nullable()
     .optional(),
+  theme: z.string().uuid().nullable().optional(),
 });
 
-/** Pinned on a profile: up to six earned trophies and four games. */
-export const maxShowcaseTrophies = 6;
-export const maxShowcaseGames = 4;
-export const ShowcaseUpdate = z.object({
-  trophies: z
-    .array(z.object({ titleId: TitleId, trophyId: z.number().int().min(0).max(9999) }))
-    .max(maxShowcaseTrophies)
-    .refine(
-      (list) => new Set(list.map((t) => `${t.titleId}/${t.trophyId}`)).size === list.length,
-      "each trophy once",
-    )
-    .optional(),
-  games: z
-    .array(TitleId)
-    .max(maxShowcaseGames)
-    .refine((list) => new Set(list).size === list.length, "each game once")
-    .optional(),
-});
+/** Pinned to the top of a profile: up to six earned trophies and games together. */
+export const maxShowcasePins = 6;
+export const maxShowcaseTrophies = maxShowcasePins;
+export const maxShowcaseGames = maxShowcasePins;
+export const ShowcaseUpdate = z
+  .object({
+    trophies: z
+      .array(z.object({ titleId: TitleId, trophyId: z.number().int().min(0).max(9999) }))
+      .max(maxShowcaseTrophies)
+      .refine(
+        (list) => new Set(list.map((t) => `${t.titleId}/${t.trophyId}`)).size === list.length,
+        "each trophy once",
+      )
+      .optional(),
+    games: z
+      .array(TitleId)
+      .max(maxShowcaseGames)
+      .refine((list) => new Set(list).size === list.length, "each game once")
+      .optional(),
+  })
+  .refine(
+    (input) => (input.trophies?.length ?? 0) + (input.games?.length ?? 0) <= maxShowcasePins,
+    "up to six pins, trophies and games together",
+  );
 export type ShowcaseStored = { trophies?: { titleId: string; trophyId: number }[]; games?: string[] };
 
 export interface ShowcaseTrophy {
@@ -133,6 +154,7 @@ export interface ShowcaseView {
 export interface ProfileLook {
   cover: CoverView | null;
   accent: AccentName | null;
+  theme: ProfileTheme | null;
   trophyLevel: TrophyLevel | null;
 }
 

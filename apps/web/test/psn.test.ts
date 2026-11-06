@@ -1,6 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { type Notice, noticeHref } from "../lib/notify";
-import { byDay, dayKey, gameOptions, isoToLocalInput, linkHref, localArt, localInputToIso } from "../lib/psn";
+import {
+  byDay,
+  dayKey,
+  gameOptions,
+  isoToLocalInput,
+  linkHref,
+  localArt,
+  localInputToIso,
+  maxPins,
+  profileLook,
+  togglePin,
+} from "../lib/psn";
 
 vi.mock("@/lib/session", () => ({ relay: async (path: string) => Response.json({ relayed: path }) }));
 
@@ -84,6 +95,51 @@ describe("profile and community helpers", () => {
     expect(noticeHref(notice("event_started", { data: { link: { kind: "party", id: other } } }))).toBe(
       "/party",
     );
+  });
+});
+
+describe("a profile's look and pins", () => {
+  const theme = {
+    id,
+    name: "Violet hour",
+    colors: { deep: "#05010f", middle: "#3a0f6b", bright: "#c69bff", accent: "#b06bff" },
+    preview: `https://together.example.org/api/v1/themes/${id}/preview.webp?v=2`,
+    thumb: `https://together.example.org/api/v1/themes/${id}/thumb.webp?v=2`,
+    maker: { handle: "ece", displayName: "Ece" },
+  };
+
+  it("wears the theme's still and accent, under a cover or accent picked on top", () => {
+    expect(profileLook({})).toEqual({ picture: null, kind: null, accent: null, theme: null });
+    expect(profileLook({ theme })).toEqual({
+      picture: theme.preview,
+      kind: "theme",
+      accent: "#b06bff",
+      theme,
+    });
+    const cover = {
+      kind: "preset" as const,
+      id: "sunset-grid",
+      url: "https://together.example.org/api/v1/art/covers/sunset-grid.svg",
+    };
+    expect(profileLook({ theme, cover, accent: "mint" })).toEqual({
+      picture: "/api/v1/art/covers/sunset-grid.svg",
+      kind: "preset",
+      accent: "#5cebbd",
+      theme,
+    });
+    expect(profileLook({ accent: "gold", theme: null })).toMatchObject({ picture: null, accent: "#ffcc5c" });
+  });
+
+  it("pins up to six trophies and games together", () => {
+    expect(maxPins).toBe(6);
+    const full = { trophies: ["a", "b", "c", "d"], games: ["x", "y"] };
+    // Full: nothing more is added, either kind.
+    expect(togglePin(full, "trophies", "e")).toBe(full);
+    expect(togglePin(full, "games", "z")).toBe(full);
+    // Taking one off makes room for the other kind.
+    const fewer = togglePin(full, "trophies", "b");
+    expect(fewer).toEqual({ trophies: ["a", "c", "d"], games: ["x", "y"] });
+    expect(togglePin(fewer, "games", "z")).toEqual({ trophies: ["a", "c", "d"], games: ["x", "y", "z"] });
   });
 });
 

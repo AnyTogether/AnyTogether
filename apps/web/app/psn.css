@@ -188,6 +188,73 @@
   backdrop-filter: blur(18px);
   background: rgba(7, 8, 12, 0.25);
 }
+/* A worn Theme Hub theme: its still under its own deep-to-middle tint, and a chip naming it. */
+.profile.themed .banner {
+  background-color: var(--t-deep);
+  background-image: linear-gradient(120deg, var(--t-deep), var(--t-middle));
+}
+.profile.themed .banner.cover.theme::after {
+  background: linear-gradient(180deg, transparent 30%, color-mix(in srgb, var(--t-deep) 55%, #0c0e14) 100%),
+    linear-gradient(90deg, color-mix(in srgb, var(--t-deep) 45%, transparent), transparent 60%);
+}
+.profile.themed::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    70% 40% at 50% 0%,
+    color-mix(in srgb, var(--t-middle) 22%, transparent),
+    transparent
+  );
+}
+.theme-chip {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100% - 80px);
+  padding: 6px 11px 6px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--t-deep) 62%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: rgba(238, 240, 246, 0.92);
+  font: 500 12px / 1 var(--font-display), system-ui, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.theme-chip:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+.theme-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.theme-chip-dots,
+.theme-dots {
+  display: inline-flex;
+  flex: none;
+}
+.theme-chip-dots i,
+.theme-dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px rgba(7, 8, 12, 0.6);
+}
+.theme-chip-dots i + i,
+.theme-dots i + i {
+  margin-left: -3px;
+}
 .profile.accented .avatar {
   box-shadow: 0 0 0 4px #0c0e14, 0 0 0 5.5px var(--accent);
 }
@@ -248,7 +315,7 @@
   padding: 0;
   margin-top: 14px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
 }
 .showcase-game {
@@ -326,6 +393,38 @@
   width: 28px;
   height: 28px;
   border-radius: 8px;
+}
+/* The editor's count: six slots, filled by trophies (gold) then games (accent). */
+.pin-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font: 500 13px / 1.3 var(--font-display), system-ui, sans-serif;
+  color: var(--ink);
+}
+.pin-count .hint {
+  flex-basis: 100%;
+  font-size: 12.5px;
+  font-weight: 400;
+}
+.pin-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+.pin-dots i {
+  display: block;
+  width: 14px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  transition: background 0.2s ease, width 0.2s ease;
+}
+.pin-dots i.is-trophy {
+  background: #e8c15a;
+}
+.pin-dots i.is-game {
+  background: var(--a);
 }
 .pick-head {
   font: 500 12px / 1 var(--font-mono), monospace;
@@ -996,6 +1095,65 @@ select option {
   opacity: 0;
   pointer-events: none;
 }
+.cover-grid .thumb.theme {
+  background-color: var(--t-deep);
+}
+.cover-grid .thumb .theme-dots {
+  position: absolute;
+  left: 7px;
+  bottom: 7px;
+}
+.look-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  font-size: 13.5px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 2px;
+  transition: border-color 0.2s ease;
+}
+.look-more:hover {
+  border-color: var(--ink);
+}
+.look-more:focus-visible {
+  outline: 2px solid var(--a);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.look-more svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s ease;
+}
+.look-more:hover svg {
+  transform: translateX(2px);
+}
+.lp-theme {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font: 500 11px / 1 var(--font-display), system-ui, sans-serif;
+  color: rgba(238, 240, 246, 0.92);
+  background: color-mix(in srgb, var(--t-deep) 62%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .cover-grid .thumb.plain {
   background: radial-gradient(60% 120% at 18% 0%, rgba(79, 124, 255, 0.55), transparent 70%),
     radial-gradient(50% 120% at 82% 10%, rgba(182, 92, 255, 0.45), transparent 70%), #0c0e14;
@@ -1117,6 +1275,12 @@ select option {
   .cover-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .showcase-games {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .theme-chip {
+    max-width: 46%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1124,6 +1288,9 @@ select option {
     animation: none;
   }
   .showcase-trophy,
+  .theme-chip,
+  .look-more svg,
+  .pin-dots i,
   .icon-grid label,
   .cover-grid .thumb,
   .lp-cover,
