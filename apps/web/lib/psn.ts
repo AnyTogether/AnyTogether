@@ -72,6 +72,50 @@ export function localArt(url: string | null | undefined) {
   return match ? `/api/v1/art/${match[1]}/${match[2]}.svg` : url;
 }
 
+/** A Theme Hub theme a profile wears (only while the theme is published). */
+export interface ProfileTheme {
+  id: string;
+  name: string;
+  colors: { deep: string; middle: string; bright: string; accent: string };
+  preview: string;
+  thumb: string;
+  maker: { handle: string; displayName: string } | null;
+}
+
+/** What a profile's header shows: the picked cover, else the worn theme's still; the picked
+ *  accent, else the theme's. Older API answers lack the theme. */
+export function profileLook(profile: {
+  cover?: CoverView | null;
+  accent?: AccentName | null;
+  theme?: ProfileTheme | null;
+}) {
+  const theme = profile.theme ?? null;
+  const cover = profile.cover ? localArt(profile.cover.url) : null;
+  return {
+    picture: cover ?? theme?.preview ?? null,
+    kind: (cover ? profile.cover?.kind : theme ? "theme" : null) as "preset" | "game" | "theme" | null,
+    accent: profile.accent ? accents[profile.accent] : (theme?.colors.accent ?? null),
+    theme,
+  };
+}
+
+/** Pinned to the top of a profile: six in all, trophies and games together. */
+export const maxPins = 6;
+
+/** Pins or unpins one; nothing is added once six are pinned. */
+export function togglePin<T>(
+  pins: { trophies: T[]; games: string[] },
+  kind: "trophies" | "games",
+  item: T | string,
+  same: (a: T | string, b: T | string) => boolean = (a, b) => a === b,
+) {
+  const list = pins[kind] as (T | string)[];
+  if (list.some((pin) => same(pin, item)))
+    return { ...pins, [kind]: list.filter((pin) => !same(pin, item)) } as typeof pins;
+  if (pins.trophies.length + pins.games.length >= maxPins) return pins;
+  return { ...pins, [kind]: [...list, item] } as typeof pins;
+}
+
 export interface ShowcaseTrophy {
   titleId: string;
   gameNames: Record<string, string>;

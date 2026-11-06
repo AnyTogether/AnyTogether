@@ -148,6 +148,7 @@ export async function exportAccount(
       trophyLevel: profile.trophyLevel,
       cover: profile.cover,
       accent: profile.accent,
+      themeId: profile.themeId,
       showcase: profile.showcase,
       rememberMet: profile.rememberMet,
       presenceStatus: statusOf(profile),

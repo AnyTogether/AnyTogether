@@ -2,6 +2,8 @@
 
 import type { UiStrings } from "@/lib/i18n";
 import { fill } from "@/lib/people";
+import { rateLimitText } from "@/lib/rateLimit";
+import { json, social } from "@/lib/social";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ThemeShare } from "./ThemeShare";
@@ -60,6 +62,55 @@ export function ThemeLike({
       <Heart />
       <span>{likes}</span>
     </button>
+  );
+}
+
+/** Wear a theme on one's AnyTogether profile, or take it off again. */
+export function ThemeWear({ id, worn: initial, texts }: { id: string; worn: boolean; texts: UiStrings }) {
+  const [worn, setWorn] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <>
+      <button
+        type="button"
+        className={`pill wear${worn ? " on" : ""}`}
+        aria-pressed={worn}
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          const next = !worn;
+          const saved = await social("me/look", { method: "PATCH", ...json({ theme: next ? id : null }) });
+          setBusy(false);
+          if (!saved.ok) {
+            const body = (saved.body ?? {}) as { code?: string; retryAfter?: number };
+            return setError(
+              body.code === "rate_limited" ? rateLimitText(body.retryAfter, texts) : texts.failed,
+            );
+          }
+          setWorn(next);
+        }}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">
+          {worn ? (
+            <path d="M5 12.5l4.2 4.2L19 7" />
+          ) : (
+            <>
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" />
+            </>
+          )}
+        </svg>
+        <span>{worn ? texts.wearingTheme : texts.wearTheme}</span>
+        {worn && <span className="meta">{texts.takeOffTheme}</span>}
+      </button>
+      {error && (
+        <p className="error wear-error" role="alert">
+          {error}
+        </p>
+      )}
+    </>
   );
 }
 

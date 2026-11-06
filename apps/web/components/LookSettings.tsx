@@ -7,6 +7,7 @@ import { fill } from "@/lib/people";
 import {
   type AccentName,
   type CoverView,
+  type ProfileTheme,
   type TrophyLevel,
   accentNames,
   accents,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/psn";
 import { rateLimitText } from "@/lib/rateLimit";
 import { json, social } from "@/lib/social";
+import Link from "next/link";
 import { type CSSProperties, useEffect, useState } from "react";
 
 type Choice = { kind: "preset"; id: string } | { kind: "game"; titleId: string } | null;
@@ -40,12 +42,15 @@ function Tick() {
   );
 }
 
-/** The profile's cover (a preset, or a game's artwork the server has) and accent, each saved as
- *  soon as it is picked, with a small live copy of the profile that shows what they change. */
+/** The profile's theme (one from the Theme Hub), cover (a preset, or a game's artwork the server
+ *  has) and accent, each saved as soon as it is picked, with a small live copy of the profile that
+ *  shows what they change. */
 export function LookSettings({
   texts,
   cover,
   accent,
+  theme,
+  themes,
   games,
   person,
   level,
@@ -53,6 +58,9 @@ export function LookSettings({
   texts: UiStrings;
   cover: CoverView | null;
   accent: AccentName | null;
+  /** The theme worn now, and themes from the Hub to pick from. */
+  theme: ProfileTheme | null;
+  themes: ProfileTheme[];
   /** The owner's games that have artwork here. */
   games: { titleId: string; names: Record<string, string>; iconUrl: string }[];
   /** Who the preview shows. */
@@ -67,13 +75,14 @@ export function LookSettings({
       : null,
   );
   const [tone, setTone] = useState<AccentName | null>(accent);
+  const [worn, setWorn] = useState<ProfileTheme | null>(theme);
   /** A swatch under the pointer or the keyboard: the preview shows it before it is picked. */
   const [peek, setPeek] = useState<AccentName | null | undefined>(undefined);
   const [status, setStatus] = useState<{ kind: "idle" | "saved" } | { kind: "error"; text: string }>({
     kind: "idle",
   });
   /** Which picker the last save came from, for the tick. */
-  const [savedFrom, setSavedFrom] = useState<"cover" | "accent" | null>(null);
+  const [savedFrom, setSavedFrom] = useState<"theme" | "cover" | "accent" | null>(null);
   const { language } = texts;
 
   useEffect(() => {
@@ -85,33 +94,90 @@ export function LookSettings({
     return () => clearTimeout(timer);
   }, [status]);
 
-  async function save(change: { cover?: Choice; accent?: AccentName | null }) {
-    const before = { current, tone };
+  async function save(change: { cover?: Choice; accent?: AccentName | null; theme?: string | null }) {
+    const before = { current, tone, worn };
     if (change.cover !== undefined) setCurrent(change.cover);
     if (change.accent !== undefined) setTone(change.accent);
+    if (change.theme !== undefined) {
+      // A theme goes on whole: the cover and accent come off with it.
+      setWorn(change.theme ? (choices.find((t) => t.id === change.theme) ?? null) : null);
+      if (change.theme) {
+        setCurrent(null);
+        setTone(null);
+      }
+    }
     setSavedFrom(null);
     const saved = await social("me/look", { method: "PATCH", ...json(change) });
     if (!saved.ok) {
       setCurrent(before.current);
       setTone(before.tone);
+      setWorn(before.worn);
       const body = (saved.body ?? {}) as { code?: string; retryAfter?: number };
       return setStatus({
         kind: "error",
         text: body.code === "rate_limited" ? rateLimitText(body.retryAfter, texts) : texts.failed,
       });
     }
-    setSavedFrom(change.cover !== undefined ? "cover" : "accent");
+    // An older server knows no themes: what it answers is what the profile shows.
+    const answer = (saved.body ?? {}) as { theme?: ProfileTheme | null };
+    if (change.theme !== undefined) {
+      if (answer.theme !== undefined) setWorn(answer.theme);
+      else {
+        setCurrent(before.current);
+        setTone(before.tone);
+        setWorn(before.worn);
+      }
+    }
+    setSavedFrom(change.theme !== undefined ? "theme" : change.cover !== undefined ? "cover" : "accent");
     setStatus({ kind: "saved" });
   }
 
+  // The worn theme stays pickable when it is not among the Hub's popular ones.
+  const choices = theme && !themes.some((t) => t.id === theme.id) ? [theme, ...themes] : themes;
+
   const gameArt = (titleId: string) => games.find((game) => game.titleId === titleId)?.iconUrl ?? null;
-  const coverImage = !current
+  const picked = !current
     ? null
     : current.kind === "preset"
       ? coverSrc(current.id)
       : gameArt(current.titleId);
+  const coverImage = picked ?? worn?.preview ?? null;
   const shown = peek === undefined ? tone : peek;
-  const accentColor = shown ? accents[shown] : defaultAccent;
+  const accentColor = shown ? accents[shown] : (worn?.colors.accent ?? defaultAccent);
+
+  const themeOption = (choice: ProfileTheme | null) => {
+    const on = (worn?.id ?? null) === (choice?.id ?? null);
+    return (
+      <label key={choice?.id ?? "none"} className={on ? "on" : undefined}>
+        <input type="radio" name="theme" checked={on} onChange={() => save({ theme: choice?.id ?? null })} />
+        <span
+          className={`thumb${choice ? " theme" : " plain"}`}
+          style={
+            choice
+              ? ({
+                  backgroundImage: `url("${choice.thumb}")`,
+                  "--t-deep": choice.colors.deep,
+                  "--t-middle": choice.colors.middle,
+                } as CSSProperties)
+              : undefined
+          }
+          aria-hidden="true"
+        >
+          {choice && (
+            <span className="theme-dots">
+              <i style={{ background: choice.colors.bright }} />
+              <i style={{ background: choice.colors.accent }} />
+            </span>
+          )}
+          {on && savedFrom === "theme" && <Tick />}
+        </span>
+        <span className="cover-name">
+          {choice ? choice.name : texts.themeNone}
+          {choice?.maker && <small>{fill(texts.byMaker, { name: choice.maker.displayName })}</small>}
+        </span>
+      </label>
+    );
+  };
 
   const coverOption = (choice: Choice, label: string, image: string | null, key: string, sub?: string) => {
     const on = same(current, choice);
@@ -166,6 +232,15 @@ export function LookSettings({
           style={coverImage ? { backgroundImage: `url("${coverImage}")` } : undefined}
           aria-hidden="true"
         />
+        {worn && (
+          <span
+            className="lp-theme"
+            style={{ "--t-deep": worn.colors.deep, "--t-middle": worn.colors.middle } as CSSProperties}
+            aria-hidden="true"
+          >
+            {fill(texts.themeWorn, { name: worn.name })}
+          </span>
+        )}
         <div className="lp-body" aria-hidden="true">
           <span className="lp-avatar">
             <Avatar person={person} size={60} />
@@ -181,6 +256,22 @@ export function LookSettings({
         </div>
         <figcaption>{texts.lookPreview}</figcaption>
       </figure>
+
+      <div className="look-group">
+        <span className="look-heading">{texts.themeLabel}</span>
+        <p className="hint look-hint">{texts.themeHint}</p>
+        <fieldset className="cover-grid">
+          <legend className="visually-hidden">{texts.themeLabel}</legend>
+          {themeOption(null)}
+          {choices.map((choice) => themeOption(choice))}
+        </fieldset>
+        <Link href="/themes" className="look-more">
+          {texts.themeBrowse}
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </Link>
+      </div>
 
       <div className="look-group">
         <span className="look-heading">{texts.coverLabel}</span>

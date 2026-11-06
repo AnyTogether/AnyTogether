@@ -138,6 +138,7 @@ export function minimalCard(answer: Record<string, unknown>) {
     trophyLevel: null,
     cover: null,
     accent: null,
+    theme: null,
   };
 }
 

@@ -4,14 +4,17 @@ import type { EarnedTrophy, LibraryGame } from "@/lib/games";
 import { localName, trophyText } from "@/lib/games";
 import type { UiStrings } from "@/lib/i18n";
 import { fill } from "@/lib/people";
+import { maxPins, togglePin } from "@/lib/psn";
 import { json, social } from "@/lib/social";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 
 type Pin = { titleId: string; trophyId: number };
+/** The editor's six slots, by name. */
+const slots = Array.from({ length: maxPins }, (_, i) => `slot-${i}`);
 const key = (pin: Pin) => `${pin.titleId}/${pin.trophyId}`;
 
-/** The owner picks up to six of their trophies and four of their games to pin. */
+/** The owner picks up to six of their trophies and games to pin, both kinds together. */
 export function ShowcaseEditor({
   texts,
   trophies,
@@ -26,8 +29,14 @@ export function ShowcaseEditor({
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useId();
-  const [pins, setPins] = useState(pinned.trophies);
-  const [favourites, setFavourites] = useState(pinned.games);
+  // A showcase saved before the shared limit may hold more: it opens trimmed to six.
+  const [chosen, setChosen] = useState(() => {
+    const trophies = pinned.trophies.slice(0, maxPins);
+    return { trophies, games: pinned.games.slice(0, maxPins - trophies.length) };
+  });
+  const pins = chosen.trophies;
+  const favourites = chosen.games;
+  const full = pins.length + favourites.length >= maxPins;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { language } = texts;
@@ -44,21 +53,8 @@ export function ShowcaseEditor({
   ];
 
   const toggleTrophy = (pin: Pin) =>
-    setPins((list) =>
-      list.some((p) => key(p) === key(pin))
-        ? list.filter((p) => key(p) !== key(pin))
-        : list.length >= 6
-          ? list
-          : [...list, pin],
-    );
-  const toggleGame = (titleId: string) =>
-    setFavourites((list) =>
-      list.includes(titleId)
-        ? list.filter((t) => t !== titleId)
-        : list.length >= 4
-          ? list
-          : [...list, titleId],
-    );
+    setChosen((now) => togglePin(now, "trophies", pin, (a, b) => key(a as Pin) === key(b as Pin)));
+  const toggleGame = (titleId: string) => setChosen((now) => togglePin(now, "games", titleId));
 
   async function save() {
     setBusy(true);
@@ -94,8 +90,22 @@ export function ShowcaseEditor({
       >
         <div className="sheet-body">
           <h3 id={heading}>{texts.editShowcase}</h3>
+          <p className="pin-count" aria-live="polite">
+            <span className="pin-dots" aria-hidden="true">
+              {slots.map((slot, i) => (
+                <i
+                  key={slot}
+                  className={
+                    i < pins.length ? "trophy" : i < pins.length + favourites.length ? "game" : undefined
+                  }
+                />
+              ))}
+            </span>
+            {fill(texts.showcaseCount, { n: pins.length + favourites.length })}
+            <span className="hint">{texts.showcaseLimit}</span>
+          </p>
           <div className="picker">
-            <span className="pick-head">{fill(texts.showcasePickTrophies, { n: pins.length })}</span>
+            <span className="pick-head">{texts.showcasePickTrophies}</span>
             {choices.length === 0 && <p className="hint">{texts.noTrophies}</p>}
             {choices.map((trophy) => {
               const on = pins.some((p) => key(p) === key(trophy));
@@ -104,7 +114,7 @@ export function ShowcaseEditor({
                   <input
                     type="checkbox"
                     checked={on}
-                    disabled={!on && pins.length >= 6}
+                    disabled={!on && full}
                     onChange={() => toggleTrophy({ titleId: trophy.titleId, trophyId: trophy.trophyId })}
                   />
                   <span className={`cup ${trophy.grade}`} aria-hidden="true">
@@ -121,7 +131,7 @@ export function ShowcaseEditor({
                 </label>
               );
             })}
-            <span className="pick-head">{fill(texts.showcasePickGames, { n: favourites.length })}</span>
+            <span className="pick-head">{texts.showcasePickGames}</span>
             {games.length === 0 && <p className="hint">{texts.noGames}</p>}
             {games.map((game) => {
               const on = favourites.includes(game.titleId);
@@ -130,7 +140,7 @@ export function ShowcaseEditor({
                   <input
                     type="checkbox"
                     checked={on}
-                    disabled={!on && favourites.length >= 4}
+                    disabled={!on && full}
                     onChange={() => toggleGame(game.titleId)}
                   />
                   <span className="lines">

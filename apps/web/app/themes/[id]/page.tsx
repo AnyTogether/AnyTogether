@@ -1,6 +1,6 @@
 import { Avatar } from "@/components/Avatar";
 import { ProfileMenu } from "@/components/ProfileMenu";
-import { ThemeLike, ThemeOwner } from "@/components/ThemeActions";
+import { ThemeLike, ThemeOwner, ThemeWear } from "@/components/ThemeActions";
 import { wide } from "@/components/site/fonts";
 import { strings, ui } from "@/lib/i18n";
 import { fill } from "@/lib/people";
@@ -118,6 +118,7 @@ export default async function Theme({ params }: Params) {
             signedIn={Boolean(user) && !theme.mine}
             texts={ui(texts)}
           />
+          {user && <ThemeWear id={theme.id} worn={user.profile.theme?.id === theme.id} texts={ui(texts)} />}
         </div>
       )}
       {published && <p className="hint-line in d3">{texts.openHint}</p>}
