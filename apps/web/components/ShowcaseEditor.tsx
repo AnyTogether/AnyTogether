@@ -96,7 +96,11 @@ export function ShowcaseEditor({
                 <i
                   key={slot}
                   className={
-                    i < pins.length ? "is-trophy" : i < pins.length + favourites.length ? "is-game" : undefined
+                    i < pins.length
+                      ? "is-trophy"
+                      : i < pins.length + favourites.length
+                        ? "is-game"
+                        : undefined
                   }
                 />
               ))}
