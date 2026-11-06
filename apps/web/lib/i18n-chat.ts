@@ -1,4 +1,5 @@
-/** Strings of reactions, replies, unsend, receipts, pin and mute in messages, English and Turkish. */
+/** Strings of reactions, replies, unsend, receipts, pin, mute and the party chat in messages, English
+ *  and Turkish. */
 export const chatEn = {
   react: "React",
   reactionLike: "Like",
@@ -33,6 +34,13 @@ export const chatEn = {
   readReceiptsOff: "Off",
   readReceiptsHint:
     "When off, people don't see when you've read their messages, and you don't see theirs. Delivered still shows.",
+  formerMember: "Former member",
+  reportMessage: "Report",
+  reportMessageTitle: "Report this message",
+  reportMessageLead: "A moderator reads it. Its author is not told who sent the report.",
+  partyChat: "Chat",
+  partyChatPlaceholder: "Message the party",
+  partyChatEmpty: "Only the party reads this. Anyone who joins sees the messages so far.",
 };
 
 export const chatTr: typeof chatEn = {
@@ -69,4 +77,11 @@ export const chatTr: typeof chatEn = {
   readReceiptsOff: "Kapalı",
   readReceiptsHint:
     "Kapalıyken mesajlarını okuduğunu kimse görmez, sen de onlarınkini görmezsin. İletildi bilgisi yine görünür.",
+  formerMember: "Eski üye",
+  reportMessage: "Bildir",
+  reportMessageTitle: "Bu mesajı bildir",
+  reportMessageLead: "Bir moderatör okur. Yazan kişi bildirimi kimin gönderdiğini öğrenmez.",
+  partyChat: "Sohbet",
+  partyChatPlaceholder: "Partiye yaz",
+  partyChatEmpty: "Bunu yalnız parti okur. Katılan herkes o ana kadarki mesajları görür.",
 };

@@ -300,6 +300,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         lastMessage: lastMessage ?? null,
         updatedAt: c.updatedAt.toISOString(),
         communityId: c.communityId,
+        partyId: c.partyId,
         muted: muted ?? false,
         pinned: Boolean(pinnedAt),
         receipts,
@@ -316,11 +317,15 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     return view as ConversationView;
   };
 
-  /** A community's chat follows the community: its title and members change there. */
-  const managedByCommunity = (conversation: Conversation) => {
+  /** A community's or a party's chat follows it: its title and members change there. */
+  const managedElsewhere = (conversation: Conversation) => {
     if (conversation.communityId)
       throw new HttpError(409, ErrorCode.conflict, "This chat belongs to a community: change it there", {
         communityId: conversation.communityId,
+      });
+    if (conversation.partyId)
+      throw new HttpError(409, ErrorCode.conflict, "This chat belongs to a party: join or leave the party", {
+        partyId: conversation.partyId,
       });
   };
 
@@ -374,6 +379,8 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       .where(
         and(
           eq(conversationMembers.accountId, me),
+          // A party's chat sits beside the party, not in the list.
+          isNull(conversations.partyId),
           // Pinned ones lead the first page; later pages are the rest by time.
           before && !Number.isNaN(Date.parse(before))
             ? and(lt(conversations.updatedAt, new Date(before)), isNull(conversationMembers.pinnedAt))
@@ -410,6 +417,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       .where(
         and(
           eq(conversationMembers.accountId, me),
+          isNull(conversations.partyId),
           gt(conversations.lastSeq, conversationMembers.readSeq),
           isNull(messages.deletedAt),
           sql`${messages.authorId} is distinct from ${me}::uuid`,
@@ -466,7 +474,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const { conversation } = await membership(c.req.param("id"), me);
     if (conversation.kind !== "group")
       throw new HttpError(400, ErrorCode.badRequest, "Only a group has a title");
-    managedByCommunity(conversation);
+    managedElsewhere(conversation);
     const { title } = await body(c, ConversationUpdate);
     await db
       .update(conversations)
@@ -484,7 +492,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const { conversation } = await membership(c.req.param("id"), me);
     if (conversation.kind !== "group")
       throw new HttpError(400, ErrorCode.badRequest, "Start a group to talk with more people");
-    managedByCommunity(conversation);
+    managedElsewhere(conversation);
     const { userIds } = await body(c, ConversationMembers);
     const current = await memberIds(conversation.id);
     const added = [...new Set(userIds)].filter((id) => !current.includes(id));
@@ -523,7 +531,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const target = c.req.param("userId");
     if (conversation.kind !== "group")
       throw new HttpError(400, ErrorCode.badRequest, "A direct conversation cannot be left");
-    managedByCommunity(conversation);
+    managedElsewhere(conversation);
     if (target !== me && conversation.createdBy !== me)
       throw new HttpError(403, ErrorCode.forbidden, "Only the group's creator can remove people");
     const removed = await db
@@ -595,6 +603,8 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     await limit("message", me);
     await limit("messageDay", me);
     if (input.text) allowedText(input.text);
+    if (conversation.partyId && input.attachments?.length)
+      throw new HttpError(400, ErrorCode.badRequest, "A party's chat takes text only");
     const members = await memberIds(conversation.id);
     await remember(conversation.id, members);
     if (conversation.kind === "direct") {

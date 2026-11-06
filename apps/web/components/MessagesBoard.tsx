@@ -4,6 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { CallButton } from "@/components/Calls";
 import { useLive, useLiveEvents } from "@/components/Live";
 import { AttachmentView, MediaViewer, VoiceRecorder } from "@/components/Media";
+import { ReportSheet } from "@/components/ProfileMenu";
 import {
   byPinnedThenUpdated,
   canEditMessage,
@@ -53,11 +54,11 @@ import {
   useState,
 } from "react";
 
-interface Thread {
+export interface Thread {
   messages: Message[];
   more: boolean;
 }
-interface Pending {
+export interface Pending {
   clientId: string;
   text: string;
   failed: boolean;
@@ -118,7 +119,7 @@ function uploadRefusal(
 }
 
 /** Why a message was refused, in the reader's words. */
-const refusal = (texts: UiStrings, status: number, code: string | undefined, side?: string) =>
+export const refusal = (texts: UiStrings, status: number, code: string | undefined, side?: string) =>
   familyRefusal({ code, side }, texts) ??
   (code === "link_blocked" ? texts.linkBlocked : status === 403 ? texts.cannotMessage : texts.failed);
 /** A run: messages by the same person within five minutes stay together. */
@@ -219,9 +220,12 @@ export function MessagesBoard({
     if (location.pathname + location.search !== target) history.replaceState(null, "", target);
   }, [selected]);
 
+  /** Conversations that are not in the list (a party's chat): their messages reload nothing. */
+  const unlisted = useRef(new Set<string>());
   const reloadList = useCallback(async () => {
     const { body } = await social<{ conversations: Conversation[] }>("me/conversations");
     if (body) setConversations(body.conversations.sort(byUpdated));
+    return body?.conversations;
   }, []);
 
   const loadThread = useCallback(async (id: string, before?: number) => {
@@ -328,7 +332,11 @@ export function MessagesBoard({
         });
         return next.sort(byUpdated);
       });
-      if (created && !known) reloadList();
+      const id = message.conversationId;
+      if (created && !known && !unlisted.current.has(id))
+        reloadList().then((list) => {
+          if (list && !list.some((c) => c.id === id)) unlisted.current.add(id);
+        });
     },
     [me, reloadList],
   );
@@ -764,7 +772,11 @@ function dayLabel(iso: string, now: number, texts: UiStrings, locale: string) {
   return day.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
 }
 
-function ThreadView({
+/** A conversation's thread with its composer. `embedded` shows it inside another page (a party's
+ *  chat): a plain heading in place of the conversation's head, its own placeholder, and a line while
+ *  it is empty. */
+export function ThreadView({
+  embedded,
   texts,
   locale,
   me,
@@ -788,6 +800,7 @@ function ThreadView({
   onNotice,
   onExpired,
 }: {
+  embedded?: { title: string; placeholder: string; empty: string };
   onReact: (message: Message, name: MessageReaction) => Promise<void>;
   onSetting: (change: "pin" | "mute", value: boolean) => Promise<void>;
   media: MediaSetup;
@@ -820,6 +833,17 @@ function ThreadView({
   const [staged, setStaged] = useState<Staged | null>(null);
   const [dragging, setDragging] = useState(false);
   const [viewing, setViewing] = useState<{ item: MediaItem; mine: boolean } | null>(null);
+  const [reporting, setReporting] = useState<Message | null>(null);
+  const reportSheet = useRef<HTMLDialogElement>(null);
+  // The sheet opens for the message picked, and closing it lets the next one open.
+  useEffect(() => {
+    const sheet = reportSheet.current;
+    if (!reporting || !sheet) return;
+    sheet.showModal();
+    const done = () => setReporting(null);
+    sheet.addEventListener("close", done);
+    return () => sheet.removeEventListener("close", done);
+  }, [reporting]);
   const expiredOnce = useRef(false);
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -877,50 +901,56 @@ function ThreadView({
 
   return (
     <>
-      <div className="thread-head">
-        <button type="button" className="pill icon back" aria-label={texts.back} onClick={onBack}>
-          <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
-            <path d="M15 5l-7 7 7 7" />
-          </svg>
-        </button>
-        <Faces conversation={conversation} me={me} />
-        <span className="lines">
-          <span className="name">{name}</span>
-          <span className="meta">
-            {group
-              ? fill(texts.membersCount, { n: conversation.members.length })
-              : others[0]
-                ? `@${others[0].handle}`
-                : ""}
+      {embedded ? (
+        <div className="thread-head embedded">
+          <h3 className="sub">{embedded.title}</h3>
+        </div>
+      ) : (
+        <div className="thread-head">
+          <button type="button" className="pill icon back" aria-label={texts.back} onClick={onBack}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="stroke">
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+          </button>
+          <Faces conversation={conversation} me={me} />
+          <span className="lines">
+            <span className="name">{name}</span>
+            <span className="meta">
+              {group
+                ? fill(texts.membersCount, { n: conversation.members.length })
+                : others[0]
+                  ? `@${others[0].handle}`
+                  : ""}
+            </span>
           </span>
-        </span>
-        {!group && others[0] && (
-          <CallButton person={others[0]} label={fill(texts.callFriend, { name: others[0].displayName })} />
-        )}
-        {group && conversation.communityId && (
-          <Link href={`/communities/${conversation.communityId}`} className="pill">
-            {texts.communities}
-          </Link>
-        )}
-        <Menu label={texts.conversationOptions}>
-          {(close) => (
-            <ConversationActions
-              texts={texts}
-              conversation={conversation}
-              name={name}
-              canLeave={group && !conversation.communityId}
-              onSetting={(change, value) => {
-                close();
-                onSetting(change, value);
-              }}
-              onLeave={() => {
-                close();
-                onLeave();
-              }}
-            />
+          {!group && others[0] && (
+            <CallButton person={others[0]} label={fill(texts.callFriend, { name: others[0].displayName })} />
           )}
-        </Menu>
-      </div>
+          {group && conversation.communityId && (
+            <Link href={`/communities/${conversation.communityId}`} className="pill">
+              {texts.communities}
+            </Link>
+          )}
+          <Menu label={texts.conversationOptions}>
+            {(close) => (
+              <ConversationActions
+                texts={texts}
+                conversation={conversation}
+                name={name}
+                canLeave={group && !conversation.communityId}
+                onSetting={(change, value) => {
+                  close();
+                  onSetting(change, value);
+                }}
+                onLeave={() => {
+                  close();
+                  onLeave();
+                }}
+              />
+            )}
+          </Menu>
+        </div>
+      )}
 
       <div
         className={`messages${dragging ? " dragging" : ""}`}
@@ -979,7 +1009,7 @@ function ThreadView({
                 )}
                 <div className="msg-body">
                   {group && !mine && runStart && (
-                    <span className="msg-author">{author?.displayName ?? "?"}</span>
+                    <span className="msg-author">{author?.displayName ?? texts.formerMember}</span>
                   )}
                   {!message.deletedAt && message.replyTo ? (
                     <ReplyQuote texts={texts} names={names} target={replyTarget(messages, message.replyTo)} />
@@ -1066,6 +1096,10 @@ function ThreadView({
                           close();
                           onDelete(message);
                         }}
+                        onReport={() => {
+                          close();
+                          setReporting(message);
+                        }}
                       />
                     )}
                   </Menu>
@@ -1104,6 +1138,9 @@ function ThreadView({
             </div>
           </div>
         ))}
+        {embedded && thread && messages.length === 0 && pending.length === 0 && (
+          <p className="hint thread-start">{embedded.empty}</p>
+        )}
         {typists.length > 0 && (
           <p className="typing" aria-live="polite">
             <span className="typing-dots" aria-hidden="true">
@@ -1145,7 +1182,11 @@ function ThreadView({
             : null
         }
         onCancelReply={() => setReplying(null)}
-        placeholder={staged ? texts.captionPlaceholder : fill(texts.composerPlaceholder, { name })}
+        placeholder={
+          staged
+            ? texts.captionPlaceholder
+            : (embedded?.placeholder ?? fill(texts.composerPlaceholder, { name }))
+        }
         editing={editing}
         media={media}
         staged={staged}
@@ -1187,6 +1228,20 @@ function ThreadView({
         canReport={Boolean(viewing && !viewing.mine)}
         onClose={() => setViewing(null)}
       />
+      {reporting && (
+        <ReportSheet
+          key={reporting.id}
+          dialog={reportSheet}
+          person={{
+            userId: reporting.id,
+            displayName: people.get(reporting.authorId ?? "")?.displayName ?? "",
+          }}
+          texts={texts}
+          kind="message"
+          title={texts.reportMessageTitle}
+          lead={texts.reportMessageLead}
+        />
+      )}
     </>
   );
 }
@@ -1447,6 +1502,7 @@ function MessageActions({
   onReply,
   onEdit,
   onDelete,
+  onReport,
 }: {
   texts: UiStrings;
   mine: boolean;
@@ -1456,6 +1512,7 @@ function MessageActions({
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onReport: () => void;
 }) {
   const [asking, setAsking] = useState(false);
   if (asking)
@@ -1490,6 +1547,11 @@ function MessageActions({
       {mine && (
         <button type="button" role="menuitem" className="danger" onClick={() => setAsking(true)}>
           {texts.unsend}
+        </button>
+      )}
+      {!mine && (
+        <button type="button" role="menuitem" className="danger" onClick={onReport}>
+          {texts.reportMessage}
         </button>
       )}
     </>

@@ -69,6 +69,9 @@ export interface PartyView {
   joinCode?: JoinCode | null;
   /** The party's Discord server or channel, as the leader set it (members only). */
   discord?: string | null;
+  /** The party's text chat, a conversation the members read and write with the message routes
+   *  (members only; older API answers lack it). */
+  conversationId?: string;
   createdAt: string;
 }
 

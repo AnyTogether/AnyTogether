@@ -5,6 +5,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { PartyListing } from "@/components/Discover";
 import { useLive, useLiveEvents } from "@/components/Live";
 import { Menu } from "@/components/MessagesBoard";
+import { PartyChat } from "@/components/PartyChat";
 import type { UiStrings } from "@/lib/i18n";
 import { type Friend, type Person, byPresence, fill, presenceDot, shownName } from "@/lib/people";
 import {
@@ -395,7 +396,7 @@ export function PartyBoard({
     );
 
   return (
-    <section className="page party-page">
+    <section className={`page party-page${party.conversationId ? " with-chat" : ""}`}>
       <div className="party-title in d1">
         <h2>{texts.party}</h2>
         <span className="count">
@@ -403,7 +404,7 @@ export function PartyBoard({
         </span>
         {status !== "ready" && <span className="tag live-state">{texts.reconnecting}</span>}
       </div>
-      <div className="in d2">
+      <div className="party-layout in d2">
         <div className={`card voice${mesh.current ? " live" : ""}`}>
           <div className="voice-head">
             <h3 className="sub">{texts.voice}</h3>
@@ -501,177 +502,183 @@ export function PartyBoard({
           )}
         </div>
 
-        {notice && <p className={`notice ${notice.kind}`}>{notice.text}</p>}
+        {party.conversationId && (
+          <PartyChat key={party.conversationId} party={party} texts={texts} locale={texts.language} />
+        )}
 
-        <TogetherCard party={party} me={me ?? ""} games={games} texts={texts} />
+        <div className="party-rest">
+          {notice && <p className={`notice ${notice.kind}`}>{notice.text}</p>}
 
-        <PartyListing party={party} leader={leader} games={games} texts={texts} onChange={reload} />
+          <TogetherCard party={party} me={me ?? ""} games={games} texts={texts} />
 
-        <JoinCodeCard party={party} leader={leader} texts={texts} onChange={reload} />
+          <PartyListing party={party} leader={leader} games={games} texts={texts} onChange={reload} />
 
-        <DiscordCard party={party} leader={leader} texts={texts} onChange={reload} />
+          <JoinCodeCard party={party} leader={leader} texts={texts} onChange={reload} />
 
-        <div className="card raise">
-          <div className="members-head">
-            <h3 className="sub">
-              {texts.members} <span className="n">{party.members.length}</span>
-            </h3>
-            {leader ? (
-              <Segmented
-                small
-                value={party.privacy}
-                onChange={(value) =>
-                  act("privacy", `parties/${party.id}`, { method: "PATCH", ...json({ privacy: value }) })
-                }
-                options={[
-                  ["invite", texts.privacyInvite],
-                  ["friends", texts.privacyFriends],
-                ]}
-              />
-            ) : (
-              <span className="tag">
-                {party.privacy === "friends" ? texts.privacyFriends : texts.privacyInvite}
-              </span>
-            )}
-          </div>
-          <ul className="people">
-            {party.members.map((member) => {
-              const self = member.userId === me;
-              const peer = peerState.get(member.userId);
-              const speaking = self ? !!voice?.speaking && talking : !!peer?.speaking;
-              const voiceIn = self ? !!mesh.current : inVoice.has(member.userId);
-              const muted = self ? !micOn : mutedSet.has(member.userId);
-              const deaf = self ? mic.deafened : deafSet.has(member.userId);
-              return (
-                <li key={member.userId} className="person">
-                  <span className={`ring${speaking ? " speaking" : ""}`}>
-                    <Avatar person={member} />
-                  </span>
-                  <span className="lines">
-                    <span className="name">
-                      {shownName(member)}
-                      {self && <span className="handle"> ({texts.you})</span>}
-                      {!self && member.privateName && <span className="handle"> @{member.handle}</span>}
-                    </span>
-                    <span className="meta member-meta">
-                      {party.leaderId === member.userId && <span className="crown">{texts.leader}</span>}
-                      {voiceIn && (
-                        <span className={`in-voice${muted || deaf ? " muted" : ""}`}>
-                          {deaf
-                            ? texts.deafened
-                            : muted
-                              ? texts.muted
-                              : speaking
-                                ? texts.speaking
-                                : peer && peer.state !== "connected"
-                                  ? texts.connectingShort
-                                  : texts.inVoice}
-                        </span>
-                      )}
-                      {!voiceIn && <span>@{member.handle}</span>}
-                    </span>
-                  </span>
-                  <div className="acts">
-                    {leader && !self && (
-                      <Menu label={fill(texts.more, { name: member.displayName })}>
-                        {(close) => (
-                          <MemberActions
-                            texts={texts}
-                            member={member}
-                            onLead={() => {
-                              close();
-                              act(member.userId, `parties/${party.id}/leader`, {
-                                method: "POST",
-                                ...json({ userId: member.userId }),
-                              });
-                            }}
-                            onKick={() => {
-                              close();
-                              act(member.userId, `parties/${party.id}/kick`, {
-                                method: "POST",
-                                ...json({ userId: member.userId }),
-                              });
-                            }}
-                          />
-                        )}
-                      </Menu>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="party-foot">
-            {leaving ? (
-              <div className="confirm" role="alertdialog" aria-label={texts.leaveParty}>
-                <p>{texts.confirmLeaveParty}</p>
-                <div className="row">
-                  <button type="button" className="pill" onClick={() => setLeaving(false)}>
-                    {texts.keep}
-                  </button>
-                  <button
-                    type="button"
-                    className="pill danger"
-                    disabled={busy !== null}
-                    onClick={async () => {
-                      setLeaving(false);
-                      stopVoice(true);
-                      await act("leave", `parties/${party.id}/leave`);
-                    }}
-                  >
-                    {texts.leaveParty}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="pill danger"
-                disabled={busy !== null}
-                onClick={() => setLeaving(true)}
-              >
-                {texts.leaveParty}
-              </button>
-            )}
-          </div>
-        </div>
+          <DiscordCard party={party} leader={leader} texts={texts} onChange={reload} />
 
-        <div className="card">
-          <h3 className="sub">{texts.inviteFriends}</h3>
-          {invitable.length === 0 ? (
-            <p className="hint empty">{texts.noFriendsToInvite}</p>
-          ) : (
+          <div className="card raise">
+            <div className="members-head">
+              <h3 className="sub">
+                {texts.members} <span className="n">{party.members.length}</span>
+              </h3>
+              {leader ? (
+                <Segmented
+                  small
+                  value={party.privacy}
+                  onChange={(value) =>
+                    act("privacy", `parties/${party.id}`, { method: "PATCH", ...json({ privacy: value }) })
+                  }
+                  options={[
+                    ["invite", texts.privacyInvite],
+                    ["friends", texts.privacyFriends],
+                  ]}
+                />
+              ) : (
+                <span className="tag">
+                  {party.privacy === "friends" ? texts.privacyFriends : texts.privacyInvite}
+                </span>
+              )}
+            </div>
             <ul className="people">
-              {invitable.map((friend) => (
-                <li key={friend.userId} className={`person ${friend.presence.state}`}>
-                  <Avatar person={friend} presence={presenceDot(friend.presence)} />
-                  <span className="lines">
-                    <span className="name">{friend.displayName}</span>
-                    <span className="meta">@{friend.handle}</span>
-                  </span>
-                  <div className="acts">
-                    {invitedSet.has(friend.userId) ? (
-                      <span className="tag">{texts.invited}</span>
-                    ) : (
-                      <button
-                        type="button"
-                        className="pill"
-                        disabled={busy !== null || party.members.length >= maxPartySize}
-                        onClick={() =>
-                          act(friend.userId, `parties/${party.id}/invites`, {
-                            method: "POST",
-                            ...json({ userIds: [friend.userId] }),
-                          })
-                        }
-                      >
-                        {texts.invite}
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
+              {party.members.map((member) => {
+                const self = member.userId === me;
+                const peer = peerState.get(member.userId);
+                const speaking = self ? !!voice?.speaking && talking : !!peer?.speaking;
+                const voiceIn = self ? !!mesh.current : inVoice.has(member.userId);
+                const muted = self ? !micOn : mutedSet.has(member.userId);
+                const deaf = self ? mic.deafened : deafSet.has(member.userId);
+                return (
+                  <li key={member.userId} className="person">
+                    <span className={`ring${speaking ? " speaking" : ""}`}>
+                      <Avatar person={member} />
+                    </span>
+                    <span className="lines">
+                      <span className="name">
+                        {shownName(member)}
+                        {self && <span className="handle"> ({texts.you})</span>}
+                        {!self && member.privateName && <span className="handle"> @{member.handle}</span>}
+                      </span>
+                      <span className="meta member-meta">
+                        {party.leaderId === member.userId && <span className="crown">{texts.leader}</span>}
+                        {voiceIn && (
+                          <span className={`in-voice${muted || deaf ? " muted" : ""}`}>
+                            {deaf
+                              ? texts.deafened
+                              : muted
+                                ? texts.muted
+                                : speaking
+                                  ? texts.speaking
+                                  : peer && peer.state !== "connected"
+                                    ? texts.connectingShort
+                                    : texts.inVoice}
+                          </span>
+                        )}
+                        {!voiceIn && <span>@{member.handle}</span>}
+                      </span>
+                    </span>
+                    <div className="acts">
+                      {leader && !self && (
+                        <Menu label={fill(texts.more, { name: member.displayName })}>
+                          {(close) => (
+                            <MemberActions
+                              texts={texts}
+                              member={member}
+                              onLead={() => {
+                                close();
+                                act(member.userId, `parties/${party.id}/leader`, {
+                                  method: "POST",
+                                  ...json({ userId: member.userId }),
+                                });
+                              }}
+                              onKick={() => {
+                                close();
+                                act(member.userId, `parties/${party.id}/kick`, {
+                                  method: "POST",
+                                  ...json({ userId: member.userId }),
+                                });
+                              }}
+                            />
+                          )}
+                        </Menu>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
-          )}
+            <div className="party-foot">
+              {leaving ? (
+                <div className="confirm" role="alertdialog" aria-label={texts.leaveParty}>
+                  <p>{texts.confirmLeaveParty}</p>
+                  <div className="row">
+                    <button type="button" className="pill" onClick={() => setLeaving(false)}>
+                      {texts.keep}
+                    </button>
+                    <button
+                      type="button"
+                      className="pill danger"
+                      disabled={busy !== null}
+                      onClick={async () => {
+                        setLeaving(false);
+                        stopVoice(true);
+                        await act("leave", `parties/${party.id}/leave`);
+                      }}
+                    >
+                      {texts.leaveParty}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="pill danger"
+                  disabled={busy !== null}
+                  onClick={() => setLeaving(true)}
+                >
+                  {texts.leaveParty}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="sub">{texts.inviteFriends}</h3>
+            {invitable.length === 0 ? (
+              <p className="hint empty">{texts.noFriendsToInvite}</p>
+            ) : (
+              <ul className="people">
+                {invitable.map((friend) => (
+                  <li key={friend.userId} className={`person ${friend.presence.state}`}>
+                    <Avatar person={friend} presence={presenceDot(friend.presence)} />
+                    <span className="lines">
+                      <span className="name">{friend.displayName}</span>
+                      <span className="meta">@{friend.handle}</span>
+                    </span>
+                    <div className="acts">
+                      {invitedSet.has(friend.userId) ? (
+                        <span className="tag">{texts.invited}</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="pill"
+                          disabled={busy !== null || party.members.length >= maxPartySize}
+                          onClick={() =>
+                            act(friend.userId, `parties/${party.id}/invites`, {
+                              method: "POST",
+                              ...json({ userIds: [friend.userId] }),
+                            })
+                          }
+                        >
+                          {texts.invite}
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </section>

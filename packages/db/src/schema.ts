@@ -604,6 +604,11 @@ export const conversations = pgTable(
     communityId: uuid()
       .unique()
       .references((): AnyPgColumn => communities.id, { onDelete: "cascade" }),
+    /** A party's chat: its members are the party's while it lasts, kept in step by the API, and
+     *  it is deleted when the party ends. */
+    partyId: uuid()
+      .unique()
+      .references((): AnyPgColumn => parties.id, { onDelete: "cascade" }),
   },
   (table) => [
     check("kind", sql`${table.kind} in ('direct', 'group')`),

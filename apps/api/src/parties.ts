@@ -1,4 +1,13 @@
-import { accounts, games, parties, partyInvites, partyMembers, partyRequests } from "@anytogether/db";
+import {
+  accounts,
+  conversationMembers,
+  conversations,
+  games,
+  parties,
+  partyInvites,
+  partyMembers,
+  partyRequests,
+} from "@anytogether/db";
 import {
   ErrorCode,
   type GatewayEvent,
@@ -14,6 +23,7 @@ import {
   type PartyView,
   type PublicPartyView,
   TitleId,
+  conversationMembersKey,
   maxPartySize,
 } from "@anytogether/shared";
 import { type SQL, and, asc, count, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
@@ -127,6 +137,52 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
     for (const member of members) await setPresenceExtra(deps.valkey, member, "party", value);
   };
 
+  /** The party's chat, made with its members the first time it is needed (a party from before
+   *  party chat has none yet). It starts muted: the members are in the party, beside it. */
+  async function chatOf(partyId: string) {
+    const [found] = await db
+      .select({ id: conversations.id })
+      .from(conversations)
+      .where(eq(conversations.partyId, partyId));
+    if (found) return found.id;
+    const [party] = await db.select().from(parties).where(eq(parties.id, partyId));
+    const [made] = await db
+      .insert(conversations)
+      .values({ id: uuidv7(), kind: "group", createdBy: party?.leaderId ?? null, partyId })
+      .onConflictDoNothing()
+      .returning({ id: conversations.id });
+    const id =
+      made?.id ??
+      (
+        await db
+          .select({ id: conversations.id })
+          .from(conversations)
+          .where(eq(conversations.partyId, partyId))
+      )[0]?.id;
+    if (!id) throw new HttpError(409, ErrorCode.conflict, "Try again");
+    const members = await memberIds(partyId);
+    if (members.length)
+      await db
+        .insert(conversationMembers)
+        .values(members.map((accountId) => ({ conversationId: id, accountId, muted: true })))
+        .onConflictDoNothing();
+    return id;
+  }
+
+  /** A new member reads the chat's history from the start, with nothing of it unread. */
+  async function intoChat(partyId: string, userId: string) {
+    const id = await chatOf(partyId);
+    const [chat] = await db
+      .select({ lastSeq: conversations.lastSeq })
+      .from(conversations)
+      .where(eq(conversations.id, id));
+    await db
+      .insert(conversationMembers)
+      .values({ conversationId: id, accountId: userId, readSeq: chat?.lastSeq ?? 0, muted: true })
+      .onConflictDoNothing();
+    await deps.valkey.del(conversationMembersKey(id));
+  }
+
   /** Hooks the call routes register, run when someone leaves a party (to leave its call too). */
   const leaveHooks: ((partyId: string, userId: string, ended: boolean) => Promise<void>)[] = [];
   const callOf: { current: (partyId: string) => Promise<PartyView["call"]> } = {
@@ -173,6 +229,7 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
             requests: requests.flatMap((r) => cards.get(r.accountId) ?? []),
             joinCode: await codes.current("party", party.id),
             discord: party.discordUrl ?? null,
+            ...(party.endedAt ? {} : { conversationId: await chatOf(party.id) }),
           }
         : {}),
       createdAt: party.createdAt.toISOString(),
@@ -220,6 +277,7 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
       await tx.insert(partyMembers).values({ partyId: id, accountId: me });
       return made as Party;
     });
+    await chatOf(party.id);
     await showInPresence(party, [me]);
     if (party.publicJoin) await relist(party, "listed");
     return party;
@@ -243,6 +301,17 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
         .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.accountId, userId)))
         .returning();
       if (!party || !removed.length) return null;
+      // Out of the party is out of its chat; the last one out ends the chat with the party.
+      const [chat] = await tx
+        .select({ id: conversations.id })
+        .from(conversations)
+        .where(eq(conversations.partyId, partyId));
+      if (chat)
+        await tx
+          .delete(conversationMembers)
+          .where(
+            and(eq(conversationMembers.conversationId, chat.id), eq(conversationMembers.accountId, userId)),
+          );
       const left = await tx
         .select()
         .from(partyMembers)
@@ -255,11 +324,13 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
           .where(eq(parties.id, partyId))
           .returning();
         const invited = await tx.delete(partyInvites).where(eq(partyInvites.partyId, partyId)).returning();
+        if (chat) await tx.delete(conversations).where(eq(conversations.id, chat.id));
         return {
           party: ended as Party,
           left: [] as string[],
           ended: true,
           invited: invited.map((i) => i.accountId),
+          chatId: chat?.id ?? null,
         };
       }
       let current = party;
@@ -271,9 +342,16 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
           .returning();
         current = moved as Party;
       }
-      return { party: current, left: left.map((m) => m.accountId), ended: false, invited: [] as string[] };
+      return {
+        party: current,
+        left: left.map((m) => m.accountId),
+        ended: false,
+        invited: [] as string[],
+        chatId: chat?.id ?? null,
+      };
     });
     if (!result) return false;
+    if (result.chatId) await deps.valkey.del(conversationMembersKey(result.chatId));
     await setPresenceExtra(deps.valkey, userId, "party", null);
     for (const hook of leaveHooks) await hook(partyId, userId, result.ended);
     if (result.ended) {
@@ -445,6 +523,8 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
     leave,
     showInPresence,
     tell,
+    chatOf,
+    intoChat,
     leaveHooks,
     callOf,
     togetherOf,
@@ -487,6 +567,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
     relist,
     dropRequests,
     publicParties,
+    intoChat,
   } = service;
 
   const invited = async (partyId: string, userId: string) =>
@@ -694,6 +775,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
     if (joined === "full")
       throw new HttpError(409, ErrorCode.full, `A party has at most ${maxPartySize} people`);
     await notes.settle(me, "party_invite", party.id);
+    await intoChat(party.id, me);
     const everyone = await memberIds(party.id);
     const member = await who.card(me);
     if (member)
