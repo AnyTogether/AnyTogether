@@ -14,7 +14,6 @@ import {
   lfgPurposes,
   maxLfgHours,
   maxOpenLfgPosts,
-  maxPartySize,
 } from "@anytogether/shared";
 import { type SQL, and, asc, count, desc, eq, gt, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -34,6 +33,7 @@ import type { Notifier } from "./notifications.js";
 import type { PartyService } from "./parties.js";
 import { blockedBetween, noBlockBetween, people } from "./people.js";
 import { strangerLimiter } from "./ratelimit.js";
+import { mediaLimits } from "./sfu.js";
 import type { SharePlayService } from "./sharePlays.js";
 
 type Post = typeof lfgPosts.$inferSelect;
@@ -515,8 +515,9 @@ export function lfgRoutes(deps: Deps, notes: Notifier, parties: PartyService, sh
     if (current && (party.leaderId ?? members[0]) !== post.authorId)
       throw new HttpError(403, ErrorCode.notPartyLeader, "Only your party's leader can bring players in");
     if (!members.includes(userId)) {
-      if (members.length >= maxPartySize)
-        throw new HttpError(409, ErrorCode.full, `Your party has ${maxPartySize} people already`);
+      const max = mediaLimits(deps.sfu).maxPartySize;
+      if (members.length >= max)
+        throw new HttpError(409, ErrorCode.full, `Your party has ${max} people already`);
       await parties.inviteTo(party, post.authorId, [userId], { quiet: true });
       await parties.announce(party);
     }

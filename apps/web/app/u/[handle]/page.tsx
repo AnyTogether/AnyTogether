@@ -27,7 +27,7 @@ import { fill, isMinimalCard, shownName } from "@/lib/people";
 import type { Person, Profile, PublicProfile } from "@/lib/people";
 import type { PostPage } from "@/lib/posts";
 import { statusFrom } from "@/lib/presenceMode";
-import { type LevelBadgeData, type Showcase, accents, localArt } from "@/lib/psn";
+import { type LevelBadgeData, type Showcase, profileLook } from "@/lib/psn";
 import { api, currentUser, publicJson } from "@/lib/session";
 import { withArt } from "@/lib/steamgrid";
 import type { MediaItem, StorageInfo } from "@/lib/storage";
@@ -153,19 +153,36 @@ export default async function UserProfile({ params }: Params) {
   ];
   // The row of games played: art from SteamGridDB for those the launcher sent no icon for.
   const art = await withArt((games ?? []).slice(0, 8), (game) => localName(game.names, "en"));
-  const cover = profile.cover ? localArt(profile.cover.url) : null;
-  const accent = profile.accent ? accents[profile.accent] : null;
+  // The picked cover and accent, else the worn theme's still and accent.
+  const look = profileLook(profile);
+  const { accent, theme } = look;
   return (
     <section className="page">
       <article
-        className={`card profile in d1${accent ? " accented" : ""}`}
-        style={accent ? ({ "--accent": accent } as React.CSSProperties) : undefined}
+        className={`card profile in d1${accent ? " accented" : ""}${theme ? " themed" : ""}`}
+        style={
+          accent || theme
+            ? ({
+                ...(accent ? { "--accent": accent } : {}),
+                ...(theme ? { "--t-deep": theme.colors.deep, "--t-middle": theme.colors.middle } : {}),
+              } as React.CSSProperties)
+            : undefined
+        }
       >
         <div
-          className={`banner${cover ? ` cover ${profile.cover?.kind}` : ""}`}
-          style={cover ? { backgroundImage: `url("${cover}")` } : undefined}
+          className={`banner${look.picture ? ` cover ${look.kind}` : ""}`}
+          style={look.picture ? { backgroundImage: `url("${look.picture}")` } : undefined}
           aria-hidden="true"
         />
+        {theme && (
+          <Link href={`/themes/${theme.id}`} className="theme-chip">
+            <span className="theme-chip-dots" aria-hidden="true">
+              <i style={{ background: theme.colors.bright }} />
+              <i style={{ background: theme.colors.accent }} />
+            </span>
+            {fill(texts.themeWorn, { name: theme.name })}
+          </Link>
+        )}
         {!self && user && (
           <ProfileMenu
             person={profile}

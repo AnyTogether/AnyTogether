@@ -14,7 +14,6 @@ import {
   type PartyView,
   type PublicPartyView,
   TitleId,
-  maxPartySize,
 } from "@anytogether/shared";
 import { type SQL, and, asc, count, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -33,6 +32,7 @@ import type { Notifier } from "./notifications.js";
 import { noBlockBetween, people } from "./people.js";
 import { setPresenceExtra } from "./presence.js";
 import { rateLimiter, strangerLimiter } from "./ratelimit.js";
+import { mediaLimits } from "./sfu.js";
 
 type Party = typeof parties.$inferSelect;
 type Listing = z.infer<typeof PartyListing>;
@@ -51,7 +51,12 @@ const listingColumns = (listing: Listing | null | undefined, before?: Party) =>
 const noPublic = "Your family settings keep public parties, Find players and share plays off";
 
 /** The party pieces the call routes need too. */
-export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "limits">, notes: Notifier) {
+export function partyService(
+  deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "limits" | "sfu">,
+  notes: Notifier,
+) {
+  /** How many a party may hold here: the mesh's eight, or more with the media server. */
+  const partyMax = mediaLimits(deps.sfu).maxPartySize;
   const { db } = deps;
   const who = people(db);
   const codes = joinCodeStore(deps);
@@ -121,7 +126,7 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
     const value: PartyPresence = {
       id: party.id,
       size: members.length,
-      max: maxPartySize,
+      max: partyMax,
       open: party.privacy === "friends",
     };
     for (const member of members) await setPresenceExtra(deps.valkey, member, "party", value);
@@ -160,6 +165,7 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
       }),
       invited: invites.flatMap((i) => cards.get(i.accountId) ?? []),
       call: await callOf.current(party.id),
+      max: partyMax,
       together: await togetherOf.current(party.id),
       public: party.publicJoin
         ? {
@@ -346,7 +352,7 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
         language: party.language,
         join: party.publicJoin as "request" | "open",
         size: sizes.get(party.id) ?? 0,
-        max: maxPartySize,
+        max: partyMax,
         requested: asked.has(party.id),
         listedAt: (party.listedAt ?? party.createdAt).toISOString(),
       }),
@@ -407,7 +413,7 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
         ? { titleId: party.titleId, title: null, names: game?.names ?? {}, iconUrl: game?.iconUrl ?? null }
         : null,
       size: members.length,
-      max: maxPartySize,
+      max: partyMax,
       state,
     };
   }
@@ -426,8 +432,8 @@ export function partyService(deps: Pick<Deps, "db" | "valkey" | "publicUrl" | "l
     await family.mayMessage(me, members);
     if (await invitedTo(party.id, me)) return { state: "invited" as const, made: false };
     if (await askedTo(party.id, me)) return { state: "requested" as const, made: false };
-    if (members.length >= maxPartySize)
-      throw new HttpError(409, ErrorCode.full, `A party has at most ${maxPartySize} people`);
+    if (members.length >= partyMax)
+      throw new HttpError(409, ErrorCode.full, `A party has at most ${partyMax} people`);
     if (!friend) await strangerLimit("joinRequest", me);
     return { state: "requested" as const, made: await ask(party, me, "code") };
   }
@@ -463,6 +469,7 @@ export type PartyService = ReturnType<typeof partyService>;
 /** Parties: make one, invite friends, join and leave, a leader who may kick and hand over; and, when
  *  the leader lists it in public, strangers who ask to join or walk in. */
 export function partyRoutes(deps: Deps, service: PartyService) {
+  const partyMax = mediaLimits(deps.sfu).maxPartySize;
   const app = new Hono<{ Variables: AuthVariables }>();
   app.use("*", requireUser(deps));
   const { db } = deps;
@@ -680,7 +687,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
       const [locked] = await tx.select().from(parties).where(eq(parties.id, party.id)).for("update");
       if (!locked || locked.endedAt) return "ended" as const;
       const now = await tx.select().from(partyMembers).where(eq(partyMembers.partyId, party.id));
-      if (now.length >= maxPartySize) return "full" as const;
+      if (now.length >= partyMax) return "full" as const;
       await tx.insert(partyMembers).values({ partyId: party.id, accountId: me });
       await tx
         .delete(partyInvites)
@@ -691,8 +698,7 @@ export function partyRoutes(deps: Deps, service: PartyService) {
       return "joined" as const;
     });
     if (joined === "ended") throw new HttpError(404, ErrorCode.notFound, "No such party");
-    if (joined === "full")
-      throw new HttpError(409, ErrorCode.full, `A party has at most ${maxPartySize} people`);
+    if (joined === "full") throw new HttpError(409, ErrorCode.full, `A party has at most ${partyMax} people`);
     await notes.settle(me, "party_invite", party.id);
     const everyone = await memberIds(party.id);
     const member = await who.card(me);
@@ -714,8 +720,8 @@ export function partyRoutes(deps: Deps, service: PartyService) {
     if (members.includes(me)) throw new HttpError(409, ErrorCode.conflict, "You are in this party");
     if (!party.publicJoin) throw new HttpError(403, ErrorCode.forbidden, "This party takes no requests");
     await family.need(me, "public_matchmaking", noPublic);
-    if (members.length >= maxPartySize)
-      throw new HttpError(409, ErrorCode.full, `A party has at most ${maxPartySize} people`);
+    if (members.length >= partyMax)
+      throw new HttpError(409, ErrorCode.full, `A party has at most ${partyMax} people`);
     await strangerLimit("joinRequest", me);
     const made = await ask(party, me, "list");
     return c.json({ requested: true }, made ? 201 : 200);
@@ -746,8 +752,8 @@ export function partyRoutes(deps: Deps, service: PartyService) {
     const { party, members } = await asLeader(c.req.param("id"), me);
     const userId = c.req.param("userId");
     const accept = c.req.param("answer") === "accept";
-    if (accept && members.length >= maxPartySize)
-      throw new HttpError(409, ErrorCode.full, `A party has at most ${maxPartySize} people`);
+    if (accept && members.length >= partyMax)
+      throw new HttpError(409, ErrorCode.full, `A party has at most ${partyMax} people`);
     const removed = z.string().uuid().safeParse(userId).success
       ? await db
           .delete(partyRequests)

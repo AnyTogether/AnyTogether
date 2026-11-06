@@ -368,6 +368,25 @@
   stroke: #ff6b9a;
   transform: scale(1.12);
 }
+/* Wear on my profile: on, it takes the theme's own accent and offers to take it off. */
+.pill.wear {
+  gap: 8px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.pill.wear.on {
+  border-color: color-mix(in srgb, var(--t-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--t-accent) 12%, transparent);
+}
+.pill.wear.on svg {
+  stroke: var(--t-accent);
+}
+.pill.wear .meta {
+  color: var(--mute);
+}
+.wear-error {
+  flex-basis: 100%;
+  margin: 0;
+}
 .theme-page > .hint-line {
   margin-top: 10px;
   font-size: 13px;

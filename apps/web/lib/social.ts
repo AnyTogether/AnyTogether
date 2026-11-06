@@ -1,4 +1,5 @@
 import type { Person } from "@/lib/people";
+import type { SfuAccess } from "@/lib/share";
 import type { Attachment, MediaKind } from "@/lib/storage";
 import type { PartyTogether } from "@/lib/together";
 import type { Sealed } from "@anytogether/e2ee";
@@ -79,7 +80,16 @@ export interface Party {
   privacy: "invite" | "friends";
   members: PartyMember[];
   invited: Person[];
-  call: { id: string; in: string[]; muted?: string[]; deafened?: string[] } | null;
+  call: {
+    id: string;
+    in: string[];
+    muted?: string[];
+    deafened?: string[];
+    /** "sfu": the call goes through the media server (older API answers lack it: the mesh). */
+    media?: "mesh" | "sfu";
+  } | null;
+  /** How many the party may hold on this server (older API answers lack it: maxPartySize). */
+  max?: number;
   /** The party's Play Together game while one runs (older API answers lack it). */
   together?: PartyTogether | null;
   /** Listed in public, and how (older API answers lack it). */
@@ -134,9 +144,17 @@ export interface CallPeer {
 }
 
 export interface CallJoin {
-  call: { id: string; kind: "direct" | "party"; partyId: string | null; in: CallPeer[] };
+  call: {
+    id: string;
+    kind: "direct" | "party";
+    partyId: string | null;
+    in: CallPeer[];
+    media?: "mesh" | "sfu";
+  };
   iceServers: RTCIceServer[];
   expiresAt: string | null;
+  /** The media server room while the call goes through it. */
+  sfu?: SfuAccess | null;
 }
 
 /** An event from the gateway. */

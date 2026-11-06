@@ -17,6 +17,8 @@ export interface Me {
     avatar: string | null;
     appearOffline?: boolean;
     presenceStatus?: string;
+    /** The Theme Hub theme the profile wears (older API answers lack it). */
+    theme?: { id: string } | null;
   };
   /** A mute in force (older API answers have none). */
   restrictions?: Restriction[];
