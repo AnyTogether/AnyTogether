@@ -1254,8 +1254,10 @@ svg.hang-up {
   color: var(--mute);
 }
 
-dialog.sheet.e2ee-sheet {
-  width: min(460px, calc(100vw - 32px));
+@media (min-width: 521px) {
+  dialog.sheet.e2ee-sheet {
+    width: min(460px, calc(100vw - 32px));
+  }
 }
 .e2ee-sheet .sheet-body {
   max-height: calc(100dvh - 48px);
