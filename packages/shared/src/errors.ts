@@ -38,6 +38,12 @@ export const ErrorCode = {
   linksNotAllowed: "links_not_allowed",
   /** A message links to a domain on the server's deny-list. */
   linkBlocked: "link_blocked",
+  /** A sealed message does not have a key for exactly the active devices of both people; the
+   *  answer has `devices` ({userId: deviceIds}). Fetch the devices, show the change, seal again. */
+  e2eeDevices: "e2ee_devices",
+  /** The direct conversation is end-to-end encrypted (or both people have device keys): a plain
+   *  message is refused. */
+  e2eeRequired: "e2ee_required",
   /** A message was edited as often as it may be (maxMessageEdits). */
   editLimit: "edit_limit",
   payloadTooLarge: "payload_too_large",
