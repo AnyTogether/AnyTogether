@@ -30,7 +30,7 @@ export interface AdminReport {
     | "post"
     | "comment";
   targetId: string;
-  message: { text: string | null; sentAt: string | null; removed: boolean } | null;
+  message: { text: string | null; sentAt: string | null; removed: boolean; encrypted?: boolean } | null;
   /** A reported looking-for-group post, as it was when reported. */
   post: {
     note: string | null;

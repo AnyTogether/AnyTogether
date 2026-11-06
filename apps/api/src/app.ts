@@ -16,6 +16,7 @@ import { communityRoutes } from "./communities.js";
 import { compatRoutes } from "./compat.js";
 import { connectionRoutes } from "./connections.js";
 import { discoverRoutes } from "./discover.js";
+import { e2eeRoutes } from "./e2ee.js";
 import { HttpError } from "./errors.js";
 import { familyRoutes, sendFamilySummaries } from "./family.js";
 import { feedRoutes } from "./feed.js";
@@ -187,6 +188,7 @@ export function createApp(deps: Deps) {
   v1.route("/", postRoutes(deps, notes, media));
   v1.route("/", leaderboardRoutes(deps));
   v1.route("/", reportRoutes(deps));
+  v1.route("/", e2eeRoutes(deps));
   v1.route("/", messageRoutes(deps, notes));
   v1.route("/", partyRoutes(deps, partyPieces));
   const calls = callRoutes(deps, partyPieces);

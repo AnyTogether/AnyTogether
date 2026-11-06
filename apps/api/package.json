@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@anytogether/db": "workspace:*",
+    "@anytogether/e2ee": "workspace:*",
     "@anytogether/shared": "workspace:*",
     "@hono/node-server": "^1.13.7",
     "@simplewebauthn/server": "^13.3.3",

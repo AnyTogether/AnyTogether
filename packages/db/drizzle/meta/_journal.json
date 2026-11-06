@@ -201,8 +201,22 @@
     {
       "idx": 28,
       "version": "7",
-      "when": 1793934928848,
-      "tag": "0028_phone_push",
+      "when": 1793934197446,
+      "tag": "0028_e2ee_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793935250333,
+      "tag": "0029_party_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793935811242,
+      "tag": "0030_phone_push",
       "breakpoints": true
     }
   ]

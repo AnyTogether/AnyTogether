@@ -19,6 +19,7 @@ import {
   type ReactionView,
   ReadUpTo,
   type ReceiptView,
+  type SealedMessage,
   conversationMembersKey,
   conversationMembersSeconds,
   editWindowMs,
@@ -27,12 +28,14 @@ import {
   maxPinnedConversations,
   mediaFallbackText,
   messageReactions as reactionNames,
+  sealedFallbackText,
 } from "@anytogether/shared";
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
 import type { Deps } from "./app.js";
+import { allHaveDevices, checkSealed } from "./e2ee.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { familyGuard } from "./family.js";
@@ -70,14 +73,19 @@ export const messageView = (
   reactions: ReactionView[] = [],
 ): MessageView => {
   const kind = m.deletedAt ? undefined : (m.attachments as { kind: MediaKind }[])[0]?.kind;
+  const sealed = m.deletedAt ? null : (m.sealed as SealedMessage | null);
   return {
     id: m.id,
     conversationId: m.conversationId,
     seq: m.seq,
     authorId: m.authorId,
     kind: kind ?? "text",
-    text: m.deletedAt ? null : (m.text ?? (kind ? mediaFallbackText[kind] : null)),
-    caption: m.deletedAt || !kind ? null : m.text,
+    text: m.deletedAt
+      ? null
+      : sealed
+        ? sealedFallbackText
+        : (m.text ?? (kind ? mediaFallbackText[kind] : null)),
+    caption: m.deletedAt || !kind || sealed ? null : m.text,
     attachments: m.deletedAt ? [] : attachments,
     replyTo: m.replyTo,
     editedAt: iso(m.editedAt),
@@ -85,6 +93,7 @@ export const messageView = (
     reactions: m.deletedAt ? [] : reactions,
     deletedAt: iso(m.deletedAt),
     createdAt: m.createdAt.toISOString(),
+    ...(sealed ? { sealed } : {}),
   };
 };
 
@@ -300,9 +309,11 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         lastMessage: lastMessage ?? null,
         updatedAt: c.updatedAt.toISOString(),
         communityId: c.communityId,
+        partyId: c.partyId,
         muted: muted ?? false,
         pinned: Boolean(pinnedAt),
         receipts,
+        encrypted: Boolean(c.sealedAt),
       };
     });
   };
@@ -316,11 +327,15 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     return view as ConversationView;
   };
 
-  /** A community's chat follows the community: its title and members change there. */
-  const managedByCommunity = (conversation: Conversation) => {
+  /** A community's or a party's chat follows it: its title and members change there. */
+  const managedElsewhere = (conversation: Conversation) => {
     if (conversation.communityId)
       throw new HttpError(409, ErrorCode.conflict, "This chat belongs to a community: change it there", {
         communityId: conversation.communityId,
+      });
+    if (conversation.partyId)
+      throw new HttpError(409, ErrorCode.conflict, "This chat belongs to a party: join or leave the party", {
+        partyId: conversation.partyId,
       });
   };
 
@@ -374,6 +389,8 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       .where(
         and(
           eq(conversationMembers.accountId, me),
+          // A party's chat sits beside the party, not in the list.
+          isNull(conversations.partyId),
           // Pinned ones lead the first page; later pages are the rest by time.
           before && !Number.isNaN(Date.parse(before))
             ? and(lt(conversations.updatedAt, new Date(before)), isNull(conversationMembers.pinnedAt))
@@ -410,6 +427,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
       .where(
         and(
           eq(conversationMembers.accountId, me),
+          isNull(conversations.partyId),
           gt(conversations.lastSeq, conversationMembers.readSeq),
           isNull(messages.deletedAt),
           sql`${messages.authorId} is distinct from ${me}::uuid`,
@@ -466,7 +484,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const { conversation } = await membership(c.req.param("id"), me);
     if (conversation.kind !== "group")
       throw new HttpError(400, ErrorCode.badRequest, "Only a group has a title");
-    managedByCommunity(conversation);
+    managedElsewhere(conversation);
     const { title } = await body(c, ConversationUpdate);
     await db
       .update(conversations)
@@ -484,7 +502,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const { conversation } = await membership(c.req.param("id"), me);
     if (conversation.kind !== "group")
       throw new HttpError(400, ErrorCode.badRequest, "Start a group to talk with more people");
-    managedByCommunity(conversation);
+    managedElsewhere(conversation);
     const { userIds } = await body(c, ConversationMembers);
     const current = await memberIds(conversation.id);
     const added = [...new Set(userIds)].filter((id) => !current.includes(id));
@@ -523,7 +541,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     const target = c.req.param("userId");
     if (conversation.kind !== "group")
       throw new HttpError(400, ErrorCode.badRequest, "A direct conversation cannot be left");
-    managedByCommunity(conversation);
+    managedElsewhere(conversation);
     if (target !== me && conversation.createdBy !== me)
       throw new HttpError(403, ErrorCode.forbidden, "Only the group's creator can remove people");
     const removed = await db
@@ -595,6 +613,8 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     await limit("message", me);
     await limit("messageDay", me);
     if (input.text) allowedText(input.text);
+    if (conversation.partyId && input.attachments?.length)
+      throw new HttpError(400, ErrorCode.badRequest, "A party's chat takes text only");
     const members = await memberIds(conversation.id);
     await remember(conversation.id, members);
     if (conversation.kind === "direct") {
@@ -603,6 +623,16 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         throw new HttpError(403, ErrorCode.forbidden, "You can only message your friends");
     }
     await family.mayMessage(me, members);
+    // End-to-end encrypted (docs/e2ee.md): sealed for exactly both people's devices, and never plain
+    // again once it was, or while both of them can read sealed messages.
+    if (input.sealed) {
+      if (conversation.kind !== "direct")
+        throw new HttpError(400, ErrorCode.badRequest, "Only a direct conversation is end-to-end encrypted");
+    } else if (
+      conversation.kind === "direct" &&
+      (conversation.sealedAt || (await allHaveDevices(db, members)))
+    )
+      throw new HttpError(409, ErrorCode.e2eeRequired, "This conversation is end-to-end encrypted");
     const resent = async () => {
       const [existing] = await db.select().from(messages).where(eq(messages.id, input.clientId));
       if (!existing || existing.authorId !== me || existing.conversationId !== conversation.id)
@@ -611,12 +641,14 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     };
     if ((await db.select({ id: messages.id }).from(messages).where(eq(messages.id, input.clientId))).length)
       return resent();
+    if (input.sealed) await checkSealed(db, input.sealed, me, members);
     if (input.replyTo !== undefined && input.replyTo > conversation.lastSeq)
       throw new HttpError(400, ErrorCode.badRequest, "replyTo: no such message");
     // Media: the sender's own, uploaded first; one piece per message, with the text as its caption.
     const attached = await mediaOf.attachable(
       me,
       (input.attachments ?? []).map((a) => a.mediaId),
+      Boolean(input.sealed),
     );
     const attachments = attached.map((m) => ({ mediaId: m.id, kind: m.kind as MediaKind }));
 
@@ -635,7 +667,8 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
             seq: bumped.seq,
             id: input.clientId,
             authorId: me,
-            text: input.text || null,
+            text: input.sealed ? null : input.text || null,
+            sealed: input.sealed ?? null,
             attachments,
             replyTo: input.replyTo ?? null,
           })
@@ -643,6 +676,11 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
           .returning();
         // Sent twice at once: undo this seq and answer with the first.
         if (!message) throw new Resent();
+        if (input.sealed && !conversation.sealedAt)
+          await tx
+            .update(conversations)
+            .set({ sealedAt: sql`coalesce(${conversations.sealedAt}, now())` })
+            .where(eq(conversations.id, conversation.id));
         await tx
           .update(conversationMembers)
           .set({ readSeq: bumped.seq, deliveredSeq: bumped.seq })
@@ -685,7 +723,9 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
             conversationId: conversation.id,
             title: conversation.title,
             group: conversation.kind === "group",
-            text: said.length > 140 ? `${said.slice(0, 139)}…` : said,
+            // A sealed message's notification says nothing of what it says.
+            text: input.sealed ? "" : said.length > 140 ? `${said.slice(0, 139)}…` : said,
+            ...(input.sealed ? { sealed: true } : {}),
           },
         });
     return c.json(view, 201);
@@ -709,7 +749,15 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     await assertNotMuted(deps.db, me);
     const { conversation } = await membership(c.req.param("id"), me);
     const message = await own(conversation.id, me, c.req.param("seq"));
-    const { text } = await body(c, MessageEdit);
+    const input = await body(c, MessageEdit);
+    const text = "text" in input ? input.text : null;
+    const sealed = "sealed" in input ? input.sealed : null;
+    if (Boolean(sealed) !== Boolean(message.sealed))
+      throw new HttpError(
+        400,
+        ErrorCode.badRequest,
+        message.sealed ? "A sealed message is edited with a new seal" : "Only a sealed message takes a seal",
+      );
     await limit("messageChange", me);
     if (Date.now() - message.createdAt.getTime() > editWindowMs)
       throw new HttpError(403, ErrorCode.forbidden, "A message can be edited for 15 minutes");
@@ -718,10 +766,15 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
         max: maxMessageEdits,
       });
     if (message.editCount >= maxMessageEdits) throw tooMany();
-    allowedText(text);
+    if (text !== null) allowedText(text);
+    if (sealed) await checkSealed(db, sealed, me, await memberIds(conversation.id));
     const [updated] = await db
       .update(messages)
-      .set({ text, editedAt: new Date(), editCount: sql`${messages.editCount} + 1` })
+      .set({
+        ...(sealed ? { sealed } : { text }),
+        editedAt: new Date(),
+        editCount: sql`${messages.editCount} + 1`,
+      })
       .where(
         and(
           eq(messages.conversationId, conversation.id),
@@ -744,7 +797,7 @@ export function messageRoutes(deps: Deps, notes: Notifier) {
     // Unsent, at any time: emptied at once (text, media, reactions), only its place stays.
     const [deleted] = await db
       .update(messages)
-      .set({ text: null, attachments: [], deletedAt: new Date() })
+      .set({ text: null, sealed: null, attachments: [], deletedAt: new Date() })
       .where(and(eq(messages.conversationId, conversation.id), eq(messages.seq, message.seq)))
       .returning();
     await db

@@ -7,6 +7,7 @@ import { purgeDeletedAccounts } from "./account.js";
 import { createApp } from "./app.js";
 import { lateBackupWarning } from "./backups.js";
 import { config } from "./config.js";
+import { sweepExpiredDevices } from "./e2ee.js";
 import { storeFromSettings } from "./fileStore.js";
 import { type FileService, fileService } from "./files.js";
 import { mailerFor } from "./mail.js";
@@ -116,6 +117,8 @@ const purge = () =>
   purgeDeletedAccounts({ db, valkey, files })
     .then((count) => count && console.log(`deleted ${count} account(s)`))
     .then(() => sweepThemeFiles({ db, publicUrl: settings.publicUrl }))
+    // Device keys of sessions that ran out without signing out.
+    .then(() => sweepExpiredDevices({ db, valkey }))
     // Then cloud files nothing uses: unfinished uploads, unsent media, deleted accounts' files.
     .then(() => files?.sweep())
     .then((swept) => {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SealedMessage } from "./e2ee.js";
 import type { AttachmentView, MessageKind } from "./storage.js";
 
 /** The most people in a group conversation, its creator included. */
@@ -50,22 +51,30 @@ export const ConversationMembers = z.object({
 });
 
 /** clientId is the client's own UUID (v7), so a resent message is stored once. Text, or one piece
- *  of the sender's own media (uploaded first with POST /me/media) with an optional caption. */
+ *  of the sender's own media (uploaded first with POST /me/media) with an optional caption. In an
+ *  end-to-end encrypted direct conversation, `sealed` instead of text, and the media sealed too
+ *  (POST /me/media/sealed); see docs/e2ee.md. */
 export const MessageSend = z
   .object({
     clientId: z.string().uuid(),
     text: z.string().trim().max(maxMessageLength).optional(),
+    sealed: SealedMessage.optional(),
     replyTo: z.number().int().positive().optional(),
     attachments: z
       .array(z.object({ mediaId: z.string().uuid() }))
       .max(1)
       .optional(),
   })
-  .refine((m) => Boolean(m.text) || Boolean(m.attachments?.length), {
+  .refine((m) => Boolean(m.text) || Boolean(m.sealed) || Boolean(m.attachments?.length), {
     message: "a message needs text or an attachment",
     path: ["text"],
-  });
-export const MessageEdit = z.object({ text: Text });
+  })
+  .refine((m) => !(m.sealed && m.text), { message: "a sealed message has no text", path: ["text"] });
+/** New text, or for a sealed message a new seal of it. */
+export const MessageEdit = z.union([
+  z.object({ text: Text }).strict(),
+  z.object({ sealed: SealedMessage }).strict(),
+]);
 export const ReadUpTo = z.object({ upToSeq: z.number().int().min(0) });
 /** A device got messages over the gateway up to this seq (fetching them says so by itself). */
 export const DeliveredUpTo = ReadUpTo;
@@ -98,6 +107,9 @@ export interface MessageView {
    *  its place stays ("message removed"). */
   deletedAt: string | null;
   createdAt: string;
+  /** End-to-end encrypted: its text and attachment keys are in here, and `text` is only the
+   *  stand-in for older clients (sealedFallbackText). Left out for a plain message. */
+  sealed?: SealedMessage;
 }
 
 export interface ReactionView {
@@ -139,11 +151,18 @@ export interface ConversationView {
   updatedAt: string;
   /** The community whose chat it is: its members come and go with the community's. */
   communityId?: string | null;
+  /** The party whose chat it is: only its members read and write there while they are in it. A
+   *  party's chat is not in the conversation list or the unread badge, it sits beside the party,
+   *  takes text only and starts muted (older API answers lack it). */
+  partyId?: string | null;
   muted?: boolean;
   /** Pinned to the top of the list; the list has pinned ones first (older API answers lack it). */
   pinned?: boolean;
   /** The other members' read and delivered marks (older API answers lack it). */
   receipts?: ReceiptView[];
+  /** A direct conversation with an end-to-end encrypted message in it: plain messages are refused
+   *  from then on (docs/e2ee.md). */
+  encrypted?: boolean;
 }
 
 export type MessageEvent =
