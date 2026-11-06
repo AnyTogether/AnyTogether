@@ -7,6 +7,7 @@ import { useLive, useLiveEvents } from "@/components/Live";
 import { Menu } from "@/components/MessagesBoard";
 import type { UiStrings } from "@/lib/i18n";
 import { type Friend, type Person, byPresence, fill, presenceDot, shownName } from "@/lib/people";
+import type { SfuAccess } from "@/lib/share";
 import {
   type CallJoin,
   type Party,
@@ -30,11 +31,12 @@ import {
   toggleDeafen,
   toggleMic,
 } from "@/lib/voice";
+import { VoiceRoom } from "@/lib/voiceSfu";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type FriendWithParty = Friend & {
-  presence: Friend["presence"] & { party?: { id: string; size: number; open: boolean } };
+  presence: Friend["presence"] & { party?: { id: string; size: number; max?: number; open: boolean } };
 };
 type Mode = "open" | "ptt";
 
@@ -85,7 +87,8 @@ export function PartyBoard({
   const [privacy, setPrivacy] = useState<"invite" | "friends">("invite");
 
   // Voice
-  const mesh = useRef<VoiceMesh | null>(null);
+  /** Party voice: the mesh, or the media server's room once the call has more voices. */
+  const mesh = useRef<VoiceMesh | VoiceRoom | null>(null);
   const [callId, setCallId] = useState<string | null>(null);
   const [voice, setVoice] = useState<VoiceState | null>(null);
   const [joining, setJoining] = useState(false);
@@ -148,6 +151,10 @@ export function PartyBoard({
 
   const talking = micOn && (prefs.mode === "open" || held);
   useEffect(() => mesh.current?.setTalking(talking), [talking]);
+  const talkingRef = useRef(talking);
+  talkingRef.current = talking;
+  const deafRef = useRef(mic.deafened);
+  deafRef.current = mic.deafened;
 
   useEffect(() => mesh.current?.setDeafened(mic.deafened), [mic.deafened]);
 
@@ -230,6 +237,9 @@ export function PartyBoard({
       case "call.ended":
         if (data.callId === callIdRef.current) stopVoice(false);
         return reload();
+      case "call.media":
+        if (data.callId === callIdRef.current && data.media === "sfu") moveToRoom(data.callId);
+        return reload();
       case "signal":
         if (data.call === callIdRef.current) mesh.current?.onSignal(data).catch(() => {});
         return;
@@ -249,6 +259,35 @@ export function PartyBoard({
     return result.ok;
   }
 
+  /** Into the media server's room with the microphone, for a call that goes through it. */
+  async function startRoom(call: string, stream: MediaStream, access: SfuAccess) {
+    const room = new VoiceRoom({ me, stream, access, onChange: () => setVoice(room.state()) });
+    mesh.current = room;
+    setCallId(call);
+    room.setTalking(talkingRef.current);
+    room.setDeafened(deafRef.current);
+    setVoice(room.state());
+    await room.start();
+  }
+
+  /** The call moved to the media server (a ninth voice came in): the mesh goes, the room comes. */
+  const moving = useRef(false);
+  async function moveToRoom(call: string) {
+    if (moving.current || mesh.current?.route !== "mesh" || callIdRef.current !== call) return;
+    moving.current = true;
+    try {
+      const access = await social<SfuAccess>(`calls/${call}/sfu`);
+      if (!access.body || callIdRef.current !== call || mesh.current?.route !== "mesh") return;
+      mesh.current.close();
+      mesh.current = null;
+      await startRoom(call, await VoiceMesh.microphone(noise), access.body);
+    } catch {
+      setNotice({ kind: "error", text: texts.failed });
+    } finally {
+      moving.current = false;
+    }
+  }
+
   async function joinVoice() {
     if (!party || !session) return;
     setJoining(true);
@@ -259,6 +298,13 @@ export function PartyBoard({
       const joined = await social<CallJoin>("calls", { method: "POST", ...json({ partyId: party.id }) });
       if (!joined.body?.call) throw new Error("no call");
       const call = joined.body.call.id;
+      if (joined.body.call.media === "sfu") {
+        const access = joined.body.sfu ?? (await social<SfuAccess>(`calls/${call}/sfu`)).body;
+        if (!access) throw new Error("no room");
+        await startRoom(call, stream, access);
+        await reload();
+        return;
+      }
       const started = new VoiceMesh({
         me,
         stream,
@@ -282,6 +328,13 @@ export function PartyBoard({
       setJoining(false);
     }
   }
+
+  // The party says its call went to the media server while this page still talks on the mesh
+  // (the event came while the socket was away).
+  useEffect(() => {
+    if (callId && party?.call?.id === callId && party.call.media === "sfu" && mesh.current?.route === "mesh")
+      moveToRoom(callId);
+  });
 
   // Everyone but the people in it: friends to invite, online first.
   const inParty = new Set(party?.members.map((m) => m.userId));
@@ -372,14 +425,17 @@ export function PartyBoard({
                     <span className="lines">
                       <span className="name">{fill(texts.partyOf, { name: friend.displayName })}</span>
                       <span className="meta">
-                        {friend.presence.party?.size}/{maxPartySize}
+                        {friend.presence.party?.size}/{friend.presence.party?.max ?? maxPartySize}
                       </span>
                     </span>
                     <div className="acts">
                       <button
                         type="button"
                         className="primary small"
-                        disabled={busy !== null || (friend.presence.party?.size ?? 0) >= maxPartySize}
+                        disabled={
+                          busy !== null ||
+                          (friend.presence.party?.size ?? 0) >= (friend.presence.party?.max ?? maxPartySize)
+                        }
                         onClick={() => act(friend.userId, `parties/${friend.presence.party?.id}/join`)}
                       >
                         {texts.join}
@@ -399,7 +455,7 @@ export function PartyBoard({
       <div className="party-title in d1">
         <h2>{texts.party}</h2>
         <span className="count">
-          {party.members.length}/{maxPartySize}
+          {party.members.length}/{party.max ?? maxPartySize}
         </span>
         {status !== "ready" && <span className="tag live-state">{texts.reconnecting}</span>}
       </div>
@@ -656,7 +712,7 @@ export function PartyBoard({
                       <button
                         type="button"
                         className="pill"
-                        disabled={busy !== null || party.members.length >= maxPartySize}
+                        disabled={busy !== null || party.members.length >= (party.max ?? maxPartySize)}
                         onClick={() =>
                           act(friend.userId, `parties/${party.id}/invites`, {
                             method: "POST",

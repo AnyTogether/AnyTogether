@@ -7,6 +7,7 @@ import { fill } from "@/lib/people";
 import {
   type PadOutput,
   type PadState,
+  type SfuAccess,
   type SharePlay,
   type SharePlayJoin,
   encodePad,
@@ -18,9 +19,11 @@ import {
   randomSession,
   restingPad,
   samePad,
+  watchRoute,
 } from "@/lib/share";
 import { type AudioStats, ShareAudio } from "@/lib/shareAudio";
 import { type LinkState, type LinkStats, ShareConnection, type ShareSignal } from "@/lib/shareConnection";
+import { ShareRoom } from "@/lib/shareSfu";
 import { social } from "@/lib/social";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -50,7 +53,9 @@ function quality(stats: LinkStats): Quality {
 }
 
 /** Watching a friend's share play: their game's picture and sound, straight from their launcher
- *  over WebRTC; with a pad from the host, this browser's controller or keyboard plays along. */
+ *  over WebRTC; with a pad from the host, this browser's controller or keyboard plays along. A
+ *  big share play goes through the server's media server, except for the viewers holding a pad,
+ *  who keep the direct connection. */
 export function Watch({ texts, initial, id }: { texts: UiStrings; initial: SharePlay | null; id: string }) {
   const { me, session, status, send } = useLive();
   const [share, setShare] = useState<SharePlay | null>(initial);
@@ -74,7 +79,9 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
   /** The first frame was drawn: until then the veil stays up. */
   const [picture, setPicture] = useState(false);
 
-  const conn = useRef<ShareConnection | null>(null);
+  const conn = useRef<ShareConnection | ShareRoom | null>(null);
+  /** The ICE servers from the last join, for a direct connection made later (a pad handed over). */
+  const ice = useRef<RTCIceServer[]>([]);
   const audio = useRef<ShareAudio | null>(null);
   const pending = useRef<ShareSignal[]>([]);
   const stage = useRef<HTMLDivElement>(null);
@@ -113,6 +120,50 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
     setPhase(next);
   }, []);
 
+  /** The connection this viewer should have now: from the media server, or straight from the
+   *  host. Another one in its place is closed first (the host hears a direct one go). */
+  const connect = useCallback(
+    (sharePlay: SharePlay, access: SfuAccess | null) => {
+      if (!sharePlay.host) return;
+      conn.current?.close(true);
+      conn.current = null;
+      setStream(null);
+      setPadOpen(false);
+      audio.current ??= new ShareAudio();
+      // The browser may already let the page play sound (the user clicked their way here).
+      audio.current.start().then(() => setSoundOn(!!audio.current?.running));
+      const onChange = () => {
+        if (conn.current !== started) return;
+        setLink(started.state);
+        setStream(started.stream);
+        setPadOpen(started.padOpen);
+      };
+      const started =
+        watchRoute(sharePlay, me) === "sfu"
+          ? new ShareRoom({
+              hostId: sharePlay.host.userId,
+              access,
+              renew: async () => (await social<SfuAccess>(`share-plays/${id}/sfu`)).body ?? null,
+              audio: audio.current,
+              onChange,
+            })
+          : new ShareConnection({
+              hostId: sharePlay.host.userId,
+              hostDevice: sharePlay.hostDevice,
+              iceServers: ice.current,
+              audio: audio.current,
+              signal,
+              onChange,
+              onPadOutput: (output) => feedback(output),
+            });
+      conn.current = started;
+      setLink(started.state);
+      for (const waiting of pending.current.splice(0)) started.onSignal(waiting);
+      started.start();
+    },
+    [id, me, signal],
+  );
+
   /** Joins (again, after the socket came back: the seat moves to this device and keeps its pad). */
   const join = useCallback(async () => {
     const joined = await social<SharePlayJoin & { join?: string }>(`share-plays/${id}/join`, {
@@ -126,35 +177,18 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
       return;
     }
     const { sharePlay, iceServers } = joined.body;
+    ice.current = iceServers;
     setShare(sharePlay);
     shareRef.current = sharePlay;
     setPhase("watching");
-    if (conn.current) {
-      conn.current.setIceServers(iceServers);
-      if (conn.current.state !== "connected") conn.current.askAgain();
+    const current = conn.current;
+    if (current && current.route === watchRoute(sharePlay, me)) {
+      current.setIceServers(iceServers);
+      if (current.state !== "connected") current.askAgain();
       return;
     }
-    if (!sharePlay.host) return;
-    audio.current ??= new ShareAudio();
-    // The browser may already let the page play sound (the user clicked their way here).
-    audio.current.start().then(() => setSoundOn(!!audio.current?.running));
-    const started = new ShareConnection({
-      hostId: sharePlay.host.userId,
-      hostDevice: sharePlay.hostDevice,
-      iceServers,
-      audio: audio.current,
-      signal,
-      onChange: () => {
-        setLink(started.state);
-        setStream(started.stream);
-        setPadOpen(started.padOpen);
-      },
-      onPadOutput: (output) => feedback(output),
-    });
-    conn.current = started;
-    for (const waiting of pending.current.splice(0)) started.onSignal(waiting);
-    started.start();
-  }, [id, signal, finish]);
+    connect(sharePlay, joined.body.sfu ?? null);
+  }, [id, me, finish, connect]);
 
   // Join once the socket is up: signals for this browser go to its session.
   useEffect(() => {
@@ -192,6 +226,9 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
           );
         setShare(next);
         shareRef.current = next;
+        // A pad handed over or taken back, or the share play moved to the media server: the
+        // other connection.
+        if (conn.current && conn.current.route !== watchRoute(next, me)) connect(next, null);
         return;
       }
       case "share_play.ended":
@@ -470,6 +507,7 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
         tabIndex={0}
         aria-label={fill(texts.shareWatching, { name: hostName })}
         data-link={link}
+        data-route={conn.current?.route ?? ""}
         data-frames={stats?.framesDecoded ?? 0}
         data-sound={stats?.audio === "opus" ? stats.audioSamples : (audioStats?.played ?? 0)}
         data-audio={stats?.audio ?? "pcm"}
@@ -627,7 +665,9 @@ export function Watch({ texts, initial, id }: { texts: UiStrings; initial: Share
                   ? texts.sharePathRelay
                   : stats?.path === "direct"
                     ? texts.sharePathDirect
-                    : "–"}
+                    : stats?.path === "server"
+                      ? texts.sharePathServer
+                      : "–"}
               </dd>
             </div>
             {slot && (
