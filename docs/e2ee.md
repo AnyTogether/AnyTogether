@@ -3,7 +3,7 @@
 Version 1 of the protocol (`v: 1`). Direct conversations (two people) only: groups and community
 chats stay as they are. This file is the contract between the server and every client: the web
 app, the macOS launcher, AnyPS5 Desktop and the phone app. The shared test vectors in
-`packages/shared/test/fixtures/e2ee-v1.json` pin it down byte for byte.
+`packages/e2ee/test/e2ee-v1.json` pin it down byte for byte.
 
 ## What it protects, and what it does not
 
