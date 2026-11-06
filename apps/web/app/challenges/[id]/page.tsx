@@ -96,7 +96,7 @@ export default async function ChallengePage({ params }: Params) {
 
       {ended && challenge.leader && <Winner standing={challenge.leader} texts={texts} value={value} />}
 
-      {challenge.myStanding && (
+      {challenge.myStanding && challenge.myStanding.value > 0 && (
         <article className="card my-rank in d2">
           <span className="sub">{texts.yourPlace}</span>
           <div className="my-rank-row">
