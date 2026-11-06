@@ -5,7 +5,7 @@ import type { Language } from "./i18n";
  *  together; the page shows the date at its top and the repository keeps the history. */
 
 /** The day these texts last changed (YYYY-MM-DD). */
-export const legalUpdated = "2026-10-26";
+export const legalUpdated = "2026-11-06";
 
 /** The AnyTogether server these texts speak for; any other address is someone else's server. */
 export const officialOrigin = "https://anytogether.net";
@@ -166,7 +166,7 @@ const privacyEn: LegalDoc = {
             "Anyone signed in sees a public community, its members (with their role and when they joined) and who is going to its events; an invite-only community is seen only by its members.",
             "In a call, a share play or an online game the others' devices connect to yours, so they can learn your IP address, as in any peer-to-peer connection.",
             "Your captures: a Friends post is seen only by you and your friends; a Public one by anyone signed in on the game's page and in the Captures feed of people who played with you, and on your profile when it is public (your friends always see it there). They are never on your signed-out profile or in link previews. Whoever can see a post sees its comments and the number of likes; the list of who liked it shows its author everyone, and others only their friends and people whose search setting is everyone. No one you blocked, or who blocked you, sees your posts, likes or comments, and you do not see theirs. A child's posts are for friends only.",
-            "Moderators see what is reported to them and the restrictions and appeals they handle; a community's moderators see its members and can remove or ban them from it. Whoever runs the server can technically reach everything on it, messages included: they are not end-to-end encrypted.",
+            "Moderators see what is reported to them and the restrictions and appeals they handle; a community's moderators see its members and can remove or ban them from it. Whoever runs the server can technically reach everything on it, with one exception. A direct conversation between two people whose apps support it is end-to-end encrypted: its messages, photos, clips and voice notes are encrypted on your device for your devices and the other person's, and the server keeps only what it cannot read. It still sees who writes to whom and when, how big a message is and whether it has an attachment, replies, reactions and read marks. Group chats, community chats and conversations with someone on an older app are not end-to-end encrypted. When you report an encrypted message, your app sends that message's key with the report, so the moderators can read that message and only that one.",
             "Parents and a family's manager see what [Children and families](#children) describes.",
           ],
         },
@@ -291,7 +291,7 @@ const privacyEn: LegalDoc = {
       id: "security",
       title: "Security",
       blocks: [
-        "Connections are encrypted (HTTPS). There are no passwords to leak: sign-in codes, session tokens and family codes are stored only as hashes, and a passkey leaves only its public key here. Messages are not end-to-end encrypted, so do not send anything you would not want the server's operator to be able to read.",
+        "Connections are encrypted (HTTPS). There are no passwords to leak: sign-in codes, session tokens and family codes are stored only as hashes, and a passkey leaves only its public key here. Direct conversations are end-to-end encrypted once both people use an app that supports it: each device has its own keys, which never leave it, and you can compare a safety number with the other person to be sure nobody is in between. A device added later cannot read what was sent before it. Group chats and community chats are not end-to-end encrypted, so do not send anything there you would not want the server's operator to be able to read. A call between two people goes straight between the two devices and is encrypted between them (DTLS-SRTP), through the relay too. A party's voice with more than eight people goes through this server's media server, when it has one, and is not end-to-end encrypted.",
       ],
     },
     {
@@ -557,7 +557,7 @@ const privacyTr: LegalDoc = {
             "Herkese açık bir topluluğu, üyelerini (rolleri ve ne zaman katıldıklarıyla) ve etkinliklerine kimlerin geleceğini giriş yapmış herkes görür; yalnızca davetle girilen bir topluluğu yalnızca üyeleri görür.",
             "Bir aramada, birlikte oynamada ya da online bir oyunda diğerlerinin cihazları seninkine bağlanır; bu yüzden her eşler arası bağlantıda olduğu gibi IP adresini öğrenebilirler.",
             "Çekimlerin: Arkadaşlar paylaşımını yalnızca sen ve arkadaşların görür; Herkese açık olanı giriş yapan herkes oyunun sayfasında ve seninle oynamış kişilerin Çekimler akışında, profilin herkese açıksa profilinde de görür (arkadaşların orada hep görür). Giriş yapılmadan açılan profilinde ve bağlantı önizlemelerinde asla yer almazlar. Bir paylaşımı görebilen, yorumlarını ve beğeni sayısını da görür; beğenenler listesi paylaşımın sahibine herkesi, başkalarına yalnızca kendi arkadaşlarını ve arama ayarı herkes olan kişileri gösterir. Engellediğin ya da seni engelleyen hiç kimse paylaşımlarını, beğenilerini ve yorumlarını görmez; sen de onlarınkini görmezsin. Bir çocuğun paylaşımları yalnızca arkadaşlarına açıktır.",
-            "Moderatörler kendilerine raporlananları ve ele aldıkları kısıtlama ve itirazları görür; bir topluluğun moderatörleri onun üyelerini görür ve onları topluluktan çıkarabilir ya da yasaklayabilir. Sunucuyu çalıştıran kişi teknik olarak oradaki her şeye, mesajlar dahil, erişebilir: mesajlar uçtan uca şifreli değildir.",
+            "Moderatörler kendilerine raporlananları ve ele aldıkları kısıtlama ve itirazları görür; bir topluluğun moderatörleri onun üyelerini görür ve onları topluluktan çıkarabilir ya da yasaklayabilir. Sunucuyu çalıştıran kişi teknik olarak oradaki her şeye erişebilir, bir istisna dışında. Uygulamaları destekleyen iki kişi arasındaki doğrudan konuşma uçtan uca şifrelidir: mesajları, fotoğrafları, klipleri ve sesli notları senin cihazında, senin ve karşındakinin cihazları için şifrelenir ve sunucu yalnızca okuyamadığı hâlini saklar. Sunucu yine de kimin kime ne zaman yazdığını, mesajın boyutunu ve ek içerip içermediğini, yanıtları, tepkileri ve okundu bilgilerini görür. Grup sohbetleri, topluluk sohbetleri ve eski bir uygulama kullanan biriyle konuşmalar uçtan uca şifreli değildir. Şifreli bir mesajı bildirdiğinde uygulaman o mesajın anahtarını bildirimle birlikte gönderir, böylece moderatörler yalnızca o mesajı okuyabilir.",
             "Ebeveynler ve ailenin yöneticisi [Çocuklar ve aileler](#children) bölümünde anlatılanları görür.",
           ],
         },
@@ -678,7 +678,7 @@ const privacyTr: LegalDoc = {
       id: "security",
       title: "Güvenlik",
       blocks: [
-        "Bağlantılar şifrelidir (HTTPS). Sızacak şifre yoktur: giriş kodları, oturum anahtarları ve aile kodları yalnızca özet olarak saklanır; bir geçiş anahtarı burada yalnızca açık anahtarını bırakır. Mesajlar uçtan uca şifreli değildir; sunucunun işletmecisinin okuyabilmesini istemediğin bir şeyi gönderme.",
+        "Bağlantılar şifrelidir (HTTPS). Sızacak şifre yoktur: giriş kodları, oturum anahtarları ve aile kodları yalnızca özet olarak saklanır; bir geçiş anahtarı burada yalnızca açık anahtarını bırakır. Doğrudan konuşmalar, iki kişi de bunu destekleyen bir uygulama kullandığında uçtan uca şifrelidir: her cihazın kendi anahtarları vardır ve cihazdan hiç çıkmaz. Aranızda kimse olmadığından emin olmak için karşındakiyle bir güvenlik numarası karşılaştırabilirsin. Sonradan eklenen bir cihaz, ondan önce gönderilenleri okuyamaz. Grup ve topluluk sohbetleri uçtan uca şifreli değildir, bu yüzden oralarda sunucunun işletmecisinin okuyabilmesini istemediğin bir şey gönderme. İki kişi arasındaki bir arama doğrudan iki cihaz arasında kurulur ve aktarıcı üzerinden geçerken de cihazlar arasında şifrelidir (DTLS-SRTP). Sekizden fazla kişinin konuştuğu bir parti sesi, sunucunun bir medya sunucusu varsa onun üzerinden geçer ve uçtan uca şifreli değildir.",
       ],
     },
     {

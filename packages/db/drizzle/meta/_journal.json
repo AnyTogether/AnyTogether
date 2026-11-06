@@ -201,8 +201,15 @@
     {
       "idx": 28,
       "version": "7",
-      "when": 1793934061227,
-      "tag": "0028_party_chat",
+      "when": 1793934197446,
+      "tag": "0028_e2ee_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793935250333,
+      "tag": "0029_party_chat",
       "breakpoints": true
     }
   ]

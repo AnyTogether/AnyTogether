@@ -16,6 +16,8 @@ export interface MediaItem {
   poster: string | null;
   hidden?: boolean;
   gallery?: number | null;
+  /** Encrypted on the sender's device: the links serve ciphertext, opened with the message's key. */
+  sealed?: true;
   createdAt: string;
 }
 
@@ -151,6 +153,8 @@ export function uploadMedia(
   file: Blob,
   kind: MediaKind,
   onProgress?: (fraction: number) => void,
+  /** Encrypted in the browser for an end-to-end encrypted message: kept by the server as it is. */
+  sealed = false,
 ): Promise<{
   ok: boolean;
   status: number;
@@ -158,7 +162,7 @@ export function uploadMedia(
 }> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/me/upload?kind=${kind}`);
+    xhr.open("POST", `/me/upload?kind=${kind}${sealed ? "&sealed=1" : ""}`);
     xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress?.(event.loaded / event.total);

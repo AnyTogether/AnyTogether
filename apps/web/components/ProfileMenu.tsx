@@ -137,10 +137,13 @@ export function ReportSheet({
   kind = "user",
   lead,
   title,
+  extra,
 }: {
   dialog: React.RefObject<HTMLDialogElement | null>;
   person: { userId: string; displayName: string };
   texts: UiStrings;
+  /** Sent with the report: an end-to-end encrypted message's content key. */
+  extra?: Record<string, string>;
 } & Target) {
   const [reason, setReason] = useState<(typeof reasons)[number] | null>(null);
   const [note, setNote] = useState("");
@@ -198,6 +201,7 @@ export function ReportSheet({
                   targetId: person.userId,
                   reason,
                   ...(note.trim() ? { note: note.trim() } : {}),
+                  ...extra,
                 }),
               }).catch(() => undefined);
               if (response?.ok) return setState("sent");

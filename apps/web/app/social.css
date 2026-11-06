@@ -1249,3 +1249,223 @@ svg.hang-up {
     min-height: 360px;
   }
 }
+
+/* End-to-end encryption: the lock in the thread's head, its sheet with the safety number, the
+   notice when someone's devices changed, and sealed media while it opens. */
+.e2ee-lock.on {
+  color: var(--c);
+  border-color: rgba(47, 224, 196, 0.28);
+}
+.e2ee-lock.on:hover {
+  border-color: rgba(47, 224, 196, 0.5);
+  background: rgba(47, 224, 196, 0.06);
+}
+.e2ee-line {
+  align-self: center;
+  max-width: 46ch;
+  margin: 10px auto 4px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--mute);
+  text-wrap: balance;
+}
+.e2ee-changed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 16px 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 184, 75, 0.26);
+  background: rgba(245, 184, 75, 0.07);
+  animation: e2ee-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.e2ee-changed > svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--away);
+}
+.e2ee-changed p {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.e2ee-changed-actions {
+  display: flex;
+  gap: 6px;
+}
+.e2ee-changed .pill.small {
+  padding: 6px 10px;
+}
+.e2ee-changed .pill.ghost {
+  border-color: transparent;
+  color: var(--mute);
+}
+@keyframes e2ee-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.composer.e2ee-stuck {
+  display: block;
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--mute);
+}
+
+dialog.sheet.e2ee-sheet {
+  width: min(460px, calc(100vw - 32px));
+}
+.e2ee-sheet .sheet-body {
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.e2ee-seal {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: var(--mute);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+}
+.e2ee-seal.on {
+  color: #07080c;
+  border-color: transparent;
+  background: linear-gradient(135deg, #8af0de, #8fb0ff);
+  box-shadow: 0 10px 30px rgba(47, 224, 196, 0.22);
+}
+.e2ee-seal svg {
+  width: 24px;
+  height: 24px;
+}
+.e2ee-sheet h4 {
+  font: 500 11px / 1 var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.e2ee-safety,
+.e2ee-devices {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.e2ee-digits {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  counter-reset: group;
+}
+.e2ee-digits li {
+  position: relative;
+  padding: 11px 0 9px;
+  text-align: center;
+  font: 500 17px / 1 var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  counter-increment: group;
+}
+/* Each group's place, so two people reading them out lose nothing: "seventh: 40213". */
+.e2ee-digits li::before {
+  content: counter(group);
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  font-size: 8px;
+  letter-spacing: 0;
+  color: var(--mute);
+  opacity: 0.7;
+}
+.e2ee-safety .pill {
+  justify-self: start;
+}
+.e2ee-safety .pill.primary {
+  border-color: transparent;
+}
+.e2ee-compared {
+  color: var(--c);
+  border-color: rgba(47, 224, 196, 0.35);
+}
+.e2ee-compared svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.e2ee-devices dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  font-size: 14px;
+}
+.e2ee-devices dt {
+  color: var(--mute);
+}
+.e2ee-sheet .row {
+  display: flex;
+  justify-content: flex-end;
+}
+.media-frame.e2ee-opening {
+  display: grid;
+  place-items: center;
+  color: var(--mute);
+  background: linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.03) 30%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.03) 70%
+    )
+    0 0 / 300% 100%;
+  animation: e2ee-shimmer 1.4s linear infinite;
+}
+.media-frame.e2ee-opening.voice {
+  aspect-ratio: auto;
+  height: 52px;
+}
+.media-frame.e2ee-opening svg {
+  width: 22px;
+  height: 22px;
+}
+@keyframes e2ee-shimmer {
+  to {
+    background-position: -300% 0;
+  }
+}
+.e2ee-file-failed {
+  font-size: 14px;
+  color: var(--mute);
+  font-style: italic;
+}
+@media (prefers-reduced-motion: reduce) {
+  .e2ee-changed,
+  .media-frame.e2ee-opening {
+    animation: none;
+  }
+}
+@media (max-width: 560px) {
+  .e2ee-changed {
+    flex-wrap: wrap;
+  }
+  .e2ee-changed-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .e2ee-digits li {
+    font-size: 15px;
+  }
+}

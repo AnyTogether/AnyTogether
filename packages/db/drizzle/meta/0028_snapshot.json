@@ -1,5 +1,5 @@
 {
-  "id": "b2a5bdf6-0ba5-4b9b-9bc7-a0d6502fbb62",
+  "id": "98c05779-0afd-4ae9-a7c7-7e923bda2d6f",
   "prevId": "cac570df-f10e-4923-bbc3-8cad378aad36",
   "version": "7",
   "dialect": "postgresql",
@@ -2290,9 +2290,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "party_id": {
-          "name": "party_id",
-          "type": "uuid",
+        "sealed_at": {
+          "name": "sealed_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         }
@@ -2324,19 +2324,6 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        },
-        "conversations_party_id_parties_id_fk": {
-          "name": "conversations_party_id_parties_id_fk",
-          "tableFrom": "conversations",
-          "tableTo": "parties",
-          "columnsFrom": [
-            "party_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2354,13 +2341,6 @@
           "columns": [
             "community_id"
           ]
-        },
-        "conversations_partyId_unique": {
-          "name": "conversations_partyId_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "party_id"
-          ]
         }
       },
       "policies": {},
@@ -2368,6 +2348,10 @@
         "kind": {
           "name": "kind",
           "value": "\"conversations\".\"kind\" in ('direct', 'group')"
+        },
+        "sealed_direct": {
+          "name": "sealed_direct",
+          "value": "\"conversations\".\"sealed_at\" is null or \"conversations\".\"kind\" = 'direct'"
         },
         "direct_key": {
           "name": "direct_key",
@@ -2453,6 +2437,130 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.e2ee_devices": {
+      "name": "e2ee_devices",
+      "schema": "",
+      "columns": {
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sign_key": {
+          "name": "sign_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "box_key": {
+          "name": "box_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sig": {
+          "name": "sig",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "e2ee_devices_session_id_index": {
+          "name": "e2ee_devices_session_id_index",
+          "columns": [
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "e2ee_devices_account_id_accounts_id_fk": {
+          "name": "e2ee_devices_account_id_accounts_id_fk",
+          "tableFrom": "e2ee_devices",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "e2ee_devices_session_id_sessions_id_fk": {
+          "name": "e2ee_devices_session_id_sessions_id_fk",
+          "tableFrom": "e2ee_devices",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "e2ee_devices_account_id_id_pk": {
+          "name": "e2ee_devices_account_id_id_pk",
+          "columns": [
+            "account_id",
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "e2ee_device_name": {
+          "name": "e2ee_device_name",
+          "value": "length(\"e2ee_devices\".\"name\") <= 80"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.earned_trophies": {
@@ -4723,6 +4831,13 @@
           "notNull": true,
           "default": "'active'"
         },
+        "sealed": {
+          "name": "sealed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "used_at": {
           "name": "used_at",
           "type": "timestamp with time zone",
@@ -5043,6 +5158,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "sealed": {
+          "name": "sealed",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -5097,6 +5218,10 @@
         "text_length": {
           "name": "text_length",
           "value": "length(\"messages\".\"text\") <= 4000"
+        },
+        "sealed_text": {
+          "name": "sealed_text",
+          "value": "\"messages\".\"sealed\" is null or \"messages\".\"text\" is null"
         }
       },
       "isRLSEnabled": false

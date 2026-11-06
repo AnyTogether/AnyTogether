@@ -2,6 +2,7 @@ import type { Person } from "@/lib/people";
 import type { SfuAccess } from "@/lib/share";
 import type { Attachment, MediaKind } from "@/lib/storage";
 import type { PartyTogether } from "@/lib/together";
+import type { Sealed } from "@anytogether/e2ee";
 
 /** Messages, parties and calls as the API shows them (the website keeps its own copy of the shapes). */
 export interface Message {
@@ -22,6 +23,8 @@ export interface Message {
   reactions?: Reaction[];
   deletedAt: string | null;
   createdAt: string;
+  /** End-to-end encrypted: opened in the browser (lib/e2ee); `text` is then only a stand-in. */
+  sealed?: Sealed;
 }
 
 export type MessageReaction = "like" | "love" | "laugh" | "wow" | "sad" | "fire" | "gg";
@@ -58,6 +61,8 @@ export interface Conversation {
   /** Older API answers lack these. */
   pinned?: boolean;
   receipts?: ReceiptMark[];
+  /** A direct conversation with an end-to-end encrypted message in it. */
+  encrypted?: boolean;
 }
 
 export interface PartyMember extends Person {

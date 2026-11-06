@@ -306,7 +306,15 @@ export function postRoutes(deps: Deps, notes: Notifier, mediaOf: MediaService) {
     const rows = await db
       .select()
       .from(media)
-      .where(and(inArray(media.id, input.media), eq(media.accountId, me), eq(media.status, "active")));
+      .where(
+        and(
+          inArray(media.id, input.media),
+          eq(media.accountId, me),
+          eq(media.status, "active"),
+          // Sealed media is for the encrypted message it was made for, never a post.
+          eq(media.sealed, false),
+        ),
+      );
     if (rows.length !== input.media.length)
       throw new HttpError(400, ErrorCode.badRequest, "media: only your own photos and clips, uploaded first");
     const clips = rows.filter((r) => r.kind === "clip");

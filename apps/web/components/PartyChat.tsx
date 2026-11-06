@@ -1,5 +1,6 @@
 "use client";
 
+import type { E2ee } from "@/components/E2ee";
 import { useLive, useLiveEvents } from "@/components/Live";
 import { type Pending, type Thread, ThreadView, refusal } from "@/components/MessagesBoard";
 import { hasReacted, withEvent, withReactions } from "@/lib/chat";
@@ -18,6 +19,16 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const noMedia = { enabled: false, limits: null };
+/** A party's chat is a group, never end-to-end encrypted: nothing to register, fetch or open. */
+const plainOnly = {
+  device: null,
+  server: "no",
+  noStorage: false,
+  people: {},
+  devicesOf: async () => ({}),
+  openMessage: () => ({ state: "plain" }),
+} as unknown as E2ee;
+const asIs = (message: Message) => message;
 
 /** The party's text chat beside its voice: the party's conversation, read and written by its
  *  members while they are in it, kept live by the gateway. Text only, with replies, reactions,
@@ -306,6 +317,9 @@ export function PartyChat({ party, texts, locale }: { party: Party; texts: UiStr
         onEdit={edit}
         onDelete={remove}
         onLeave={() => {}}
+        e2ee={plainOnly}
+        mode={null}
+        shown={asIs}
       />
     </div>
   );
