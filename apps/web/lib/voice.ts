@@ -83,6 +83,7 @@ const speakingHoldMs = 350;
  *  FEC and DTX, the platform's echo cancellation, noise suppression and gain. Whoever joins later
  *  makes the offers; if two offer at once, the "polite" side (the larger user ID) gives way. */
 export class VoiceMesh {
+  readonly route = "mesh" as const;
   private peers = new Map<string, Peer>();
   private stream: MediaStream | null;
   private context: AudioContext | null = null;

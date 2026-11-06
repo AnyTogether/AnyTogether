@@ -27,7 +27,7 @@ AnyTogether is MIT licensed: use it, change it and run it however you like.
 - A host name, such as `together.example.org`, whose DNS A (and AAAA, if the machine has IPv6)
   record points at the machine.
 - Open ports: 80/tcp and 443/tcp and 443/udp (HTTP/3). With the TURN relay also 3478/udp,
-  3478/tcp and 49160-49200/udp.
+  3478/tcp and 49160-49200/udp. With the media server also 7881/tcp and 7882/udp.
 - For real sign-in mail: an SMTP account or a [Resend](https://resend.com) API key. Without one
   the codes go to the API's log, which is enough for trying it out.
 
@@ -124,6 +124,35 @@ itself, hands out credentials only through the API (TURN REST: short-lived, sign
 `TURN_SECRET`) and refuses to relay into private and loopback addresses. Behind a NAT that hides
 the public address, replace `$$(detect-external-ip)` in `compose.yaml` with `public/private`
 addresses (`--external-ip=203.0.113.7/10.0.0.5`).
+
+### Big share plays and parties: the media server
+
+Share play and party voice go straight between the people in them. That holds four viewers on a
+share play and eight voices in a party call. A media server (LiveKit) takes bigger ones: the host
+sends the game once to it and it forwards to every viewer, and a party call moves to it when a
+ninth voice comes in. Smaller ones stay direct even with it. Viewers holding a controller keep the
+direct connection to the host, so the players get the shortest path.
+
+It needs a machine with good upload: every viewer of a big share play takes what the host sends,
+a few Mbit/s, from it, and every voice a few dozen kbit/s to each listener. It forwards and never
+re-encodes, so CPU and memory matter less: two cores and 1 GB carry a few busy rooms.
+
+1. In `.env`, a key and a secret of your own:
+   `LIVEKIT_API_KEY=` any name, e.g. `API` and a few random letters
+   `LIVEKIT_API_SECRET=` `openssl rand -hex 32` (32 characters or more)
+2. `LIVEKIT_URL=wss://together.example.org/livekit` in `.env`, for your host name. Caddy sends
+   `/livekit` to the media server. The API reaches it inside the network (`LIVEKIT_API_URL`).
+3. Optional limits: `SFU_MAX_SHARE_VIEWERS` (16, at most 50) and `SFU_MAX_PARTY_SIZE` (24, at most
+   32).
+4. Open 7881/tcp and 7882/udp to this machine.
+5. `docker compose --profile sfu up -d`, then `docker compose up -d api` so the API reads the new
+   settings. Its log says `media server: on`.
+
+The media server finds the machine's public address by itself (`use_external_ip` in
+`deploy/livekit.yaml`). Behind a NAT that hides it, set `rtc.node_ip` there instead. Without
+`LIVEKIT_API_KEY` and a long enough `LIVEKIT_API_SECRET` it does not start, and
+`docker compose logs livekit` says so. Without `LIVEKIT_URL` the API keeps it off and refuses share
+plays above four viewers and parties above eight (`media_server_off`).
 
 ### Push notifications
 
@@ -232,6 +261,11 @@ rest.
 | `WEBAUTHN_RP_NAME` | api | `.env`, `AnyTogether` | the site's name in passkey prompts |
 | `TURN_SECRET` | api (and coturn) | `.env` | the TURN REST secret; empty: no relay credentials |
 | `TURN_URLS` | api | `.env` | STUN/TURN URLs handed to callers, comma separated |
+| `LIVEKIT_URL` | api | `.env` | the media server's WebSocket as clients reach it (`wss://<domain>/livekit`); empty: no media server, share plays up to 4 viewers and parties up to 8 |
+| `LIVEKIT_API_URL` | api | `http://livekit:7880` | where the API reaches the media server's server API (empty outside `deploy/`: `LIVEKIT_URL` with `https`) |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | api (and livekit) | `.env` | the media server's key and secret (32 characters or more); both needed |
+| `SFU_MAX_SHARE_VIEWERS` | api | `.env`, `16` | the most viewers of a share play with the media server (5-50) |
+| `SFU_MAX_PARTY_SIZE` | api | `.env`, `24` | the most people in a party with the media server (9-32) |
 | `CLIENT_IP_HEADER` | api | `.env`, `cf-connecting-ip` | where per-address rate limits read the visitor's address: `cf-connecting-ip` (Cloudflare's header, then `X-Real-IP`; right behind Cloudflare or behind the bundled Caddy, which drops a CF-Connecting-IP sent by visitors), `x-real-ip` (your proxy sets `X-Real-IP` and passes CF-Connecting-IP through untouched, e.g. Traefik without Cloudflare) or `socket` (nothing in front of the API) |
 | `GAME_ICON_HOSTS` | api | `.env` | hosts (and their subdomains) a game's icon URL may point at, comma separated; launchers load icons for everyone who sees the game, so empty keeps none |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | api | `.env` | the Web Push key pair (`npx web-push generate-vapid-keys`); empty: no push notifications |

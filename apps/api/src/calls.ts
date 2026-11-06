@@ -9,13 +9,17 @@ import {
   ErrorCode,
   type GatewayEvent,
   type IceServer,
+  type MediaRoute,
   callDeafenedKey,
   callDeparturesKey,
   callInKey,
+  callMediaKey,
   callMembersKey,
   callMutedKey,
   deviceCallsKey,
   devicePresenceKey,
+  maxPartySize,
+  sfuCallRoom,
   turnCredentialSeconds,
 } from "@anytogether/shared";
 import { and, eq, isNull } from "drizzle-orm";
@@ -64,6 +68,29 @@ export function callRoutes(deps: Deps, parties: PartyService) {
   const keep = turnCredentialSeconds;
   const limit = rateLimiter(valkey, deps.limits);
   const family = familyGuard(db);
+  const { sfu } = deps;
+
+  /** A call is the mesh until it moves to the media server. */
+  const mediaOf = async (callId: string): Promise<MediaRoute> =>
+    (await valkey.get(callMediaKey(callId))) === "sfu" ? "sfu" : "mesh";
+
+  const sfuAccess = async (call: Call, me: string) =>
+    sfu && (await mediaOf(call.id)) === "sfu"
+      ? sfu.access(sfuCallRoom(call.id), me, { publish: true })
+      : null;
+
+  /** More voices in a party call than the mesh holds: it moves to the media server, and everyone in
+   *  the party hears it. Never back while the call lasts. */
+  const outgrown = async (call: Call) => {
+    if (!sfu || !call.partyId || (await mediaOf(call.id)) === "sfu") return false;
+    if ((await valkey.hlen(callInKey(call.id))) <= maxPartySize) return false;
+    await valkey.set(callMediaKey(call.id), "sfu", "EX", keep);
+    await tell(await valkey.smembers(callMembersKey(call.id)), {
+      type: "call.media",
+      data: { callId: call.id, partyId: call.partyId, media: "sfu" },
+    });
+    return true;
+  };
 
   const tell = async (userIds: string[], event: GatewayEvent) => {
     for (const userId of new Set(userIds)) await publish(valkey, userId, event);
@@ -91,6 +118,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     startedBy: call.startedBy,
     calleeId: call.calleeId,
     in: call.endedAt ? [] : await peers(call.id),
+    media: call.endedAt ? "mesh" : await mediaOf(call.id),
     startedAt: call.startedAt.toISOString(),
     answeredAt: call.answeredAt?.toISOString() ?? null,
     endedAt: call.endedAt?.toISOString() ?? null,
@@ -99,6 +127,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
   const joined = async (call: Call, me: string): Promise<CallJoin> => ({
     call: await view(call),
     ...iceServers(deps.turn, me),
+    sfu: await sfuAccess(call, me),
   });
 
   /** May signal in it, and is in it now on `device` (which, when its socket goes, leaves it). */
@@ -111,6 +140,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
       .expire(callMembersKey(callId), keep)
       .expire(callInKey(callId), keep)
       .expire(deviceCallsKey(device), keep)
+      .expire(callMediaKey(callId), keep)
       .exec();
   };
 
@@ -142,11 +172,19 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     if (!ended) return;
     const members = await valkey.smembers(callMembersKey(call.id));
     const devices = Object.values(await valkey.hgetall(callInKey(call.id)));
+    const media = await mediaOf(call.id);
     const cleanup = valkey
       .multi()
-      .del(callMembersKey(call.id), callInKey(call.id), callMutedKey(call.id), callDeafenedKey(call.id));
+      .del(
+        callMembersKey(call.id),
+        callInKey(call.id),
+        callMutedKey(call.id),
+        callDeafenedKey(call.id),
+        callMediaKey(call.id),
+      );
     for (const device of devices) cleanup.srem(deviceCallsKey(device), call.id);
     await cleanup.exec();
+    if (media === "sfu") await sfu?.close(sfuCallRoom(call.id));
     await tell(members, { type: "call.ended", data: { callId: call.id, partyId: call.partyId, reason } });
     const missed =
       !ended.partyId && ended.calleeId && !ended.answeredAt && reason === "ended" && by !== ended.calleeId;
@@ -174,6 +212,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     await valkey.srem(callDeafenedKey(call.id), me);
     if (device) await valkey.srem(deviceCallsKey(device), call.id);
     if (!stillMember) await valkey.srem(callMembersKey(call.id), me);
+    if (removed && (await mediaOf(call.id)) === "sfu") await sfu?.remove(sfuCallRoom(call.id), me);
     if (!call.partyId) return end(call, "ended", me);
     if (removed)
       await tell([...(await valkey.smembers(callMembersKey(call.id))), me], {
@@ -201,6 +240,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
       in: now.map((p) => p.userId),
       muted: now.filter((p) => p.muted).map((p) => p.userId),
       deafened: now.filter((p) => p.deafened).map((p) => p.userId),
+      media: await mediaOf(call.id),
     };
   };
   parties.leaveHooks.push(async (partyId, userId, ended) => {
@@ -248,9 +288,11 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     const before = await valkey.hget(callInKey(call.id), me);
     const fresh = !before;
     await enter(call.id, [me], me, device);
+    if (fresh) await outgrown(call);
     // In the voice on another device already (the computer, while the phone is the controller):
     // the voice moves here, and that device stops its own without leaving. The others' meshes
-    // take this device's offers in place of the old one's.
+    // take this device's offers in place of the old one's; on the media server the same identity
+    // joining from here takes the old one's place.
     if (before && before !== device) {
       await valkey.srem(deviceCallsKey(before), call.id);
       const [session] = await db
@@ -365,6 +407,16 @@ export function callRoutes(deps: Deps, parties: PartyService) {
       }
     }
     return c.json(await view(call));
+  });
+
+  /** A fresh media server token while the call goes through it (to join it when the call moved
+   *  there, or to come back after a long break). */
+  app.get("/calls/:id/sfu", async (c) => {
+    const me = c.get("userId");
+    const call = await asMember(c.req.param("id"), me);
+    const access = await sfuAccess(call, me);
+    if (!access) throw new HttpError(409, ErrorCode.conflict, "This call is peer to peer");
+    return c.json(access);
   });
 
   /** Fresh relay credentials for a call that outlives them. */
