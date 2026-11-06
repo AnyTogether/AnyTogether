@@ -211,6 +211,13 @@
       "when": 1793935250333,
       "tag": "0029_party_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793935712884,
+      "tag": "0030_challenges_public_api",
+      "breakpoints": true
     }
   ]
 }
