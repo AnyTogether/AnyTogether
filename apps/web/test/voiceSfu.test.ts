@@ -58,7 +58,14 @@ describe("party voice through the media server", () => {
 
   it("joins muted unless talking, and follows mute, deafen and who is there", async () => {
     const { join, seen } = fakeJoin();
-    const mic = { kind: "audio", enabled: true, stopped: false, stop: () => (mic.stopped = true) };
+    const mic = {
+      kind: "audio",
+      enabled: true,
+      stopped: false,
+      stop: () => {
+        mic.stopped = true;
+      },
+    };
     const room = new VoiceRoom({
       me: "me",
       stream: new FakeStream([mic]) as unknown as MediaStream,
