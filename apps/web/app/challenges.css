@@ -3,6 +3,7 @@
 /* The brand's trail: the same blue, violet and teal as the leaderboards' rank. */
 .challenges,
 .challenge,
+.ch-list,
 .ch-sheet {
   --trail: linear-gradient(90deg, #8fb0ff, #d4a6ff 55%, #8af0de);
 }
@@ -128,10 +129,12 @@
   overflow-wrap: anywhere;
 }
 .ch-kicker {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
   gap: 7px;
-  font: 500 12px / 1 var(--font-mono), monospace;
+  font: 500 12px / 1.35 var(--font-mono), monospace;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--mute);
