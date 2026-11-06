@@ -2,11 +2,11 @@ import { type GatewayEvent, topicChannel, userChannel, userEvents } from "@anyto
 import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
 
-/** Sends an event to every gateway holding one of the user's sockets, and keeps it five minutes
- *  for a socket that reconnects. */
-export async function publish(valkey: Redis, userId: string, event: GatewayEvent) {
+/** Sends an event to every gateway holding one of the user's sockets (only to the socket of one
+ *  sign-in, given `device`), and keeps it five minutes for a socket that reconnects. */
+export async function publish(valkey: Redis, userId: string, event: GatewayEvent, device?: string) {
   const id = uuidv7();
-  const message = JSON.stringify({ id, ...event });
+  const message = JSON.stringify({ id, ...event, ...(device ? { device } : {}) });
   await valkey
     .multi()
     .xadd(userEvents(userId), "MINID", "~", `${Date.now() - 5 * 60_000}`, "*", "event", message)

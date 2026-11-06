@@ -436,6 +436,26 @@ describe("the gateway", () => {
     for (const c of [caller, phone, laptop, outsider]) c.socket.close();
   });
 
+  it("passes no call signals from a device whose voice moved to another of the user's devices", async () => {
+    await valkey.sadd("call:c1:members", "u1", "u2");
+    // u2 joined on the Mac, then on the phone: the phone is the one in the call now.
+    await valkey.hset("call:c1:in", "u1", "s1", "u2", "phone");
+    const friend = await signedIn("u1", "s1");
+    const mac = await signedIn("u2", "mac");
+    const phone = await signedIn("u2", "phone");
+    mac.send({ op: "signal", to: "u1", call: "c1", kind: "bye", data: null });
+    expect(await mac.waitFor((frame) => frame.op === "error")).toMatchObject({ code: "not_in_call" });
+    phone.send({ op: "signal", to: "u1", call: "c1", kind: "offer", data: { sdp: "v=0" } });
+    const offer = await friend.waitFor((frame) => frame.type === "signal");
+    expect(offer.data).toMatchObject({ from: "u2", device: "phone", kind: "offer" });
+    expect(friend.frames.filter((frame) => frame.type === "signal")).toHaveLength(1);
+    // Someone not in the voice yet (a callee before answering) may still signal.
+    await valkey.sadd("call:c2:members", "u1", "u2");
+    mac.send({ op: "signal", to: "u1", call: "c2", kind: "candidate", data: {} });
+    await friend.waitFor((frame) => (frame.data as { call?: string })?.call === "c2");
+    for (const c of [friend, mac, phone]) c.socket.close();
+  });
+
   it("notes a device that goes while in a call, unless another tab of it is still here", async () => {
     await valkey.sadd("device-calls:web1", "c1");
     const tab = await signedIn("u1", "web1");

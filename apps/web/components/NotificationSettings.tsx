@@ -64,6 +64,34 @@ export function NotificationSettings({
       <div className="toggles">{noticeKinds.map(row)}</div>
       {children}
       <div className="toggles">
+        {settings.pushPreview !== undefined && (setup.push || setup.native) && (
+          <label className="toggle-row digest">
+            <span className="lines">
+              <span>{texts.pushPreview}</span>
+              <span className="meta">{texts.pushPreviewHint}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={settings.pushPreview}
+              onChange={(event) => change("pushPreview", event.target.checked)}
+            />
+            <span className="toggle" />
+          </label>
+        )}
+        {settings.pushCalls !== undefined && setup.native && (
+          <label className="toggle-row digest">
+            <span className="lines">
+              <span>{texts.pushCalls}</span>
+              <span className="meta">{texts.pushCallsHint}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={settings.pushCalls}
+              onChange={(event) => change("pushCalls", event.target.checked)}
+            />
+            <span className="toggle" />
+          </label>
+        )}
         <label className="toggle-row digest">
           <span className="lines">
             <span>{texts.digest}</span>

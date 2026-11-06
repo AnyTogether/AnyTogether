@@ -11,6 +11,7 @@ import { storeFromSettings } from "./fileStore.js";
 import { type FileService, fileService } from "./files.js";
 import { mailerFor } from "./mail.js";
 import { pruneMeetings } from "./met.js";
+import { apnsSender, fcmSender, nativePush as phonePush, serviceAccountOf } from "./nativePush.js";
 import { pruneNotifications, sendDigests, webPushSender } from "./notifications.js";
 import { restoreRevocations } from "./sessions.js";
 import { sweepThemeFiles } from "./themes.js";
@@ -30,6 +31,17 @@ console.log(
 );
 console.log(
   `push notifications: ${push ? "on" : "off (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT)"}`,
+);
+const apns = apnsSender(settings.apns);
+let fcm: ReturnType<typeof fcmSender>;
+try {
+  fcm = fcmSender({ account: serviceAccountOf(settings.fcmServiceAccount) });
+} catch (error) {
+  console.error((error as Error).message);
+}
+const nativePush = phonePush({ apns, fcm });
+console.log(
+  `phone push: iPhone ${apns ? `on (${settings.apns.topics.join(", ")})` : "off (APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY, APNS_BUNDLE_IDS)"}, Android ${fcm ? "on" : "off (FCM_SERVICE_ACCOUNT)"}`,
 );
 // Cloud saves and media only when the server has somewhere to keep them, and it works.
 let files: FileService | undefined;
@@ -73,6 +85,7 @@ const app = createApp({
   gameIconHosts: settings.gameIconHosts,
   clientIpHeader: settings.clientIpHeader,
   push,
+  nativePush,
   githubToken: settings.githubToken,
   backupStatusFile: settings.backupStatusFile,
   clientGate: settings.clientGate,

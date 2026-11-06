@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { calls } from "@anytogether/db";
+import { calls, sessions } from "@anytogether/db";
 import {
   CallCreate,
   type CallJoin,
@@ -148,7 +148,16 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     for (const device of devices) cleanup.srem(deviceCallsKey(device), call.id);
     await cleanup.exec();
     await tell(members, { type: "call.ended", data: { callId: call.id, partyId: call.partyId, reason } });
-    if (!ended.partyId && ended.calleeId && !ended.answeredAt && reason === "ended" && by !== ended.calleeId)
+    const missed =
+      !ended.partyId && ended.calleeId && !ended.answeredAt && reason === "ended" && by !== ended.calleeId;
+    // The callee's phones that rang stop, or show the missed call.
+    if (!ended.partyId && ended.calleeId && !ended.answeredAt)
+      parties.notes.ringOver(ended.calleeId, {
+        callId: ended.id,
+        from: missed && ended.startedBy ? await who.card(ended.startedBy) : null,
+        missed: Boolean(missed),
+      });
+    if (missed && ended.calleeId)
       await parties.notes.notify(ended.calleeId, {
         kind: "missed_call",
         actorId: ended.startedBy,
@@ -221,7 +230,11 @@ export function callRoutes(deps: Deps, parties: PartyService) {
       if (!call) throw new HttpError(409, ErrorCode.conflict, "Try again");
       await enter(call.id, [me, userId], me, device);
       const from = await who.card(me);
-      if (from) await tell([userId], { type: "call.ringing", data: { callId: call.id, from, device } });
+      if (from) {
+        await tell([userId], { type: "call.ringing", data: { callId: call.id, from, device } });
+        // A phone whose app is closed rings through push.
+        parties.notes.ring(userId, { callId: call.id, from });
+      }
       return c.json(await joined(call, me), 201);
     }
 
@@ -232,8 +245,28 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     await db.insert(calls).values({ id: uuidv7(), partyId: party.id, startedBy: me }).onConflictDoNothing();
     const call = await partyCall(party.id);
     if (!call) throw new HttpError(409, ErrorCode.conflict, "Try again");
-    const fresh = !(await valkey.hexists(callInKey(call.id), me));
+    const before = await valkey.hget(callInKey(call.id), me);
+    const fresh = !before;
     await enter(call.id, [me], me, device);
+    // In the voice on another device already (the computer, while the phone is the controller):
+    // the voice moves here, and that device stops its own without leaving. The others' meshes
+    // take this device's offers in place of the old one's.
+    if (before && before !== device) {
+      await valkey.srem(deviceCallsKey(before), call.id);
+      const [session] = await db
+        .select({ client: sessions.client })
+        .from(sessions)
+        .where(eq(sessions.id, device));
+      await publish(
+        valkey,
+        me,
+        {
+          type: "call.moved",
+          data: { callId: call.id, partyId: party.id, userId: me, device, client: session?.client ?? null },
+        },
+        before,
+      );
+    }
     if (fresh) {
       await tell(
         members.filter((id) => id !== me),
@@ -264,6 +297,7 @@ export function callRoutes(deps: Deps, parties: PartyService) {
       type: "call.answered",
       data: { callId: call.id, userId: me, device },
     });
+    parties.notes.ringOver(me, { callId: call.id, from: null, missed: false });
     return c.json(await joined(answered, me));
   });
 
@@ -285,9 +319,17 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     }
   }
 
+  /** The device that is not the one in the call for you (the voice moved off it) only goes quiet
+   *  itself: leaving from it changes nothing. */
+  const elsewhere = async (callId: string, me: string, device: string) => {
+    const current = await valkey.hget(callInKey(callId), me);
+    return current !== null && current !== device;
+  };
+
   app.post("/calls/:id/leave", async (c) => {
     const me = c.get("userId");
     const call = await asMember(c.req.param("id"), me);
+    if (await elsewhere(call.id, me, c.get("sessionId"))) return c.body(null, 204);
     await leaveAndShow(call, me);
     return c.body(null, 204);
   });
@@ -300,6 +342,8 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     const input = await body(c, CallMute);
     if (!(await valkey.hexists(callInKey(call.id), me)))
       throw new HttpError(409, ErrorCode.conflict, "Join the call first");
+    if (await elsewhere(call.id, me, c.get("sessionId")))
+      throw new HttpError(409, ErrorCode.conflict, "Your voice is on another device");
     const wasDeaf = Boolean(await valkey.sismember(callDeafenedKey(call.id), me));
     const deafened = input.deafened ?? (input.muted ? wasDeaf : false);
     const muted = input.muted || deafened;

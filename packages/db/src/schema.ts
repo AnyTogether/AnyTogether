@@ -935,6 +935,34 @@ export const pushSubscriptions = pgTable(
   (table) => [index().on(table.accountId), index().on(table.sessionId)],
 );
 
+/** A phone app's push token (APNs for an iPhone, FCM for Android), tied to the sign-in that
+ *  registered it: signing out ends it. `app` is the iPhone app's bundle ID (the APNs topic) and
+ *  `sandbox` its build's use of Apple's development push service. */
+export const pushDevices = pgTable(
+  "push_devices",
+  {
+    id: uuid().primaryKey(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    sessionId: uuid()
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    platform: text().notNull(),
+    token: text().notNull().unique(),
+    app: text(),
+    sandbox: boolean().notNull().default(false),
+    /** The language the phone shows its notifications in: en or tr. */
+    lang: text().notNull().default("en"),
+    createdAt: now(),
+  },
+  (table) => [
+    index().on(table.accountId),
+    index().on(table.sessionId),
+    check("push_device_platform", sql`${table.platform} in ('apns', 'fcm')`),
+  ],
+);
+
 /** Files kept in PostgreSQL by the default blob store (theme files and their stills), in pieces
  *  of at most 1 MiB so none is read into memory whole. */
 export const blobs = pgTable(

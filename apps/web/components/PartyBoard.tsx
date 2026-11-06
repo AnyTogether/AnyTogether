@@ -227,6 +227,19 @@ export function PartyBoard({
       case "call.joined":
       case "call.updated":
         return reload();
+      case "call.moved":
+        // You joined the voice on another device (the phone): this page goes quiet and stays in.
+        if (data.callId === callIdRef.current) {
+          mesh.current?.close(false);
+          mesh.current = null;
+          setVoice(null);
+          setCallId(null);
+          setNotice({
+            kind: "success",
+            text: data.client === "phone" ? texts.voiceMovedPhone : texts.voiceMoved,
+          });
+        }
+        return reload();
       case "call.ended":
         if (data.callId === callIdRef.current) stopVoice(false);
         return reload();

@@ -5,6 +5,7 @@ import {
   type ServerFrame,
   callDepartureGraceMs,
   callDeparturesKey,
+  callInKey,
   callMembersKey,
   conversationMembersKey,
   deviceCallsKey,
@@ -315,15 +316,20 @@ export async function createGateway(options: GatewayOptions) {
         : gameSessionMembersKey(session as string);
     const asked = store.multi().sismember(members, connection.userId).sismember(members, to);
     if (share) asked.get(sharePlayKey(share));
-    const [[, from], [, peer], [, shared] = [null, null]] = (await asked.exec()) as [
+    // In a call, from the device the sender is in it on: one whose voice moved to another device
+    // (the phone, while it is the controller) is heard no more.
+    else if (call) asked.hget(callInKey(call), connection.userId);
+    const [[, from], [, peer], [, third] = [null, null]] = (await asked.exec()) as [
       [null, number],
       [null, number],
       [null, string | null]?,
     ];
+    const shared = share ? third : null;
+    const movedAway = call !== undefined && typeof third === "string" && third !== connection.sessionId;
     // In a share play one end is always the host: viewers never reach each other.
     const host = share ? hostOf(shared) : undefined;
     const viaHost = !share || (host !== undefined && (host === connection.userId || host === to));
-    if (!from || !peer || to === connection.userId || !viaHost)
+    if (!from || !peer || to === connection.userId || !viaHost || movedAway)
       return send(
         connection.socket,
         call

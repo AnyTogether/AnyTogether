@@ -32,6 +32,7 @@ import { messageRoutes } from "./messages.js";
 import { metRoutes } from "./met.js";
 import type { AuthVariables } from "./middleware.js";
 import { reportRoutes } from "./moderation.js";
+import type { NativePush } from "./nativePush.js";
 import { type PushSender, notificationRoutes, notifier } from "./notifications.js";
 import { partyRoutes, partyService } from "./parties.js";
 import { postRoutes } from "./posts.js";
@@ -74,6 +75,9 @@ export interface Deps {
   blockedLinkDomains?: string[];
   /** Web Push with the server's VAPID keys; without it no push notifications are sent. */
   push?: PushSender;
+  /** Push to the phone app: APNs for iPhones and FCM for Android, each when set up; without it
+   *  phones get no push notifications. */
+  nativePush?: NativePush;
   /** Where theme files are kept: PostgreSQL when left out. */
   blobs?: BlobStore;
   /** Cloud saves and media (a folder or an S3 bucket, and the quota); off when left out. */

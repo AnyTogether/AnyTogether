@@ -71,11 +71,16 @@ export type NotificationEvent =
   | { type: "notification.read"; data: { ids: string[] | null; unread: number } };
 
 /** Each kind on or off (all on unless turned off), the mail digest and the weekly family summary by
- *  mail (both off unless turned on). */
+ *  mail (both off unless turned on), and for push: whether a push shows what was written (a
+ *  message's or comment's text; on unless turned off) and whether a call rings the phone (on). */
 export type NotificationSettings = Record<OptionalNotificationKind, boolean> & {
   digest: boolean;
   familyMail: boolean;
+  pushPreview: boolean;
+  pushCalls: boolean;
 };
+/** The settings that are not a kind. */
+export const notificationSwitches = ["digest", "familyMail", "pushPreview", "pushCalls"] as const;
 export const defaultNotificationSettings: NotificationSettings = {
   friend_request: true,
   friend_accepted: true,
@@ -99,6 +104,8 @@ export const defaultNotificationSettings: NotificationSettings = {
   comment_reply: true,
   digest: false,
   familyMail: false,
+  pushPreview: true,
+  pushCalls: true,
 };
 
 export function notificationSettingsOf(stored: unknown): NotificationSettings {
@@ -113,7 +120,7 @@ export function notificationSettingsOf(stored: unknown): NotificationSettings {
 export const NotificationSettingsUpdate = z
   .object(
     Object.fromEntries(
-      [...optionalNotificationKinds, "digest", "familyMail"].map((key) => [key, z.boolean().optional()]),
+      [...optionalNotificationKinds, ...notificationSwitches].map((key) => [key, z.boolean().optional()]),
     ) as Record<keyof NotificationSettings, z.ZodOptional<z.ZodBoolean>>,
   )
   .strict();
@@ -130,6 +137,38 @@ export const PushSubscriptionInput = z.object({
   lang: z.enum(["en", "tr"]).optional(),
 });
 export const PushUnsubscribe = z.object({ endpoint: z.string().max(1000) });
+
+/** Where a phone's pushes go: Apple's push service (APNs) for an iPhone, Firebase Cloud Messaging
+ *  for Android. */
+export const pushPlatforms = ["apns", "fcm"] as const;
+export type PushPlatform = (typeof pushPlatforms)[number];
+
+/** POST /me/push/device: the phone app's push token, tied to its sign-in. An iPhone says which app
+ *  it is (its bundle ID, the APNs topic; it must be one the server pushes to) and whether the build
+ *  uses Apple's development push service. */
+export const PushDeviceInput = z.object({
+  platform: z.enum(pushPlatforms),
+  token: z
+    .string()
+    .min(8)
+    .max(4096)
+    .regex(/^[A-Za-z0-9:_\-]+$/, "a push token"),
+  app: z
+    .string()
+    .max(200)
+    .regex(/^[A-Za-z0-9.\-]+$/, "a bundle ID")
+    .optional(),
+  sandbox: z.boolean().optional(),
+  lang: z.enum(["en", "tr"]).optional(),
+});
+export const PushDeviceRemove = z.object({ token: z.string().max(4096) });
+
+/** Which phones this server pushes to (GET /me/notifications/settings): APNs for these bundle IDs,
+ *  and FCM. Null when it pushes to no phone. */
+export interface NativePushView {
+  apns: string[];
+  fcm: boolean;
+}
 
 /** At most one mail digest per account in this long. */
 export const digestEveryMs = 6 * 3_600_000;

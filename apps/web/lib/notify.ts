@@ -96,13 +96,21 @@ export const noticeKinds = [
   "comment_reply",
 ] as const;
 export type NoticeKind = (typeof noticeKinds)[number];
-/** familyMail: the weekly family summary by mail (older servers leave it out). */
-export type NoticeSettings = Record<NoticeKind, boolean> & { digest: boolean; familyMail?: boolean };
+/** familyMail: the weekly family summary by mail; pushPreview: what was written shows in a push;
+ *  pushCalls: a call rings the phone app (older servers leave them out). */
+export type NoticeSettings = Record<NoticeKind, boolean> & {
+  digest: boolean;
+  familyMail?: boolean;
+  pushPreview?: boolean;
+  pushCalls?: boolean;
+};
 
 export interface NoticeSetup {
   settings: NoticeSettings;
   /** The server's VAPID key, when it sends browser push. */
   push: { publicKey: string } | null;
+  /** Whether it pushes to the phone app: the iPhone apps (APNs) and Android (FCM). */
+  native?: { apns: string[]; fcm: boolean } | null;
   canMail: boolean;
 }
 
