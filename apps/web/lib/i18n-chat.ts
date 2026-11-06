@@ -1,4 +1,5 @@
-/** Strings of reactions, replies, unsend, receipts, pin and mute in messages, English and Turkish. */
+/** Strings of reactions, replies, unsend, receipts, pin, mute and the party chat in messages, English
+ *  and Turkish. */
 export const chatEn = {
   react: "React",
   reactionLike: "Like",
@@ -62,6 +63,10 @@ export const chatEn = {
   reportMessage: "Report",
   reportMessageTitle: "Report this message",
   reportMessageLead: "A moderator will look at it. Nobody is told who reported it.",
+  formerMember: "Former member",
+  partyChat: "Chat",
+  partyChatPlaceholder: "Message the party",
+  partyChatEmpty: "Only the party reads this. Anyone who joins sees the messages so far.",
 };
 
 export const chatTr: typeof chatEn = {
@@ -128,4 +133,8 @@ export const chatTr: typeof chatEn = {
   reportMessage: "Bildir",
   reportMessageTitle: "Bu mesajı bildir",
   reportMessageLead: "Bir moderatör bakacak. Kimin bildirdiği kimseye söylenmez.",
+  formerMember: "Eski üye",
+  partyChat: "Sohbet",
+  partyChatPlaceholder: "Partiye yaz",
+  partyChatEmpty: "Bunu yalnız parti okur. Katılan herkes o ana kadarki mesajları görür.",
 };

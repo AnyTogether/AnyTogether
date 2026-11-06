@@ -55,6 +55,8 @@ export interface Conversation {
   updatedAt: string;
   /** A community's chat: its members come and go with the community (older API answers lack it). */
   communityId?: string | null;
+  /** A party's chat: shown beside the party, not in the list (older API answers lack it). */
+  partyId?: string | null;
   muted?: boolean;
   /** Older API answers lack these. */
   pinned?: boolean;
@@ -100,6 +102,8 @@ export interface Party {
   joinCode?: JoinCode | null;
   /** The party's Discord server or channel (members only). */
   discord?: string | null;
+  /** The party's text chat (members only; older API answers lack it). */
+  conversationId?: string;
   createdAt: string;
 }
 

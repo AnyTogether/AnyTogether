@@ -151,6 +151,10 @@ export interface ConversationView {
   updatedAt: string;
   /** The community whose chat it is: its members come and go with the community's. */
   communityId?: string | null;
+  /** The party whose chat it is: only its members read and write there while they are in it. A
+   *  party's chat is not in the conversation list or the unread badge, it sits beside the party,
+   *  takes text only and starts muted (older API answers lack it). */
+  partyId?: string | null;
   muted?: boolean;
   /** Pinned to the top of the list; the list has pinned ones first (older API answers lack it). */
   pinned?: boolean;
