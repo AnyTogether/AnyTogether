@@ -51,7 +51,7 @@ function ChallengeRow({ challenge, texts }: { challenge: Challenge; texts: Strin
         <span className="meta">{when}</span>
       </span>
       <span className="ch-side">
-        {challenge.myStanding ? (
+        {challenge.myStanding && challenge.myStanding.value > 0 ? (
           <>
             <b className="ch-place">#{challenge.myStanding.rank}</b>
             <span className="meta">{value(challenge.myStanding.value)}</span>

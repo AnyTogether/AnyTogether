@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { challengeValue, progressOf, untilText } from "../lib/challenges";
 import { challengesEn, challengesTr } from "../lib/i18n-challenges";
 
-const texts = { minutes: "{m} min", hoursOnly: "{h} h", pointsValue: "{n} pts", trophiesValue: "{n} trophies" };
+const texts = {
+  minutes: "{m} min",
+  hoursOnly: "{h} h",
+  pointsValue: "{n} pts",
+  trophiesValue: "{n} trophies",
+};
 
 describe("challenges on the website", () => {
   it("shows a value as points, trophies or play time", () => {

@@ -8,6 +8,9 @@
 }
 
 /* A list of challenges */
+.challenges .board-controls .seg {
+  justify-self: start;
+}
 .ch-list {
   list-style: none;
   padding: 0;
@@ -32,8 +35,9 @@
 }
 .ch-row .name {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
   min-width: 0;
   font-weight: 600;
   overflow-wrap: anywhere;
