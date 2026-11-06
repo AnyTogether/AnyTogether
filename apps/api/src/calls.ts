@@ -188,19 +188,19 @@ export function callRoutes(deps: Deps, parties: PartyService) {
     await tell(members, { type: "call.ended", data: { callId: call.id, partyId: call.partyId, reason } });
     const missed =
       !ended.partyId && ended.calleeId && !ended.answeredAt && reason === "ended" && by !== ended.calleeId;
-    // The callee's phones that rang stop, or show the missed call.
-    if (!ended.partyId && ended.calleeId && !ended.answeredAt)
-      parties.notes.ringOver(ended.calleeId, {
-        callId: ended.id,
-        from: missed && ended.startedBy ? await who.card(ended.startedBy) : null,
-        missed: Boolean(missed),
-      });
     if (missed && ended.calleeId)
       await parties.notes.notify(ended.calleeId, {
         kind: "missed_call",
         actorId: ended.startedBy,
         subjectId: ended.id,
         data: { callId: ended.id },
+      });
+    // The callee's phones that rang stop, or show the missed call (its badge counting it).
+    if (!ended.partyId && ended.calleeId && !ended.answeredAt)
+      parties.notes.ringOver(ended.calleeId, {
+        callId: ended.id,
+        from: missed && ended.startedBy ? await who.card(ended.startedBy) : null,
+        missed: Boolean(missed),
       });
   }
 

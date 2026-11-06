@@ -199,8 +199,11 @@ describe("notifications", () => {
         comment_reply: true,
         digest: false,
         familyMail: false,
+        pushPreview: true,
+        pushCalls: true,
       },
       push: null,
+      native: null,
       canMail: true,
     });
     const changed = await h.call(
