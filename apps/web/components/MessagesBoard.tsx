@@ -2,8 +2,17 @@
 
 import { Avatar } from "@/components/Avatar";
 import { CallButton } from "@/components/Calls";
+import {
+  DevicesChanged,
+  type E2ee,
+  EncryptionSheet,
+  LockButton,
+  SealedAttachmentView,
+  useE2ee,
+} from "@/components/E2ee";
 import { useLive, useLiveEvents } from "@/components/Live";
 import { AttachmentView, MediaViewer, VoiceRecorder } from "@/components/Media";
+import { ReportSheet } from "@/components/ProfileMenu";
 import {
   byPinnedThenUpdated,
   canEditMessage,
@@ -16,6 +25,19 @@ import {
   withEvent,
   withReactions,
 } from "@/lib/chat";
+import {
+  type ChatMode,
+  type ListedDevice,
+  chatMode,
+  cleanPicture,
+  contentKeyOf,
+  deviceChange,
+  memory,
+  otherOf,
+  revealed,
+  safetyOf,
+  sealFor,
+} from "@/lib/e2ee";
 import { familyRefusal } from "@/lib/family";
 import type { UiStrings } from "@/lib/i18n";
 import { type Person, fill } from "@/lib/people";
@@ -41,6 +63,7 @@ import {
   posterOf,
   uploadMedia,
 } from "@/lib/storage";
+import { sealFile } from "@anytogether/e2ee";
 import Link from "next/link";
 import {
   type CSSProperties,
@@ -146,6 +169,7 @@ export function MessagesBoard({
   media?: MediaSetup;
 }) {
   const { me, status, send: sendFrame } = useLive();
+  const e2ee = useE2ee(me);
   const [conversations, setConversations] = useState(initialConversations);
   /** Who is typing where, and until when it shows. */
   const [typing, setTyping] = useState<Record<string, Record<string, number>>>({});
@@ -164,6 +188,67 @@ export function MessagesBoard({
   selectedRef.current = selected;
 
   const current = conversations.find((c) => c.id === selected) ?? null;
+  const currentOther = current ? otherOf(current, me) : undefined;
+
+  /** A message as it reads here: a sealed one opened, or what stands in for it. */
+  const shown = useCallback(
+    (message: Message) =>
+      revealed(message, e2ee.openMessage(message), {
+        before: texts.e2eeBeforeDevice,
+        bad: texts.e2eeUndecryptable,
+      }),
+    [e2ee.openMessage, texts.e2eeBeforeDevice, texts.e2eeUndecryptable],
+  );
+
+  // A direct conversation opened: both people's devices, to seal for and to show.
+  const devicesOf = e2ee.devicesOf;
+  const otherId = currentOther?.userId;
+  useEffect(() => {
+    if (otherId && e2ee.server === "yes") devicesOf([me, otherId]);
+  }, [otherId, me, e2ee.server, devicesOf]);
+  // Seen encrypted once: this browser never writes plain in it again.
+  useEffect(() => {
+    if (current?.encrypted) memory.setEncrypted(me, current.id);
+  }, [current?.encrypted, current?.id, me]);
+
+  /** How a direct conversation is written in now (null for a group, or while still asking). */
+  const modeOf = (conversation: Conversation): ChatMode | null => {
+    const other = otherOf(conversation, me);
+    if (!other || e2ee.server === "unknown") return null;
+    return chatMode({
+      serverSupports: e2ee.server === "yes",
+      device: e2ee.device,
+      encrypted: Boolean(conversation.encrypted) || memory.encrypted(me, conversation.id),
+      theirs: e2ee.people[other.userId]?.active.length ?? 0,
+    });
+  };
+
+  /** Sends a sealed message (or a new seal of one, for an edit) for every device of both people,
+   *  fetching the devices again when the server says they changed. */
+  async function sealed(
+    conversation: Conversation,
+    messageId: string,
+    payload: Parameters<typeof sealFor>[3],
+    request: (
+      sealed: ReturnType<typeof sealFor>,
+    ) => Promise<{ ok: boolean; status: number; body: (Message & { code?: string }) | null }>,
+  ) {
+    const other = otherOf(conversation, me);
+    const device = e2ee.device;
+    if (!other || !device) return { ok: false, status: 0, body: null };
+    let devices = await e2ee.devicesOf([me, other.userId]);
+    for (let attempt = 0; ; attempt++) {
+      const all: ListedDevice[] = [...(devices[me]?.active ?? []), ...(devices[other.userId]?.active ?? [])];
+      const result = await request(
+        sealFor({ conversationId: conversation.id, messageId, me }, device, all, payload),
+      );
+      if (result.body?.code !== "e2ee_devices" || attempt >= 2) {
+        if (result.ok) memory.setEncrypted(me, conversation.id);
+        return result;
+      }
+      devices = await e2ee.devicesOf([me, other.userId], true);
+    }
+  }
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000);
@@ -429,10 +514,26 @@ export function MessagesBoard({
       ],
     }));
     lastTyped.current[conversationId] = 0;
-    const result = await social<Message & { code?: string }>(`conversations/${conversationId}/messages`, {
-      method: "POST",
-      ...json({ clientId, text, ...(replyTo ? { replyTo } : {}) }),
-    });
+    const conversation = conversationsRef.current.find((c) => c.id === conversationId);
+    const post = (body: Record<string, unknown>) =>
+      social<Message & { code?: string }>(`conversations/${conversationId}/messages`, {
+        method: "POST",
+        ...json({ clientId, ...body, ...(replyTo ? { replyTo } : {}) }),
+      });
+    const mode = conversation ? modeOf(conversation) : null;
+    let result =
+      conversation && mode === "sealed"
+        ? await sealed(conversation, clientId, { v: 1, text }, (seal) => post({ sealed: seal }))
+        : mode === "stuck"
+          ? { ok: false, status: 409, body: { code: "e2ee_required" } as Message & { code?: string } }
+          : await post({ text });
+    // The other person can read sealed messages now: sealed, never plain.
+    if (conversation && result.body?.code === "e2ee_required" && mode !== "stuck") {
+      const other = otherOf(conversation, me);
+      const devices = other ? await e2ee.devicesOf([me, other.userId], true) : {};
+      if (other && devices[other.userId]?.active.length)
+        result = await sealed(conversation, clientId, { v: 1, text }, (seal) => post({ sealed: seal }));
+    }
     if (result.ok && result.body) return take(result.body, true);
     setPending((all) => ({
       ...all,
@@ -444,6 +545,8 @@ export function MessagesBoard({
       setNotice(
         refusal(texts, result.status, result.body?.code, (result.body as { side?: string } | null)?.side),
       );
+    // Encrypted, and this browser cannot keep keys to seal it.
+    else if (result.body?.code === "e2ee_required" && e2ee.noStorage) setNotice(texts.e2eeNoBrowser);
   }
 
   const setPendingMedia = (conversationId: string, clientId: string, change: Partial<Pending>) =>
@@ -473,6 +576,11 @@ export function MessagesBoard({
       setPendingMedia(conversationId, clientId, { failed: true });
       setNotice(message);
     };
+    const conversation = conversationsRef.current.find((c) => c.id === conversationId);
+    const mode = conversation ? modeOf(conversation) : null;
+    if (mode === "stuck") return fail(texts.failed);
+    if (conversation && mode === "sealed")
+      return sendSealedMedia(conversation, item, caption, clientId, fail);
     const uploaded = await uploadMedia(item.file, item.kind, (progress) =>
       setPending((all) => ({
         ...all,
@@ -504,11 +612,97 @@ export function MessagesBoard({
     fail(refusal(texts, result.status, result.body?.code));
   }
 
-  async function edit(message: Message, text: string) {
-    const result = await social<Message & { code?: string }>(
-      `conversations/${message.conversationId}/messages/${message.seq}`,
-      { method: "PATCH", ...json({ text }) },
+  /** A photo, clip or voice note for an end-to-end encrypted conversation: a photo drawn again
+   *  without its metadata, the file (and a clip's poster) sealed here and uploaded, then the
+   *  message sealed with their keys. */
+  async function sendSealedMedia(
+    conversation: Conversation,
+    item: { file: Blob; kind: MediaKind; preview: string | null; durationMs?: number },
+    caption: string,
+    clientId: string,
+    fail: (message: string) => void,
+  ) {
+    let blob = item.file;
+    let width: number | undefined;
+    let height: number | undefined;
+    if (item.kind === "image") {
+      const clean = await cleanPicture(item.file).catch(() => null);
+      if (!clean) return fail(texts.badMediaFile);
+      ({ blob, width, height } = clean);
+    }
+    const file = sealFile(new Uint8Array(await blob.arrayBuffer()), "file");
+    const uploaded = await uploadMedia(
+      new Blob([file.ciphertext as BlobPart], { type: "application/octet-stream" }),
+      item.kind,
+      (progress) =>
+        setPending((all) => ({
+          ...all,
+          [conversation.id]: (all[conversation.id] ?? []).map((p) =>
+            p.clientId === clientId && p.media ? { ...p, media: { ...p.media, progress } } : p,
+          ),
+        })),
+      true,
     );
+    const made = uploaded.body.media;
+    if (!uploaded.ok || !made)
+      return fail(uploadRefusal(texts, uploaded.status, uploaded.body.code, media.limits));
+    let poster: { key: string; nonce: string; type: string } | undefined;
+    if (item.kind === "clip") {
+      const still = await posterOf(item.file);
+      if (still) {
+        const sealedStill = sealFile(new Uint8Array(await still.arrayBuffer()), "poster");
+        const put = await fetch(`/me/upload/${made.id}/poster`, {
+          method: "PUT",
+          body: new Blob([sealedStill.ciphertext as BlobPart]),
+          headers: { "content-type": "application/octet-stream" },
+        }).catch(() => undefined);
+        if (put?.ok)
+          poster = { key: sealedStill.key, nonce: sealedStill.nonce, type: still.type || "image/jpeg" };
+      }
+    }
+    const attachment = {
+      mediaId: made.id,
+      kind: item.kind,
+      type: blob.type || (item.kind === "clip" ? "video/mp4" : "application/octet-stream"),
+      size: blob.size,
+      key: file.key,
+      nonce: file.nonce,
+      ...(width && height ? { width, height } : {}),
+      ...(item.durationMs ? { durationMs: Math.round(item.durationMs) } : {}),
+      ...(poster ? { poster } : {}),
+    };
+    const result = await sealed(
+      conversation,
+      clientId,
+      { v: 1, ...(caption ? { text: caption } : {}), attachment },
+      (seal) =>
+        social<Message & { code?: string }>(`conversations/${conversation.id}/messages`, {
+          method: "POST",
+          ...json({ clientId, sealed: seal, attachments: [{ mediaId: made.id }] }),
+        }),
+    );
+    if (result.ok && result.body) {
+      if (item.preview) URL.revokeObjectURL(item.preview);
+      return take(result.body, true);
+    }
+    fail(refusal(texts, result.status, result.body?.code));
+  }
+
+  async function edit(message: Message, text: string) {
+    const conversation = conversationsRef.current.find((c) => c.id === message.conversationId);
+    const opened = e2ee.openMessage(message);
+    const patch = (body: Record<string, unknown>) =>
+      social<Message & { code?: string }>(`conversations/${message.conversationId}/messages/${message.seq}`, {
+        method: "PATCH",
+        ...json(body),
+      });
+    // A sealed message is edited with a new seal of it, its attachment kept.
+    const result =
+      message.sealed && conversation && opened.state === "open"
+        ? await sealed(conversation, message.id, { ...opened.payload, text }, (seal) =>
+            patch({ sealed: seal }),
+          )
+        : await patch({ text });
     if (result.ok && result.body) take(result.body, false);
     else if (result.body?.code === "edit_limit") setNotice(texts.editLimit);
     else
@@ -656,7 +850,9 @@ export function MessagesBoard({
                             ? `${c.lastMessage.authorId === me ? `${texts.you}: ` : ""}${
                                 c.lastMessage.deletedAt
                                   ? texts.removedMessage
-                                  : previewOf(texts, c.lastMessage)
+                                  : c.lastMessage.sealed && e2ee.openMessage(c.lastMessage).state !== "open"
+                                    ? texts.e2eePreview
+                                    : previewOf(texts, shown(c.lastMessage))
                               }`
                             : fill(texts.membersCount, { n: c.members.length })}
                       </span>
@@ -728,6 +924,9 @@ export function MessagesBoard({
               onEdit={edit}
               onDelete={remove}
               onLeave={() => leave(current)}
+              e2ee={e2ee}
+              mode={modeOf(current)}
+              shown={shown}
             />
           ) : (
             <div className="thread-empty">
@@ -787,7 +986,13 @@ function ThreadView({
   onSendMedia,
   onNotice,
   onExpired,
+  e2ee,
+  mode,
+  shown,
 }: {
+  e2ee: E2ee;
+  mode: ChatMode | null;
+  shown: (message: Message) => Message;
   onReact: (message: Message, name: MessageReaction) => Promise<void>;
   onSetting: (change: "pin" | "mute", value: boolean) => Promise<void>;
   media: MediaSetup;
@@ -829,7 +1034,12 @@ function ThreadView({
     () => new Map(conversation.members.map((m) => [m.userId, m])),
     [conversation.members],
   );
-  const messages = thread?.messages ?? [];
+  // Sealed messages opened here; everything below reads them as plain ones.
+  const raw = thread?.messages;
+  const messages = useMemo(() => (raw ?? []).map(shown), [raw, shown]);
+  const [reporting, setReporting] = useState<Message | null>(null);
+  const reportDialog = useRef<HTMLDialogElement>(null);
+  const sheet = useRef<HTMLDialogElement>(null);
   const group = conversation.kind === "group";
   const names = useMemo(
     () => new Map(conversation.members.map((m) => [m.userId, m.userId === me ? texts.you : m.displayName])),
@@ -838,6 +1048,35 @@ function ThreadView({
   // The receipt shows under one's newest message only.
   const lastMine = [...messages].reverse().find((m) => m.authorId === me && !m.deletedAt)?.seq;
   const others = conversation.members.filter((m) => m.userId !== me);
+  const other = group ? undefined : others[0];
+
+  // End-to-end encryption: the devices of both people, the safety number, and whether the devices
+  // changed since this browser last looked.
+  const mineDevices = e2ee.people[me]?.active ?? [];
+  const theirDevices = other ? (e2ee.people[other.userId]?.active ?? []) : [];
+  const devicesKnown = Boolean(other && e2ee.people[me] && e2ee.people[other.userId]);
+  const safety = mode === "sealed" && other ? safetyOf(me, mineDevices, other.userId, theirDevices) : null;
+  const [changed, setChanged] = useState<"mine" | "theirs" | null>(null);
+  const [compared, setCompared] = useState(false);
+  const seenNow = useMemo(
+    () => ({ mine: mineDevices.map((d) => d.id), theirs: theirDevices.map((d) => d.id) }),
+    [mineDevices, theirDevices],
+  );
+  useEffect(() => {
+    if (!devicesKnown || mode !== "sealed") return;
+    const before = memory.seen(me, conversation.id);
+    const change = deviceChange(before, seenNow);
+    setChanged(change);
+    if (!before) memory.setSeen(me, conversation.id, seenNow);
+    const kept = memory.compared(me, conversation.id);
+    if (kept && kept !== safety) memory.setCompared(me, conversation.id, null);
+    setCompared(Boolean(kept && kept === safety));
+  }, [devicesKnown, mode, me, conversation.id, seenNow, safety]);
+  const settleChange = () => {
+    memory.setSeen(me, conversation.id, seenNow);
+    setChanged(null);
+  };
+  const otherName = other?.displayName ?? name;
   const sizes = {
     image: formatBytes(media.limits?.image ?? 10 * 1048576, texts.language),
     clip: formatBytes(media.limits?.clip ?? 25 * 1048576, texts.language),
@@ -894,6 +1133,9 @@ function ThreadView({
                 : ""}
           </span>
         </span>
+        {other && (mode === "sealed" || mode === "plain" || mode === "stuck") && (
+          <LockButton texts={texts} sealed={mode !== "plain"} onOpen={() => sheet.current?.showModal()} />
+        )}
         {!group && others[0] && (
           <CallButton person={others[0]} label={fill(texts.callFriend, { name: others[0].displayName })} />
         )}
@@ -945,6 +1187,11 @@ function ThreadView({
           stick.current = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
         }}
       >
+        {mode === "plain" && (
+          <p className="e2ee-line">
+            {texts.e2eeOff}. {fill(texts.e2eeOffDetail, { name: otherName })}
+          </p>
+        )}
         {thread?.more && (
           <button
             type="button"
@@ -991,13 +1238,26 @@ function ThreadView({
                     <div
                       className={`bubble media-bubble ${message.kind}${message.caption ? " captioned" : ""}`}
                     >
-                      <AttachmentView
-                        attachment={message.attachments[0]}
-                        texts={texts}
-                        mine={mine}
-                        onOpen={(item) => setViewing({ item, mine })}
-                        onExpired={expired}
-                      />
+                      {(() => {
+                        const opened = message.sealed ? e2ee.openMessage(message) : null;
+                        return opened?.state === "open" && opened.payload.attachment ? (
+                          <SealedAttachmentView
+                            attachment={message.attachments[0]}
+                            info={opened.payload.attachment}
+                            texts={texts}
+                            mine={mine}
+                            onOpen={(item) => setViewing({ item, mine })}
+                          />
+                        ) : (
+                          <AttachmentView
+                            attachment={message.attachments[0]}
+                            texts={texts}
+                            mine={mine}
+                            onOpen={(item) => setViewing({ item, mine })}
+                            onExpired={expired}
+                          />
+                        );
+                      })()}
                       {message.caption && <p className="caption">{message.caption}</p>}
                     </div>
                   ) : (
@@ -1047,7 +1307,16 @@ function ThreadView({
                         texts={texts}
                         mine={mine}
                         reacted={(name) => hasReacted(message, name, me)}
-                        canEdit={canEditMessage(message, me, now)}
+                        canEdit={
+                          canEditMessage(message, me, now) &&
+                          (!message.sealed || e2ee.openMessage(message).state === "open")
+                        }
+                        onReport={() => {
+                          close();
+                          setReporting(message);
+                          // The sheet is drawn for this message first, then shown.
+                          requestAnimationFrame(() => reportDialog.current?.showModal());
+                        }}
                         onReact={(name) => {
                           close();
                           onReact(message, name);
@@ -1125,68 +1394,121 @@ function ThreadView({
           <span>{fill(texts.dropHint, sizes)}</span>
         </div>
       )}
+      {changed && mode === "sealed" && (
+        <DevicesChanged
+          texts={texts}
+          whose={changed}
+          name={otherName}
+          onCompare={() => {
+            settleChange();
+            sheet.current?.showModal();
+          }}
+          onDismiss={settleChange}
+        />
+      )}
       {notice && (
         <p className="notice error thread-notice" role="alert">
           {notice}
         </p>
       )}
-      <Composer
-        key={editing?.seq ?? "new"}
-        texts={texts}
-        replying={
-          replying
-            ? {
-                name: names.get(replying.authorId ?? "") ?? "?",
-                text:
-                  replying.kind && replying.kind !== "text"
-                    ? (replying.caption ?? replying.text ?? "")
-                    : (replying.text ?? ""),
-              }
-            : null
-        }
-        onCancelReply={() => setReplying(null)}
-        placeholder={staged ? texts.captionPlaceholder : fill(texts.composerPlaceholder, { name })}
-        editing={editing}
-        media={media}
-        staged={staged}
-        onStage={stage}
-        onUnstage={() =>
-          setStaged((old) => {
-            if (old) URL.revokeObjectURL(old.preview);
-            return null;
-          })
-        }
-        onVoice={(recording) => {
-          stick.current = true;
-          onSendMedia(
-            { file: recording.blob, kind: "voice", preview: null, durationMs: recording.durationMs },
-            "",
-          );
-        }}
-        onNotice={onNotice}
-        onTyping={onTyping}
-        onCancel={() => setEditing(null)}
-        onSubmit={async (text) => {
-          stick.current = true;
-          if (editing) {
-            await onEdit(editing, text);
-            setEditing(null);
-          } else if (staged) {
-            onSendMedia({ file: staged.file, kind: staged.kind, preview: staged.preview }, text);
-            setStaged(null);
-          } else {
-            onSend(text, undefined, replying?.seq);
-            setReplying(null);
+      {mode === "stuck" ? (
+        <output className="composer e2ee-stuck">
+          {e2ee.noStorage ? texts.e2eeNoBrowser : fill(texts.e2eeNoDevice, { name: otherName })}
+        </output>
+      ) : (
+        <Composer
+          key={editing?.seq ?? "new"}
+          texts={texts}
+          replying={
+            replying
+              ? {
+                  name: names.get(replying.authorId ?? "") ?? "?",
+                  text:
+                    replying.kind && replying.kind !== "text"
+                      ? (replying.caption ?? replying.text ?? "")
+                      : (replying.text ?? ""),
+                }
+              : null
           }
-        }}
-      />
+          onCancelReply={() => setReplying(null)}
+          placeholder={staged ? texts.captionPlaceholder : fill(texts.composerPlaceholder, { name })}
+          editing={editing}
+          media={media}
+          staged={staged}
+          onStage={stage}
+          onUnstage={() =>
+            setStaged((old) => {
+              if (old) URL.revokeObjectURL(old.preview);
+              return null;
+            })
+          }
+          onVoice={(recording) => {
+            stick.current = true;
+            onSendMedia(
+              { file: recording.blob, kind: "voice", preview: null, durationMs: recording.durationMs },
+              "",
+            );
+          }}
+          onNotice={onNotice}
+          onTyping={onTyping}
+          onCancel={() => setEditing(null)}
+          onSubmit={async (text) => {
+            stick.current = true;
+            if (editing) {
+              await onEdit(editing, text);
+              setEditing(null);
+            } else if (staged) {
+              onSendMedia({ file: staged.file, kind: staged.kind, preview: staged.preview }, text);
+              setStaged(null);
+            } else {
+              onSend(text, undefined, replying?.seq);
+              setReplying(null);
+            }
+          }}
+        />
+      )}
       <MediaViewer
         item={viewing?.item ?? null}
         texts={texts}
         locale={locale}
-        canReport={Boolean(viewing && !viewing.mine)}
+        // A sealed photo is reported with its message, so the moderators can open it.
+        canReport={Boolean(viewing && !viewing.mine && !viewing.item.sealed)}
         onClose={() => setViewing(null)}
       />
+      {other && (
+        <EncryptionSheet
+          dialog={sheet}
+          texts={texts}
+          name={otherName}
+          sealed={mode === "sealed" || mode === "stuck"}
+          safety={safety}
+          compared={compared}
+          mine={mineDevices}
+          theirs={theirDevices}
+          onCompared={(value) => {
+            memory.setCompared(me, conversation.id, value ? safety : null);
+            setCompared(value);
+          }}
+        />
+      )}
+      {reporting && (
+        <ReportSheet
+          key={reporting.id}
+          dialog={reportDialog}
+          person={{ userId: reporting.id, displayName: "" }}
+          texts={texts}
+          kind="message"
+          title={texts.reportMessageTitle}
+          lead={
+            reporting.sealed ? `${texts.e2eeReportNote} ${texts.reportMessageLead}` : texts.reportMessageLead
+          }
+          extra={(() => {
+            const original = raw?.find((m) => m.id === reporting.id);
+            const key = original && e2ee.device ? contentKeyOf(original, e2ee.device) : null;
+            return key ? { contentKey: key } : undefined;
+          })()}
+        />
+      )}
     </>
   );
 }
@@ -1447,6 +1769,7 @@ function MessageActions({
   onReply,
   onEdit,
   onDelete,
+  onReport,
 }: {
   texts: UiStrings;
   mine: boolean;
@@ -1456,6 +1779,7 @@ function MessageActions({
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onReport: () => void;
 }) {
   const [asking, setAsking] = useState(false);
   if (asking)
@@ -1490,6 +1814,11 @@ function MessageActions({
       {mine && (
         <button type="button" role="menuitem" className="danger" onClick={() => setAsking(true)}>
           {texts.unsend}
+        </button>
+      )}
+      {!mine && (
+        <button type="button" role="menuitem" className="danger" onClick={onReport}>
+          {texts.reportMessage}
         </button>
       )}
     </>

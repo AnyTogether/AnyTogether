@@ -75,6 +75,9 @@ const pushTexts = {
     friend_accepted: ["{name}", "accepted your friend request."],
     message: ["{name}", "{text}"],
     messages: ["{name}", "{n} new messages · {text}"],
+    // End-to-end encrypted: the server does not know what it says.
+    message_sealed: ["{name}", "Sent you a message."],
+    messages_sealed: ["{name}", "{n} new messages."],
     party_invite: ["{name}", "invited you to their party."],
     game_invite: ["{name}", "invited you to play {game}."],
     missed_call: ["{name}", "Missed call."],
@@ -116,6 +119,8 @@ const pushTexts = {
     friend_accepted: ["{name}", "arkadaşlık isteğini kabul etti."],
     message: ["{name}", "{text}"],
     messages: ["{name}", "{n} yeni mesaj · {text}"],
+    message_sealed: ["{name}", "Sana bir mesaj gönderdi."],
+    messages_sealed: ["{name}", "{n} yeni mesaj."],
     party_invite: ["{name}", "seni partisine çağırdı."],
     game_invite: ["{name}", "seni {game} oynamaya çağırdı."],
     missed_call: ["{name}", "Cevapsız arama."],
@@ -235,23 +240,27 @@ export function pushPayload(n: NotificationView, lang: string, unread: number) {
   const key = (
     familyKey && familyKey in texts
       ? familyKey
-      : n.kind === "message" && count > 1
-        ? "messages"
-        : n.kind === "lfg_request" && count > 1
-          ? "lfg_requests"
-          : n.kind === "challenge_ended" && data.rank === 1 && Number(data.value ?? 0) > 0
-            ? "challenge_won"
-            : n.kind === "post_like" && count > 2
-              ? "post_likes"
-              : n.kind === "post_like" && count === 2
-                ? "post_likes_two"
-                : n.kind === "post_comment" && count > 1
-                  ? "post_comments"
-                  : n.kind === "comment_reply" && count > 1
-                    ? "comment_replies"
-                    : n.kind === "family_request" || n.kind === "family_answer" || n.kind === "family_alert"
-                      ? "family_summary"
-                      : n.kind
+      : n.kind === "message" && data.sealed
+        ? count > 1
+          ? "messages_sealed"
+          : "message_sealed"
+        : n.kind === "message" && count > 1
+          ? "messages"
+          : n.kind === "lfg_request" && count > 1
+            ? "lfg_requests"
+            : n.kind === "challenge_ended" && data.rank === 1 && Number(data.value ?? 0) > 0
+              ? "challenge_won"
+              : n.kind === "post_like" && count > 2
+                ? "post_likes"
+                : n.kind === "post_like" && count === 2
+                  ? "post_likes_two"
+                  : n.kind === "post_comment" && count > 1
+                    ? "post_comments"
+                    : n.kind === "comment_reply" && count > 1
+                      ? "comment_replies"
+                      : n.kind === "family_request" || n.kind === "family_answer" || n.kind === "family_alert"
+                        ? "family_summary"
+                        : n.kind
   ) as keyof typeof texts;
   const name =
     n.kind === "message" && data.group

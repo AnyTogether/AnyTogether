@@ -5,6 +5,7 @@ import {
   JoinCodeIssue,
   type JoinCodeState,
   LanguageCode,
+  type MediaRoute,
   type MemberView,
   type PublicJoin,
   type PublicShareView,
@@ -21,7 +22,9 @@ import {
   devicePresenceKey,
   deviceSharePlaysKey,
   hostSharePlayKey,
+  maxShareViewers,
   publicSharePlaysKey,
+  sfuShareRoom,
   shareDeparturesKey,
   sharePlayInvitesKey,
   sharePlayKeepSeconds,
@@ -50,6 +53,7 @@ import { assertNotMuted } from "./moderation.js";
 import { people } from "./people.js";
 import { setPresenceExtra } from "./presence.js";
 import { rateLimiter, strangerLimiter } from "./ratelimit.js";
+import { mediaLimits } from "./sfu.js";
 
 /** What Valkey keeps of a share play. */
 interface Share {
@@ -61,6 +65,8 @@ interface Share {
   open: boolean;
   maxViewers: number;
   startedAt: string;
+  /** Through the media server (older ones kept before it existed have none: the mesh). */
+  media?: MediaRoute;
   /** Listed in public (older ones kept before listing existed have none). */
   public?: { join: PublicJoin; language: string | null; live: boolean } | null;
 }
@@ -94,6 +100,28 @@ export function sharePlayRoutes(deps: Deps) {
   const noPublic = "Your family settings keep public parties, Find players and share plays off";
   const keep = sharePlayKeepSeconds;
   const codes = joinCodeStore(deps);
+  const { sfu } = deps;
+
+  /** More viewers than the mesh holds need the media server, and no more than it takes. */
+  const allowViewers = (maxViewers: number) => {
+    const { maxShareViewers: max } = mediaLimits(sfu);
+    if (maxViewers > max)
+      throw new HttpError(
+        400,
+        ErrorCode.mediaServerOff,
+        sfu
+          ? `This server takes at most ${max} viewers`
+          : `More than ${maxShareViewers} viewers need a media server, and this server has none`,
+        { max },
+      );
+  };
+  /** The mesh up to four viewers; the media server above, and for good once there. */
+  const mediaFor = (maxViewers: number, before: MediaRoute = "mesh"): MediaRoute =>
+    before === "sfu" || maxViewers > maxShareViewers ? "sfu" : "mesh";
+  const sfuAccess = async (share: Share, me: string) =>
+    share.media === "sfu" && sfu
+      ? sfu.access(sfuShareRoom(share.id), me, { publish: me === share.hostId })
+      : null;
 
   /** The public lists hear that a listed share play came, changed or went. */
   const relist = (share: Share, change: "listed" | "updated" | "unlisted") =>
@@ -170,6 +198,7 @@ export function sharePlayRoutes(deps: Deps) {
       title: share.title,
       open: share.open,
       maxViewers: share.maxViewers,
+      media: share.media ?? "mesh",
       viewers: sat.flatMap(([id, seat]) => {
         const user = cards.get(id);
         return user ? [{ user, device: seat.device, slot: seat.slot, joinedAt: seat.joinedAt }] : [];
@@ -189,6 +218,7 @@ export function sharePlayRoutes(deps: Deps) {
   const joined = async (share: Share, me: string, forHost: boolean): Promise<SharePlayJoin> => ({
     sharePlay: await view(share, forHost),
     ...iceServers(deps.turn, me),
+    sfu: await sfuAccess(share, me),
   });
 
   const showInPresence = async (share: Share, viewers: number) => {
@@ -240,6 +270,7 @@ export function sharePlayRoutes(deps: Deps) {
       if ((await valkey.get(watchSharePlayKey(userId))) === share.id)
         await valkey.del(watchSharePlayKey(userId));
     await setPresenceExtra(valkey, share.hostId, "share", null);
+    if (share.media === "sfu") await sfu?.close(sfuShareRoom(share.id));
     await tell([...now.keys(), ...invited], {
       type: "share_play.ended",
       data: { sharePlayId: share.id, reason: "ended" },
@@ -260,6 +291,7 @@ export function sharePlayRoutes(deps: Deps) {
     if ((await valkey.get(watchSharePlayKey(userId))) === share.id)
       await valkey.del(watchSharePlayKey(userId));
     if (reason) await tell([userId], { type: "share_play.ended", data: { sharePlayId: share.id, reason } });
+    if (share.media === "sfu") await sfu?.remove(sfuShareRoom(share.id), userId);
     await changed(share);
     return true;
   }
@@ -546,6 +578,7 @@ export function sharePlayRoutes(deps: Deps) {
         "Your family settings keep public parties, Find players and share plays off",
       );
     await family.mayPlay(me, input.titleId);
+    allowViewers(input.maxViewers);
     await limit("sharePlay", me);
     await leaveAll(me);
     const share: Share = {
@@ -556,6 +589,7 @@ export function sharePlayRoutes(deps: Deps) {
       title: input.title ?? null,
       open: input.open,
       maxViewers: input.maxViewers,
+      media: mediaFor(input.maxViewers),
       startedAt: new Date().toISOString(),
       public: input.public ? listingOf(input.public) : null,
     };
@@ -619,6 +653,7 @@ export function sharePlayRoutes(deps: Deps) {
     const me = c.get("userId");
     const share = await asHost(c.req.param("id"), me);
     const input = await body(c, SharePlayUpdate);
+    if (input.maxViewers !== undefined) allowViewers(input.maxViewers);
     if (
       input.maxViewers !== undefined &&
       input.maxViewers < (await valkey.hlen(sharePlayViewersKey(share.id)))
@@ -629,7 +664,9 @@ export function sharePlayRoutes(deps: Deps) {
       ...(input.titleId !== undefined ? { titleId: input.titleId } : {}),
       ...(input.title !== undefined ? { title: input.title } : {}),
       ...(input.open !== undefined ? { open: input.open } : {}),
-      ...(input.maxViewers !== undefined ? { maxViewers: input.maxViewers } : {}),
+      ...(input.maxViewers !== undefined
+        ? { maxViewers: input.maxViewers, media: mediaFor(input.maxViewers, share.media) }
+        : {}),
       ...(input.public !== undefined ? { public: input.public ? listingOf(input.public) : null } : {}),
     };
     await valkey.set(sharePlayKey(share.id), JSON.stringify(updated), "EX", keep);
@@ -827,6 +864,17 @@ export function sharePlayRoutes(deps: Deps) {
     const share = await asMember(c.req.param("id"), me);
     await touch(share);
     return c.json(iceServers(deps.turn, me));
+  });
+
+  /** A fresh media server token for the host or a viewer while the share play goes through it;
+   *  asking again renews it. */
+  app.get("/share-plays/:id/sfu", async (c) => {
+    const me = c.get("userId");
+    const share = await asMember(c.req.param("id"), me);
+    const access = await sfuAccess(share, me);
+    if (!access) throw new HttpError(409, ErrorCode.conflict, "This share play is peer to peer");
+    await touch(share);
+    return c.json(access);
   });
 
   /** Devices whose gateway socket closed and did not come back within the grace: a viewer's seat

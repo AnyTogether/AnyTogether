@@ -159,6 +159,9 @@ export const profiles = pgTable(
     cover: text(),
     /** One of the launcher's accents. */
     accent: text(),
+    /** A Theme Hub theme the profile wears: its still is the cover and its colours the look,
+     *  under a cover or accent picked on top. Gone with the theme. */
+    themeId: uuid().references((): AnyPgColumn => themes.id, { onDelete: "set null" }),
     /** Players met in parties, share plays, game sessions and posts are remembered. */
     rememberMet: boolean().notNull().default(true),
     /** Appear offline: signed in and working, but friends and everyone else see the account as
@@ -180,6 +183,7 @@ export const profiles = pgTable(
     check("bio_length", sql`length(${table.bio}) <= 160`),
     uniqueIndex("profiles_handle_skeleton").on(table.handleSkeleton),
     index("profiles_by_level").on(table.trophyLevel.desc()),
+    index("profiles_theme").on(table.themeId),
   ],
 );
 
@@ -604,9 +608,13 @@ export const conversations = pgTable(
     communityId: uuid()
       .unique()
       .references((): AnyPgColumn => communities.id, { onDelete: "cascade" }),
+    /** A direct conversation's first end-to-end encrypted message: plain ones are refused from
+     *  then on (docs/e2ee.md). */
+    sealedAt: timestamp({ withTimezone: true }),
   },
   (table) => [
     check("kind", sql`${table.kind} in ('direct', 'group')`),
+    check("sealed_direct", sql`${table.sealedAt} is null or ${table.kind} = 'direct'`),
     check("direct_key", sql`(${table.kind} = 'direct') = (${table.directKey} is not null)`),
   ],
 );
@@ -653,10 +661,39 @@ export const messages = pgTable(
     editCount: integer().notNull().default(0),
     deletedAt: timestamp({ withTimezone: true }),
     createdAt: now(),
+    /** End-to-end encrypted (docs/e2ee.md): the ciphertext and its key wraps, as the sender's
+     *  device made them; text is then null. Emptied with the message. */
+    sealed: jsonb(),
   },
   (table) => [
     primaryKey({ columns: [table.conversationId, table.seq] }),
     check("text_length", sql`length(${table.text}) <= 4000`),
+    check("sealed_text", sql`${table.sealed} is null or ${table.text} is null`),
+  ],
+);
+
+/** A device's public keys for end-to-end encrypted messages, tied to the session that registered
+ *  them: removed (removed_at) when it signs out, and kept so its old messages still verify. The ID
+ *  is the first 16 bytes of SHA-256(sign_key), hex. */
+export const e2eeDevices = pgTable(
+  "e2ee_devices",
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    id: text().notNull(),
+    signKey: text().notNull(),
+    boxKey: text().notNull(),
+    sig: text().notNull(),
+    name: text().notNull(),
+    sessionId: uuid().references(() => sessions.id, { onDelete: "set null" }),
+    createdAt: now(),
+    removedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.id] }),
+    index().on(table.sessionId),
+    check("e2ee_device_name", sql`length(${table.name}) <= 80`),
   ],
 );
 
@@ -1392,6 +1429,9 @@ export const media = pgTable(
     durationMs: integer(),
     /** active | hidden (by a moderator) */
     status: text().notNull().default("active"),
+    /** Encrypted on the sender's device for an end-to-end encrypted message: the server keeps
+     *  ciphertext it cannot check or show (docs/e2ee.md). */
+    sealed: boolean().notNull().default(false),
     /** When it was first sent or pinned; until then it is a leftover upload. */
     usedAt: timestamp({ withTimezone: true }),
     /** Its place in the profile gallery (0-11), or none. */

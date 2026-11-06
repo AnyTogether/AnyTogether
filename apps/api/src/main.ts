@@ -7,12 +7,14 @@ import { purgeDeletedAccounts } from "./account.js";
 import { createApp } from "./app.js";
 import { lateBackupWarning } from "./backups.js";
 import { config } from "./config.js";
+import { sweepExpiredDevices } from "./e2ee.js";
 import { storeFromSettings } from "./fileStore.js";
 import { type FileService, fileService } from "./files.js";
 import { mailerFor } from "./mail.js";
 import { pruneMeetings } from "./met.js";
 import { pruneNotifications, sendDigests, webPushSender } from "./notifications.js";
 import { restoreRevocations } from "./sessions.js";
+import { sfuService } from "./sfu.js";
 import { sweepThemeFiles } from "./themes.js";
 import { createTokenSigner } from "./tokens.js";
 
@@ -60,6 +62,12 @@ if (store) {
   console.log(
     "cloud saves and media: off (STORAGE_DIR or S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY)",
   );
+const sfu = settings.sfu ? sfuService(settings.sfu) : undefined;
+console.log(
+  sfu
+    ? `media server: on (up to ${sfu.limits.maxShareViewers} viewers, parties of ${sfu.limits.maxPartySize})`
+    : "media server: off (LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET)",
+);
 const app = createApp({
   db,
   valkey,
@@ -69,6 +77,7 @@ const app = createApp({
   publicUrl: settings.publicUrl,
   rpName: settings.rpName,
   turn: settings.turn,
+  ...(sfu ? { sfu } : {}),
   blockedLinkDomains: settings.blockedLinkDomains,
   gameIconHosts: settings.gameIconHosts,
   clientIpHeader: settings.clientIpHeader,
@@ -95,6 +104,8 @@ const purge = () =>
   purgeDeletedAccounts({ db, valkey, files })
     .then((count) => count && console.log(`deleted ${count} account(s)`))
     .then(() => sweepThemeFiles({ db, publicUrl: settings.publicUrl }))
+    // Device keys of sessions that ran out without signing out.
+    .then(() => sweepExpiredDevices({ db, valkey }))
     // Then cloud files nothing uses: unfinished uploads, unsent media, deleted accounts' files.
     .then(() => files?.sweep())
     .then((swept) => {

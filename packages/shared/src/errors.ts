@@ -9,6 +9,9 @@ export const ErrorCode = {
   unknownTrophy: "unknown_trophy",
   /** A party, group or game session has no room left. */
   full: "full",
+  /** More viewers or a bigger party than a peer-to-peer mesh holds, on a server without a media
+   *  server (or past its limit): the answer has `max`. */
+  mediaServerOff: "media_server_off",
   /** Only a party's leader may do this for the party (e.g. let a looking-for-group player in). */
   notPartyLeader: "not_party_leader",
   /** Joining a game session needs the same game version and engine build. */
@@ -38,6 +41,12 @@ export const ErrorCode = {
   linksNotAllowed: "links_not_allowed",
   /** A message links to a domain on the server's deny-list. */
   linkBlocked: "link_blocked",
+  /** A sealed message does not have a key for exactly the active devices of both people; the
+   *  answer has `devices` ({userId: deviceIds}). Fetch the devices, show the change, seal again. */
+  e2eeDevices: "e2ee_devices",
+  /** The direct conversation is end-to-end encrypted (or both people have device keys): a plain
+   *  message is refused. */
+  e2eeRequired: "e2ee_required",
   /** A message was edited as often as it may be (maxMessageEdits). */
   editLimit: "edit_limit",
   payloadTooLarge: "payload_too_large",

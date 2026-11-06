@@ -35,6 +35,13 @@ export const ReportCreate = z.object({
   targetId: z.string().min(1).max(100),
   reason: z.enum(reportReasons),
   note: z.string().trim().max(500).optional(),
+  /** For an end-to-end encrypted message: its content key (base64), so the moderators can read
+   *  exactly this message (docs/e2ee.md). Required for one. */
+  contentKey: z
+    .string()
+    .length(44)
+    .regex(/^[A-Za-z0-9+/]*={0,2}$/, "base64")
+    .optional(),
 });
 
 /** What a moderator can do about a report on the admin page. Any action but dismiss closes every

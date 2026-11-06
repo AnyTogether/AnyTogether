@@ -1,4 +1,7 @@
+import { themes } from "@anytogether/db";
 import { coverPresets, iconPresets } from "@anytogether/shared";
+import { eq } from "drizzle-orm";
+import { uuidv7 } from "uuidv7";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { harness } from "./harness.js";
 
@@ -44,6 +47,24 @@ async function teachSet(user: User, titleId = game) {
     },
     user.token,
   );
+}
+
+const colors = { deep: "#05010f", middle: "#3a0f6b", bright: "#c69bff", accent: "#b06bff" };
+/** A theme in the Hub, made by `maker`. */
+async function shareTheme(maker: User, status: "published" | "review" | "hidden" = "published") {
+  const id = uuidv7();
+  await h.deps.db.insert(themes).values({
+    id,
+    makerId: maker.id,
+    name: "Violet hour",
+    status,
+    version: 2,
+    colors,
+    design: {},
+    size: 1000,
+    sha256: "0".repeat(64),
+  });
+  return id;
 }
 
 const earn = (user: User, ids: number[], titleId = game, earnedAt = ago(30)) =>
@@ -92,6 +113,7 @@ describe("look", () => {
         url: "https://anytogether.test/api/v1/art/covers/sunset-grid.svg",
       },
       accent: "coral",
+      theme: null,
     });
     const seen = await h.call("GET", `${v1}/users/${ana.handle}`, undefined, ben.token);
     expect(seen.body).toMatchObject({ cover: { id: "sunset-grid" }, accent: "coral" });
@@ -111,13 +133,116 @@ describe("look", () => {
     expect((await h.call("PATCH", `${v1}/me/look`, { accent: "pink" }, ana.token)).status).toBe(400);
 
     const reset = await h.call("PATCH", `${v1}/me/look`, { cover: null, accent: null }, ana.token);
-    expect(reset.body).toEqual({ cover: null, accent: null });
+    expect(reset.body).toEqual({ cover: null, accent: null, theme: null });
     const me = await h.call("GET", `${v1}/me`, undefined, ana.token);
     expect(me.body.profile).toMatchObject({ cover: null, accent: null, rememberMet: true });
   });
 });
 
+describe("profile theme", () => {
+  it("wears a published Theme Hub theme whole, under a cover or accent picked after it", async () => {
+    const ana = await h.user("ana@example.com");
+    const ben = await h.user("ben@example.com");
+    const theme = await shareTheme(ben);
+    await h.call(
+      "PATCH",
+      `${v1}/me/look`,
+      { cover: { kind: "preset", id: "sunset-grid" }, accent: "coral" },
+      ana.token,
+    );
+
+    const worn = await h.call("PATCH", `${v1}/me/look`, { theme }, ana.token);
+    expect(worn.status).toBe(200);
+    // Putting it on clears the cover and accent, so the theme shows whole.
+    expect(worn.body).toEqual({
+      cover: null,
+      accent: null,
+      theme: {
+        id: theme,
+        name: "Violet hour",
+        colors,
+        preview: `https://anytogether.test/api/v1/themes/${theme}/preview.webp?v=2`,
+        thumb: `https://anytogether.test/api/v1/themes/${theme}/thumb.webp?v=2`,
+        maker: { handle: ben.handle, displayName: expect.any(String) },
+      },
+    });
+    const seen = await h.call("GET", `${v1}/users/${ana.handle}`, undefined, ben.token);
+    expect(seen.body.theme).toMatchObject({ id: theme, colors });
+    expect((await h.call("GET", `${v1}/users/${ana.handle}`)).body.theme).toMatchObject({ id: theme });
+    expect((await h.call("GET", `${v1}/me`, undefined, ana.token)).body.profile.theme).toMatchObject({
+      id: theme,
+    });
+
+    // An accent picked on top keeps the theme.
+    const tinted = await h.call("PATCH", `${v1}/me/look`, { accent: "gold" }, ana.token);
+    expect(tinted.body).toMatchObject({ accent: "gold", theme: { id: theme } });
+    // Sent together, the cover and accent stay.
+    const both = await h.call(
+      "PATCH",
+      `${v1}/me/look`,
+      { theme, accent: "mint", cover: { kind: "preset", id: "aurora-glow" } },
+      ana.token,
+    );
+    expect(both.body).toMatchObject({ accent: "mint", cover: { id: "aurora-glow" }, theme: { id: theme } });
+
+    // Only a published theme: not one under review, hidden or unknown.
+    const review = await shareTheme(ben, "review");
+    expect((await h.call("PATCH", `${v1}/me/look`, { theme: review }, ana.token)).status).toBe(400);
+    expect((await h.call("PATCH", `${v1}/me/look`, { theme: uuidv7() }, ana.token)).status).toBe(400);
+    expect((await h.call("PATCH", `${v1}/me/look`, { theme: "nope" }, ana.token)).status).toBe(400);
+
+    // A theme hidden later is no longer shown; deleted, it is gone from the profile.
+    await h.deps.db.update(themes).set({ status: "hidden" }).where(eq(themes.id, theme));
+    expect((await h.call("GET", `${v1}/users/${ana.handle}`, undefined, ben.token)).body.theme).toBeNull();
+    await h.deps.db.update(themes).set({ status: "published" }).where(eq(themes.id, theme));
+    await h.deps.db.delete(themes).where(eq(themes.id, theme));
+    expect((await h.call("GET", `${v1}/users/${ana.handle}`, undefined, ben.token)).body.theme).toBeNull();
+
+    const other = await shareTheme(ben);
+    await h.call("PATCH", `${v1}/me/look`, { theme: other }, ana.token);
+    const off = await h.call("PATCH", `${v1}/me/look`, { theme: null }, ana.token);
+    expect(off.body.theme).toBeNull();
+  });
+});
+
 describe("showcase", () => {
+  it("holds up to six pins, trophies and games together", async () => {
+    const ana = await h.user("ana@example.com");
+    await teachSet(ana);
+    await teachSet(ana, other);
+    await earn(ana, [0, 1, 2, 3]);
+    await earn(ana, [0, 1], other);
+    const four = [0, 1, 2, 3].map((trophyId) => ({ titleId: game, trophyId }));
+
+    // Six games alone, or four trophies and two games: fine. Seven together: refused.
+    const six = await h.call("PUT", `${v1}/me/showcase`, { trophies: four, games: [game, other] }, ana.token);
+    expect(six.status).toBe(200);
+    expect(six.body.trophies).toHaveLength(4);
+    expect(six.body.games).toHaveLength(2);
+    const seven = await h.call(
+      "PUT",
+      `${v1}/me/showcase`,
+      { trophies: [...four, { titleId: other, trophyId: 0 }], games: [game, other] },
+      ana.token,
+    );
+    expect(seven.status).toBe(400);
+    // One part sent: the other, kept, counts too.
+    expect(
+      (
+        await h.call(
+          "PUT",
+          `${v1}/me/showcase`,
+          {
+            trophies: [...four, { titleId: other, trophyId: 0 }],
+          },
+          ana.token,
+        )
+      ).status,
+    ).toBe(400);
+    const swap = await h.call("PUT", `${v1}/me/showcase`, { trophies: [], games: [game, other] }, ana.token);
+    expect(swap.body).toMatchObject({ trophies: [], games: [{ titleId: game }, { titleId: other }] });
+  });
+
   it("pins earned trophies and games from the library, shown as the privacy settings allow", async () => {
     const ana = await h.user("ana@example.com");
     const ben = await h.user("ben@example.com");

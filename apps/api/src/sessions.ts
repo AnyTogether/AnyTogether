@@ -12,6 +12,7 @@ import {
 import { and, eq, gt, isNull } from "drizzle-orm";
 import type { Redis } from "ioredis";
 import { uuidv7 } from "uuidv7";
+import { forgetSessionDevice } from "./e2ee.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { isBanned, liftExpired, restrictedSignIn } from "./moderation.js";
@@ -102,8 +103,9 @@ export async function revoke(ctx: Pick<Context, "db" | "valkey">, sessionId: str
     .set({ revokedAt: new Date() })
     .where(and(eq(sessions.id, sessionId), isNull(sessions.revokedAt)));
   await ctx.valkey.set(revokedKey(sessionId), "1", "EX", revokedSeconds);
-  // Its browser gets no more push notifications.
+  // Its browser gets no more push notifications, and nobody seals messages for it any more.
   await forgetPush(ctx.db, sessionId);
+  await forgetSessionDevice(ctx, sessionId);
   await publish(ctx.valkey, accountId, { type: "account.signed_out", data: { sessionId } });
 }
 

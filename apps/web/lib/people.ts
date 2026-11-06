@@ -1,4 +1,4 @@
-import type { AccentName, CoverView, LevelBadgeData, TrophyLevel } from "@/lib/psn";
+import type { AccentName, CoverView, LevelBadgeData, ProfileTheme, TrophyLevel } from "@/lib/psn";
 import type { ConnectionBadge } from "./connections";
 import type { GamePresence } from "./together";
 
@@ -108,6 +108,7 @@ export interface Profile extends Person {
   trophyLevel?: TrophyLevel | null;
   cover?: CoverView | null;
   accent?: AccentName | null;
+  theme?: ProfileTheme | null;
   /** Which parts the viewer may open (older API answers lack it: then friends and self only). */
   visible?: Record<Section, boolean>;
   /** Only when the viewer may see it. */
@@ -144,6 +145,7 @@ export interface Own {
     /** Older API answers lack these. */
     cover?: CoverView | null;
     accent?: AccentName | null;
+    theme?: ProfileTheme | null;
     trophyLevel?: TrophyLevel;
     rememberMet?: boolean;
     appearOffline?: boolean;

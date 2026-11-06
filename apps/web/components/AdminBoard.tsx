@@ -418,6 +418,7 @@ function ReportItem({
           <figcaption className="meta">
             {texts.saidText}
             {report.message.removed && <span className="flair banned-flag">{texts.messageRemoved}</span>}
+            {report.message.encrypted && <span className="flair">{texts.messageEncrypted}</span>}
           </figcaption>
           <blockquote>{report.message.text ?? "…"}</blockquote>
         </figure>

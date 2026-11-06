@@ -17,6 +17,7 @@ import { communityRoutes } from "./communities.js";
 import { compatRoutes } from "./compat.js";
 import { connectionRoutes } from "./connections.js";
 import { discoverRoutes } from "./discover.js";
+import { e2eeRoutes } from "./e2ee.js";
 import { HttpError } from "./errors.js";
 import { familyRoutes, sendFamilySummaries } from "./family.js";
 import { feedRoutes } from "./feed.js";
@@ -45,6 +46,7 @@ import { type ClientIpHeader, type Limits, perIp } from "./ratelimit.js";
 import { realtimeRoutes } from "./realtime.js";
 import { releaseRoutes } from "./releases.js";
 import { saveRoutes } from "./saves.js";
+import { type SfuService, mediaLimits } from "./sfu.js";
 import { sharePlayRoutes } from "./sharePlays.js";
 import { showcaseRoutes } from "./showcase.js";
 import { statsRoutes } from "./stats.js";
@@ -68,6 +70,9 @@ export interface Deps {
   limits?: Partial<Limits>;
   /** STUN/TURN for calls; without it calls get no ICE servers beyond what the client has. */
   turn?: { secret: string; urls: string[] };
+  /** The media server (LiveKit) for share plays and party calls bigger than the mesh holds; off
+   *  when left out, and nothing bigger is taken. */
+  sfu?: SfuService;
   /** Which header carries the caller's address for per-address limits (see ratelimit.ts). */
   clientIpHeader?: ClientIpHeader;
   /** Hosts a game's icon may come from (subdomains included); none when left out. */
@@ -115,6 +120,8 @@ export function createApp(deps: Deps) {
 
   const v1 = new Hono<{ Variables: AuthVariables }>();
   v1.get("/health", (c) => c.json({ ok: true }));
+  // Whether this server has a media server, and how big a share play and a party may be.
+  v1.get("/media-server", (c) => c.json(mediaLimits(deps.sfu)));
   v1.get("/.well-known/jwks.json", async (c) => c.json({ keys: [await deps.tokens.publicJwk()] }));
   // Clients too old for the server get the update screen's answer before anything else.
   v1.use("*", clientGate(deps.clientGate));
@@ -185,6 +192,7 @@ export function createApp(deps: Deps) {
   v1.route("/", challengeRoutes(deps, notes, challengesKept));
   v1.route("/", apiTokenRoutes(deps));
   v1.route("/", reportRoutes(deps));
+  v1.route("/", e2eeRoutes(deps));
   v1.route("/", messageRoutes(deps, notes));
   v1.route("/", partyRoutes(deps, partyPieces));
   const calls = callRoutes(deps, partyPieces);

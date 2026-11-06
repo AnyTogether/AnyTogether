@@ -411,6 +411,12 @@ describe("web push", () => {
       body: "Cevapsız arama.",
       url: "/u/utku",
     });
+    // An end-to-end encrypted message: the server does not know what it says.
+    const sealed = { ...base, kind: "message" as const, subjectId: "c1", data: { text: "", sealed: true } };
+    expect(pushPayload(sealed, "en", 1).body).toBe("Sent you a message.");
+    expect(pushPayload({ ...sealed, data: { ...sealed.data, count: 2 } }, "tr", 2).body).toBe(
+      "2 yeni mesaj.",
+    );
   });
 });
 

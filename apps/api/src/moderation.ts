@@ -14,6 +14,7 @@ import {
   reports,
   themes,
 } from "@anytogether/db";
+import { type Sealed, fromBase64, openWithKey } from "@anytogether/e2ee";
 import {
   type AppealView,
   ErrorCode,
@@ -29,6 +30,7 @@ import { uuidv7 } from "uuidv7";
 import { revokeAll } from "./account.js";
 import type { Deps } from "./app.js";
 import { communityVisibleTo } from "./communities.js";
+import { deviceSignKey } from "./e2ee.js";
 import { HttpError } from "./errors.js";
 import { publish } from "./events.js";
 import { body } from "./http.js";
@@ -386,6 +388,42 @@ export async function handleReport(
   });
 }
 
+/** An end-to-end encrypted message as its reporter's content key opens it, checked against its
+ *  author's device signature, so a report shows what was really said (docs/e2ee.md). The
+ *  attachment's keys are kept so a moderator can open it. */
+async function openReported(
+  deps: Deps,
+  m: typeof messages.$inferSelect,
+  authorId: string,
+  contentKey: string | undefined,
+) {
+  const sealed = m.sealed as Sealed;
+  if (!contentKey)
+    throw new HttpError(400, ErrorCode.badRequest, "contentKey: this message is end-to-end encrypted");
+  const signKey = await deviceSignKey(deps.db, authorId, sealed.device);
+  let payload: ReturnType<typeof openWithKey>;
+  try {
+    if (!signKey) throw new Error("unknown device");
+    payload = openWithKey(
+      sealed,
+      {
+        conversationId: m.conversationId,
+        messageId: m.id,
+        senderUserId: authorId,
+        senderDeviceId: sealed.device,
+      },
+      fromBase64(contentKey, 32),
+      signKey,
+    );
+  } catch {
+    throw new HttpError(400, ErrorCode.badRequest, "contentKey: it does not open this message");
+  }
+  return {
+    text: payload.text ?? null,
+    sealed: { verified: true, device: sealed.device, attachment: payload.attachment ?? null },
+  };
+}
+
 /** POST /reports: a user reports someone (later a message or more) to the moderators. */
 export function reportRoutes(deps: Deps) {
   const app = new Hono<{ Variables: AuthVariables }>();
@@ -423,13 +461,15 @@ export function reportRoutes(deps: Deps) {
         : [];
       if (!found || found.message.deletedAt) throw new HttpError(404, ErrorCode.notFound, "No such message");
       if (found.message.authorId === me) throw new HttpError(400, ErrorCode.badRequest, "That is yours");
+      const m = found.message;
       snapshot = {
-        authorId: found.message.authorId,
-        conversationId: found.message.conversationId,
-        seq: found.message.seq,
-        text: found.message.text,
-        attachments: found.message.attachments,
-        createdAt: found.message.createdAt,
+        authorId: m.authorId,
+        conversationId: m.conversationId,
+        seq: m.seq,
+        text: m.text,
+        attachments: m.attachments,
+        createdAt: m.createdAt,
+        ...(m.sealed && m.authorId ? await openReported(deps, m, m.authorId, input.contentKey) : {}),
       };
     }
     // A theme: anyone signed in but its maker; its name and version are kept with the report.

@@ -143,6 +143,9 @@ export interface MediaView {
   hidden?: boolean;
   /** Its place in the owner's profile gallery, when pinned. */
   gallery?: number | null;
+  /** Encrypted on the sender's device (POST /me/media/sealed): `url` and `poster` serve the
+   *  ciphertext, opened with the key in the sealed message. No thumbnail. */
+  sealed?: true;
   createdAt: string;
 }
 
