@@ -80,6 +80,9 @@ export function SiteFooter({
               <Link href="/projects">{s.footer.openSource}</Link>
             </li>
             <li>
+              <Link href="/developers">{s.footer.developers}</Link>
+            </li>
+            <li>
               <Link href="/together#install">{s.footer.selfHosting}</Link>
             </li>
             <li>

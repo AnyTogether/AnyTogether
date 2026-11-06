@@ -1,3 +1,4 @@
+import { ApiTokens } from "@/components/ApiTokens";
 import { AvatarEditor } from "@/components/AvatarEditor";
 import { ConnectionList } from "@/components/Connections";
 import { DiscoverySettings } from "@/components/Discover";
@@ -20,6 +21,7 @@ import {
 } from "@/components/Settings";
 import { type NavGroup, type NavLink, SettingsNav } from "@/components/SettingsNav";
 import { StorageSettings } from "@/components/StorageSettings";
+import type { ApiToken } from "@/lib/challenges";
 import { type ConnectionProvider, type ConnectionSetup, providerName } from "@/lib/connections";
 import { countryOptions } from "@/lib/countries";
 import type { Discovery } from "@/lib/discover";
@@ -43,7 +45,7 @@ export default async function Settings({
 }: { searchParams: Promise<{ linked?: string; link_error?: string; provider?: string }> }) {
   const [texts, user, query] = await Promise.all([strings(), currentUser(), searchParams]);
   if (!user) redirect("/login?next=/settings");
-  const [own, signedIn, keys, notify, discovery, storage, linked] = await Promise.all([
+  const [own, signedIn, keys, notify, discovery, storage, linked, apiTokens] = await Promise.all([
     apiJson<Own>("/me"),
     apiJson<{ sessions: SignedIn[] }>("/auth/sessions"),
     apiJson<{ passkeys: PasskeyRow[]; max: number }>("/auth/passkeys"),
@@ -51,6 +53,7 @@ export default async function Settings({
     apiJson<Discovery>("/me/discovery"),
     apiJson<StorageOverview | { enabled: false }>("/me/storage"),
     apiJson<ConnectionSetup>("/me/connections"),
+    apiJson<{ tokens: ApiToken[]; max: number }>("/me/api-tokens"),
   ]);
   // Cloud saves and media: shown only when the server keeps files.
   const files = storage.body?.enabled ? storage.body : null;
@@ -102,6 +105,7 @@ export default async function Settings({
         ...item("storage", texts.sectionStorage, Boolean(files)),
         ...item("passkeys", texts.sectionPasskeys),
         ...item("devices", texts.sectionDevices),
+        ...item("api", texts.sectionApi, Boolean(apiTokens.body)),
         ...item("data", texts.sectionData),
         ...item("delete", texts.sectionDelete),
       ],
@@ -222,6 +226,16 @@ export default async function Settings({
             <p className="hint section-lead">{texts.devicesLead}</p>
             <SessionList sessions={signedIn.body?.sessions ?? []} texts={t} />
           </article>
+
+          {apiTokens.body && (
+            <article className="card" id="api">
+              <h3 className="sub">
+                {texts.sectionApi} <span className="n">{apiTokens.body.tokens.length}</span>
+              </h3>
+              <p className="hint section-lead">{texts.apiLead}</p>
+              <ApiTokens tokens={apiTokens.body.tokens} max={apiTokens.body.max} texts={t} />
+            </article>
+          )}
 
           <article className="card" id="data">
             <h3 className="sub">{texts.sectionData}</h3>

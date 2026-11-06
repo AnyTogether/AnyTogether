@@ -35,6 +35,8 @@ const allowed: Record<string, RegExp[]> = {
     /^communities$/,
     new RegExp(`^communities/${id}(/(members|bans|events))?$`),
     new RegExp(`^events/${id}$`),
+    /^(me\/)?challenges$/,
+    new RegExp(`^challenges/${id}$`),
   ],
   POST: [
     /^conversations$/,
@@ -56,6 +58,8 @@ const allowed: Record<string, RegExp[]> = {
     /^communities$/,
     new RegExp(`^communities/${id}/(join|leave|decline|invites|bans|owner|events)$`),
     new RegExp(`^events/${id}/start$`),
+    /^challenges$/,
+    new RegExp(`^challenges/${id}/(join|leave|invites)$`),
   ],
   PATCH: [
     new RegExp(`^conversations/${id}$`),
@@ -84,6 +88,7 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^communities/${id}$`),
     new RegExp(`^communities/${id}/(members|bans)/${id}$`),
     new RegExp(`^events/${id}(/rsvp)?$`),
+    new RegExp(`^challenges/${id}$`),
   ],
 };
 const queries = [
@@ -98,6 +103,7 @@ const queries = [
   "q",
   "days",
   "when",
+  "state",
 ];
 
 async function pass(request: Request, { params }: { params: Promise<{ path: string[] }> }) {

@@ -1,6 +1,8 @@
 import { Avatar } from "@/components/Avatar";
 import { BoardPicker } from "@/components/BoardPicker";
+import { ChallengeList } from "@/components/ChallengeList";
 import { LevelBadge } from "@/components/LevelBadge";
+import type { Challenge } from "@/lib/challenges";
 import type { Board, BoardEntry, BoardGame, GameBoard, Scope } from "@/lib/feed";
 import { since } from "@/lib/feed";
 import { localName, totalTime } from "@/lib/games";
@@ -27,12 +29,17 @@ export default async function Leaderboards({ searchParams }: Search) {
   const scope = scopes.find((s) => s === one(query.scope)) ?? "friends";
   const [texts, user] = await Promise.all([strings(), currentUser()]);
   if (!user) redirect("/login?next=/leaderboards");
-  const [board, picker] = await Promise.all([
+  const [board, picker, running] = await Promise.all([
     apiJson<Board>(
       game ? `/games/${game}/leaderboard?by=${by}&scope=${scope}` : `/leaderboards/points?scope=${scope}`,
     ),
     apiJson<{ games: BoardGame[] }>("/leaderboards/games"),
+    // Challenges on the game, or the reader's own on the overall board.
+    apiJson<{ challenges: Challenge[] }>(game ? `/challenges?titleId=${game}` : "/me/challenges"),
   ]);
+  const challenges = (running.body?.challenges ?? [])
+    .filter((c) => c.state === "active" || c.state === "upcoming")
+    .slice(0, 3);
   const games = picker.body?.games ?? [];
   const shown = board.body;
   if (shown?.game && !games.some((g) => g.titleId === shown.game?.titleId))
@@ -67,6 +74,7 @@ export default async function Leaderboards({ searchParams }: Search) {
         <Link href="/leaderboards" aria-current="page">
           {texts.leaderboards}
         </Link>
+        <Link href="/challenges">{texts.challenges}</Link>
       </nav>
 
       <div className="board-controls in d3">
@@ -92,6 +100,18 @@ export default async function Leaderboards({ searchParams }: Search) {
       </div>
 
       {shown && <MyRank board={shown} texts={texts} value={value} kind={kind} />}
+
+      {challenges.length > 0 && (
+        <article className="card in d3 board-challenges">
+          <h3 className="sub">{game ? texts.boardChallenges : texts.boardYourChallenges}</h3>
+          <ChallengeList challenges={challenges} texts={texts} />
+          <p className="board-updated">
+            <Link href={game ? `/challenges?new=1&game=${game}` : "/challenges"} className="pill">
+              {game ? texts.newChallenge : texts.allChallenges}
+            </Link>
+          </p>
+        </article>
+      )}
 
       <article className="card in d4">
         <h3 className="sub">
