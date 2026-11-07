@@ -34,6 +34,19 @@ const all: SpecPlatform[] = ["mac", "windows", "linux", "iphone", "android", "we
 export const statusCards: StatusCard[] = [
   // Done, newest first.
   {
+    id: "big-rooms",
+    column: "done",
+    platforms: all,
+    en: {
+      t: "Share play for many viewers",
+      d: "Up to 16 viewers on a share play and 24 voices in a party call, through the media server.",
+    },
+    tr: {
+      t: "Çok izleyicili Share play",
+      d: "Medya sunucusuyla birlikte oynamada 16 izleyiciye, parti sesinde 24 kişiye kadar.",
+    },
+  },
+  {
     id: "public-api",
     column: "done",
     platforms: ["web"],
@@ -571,19 +584,6 @@ export const statusCards: StatusCard[] = [
     tr: {
       t: "Mağazalarda telefon uygulaması",
       d: "AnyPS5 Remote, App Store ve Google Play'de, yan yükleme olmadan.",
-    },
-  },
-  {
-    id: "big-rooms",
-    column: "progress",
-    platforms: all,
-    en: {
-      t: "Share play for many viewers",
-      d: "More than four viewers, and parties with more than eight people talking. The media server is being set up.",
-    },
-    tr: {
-      t: "Çok izleyicili Share play",
-      d: "Dörtten fazla izleyici ve sekizden fazla kişinin konuştuğu partiler. Medya sunucusu kuruluyor.",
     },
   },
 ];
