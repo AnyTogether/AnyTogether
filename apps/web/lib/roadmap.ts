@@ -30,6 +30,20 @@ export const planDocs = {
 export const roadmap: RoadmapItem[] = [
   // Done, newest first.
   {
+    id: "big-rooms",
+    status: "done",
+    shipped: "AnyTogether",
+    areas: ["online"],
+    en: {
+      t: "Share play for many viewers",
+      d: "Share plays with up to 16 viewers and party calls with up to 24 voices, through AnyTogether's media server. Smaller ones stay direct.",
+    },
+    tr: {
+      t: "Çok izleyicili birlikte oynama",
+      d: "AnyTogether'ın medya sunucusuyla 16 izleyiciye kadar birlikte oynama ve 24 kişiye kadar parti sesi. Daha küçükleri doğrudan bağlanır.",
+    },
+  },
+  {
     id: "party-chat",
     status: "done",
     areas: ["mac", "pc", "phone", "online"],
@@ -529,19 +543,6 @@ export const roadmap: RoadmapItem[] = [
     tr: {
       t: "Mağazalarda telefon uygulaması",
       d: "AnyPS5 Remote, App Store ve Google Play'de, yan yükleme olmadan.",
-    },
-  },
-  {
-    id: "big-rooms",
-    status: "progress",
-    areas: ["online"],
-    en: {
-      t: "Share play for many viewers",
-      d: "More than four viewers and parties with more than eight talking, through a media server. The code is ready, and the server is being set up.",
-    },
-    tr: {
-      t: "Çok izleyicili birlikte oynama",
-      d: "Bir medya sunucusuyla dörtten fazla izleyici ve sekizden fazla konuşanlı partiler. Kod hazır ve sunucu kuruluyor.",
     },
   },
 ];
