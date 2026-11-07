@@ -37,6 +37,7 @@ export const statusCards: StatusCard[] = [
     id: "big-rooms",
     column: "done",
     platforms: all,
+    release: "AnyPS5 ARM 0.2.35 · Desktop 0.1.20",
     en: {
       t: "Share play for many viewers",
       d: "Up to 16 viewers on a share play and 24 voices in a party call, through the media server.",
