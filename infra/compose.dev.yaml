@@ -11,8 +11,11 @@ services:
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U anytogether"]
-      interval: 2s
-      retries: 30
+      # Checked often while it starts, then every 30 s, so an idle dev database stays quiet.
+      interval: 30s
+      start_period: 60s
+      start_interval: 2s
+      retries: 3
   valkey:
     image: valkey/valkey:8-alpine
     command: ["valkey-server", "--save", "", "--appendonly", "no"]
