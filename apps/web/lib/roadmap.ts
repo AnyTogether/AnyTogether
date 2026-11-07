@@ -36,11 +36,11 @@ export const roadmap: RoadmapItem[] = [
     areas: ["online"],
     en: {
       t: "Share play for many viewers",
-      d: "Share plays with up to 16 viewers and party calls with up to 24 voices, through AnyTogether's media server. Smaller ones stay direct.",
+      d: "Party calls with up to 24 voices, and share plays hosted on the Mac with up to 16 viewers, through AnyTogether's media server. Windows and Linux watch through it and host up to four. Smaller ones stay direct.",
     },
     tr: {
       t: "Çok izleyicili birlikte oynama",
-      d: "AnyTogether'ın medya sunucusuyla 16 izleyiciye kadar birlikte oynama ve 24 kişiye kadar parti sesi. Daha küçükleri doğrudan bağlanır.",
+      d: "AnyTogether'ın medya sunucusuyla 24 kişiye kadar parti sesi ve Mac'ten yayınlanan, 16 izleyiciye kadar birlikte oynama. Windows ve Linux onun üzerinden izler ve dört izleyiciye kadar yayınlar. Daha küçükleri doğrudan bağlanır.",
     },
   },
   {
