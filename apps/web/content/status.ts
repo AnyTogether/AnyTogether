@@ -40,11 +40,11 @@ export const statusCards: StatusCard[] = [
     release: "AnyPS5 ARM 0.2.35 · Desktop 0.1.20",
     en: {
       t: "Share play for many viewers",
-      d: "Up to 16 viewers on a share play and 24 voices in a party call, through the media server.",
+      d: "Up to 24 voices in a party call, and up to 16 viewers on a share play hosted on the Mac, through the media server. Windows and Linux watch through it and host up to four.",
     },
     tr: {
       t: "Çok izleyicili Share play",
-      d: "Medya sunucusuyla birlikte oynamada 16 izleyiciye, parti sesinde 24 kişiye kadar.",
+      d: "Medya sunucusuyla parti sesinde 24 kişiye, Mac'ten yayınlanan birlikte oynamada 16 izleyiciye kadar. Windows ve Linux onun üzerinden izler ve dört izleyiciye kadar yayınlar.",
     },
   },
   {
