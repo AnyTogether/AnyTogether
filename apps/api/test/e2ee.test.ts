@@ -89,7 +89,7 @@ const sendSealed = (from: Device, conversationId: string, sealed: ReturnType<typ
 describe("device keys", () => {
   it("are registered per session, checked, listed for the person and their friends, and not for strangers", async () => {
     const utku = await device("utku@example.com");
-    const ayse = await device("ayse@example.com", "Phone");
+    const ayse = await device("ayse@example.com", "Ayşe's iPhone");
     const stranger = await h.user("stranger@example.com");
     await befriend(utku, ayse);
 
@@ -121,9 +121,12 @@ describe("device keys", () => {
         signKey: ayse.record.signKey,
         boxKey: ayse.record.boxKey,
         sig: ayse.record.sig,
-        name: "Phone",
+        // Someone else's device goes by its kind, never by the name its app gave.
+        name: "iPhone",
       }),
     ]);
+    const hers = await h.call("GET", `${v1}/e2ee/devices?users=${ayse.id}`, undefined, ayse.token);
+    expect(hers.body.users[0].devices[0].name).toBe("Ayşe's iPhone");
     const toStranger = await h.call("GET", `${v1}/e2ee/devices?users=${utku.id}`, undefined, stranger.token);
     expect(toStranger.body.users).toEqual([]);
   });

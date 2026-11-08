@@ -10,6 +10,14 @@ import { json, social } from "@/lib/social";
 import Link from "next/link";
 import { useState } from "react";
 
+/** Whether the remember switch may move to `next`: turning it off deletes the list on both sides
+ *  at once, so it is asked first. Turning it on is not. */
+export const rememberSwitchAllowed = (
+  next: boolean,
+  texts: Pick<UiStrings, "rememberMetOffConfirm">,
+  ask: (question: string) => boolean,
+) => next || ask(texts.rememberMetOffConfirm);
+
 /** Who the reader played with lately: befriend, block or forget each; and the switch that keeps
  *  (or stops keeping) meetings. */
 export function MetList({ texts, initial, now }: { texts: UiStrings; initial: MetPlayers; now: number }) {
@@ -56,6 +64,7 @@ export function MetList({ texts, initial, now }: { texts: UiStrings; initial: Me
   }
 
   async function toggle(next: boolean) {
+    if (!rememberSwitchAllowed(next, texts, (question) => window.confirm(question))) return;
     setRemember(next);
     const saved = await social("me/players-met", { method: "PATCH", ...json({ remember: next }) });
     if (!saved.ok) {

@@ -10,6 +10,7 @@ import {
   browserDevice,
   browserName,
   checked,
+  deviceLine,
   openOne,
   registration,
 } from "@/lib/e2ee";
@@ -216,9 +217,9 @@ export function EncryptionSheet({
             <h4>{texts.e2eeDevices}</h4>
             <dl>
               <dt>{texts.e2eeYou}</dt>
-              <dd>{mine.map((d) => d.name).join(", ") || "–"}</dd>
+              <DeviceLines texts={texts} devices={mine} />
               <dt>{name}</dt>
-              <dd>{theirs.map((d) => d.name).join(", ") || "–"}</dd>
+              <DeviceLines texts={texts} devices={theirs} />
             </dl>
             <p className="hint">{texts.e2eeNewDeviceNote}</p>
           </section>
@@ -230,6 +231,26 @@ export function EncryptionSheet({
         </div>
       </div>
     </dialog>
+  );
+}
+
+/** One person's devices in the sheet: each as its kind and the day it was added. */
+function DeviceLines({ texts, devices }: { texts: UiStrings; devices: ListedDevice[] }) {
+  if (!devices.length) return <dd>–</dd>;
+  return (
+    <dd>
+      <ul className="e2ee-device-list">
+        {devices.map((device) => {
+          const line = deviceLine(texts, texts.language, device);
+          return (
+            <li key={device.id}>
+              <span>{line.kind}</span>
+              {line.added && <span className="meta">{line.added}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </dd>
   );
 }
 
