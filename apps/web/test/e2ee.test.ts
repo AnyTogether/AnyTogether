@@ -5,6 +5,7 @@ import {
   checked,
   contentKeyOf,
   deviceChange,
+  deviceLine,
   openOne,
   revealed,
   safetyOf,
@@ -13,6 +14,7 @@ import {
 import type { Message } from "@/lib/social";
 import { newDevice, publicDevice } from "@anytogether/e2ee";
 import { describe, expect, it } from "vitest";
+import { chatEn, chatTr } from "../lib/i18n-chat";
 
 const utku = "0190f1a2-0000-7000-8000-00000000a11c";
 const ayse = "0190f1a2-0000-7000-8000-000000000b0b";
@@ -132,5 +134,26 @@ describe("browser names", () => {
     expect(
       browserName("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0"),
     ).toBe("Firefox on Windows");
+  });
+});
+
+describe("device lists", () => {
+  it("show each device as its kind and the day it was added, never the name its app gave", () => {
+    const at = "2026-11-03T10:00:00.000Z";
+    expect(deviceLine(chatEn, "en", { name: "Utku's MacBook Pro · AnyPS5", createdAt: at })).toEqual({
+      kind: "Mac",
+      added: "Added November 3, 2026",
+    });
+    expect(deviceLine(chatTr, "tr", { name: "DESKTOP-7F3K2LQ", createdAt: at })).toEqual({
+      kind: "Windows bilgisayar",
+      added: "Eklenme: 3 Kasım 2026",
+    });
+    expect(deviceLine(chatTr, "tr", { name: "Chrome on Windows", createdAt: at }).kind).toBe(
+      "Web tarayıcısı",
+    );
+    expect(deviceLine(chatEn, "en", { name: "gokalp-rig", createdAt: "" })).toEqual({
+      kind: "Device",
+      added: null,
+    });
   });
 });

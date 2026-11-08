@@ -1,5 +1,5 @@
 import { conversationMembers, conversations, e2eeDevices, sessions } from "@anytogether/db";
-import { deviceIdOf, fromBase64, verifyDevice } from "@anytogether/e2ee";
+import { deviceIdOf, fromBase64, publicDeviceName, verifyDevice } from "@anytogether/e2ee";
 import {
   E2eeDeviceRegister,
   type E2eeDeviceView,
@@ -241,12 +241,16 @@ export function e2eeRoutes(deps: Deps) {
       users: allowed.map((userId) => {
         const live = new Set((active.get(userId) ?? []).map((d) => d.id));
         const mine = rows.filter((r) => r.accountId === userId);
+        // Someone else's devices go by their kind ("Windows PC"): the name an app registered is
+        // often the computer's own, with its owner's name in it.
+        const shown = (d: Device): E2eeDeviceView =>
+          userId === me ? deviceView(d) : { ...deviceView(d), name: publicDeviceName(d.name) };
         return {
           userId,
-          devices: mine.filter((d) => live.has(d.id)).map(deviceView),
+          devices: mine.filter((d) => live.has(d.id)).map(shown),
           removed: mine
             .filter((d) => !live.has(d.id))
-            .map((d) => ({ ...deviceView(d), removedAt: iso(d.removedAt ?? d.createdAt) })),
+            .map((d) => ({ ...shown(d), removedAt: iso(d.removedAt ?? d.createdAt) })),
         };
       }),
     };

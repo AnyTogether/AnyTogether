@@ -7,6 +7,7 @@ import {
   type Sealed,
   type SealedAttachment,
   deviceFromSeeds,
+  deviceKindOf,
   newDevice,
   open,
   publicDevice,
@@ -116,6 +117,37 @@ export function browserName(agent: string) {
             ? "Linux"
             : "";
   return system ? `${browser} on ${system}` : browser;
+}
+
+/** The words of each kind of device (docs/e2ee.md): what a device list shows instead of its name. */
+const deviceKindText = {
+  windows: "e2eeDeviceWindows",
+  mac: "e2eeDeviceMac",
+  linux: "e2eeDeviceLinux",
+  iphone: "e2eeDeviceIphone",
+  ipad: "e2eeDeviceIpad",
+  android: "e2eeDeviceAndroid",
+  browser: "e2eeDeviceBrowser",
+  device: "e2eeDeviceOther",
+} as const;
+
+/** A device as a list shows it: its kind ("Windows PC") and the day it was added, never the name
+ *  its app registered (often the computer's own name) or its ID. */
+export function deviceLine(
+  texts: Record<(typeof deviceKindText)[keyof typeof deviceKindText] | "e2eeDeviceAdded", string>,
+  language: string,
+  device: { name: string; createdAt: string },
+) {
+  const added = new Date(device.createdAt);
+  return {
+    kind: texts[deviceKindText[deviceKindOf(device.name)]],
+    added: Number.isNaN(added.getTime())
+      ? null
+      : texts.e2eeDeviceAdded.replace(
+          "{date}",
+          added.toLocaleDateString(language, { day: "numeric", month: "long", year: "numeric" }),
+        ),
+  };
 }
 
 /** The body PUT /me/e2ee/device takes for this browser. */

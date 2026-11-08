@@ -323,6 +323,40 @@ export function openFile(ciphertext: Uint8Array, part: FilePart, key: string, no
   }
 }
 
+// --- device names ----------------------------------------------------------------------------
+
+/** What kind of device a device key is on, read from the name its app registered. Lists show this
+ *  ("Windows PC", "iPhone") rather than the name, which is often the computer's own name and holds
+ *  a person's name. */
+export type DeviceKind = "windows" | "mac" | "linux" | "iphone" | "ipad" | "android" | "browser" | "device";
+
+export function deviceKindOf(name: string): DeviceKind {
+  const n = name.toLowerCase();
+  if (/chrome|firefox|safari|\bedge\b|opera|browser/.test(n)) return "browser";
+  if (/iphone|\bios\b/.test(n)) return "iphone";
+  if (/ipad/.test(n)) return "ipad";
+  if (/android|pixel|galaxy|samsung|oneplus|xiaomi|redmi|huawei/.test(n)) return "android";
+  if (/\bmac\b|macbook|imac|mac ?mini|mac ?studio|mac ?pro|macos/.test(n)) return "mac";
+  if (/linux|ubuntu|fedora|debian|\barch\b|steam ?deck|steamos/.test(n)) return "linux";
+  if (/windows|\bpc\b|^desktop-|^laptop-/.test(n)) return "windows";
+  return "device";
+}
+
+/** The English names of the kinds: what the server lists for other people's devices. */
+export const deviceKindNames: Record<DeviceKind, string> = {
+  windows: "Windows PC",
+  mac: "Mac",
+  linux: "Linux PC",
+  iphone: "iPhone",
+  ipad: "iPad",
+  android: "Android phone",
+  browser: "Web browser",
+  device: "Device",
+};
+
+/** A device's name as other people see it: its kind only. */
+export const publicDeviceName = (name: string) => deviceKindNames[deviceKindOf(name)];
+
 // --- safety number ---------------------------------------------------------------------------
 
 function personDigits(userId: string, signKeys: string[]) {

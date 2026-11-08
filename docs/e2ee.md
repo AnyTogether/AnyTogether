@@ -65,6 +65,12 @@ revoking the session removes them. `DELETE /me/e2ee/devices/:deviceId` removes o
 verify old messages), for oneself and the people one has a direct conversation with. A change
 reaches the person and those people as the gateway event `e2ee.devices` `{userId}`.
 
+A device's `name` says only what it is: the launchers register "AnyPS5 on Windows", "AnyPS5 on
+Linux" and "AnyPS5 on Mac", the web "<browser> on <system>". Older launchers sent the computer's
+own name, which often holds a person's name, so other people's devices are listed by their kind
+alone ("Windows PC", "iPhone", "Device"), read from the name by `deviceKindOf` in
+packages/e2ee. Clients show every device, their own too, as its kind and the day it was added.
+
 A client checks each device it gets: `deviceId` matches `signKey`, and `sig` verifies for that
 user. A device that fails is ignored.
 
@@ -166,7 +172,8 @@ The web app, the macOS launcher, AnyPS5 Desktop and the phone app behave the sam
 4. A sealed message is opened on the device. No key for this device: "Sent before this device was
    added." Anything else that fails: "This message could not be decrypted."
 5. The thread shows the lock state. It opens a sheet with what it means, the safety number in
-   twelve groups of five, a "We compared them" mark and both people's devices.
+   twelve groups of five, a "We compared them" mark and both people's devices, each as its kind
+   and the day it was added (never a computer's name or a device ID).
 6. The client remembers, per conversation, the devices it last saw. When they change it shows a
    notice in the thread until it is dismissed, and drops the "compared" mark. The first time it
    only remembers.
@@ -197,6 +204,15 @@ Texts, English and Turkish:
 | devices | Devices | Cihazlar |
 | you | You | Sen |
 | newDeviceNote | A new device cannot read messages sent before it was added. | Yeni bir cihaz, eklenmeden önce gönderilen mesajları okuyamaz. |
+| deviceAdded | Added {date} | Eklenme: {date} |
+| deviceWindows | Windows PC | Windows bilgisayar |
+| deviceMac | Mac | Mac |
+| deviceLinux | Linux PC | Linux bilgisayar |
+| deviceIphone | iPhone | iPhone |
+| deviceIpad | iPad | iPad |
+| deviceAndroid | Android phone | Android telefon |
+| deviceBrowser | Web browser | Web tarayıcısı |
+| deviceOther | Device | Cihaz |
 | beforeDevice | Sent before this device was added. | Bu cihaz eklenmeden önce gönderildi. |
 | undecryptable | This message could not be decrypted. | Bu mesajın şifresi çözülemedi. |
 | preview | Encrypted message | Şifreli mesaj |
