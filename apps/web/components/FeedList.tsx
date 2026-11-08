@@ -80,9 +80,15 @@ function Item({
       {person.displayName}
     </Link>
   );
-  const game = item.game ? (
-    <b className="game-name">{localName(item.game.names, language) || item.game.titleId}</b>
-  ) : null;
+  // The game's name opens its hub, as a person's name opens their profile.
+  const gameLabel = item.game ? localName(item.game.names, language) || item.game.titleId : "";
+  const game = !item.game ? null : /^[A-Z]{4}[0-9]{5}$/.test(item.game.titleId) ? (
+    <Link href={`/games/${item.game.titleId}`} className="who-name game-name">
+      {gameLabel}
+    </Link>
+  ) : (
+    <b className="game-name">{gameLabel}</b>
+  );
   const trophies = item.trophies ?? [];
   const first = trophies[0];
   const trophyName = (t: (typeof trophies)[number]) =>

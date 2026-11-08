@@ -38,3 +38,35 @@ describe("front page totals", () => {
     expect((await h.call("GET", `${v1}/stats`)).body.players).toBe(3);
   });
 });
+
+describe("players online now", () => {
+  const online = (id: string, state = "online") =>
+    h.valkey.set(`presence:${id}`, JSON.stringify({ state }), "EX", 60);
+
+  it("counts accounts with a presence kept, never who, and leaves hidden ones out", async () => {
+    const a = await h.user("one@example.com");
+    const b = await h.user("two@example.com");
+    const c = await h.user("three@example.com");
+    await online(a.id);
+    await online(b.id, "in_game");
+    // A device's own presence is not an account more.
+    await h.valkey.set(`presence:${a.id}:${uuidv7()}`, JSON.stringify({ state: "online" }), "EX", 60);
+    await h.valkey.sadd(`presence-devices:${a.id}`, "s1");
+
+    const first = await h.call("GET", `${v1}/stats/online`);
+    expect(first.status).toBe(200);
+    expect(first.body).toEqual({ online: 2 });
+    expect(first.headers.get("cache-control")).toContain("max-age=30");
+
+    // Kept a while, not counted again on every visit.
+    await online(c.id);
+    expect((await h.call("GET", `${v1}/stats/online`)).body).toEqual({ online: 2 });
+    await h.valkey.del("stats:online");
+    expect((await h.call("GET", `${v1}/stats/online`)).body).toEqual({ online: 3 });
+
+    // Showing presence to nobody takes the account out of the count.
+    await h.call("PATCH", `${v1}/me/privacy`, { presence: "nobody" }, c.token);
+    await h.valkey.del("stats:online");
+    expect((await h.call("GET", `${v1}/stats/online`)).body).toEqual({ online: 2 });
+  });
+});
