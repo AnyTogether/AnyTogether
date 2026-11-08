@@ -88,7 +88,7 @@ export const psnEn = {
     "Fills the list above with the people you were in a party, share play, game or post with. Each meeting is kept for 90 days.",
   rememberMetOffConfirm:
     "Turn off remembering? Your list of players you met is deleted, and you are taken off their lists too. Nobody is kept from now on.",
-  forget: "Forget",
+  forget: "Remove from list",
   daysLabel: "Last {n} days",
 
   communities: "Communities",
@@ -284,7 +284,7 @@ export const psnTr: typeof psnEn = {
     "Yukarıdaki listeyi aynı partide, paylaşımlı oyunda, oyunda ya da ilanda olduğun kişilerle doldurur. Her karşılaşma 90 gün tutulur.",
   rememberMetOffConfirm:
     "Hatırlama kapatılsın mı? Tanıştığın oyuncuların listesi silinir ve sen de onların listesinden çıkarılırsın. Bundan sonra kimse tutulmaz.",
-  forget: "Unut",
+  forget: "Listeden çıkar",
   daysLabel: "Son {n} gün",
 
   communities: "Topluluklar",
