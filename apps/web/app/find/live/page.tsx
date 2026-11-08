@@ -1,5 +1,6 @@
 import { RefreshOn } from "@/components/Discover";
 import { FindTabs, PartyRow, ShareRow } from "@/components/DiscoverCards";
+import { OnlineNow } from "@/components/OnlineNow";
 import type { PublicParty, PublicShare } from "@/lib/discover";
 import { strings, ui } from "@/lib/i18n";
 import { apiJson, currentUser } from "@/lib/session";
@@ -30,7 +31,10 @@ export default async function FindLive() {
         events={["discover.changed", "party.request_answered", "share_play.request_answered"]}
       />
       <div className="find-head in d1">
-        <h2>{texts.findPlayers}</h2>
+        <div className="find-title">
+          <h2>{texts.findPlayers}</h2>
+          <OnlineNow texts={texts} />
+        </div>
       </div>
       <p className="lead in d2">{texts.findLead}</p>
       <FindTabs current="live" texts={texts} />

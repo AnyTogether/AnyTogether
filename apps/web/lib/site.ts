@@ -16,6 +16,8 @@ async function quick<T>(path: string, wait = 1500): Promise<T | null> {
 
 export const loadReleases = () => quick<Releases>("/releases");
 export const loadStats = () => quick<PublicStats>("/stats");
+/** How many are online now: a number only, kept by the API for half a minute. */
+export const loadOnline = () => quick<{ online: number }>("/stats/online");
 
 /** The platform the visitor's browser says it runs on. */
 export async function visitorPlatform(): Promise<Platform | null> {
