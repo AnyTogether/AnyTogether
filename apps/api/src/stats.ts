@@ -1,10 +1,12 @@
 import { accounts, earnedTrophies, playSessions, themes } from "@anytogether/db";
+import { presenceHiddenKey } from "@anytogether/shared";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Deps } from "./app.js";
 
-/** A few totals for the website's front page: counts only, never who. Worked out at most once a
- *  minute and kept in Valkey, so a busy front page costs the database nothing. */
+/** A few totals for the website's front page, and how many are online for Find players: counts
+ *  only, never who. Worked out at most once a minute (the online count every half minute) and kept
+ *  in Valkey, so a busy page costs the database nothing. */
 
 export interface PublicStats {
   /** Accounts in good standing. */
@@ -19,6 +21,16 @@ export interface PublicStats {
 
 const key = "stats:public";
 const keepFor = 120;
+
+/** How many accounts are online now, for Find players: a number only, never who. */
+export interface OnlineNow {
+  /** Accounts online, away or in a game whose presence is not hidden. Anyone who appears offline
+   *  or shows their presence to nobody is left out, because the gateway keeps nothing for them. */
+  online: number;
+}
+
+const onlineKey = "stats:online";
+const onlineKeepFor = 30;
 
 export function statsRoutes(deps: Deps) {
   const app = new Hono();
@@ -48,6 +60,37 @@ export function statsRoutes(deps: Deps) {
       themes: shared?.n ?? 0,
     };
   };
+
+  /** The merged presences the gateway keeps, one per account (`presence:<id>`, gone when the
+   *  account goes offline or hides its presence), counted with SCAN so Valkey is never held up.
+   *  A device's own presence (`presence:<id>:<session>`) is not counted, and an account marked
+   *  hidden is left out even if a presence of theirs was still kept. */
+  const countOnline = async (): Promise<OnlineNow> => {
+    const prefix = "presence:";
+    const ids = new Set<string>();
+    let cursor = "0";
+    do {
+      const [next, keys] = await deps.valkey.scan(cursor, "MATCH", `${prefix}*`, "COUNT", 1000);
+      cursor = next;
+      for (const found of keys) if (!found.includes(":", prefix.length)) ids.add(found.slice(prefix.length));
+    } while (cursor !== "0");
+    const all = [...ids];
+    let online = 0;
+    for (let at = 0; at < all.length; at += 500) {
+      const part = all.slice(at, at + 500);
+      const hidden = await deps.valkey.mget(...part.map((id) => presenceHiddenKey(id)));
+      online += hidden.filter((value) => value === null).length;
+    }
+    return { online };
+  };
+
+  app.get("/stats/online", async (c) => {
+    const cached = await deps.valkey.get(onlineKey);
+    const now: OnlineNow = cached ? JSON.parse(cached) : await countOnline();
+    if (!cached) await deps.valkey.set(onlineKey, JSON.stringify(now), "EX", onlineKeepFor);
+    c.header("cache-control", "public, max-age=30");
+    return c.json(now);
+  });
 
   app.get("/stats", async (c) => {
     const cached = await deps.valkey.get(key);

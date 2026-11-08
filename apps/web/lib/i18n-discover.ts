@@ -4,6 +4,9 @@
 export const discoverEn = {
   findPlayers: "Find players",
   findLead: "Look for a group, drop into a public party, or meet people who play what you play.",
+  onlineNowOne: "{n} player online now",
+  onlineNowMany: "{n} players online now",
+  onlineNowHint: "Not counting anyone who is invisible or hides their status.",
   tabBoard: "Looking for group",
   tabLive: "Parties & live",
   // The board
@@ -164,6 +167,9 @@ export const discoverEn = {
 export const discoverTr: typeof discoverEn = {
   findPlayers: "Oyuncu bul",
   findLead: "Grup ara, herkese açık bir partiye katıl ya da senin oynadıklarını oynayanlarla tanış.",
+  onlineNowOne: "Şu an {n} oyuncu çevrimiçi",
+  onlineNowMany: "Şu an {n} oyuncu çevrimiçi",
+  onlineNowHint: "Görünmez olanlar ve durumunu gizleyenler sayılmaz.",
   tabBoard: "Grup arayanlar",
   tabLive: "Partiler ve canlı",
   lfgPost: "İlan ver",

@@ -1,5 +1,6 @@
 import { FilterSelect, PeopleSearch } from "@/components/Discover";
 import { FindTabs, PersonRow } from "@/components/DiscoverCards";
+import { OnlineNow } from "@/components/OnlineNow";
 import type { Discovery, PersonCard } from "@/lib/discover";
 import { type LibraryGame, localName } from "@/lib/games";
 import { strings, ui } from "@/lib/i18n";
@@ -44,7 +45,10 @@ export default async function FindPeople({ searchParams }: Search) {
   return (
     <section className="page find">
       <div className="find-head in d1">
-        <h2>{texts.findPlayers}</h2>
+        <div className="find-title">
+          <h2>{texts.findPlayers}</h2>
+          <OnlineNow texts={texts} />
+        </div>
       </div>
       <p className="lead in d2">{texts.peopleLead}</p>
       <FindTabs current="people" texts={texts} />

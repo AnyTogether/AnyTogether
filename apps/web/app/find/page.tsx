@@ -1,5 +1,6 @@
 import { FilterSelect, LfgComposer, RefreshOn } from "@/components/Discover";
 import { FindTabs, LfgCard, gameName } from "@/components/DiscoverCards";
+import { OnlineNow } from "@/components/OnlineNow";
 import {
   type Discovery,
   type LfgGame,
@@ -80,7 +81,10 @@ export default async function Find({ searchParams }: Search) {
         events={["lfg.changed", "lfg.request", "lfg.request_cancelled", "lfg.answered"]}
       />
       <div className="find-head in d1">
-        <h2>{texts.findPlayers}</h2>
+        <div className="find-title">
+          <h2>{texts.findPlayers}</h2>
+          <OnlineNow texts={texts} />
+        </div>
         <LfgComposer
           texts={t}
           games={[...composerGames].map(([titleId, name]) => ({ titleId, name }))}
