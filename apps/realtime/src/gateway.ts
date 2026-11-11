@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import {
   type ClientFrame,
+  type Listening,
   type ServerFrame,
   callDepartureGraceMs,
   callDeparturesKey,
@@ -16,6 +17,7 @@ import {
   gameDeparturesKey,
   gameSessionMembersKey,
   gameSignalKinds,
+  listeningOf,
   maxWatchedTopics,
   presenceKey as mergedPresenceKey,
   playingKey,
@@ -79,6 +81,8 @@ interface Presence {
   state: "online" | "away" | "in_game" | "offline";
   titleId?: string;
   since?: string;
+  /** What the device says is playing, while its person shares it. */
+  listening?: Listening;
 }
 
 /** One WebSocket per signed-in client: events the API publishes for its user reach it, a socket
@@ -202,7 +206,8 @@ export async function createGateway(options: GatewayOptions) {
   }
 
   /** The user's presence over all their devices (in a game > online > away), kept and, when it
-   *  changed, sent to every friend; unless they hide it, when nothing is kept or sent. */
+   *  changed, sent to every friend; unless they hide it, when nothing is kept or sent. What they
+   *  listen to comes from the first device, in the same order, that says so. */
   async function announce(userId: string) {
     if (await store.exists(presenceHiddenKey(userId))) {
       await store.del(mergedPresenceKey(userId));
@@ -216,8 +221,11 @@ export async function createGateway(options: GatewayOptions) {
     if (gone.length) await store.srem(presenceDevicesKey(userId), ...gone);
     const devices = kept.filter(Boolean).map((value) => JSON.parse(value as string) as Presence);
     const rank = { in_game: 0, online: 1, away: 2, offline: 3 };
+    devices.sort((a, b) => (rank[a.state] ?? 3) - (rank[b.state] ?? 3));
+    const first: Presence = devices[0] ?? { state: "offline" };
+    const listening = devices.find((device) => device.listening)?.listening;
     const merged: Presence = withExtras(
-      devices.sort((a, b) => (rank[a.state] ?? 3) - (rank[b.state] ?? 3))[0] ?? { state: "offline" },
+      listening ? { ...first, listening } : first,
       await store.hgetall(presenceExtraKey(userId)),
     );
     const before = await store.get(mergedPresenceKey(userId));
@@ -498,14 +506,17 @@ export async function createGateway(options: GatewayOptions) {
   };
 }
 
-/** What a device may say about itself: its state, and the game and since when while playing. */
+/** What a device may say about itself: its state, the game and since when while playing, and
+ *  what it listens to while its person shares that. */
 function devicePresence(presence: unknown): Presence {
-  const { state, titleId, since } = (presence ?? {}) as Record<string, unknown>;
+  const { state, titleId, since, listening } = (presence ?? {}) as Record<string, unknown>;
   if (state !== "online" && state !== "away" && state !== "in_game") return { state: "online" };
+  const heard = listeningOf(listening);
   return {
     state,
     ...(typeof titleId === "string" ? { titleId: titleId.slice(0, 32) } : {}),
     ...(typeof since === "string" ? { since: since.slice(0, 40) } : {}),
+    ...(heard ? { listening: heard } : {}),
   };
 }
 

@@ -13,6 +13,7 @@ import {
   byPresence,
   fill,
   isUserId,
+  listeningLine,
   playedFor,
   presenceDot,
   shownName,
@@ -305,6 +306,7 @@ export function FriendsBoard({
                     badge={<LevelBadge level={friend.level} texts={texts} />}
                   >
                     <Status friend={friend} now={now} texts={texts} />
+                    <Listening friend={friend} texts={texts} />
                   </Who>
                   <div className="acts">
                     {friend.presence.share && (
@@ -453,6 +455,22 @@ function Status({ friend, now, texts }: { friend: Friend; now: number; texts: Ui
           ? texts.stateOffline
           : texts.stateOnline;
   return <span className={`status ${dot === "offline" ? state : dot}`}>{label}</span>;
+}
+
+/** What a friend listens to while they share it: a quiet line under their status. */
+function Listening({ friend, texts }: { friend: Friend; texts: UiStrings }) {
+  const heard = listeningLine(friend.presence, texts);
+  if (!heard) return null;
+  return (
+    <span className="listening">
+      <span className="eq" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+      <span className="heard">{heard}</span>
+    </span>
+  );
 }
 
 /** The ⋯ menu on a friend: their profile, remove, block (the last two ask first). */

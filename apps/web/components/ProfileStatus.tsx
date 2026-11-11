@@ -2,16 +2,20 @@
 
 import { useLiveEvents } from "@/components/Live";
 import type { UiStrings } from "@/lib/i18n";
-import { type Presence, fill, presenceDot } from "@/lib/people";
+import { type Presence, fill, listeningLine, presenceDot } from "@/lib/people";
 import { type PresenceStatus, profilePresenceAfter } from "@/lib/presenceMode";
 import { useEffect, useState } from "react";
 
-type Texts = Pick<UiStrings, "inGame" | "stateDnd" | "stateIdle" | "stateOnline">;
+type Texts = Pick<
+  UiStrings,
+  "inGame" | "listeningTo" | "listeningToBy" | "stateDnd" | "stateIdle" | "stateOnline"
+>;
 
 /** The status line under a profile's name (Online, Idle, Do Not Disturb, or the game), kept live
  *  by the gateway like the mark on one's own avatar in the header: a friend's presence.updated,
  *  and on one's own profile presence.mode, so a status picked in the launcher shows here at once.
- *  Nothing while offline. Signed out there is no socket and the line stays as loaded. */
+ *  Nothing while offline. Signed out there is no socket and the line stays as loaded. Under it,
+ *  for friends, what the person listens to while they share it. */
 export function ProfileStatus({
   userId,
   self,
@@ -36,17 +40,30 @@ export function ProfileStatus({
   if (presence.state === "offline") return null;
   const dot = presenceDot(presence);
   const playing = presence.state === "in_game";
+  const heard = listeningLine(presence, texts);
   return (
-    <p className={`status in d2 ${playing ? "playing" : dot}`}>
-      {playing
-        ? fill(texts.inGame, {
-            title: (presence.titleId && games[presence.titleId]) || (presence.titleId ?? "?"),
-          })
-        : dot === "dnd"
-          ? texts.stateDnd
-          : dot === "idle"
-            ? texts.stateIdle
-            : texts.stateOnline}
-    </p>
+    <>
+      <p className={`status in d2 ${playing ? "playing" : dot}`}>
+        {playing
+          ? fill(texts.inGame, {
+              title: (presence.titleId && games[presence.titleId]) || (presence.titleId ?? "?"),
+            })
+          : dot === "dnd"
+            ? texts.stateDnd
+            : dot === "idle"
+              ? texts.stateIdle
+              : texts.stateOnline}
+      </p>
+      {heard && (
+        <p className="listening in d2">
+          <span className="eq" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+          <span className="heard">{heard}</span>
+        </p>
+      )}
+    </>
   );
 }

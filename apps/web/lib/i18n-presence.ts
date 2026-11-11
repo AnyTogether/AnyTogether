@@ -16,6 +16,8 @@ export const presenceEn = {
   statusMark_dnd: "Do Not Disturb is on",
   stateIdle: "Idle",
   stateDnd: "Do Not Disturb",
+  listeningTo: "Listening to {title}",
+  listeningToBy: "Listening to {title}, {artist}",
 };
 
 export const presenceTr: typeof presenceEn = {
@@ -34,4 +36,6 @@ export const presenceTr: typeof presenceEn = {
   statusMark_dnd: "Rahatsız etmeyin açık",
   stateIdle: "Boşta",
   stateDnd: "Rahatsız etmeyin",
+  listeningTo: "{title} dinliyor",
+  listeningToBy: "{title}, {artist} dinliyor",
 };

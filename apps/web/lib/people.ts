@@ -43,6 +43,22 @@ export interface Presence {
   /** While not offline: the status they picked, or idle when their devices are (older API answers
    *  lack it). */
   status?: "online" | "idle" | "dnd";
+  /** What they listen to, while they share it with their friends (never on a stranger's view). */
+  listening?: { title: string; artist?: string };
+}
+
+/** The quiet line under a friend's status: "Listening to Title, Artist", or only the title when
+ *  the player names no artist. Nothing while they are offline or share nothing. */
+export function listeningLine(
+  presence: Pick<Presence, "state" | "listening"> | undefined,
+  texts: { listeningTo: string; listeningToBy: string },
+): string | null {
+  const heard = presence?.listening;
+  if (!presence || presence.state === "offline" || !heard || typeof heard.title !== "string") return null;
+  const title = heard.title.trim();
+  if (!title) return null;
+  const artist = typeof heard.artist === "string" ? heard.artist.trim() : "";
+  return artist ? fill(texts.listeningToBy, { title, artist }) : fill(texts.listeningTo, { title });
 }
 
 /** The dot on someone's picture: red for Do Not Disturb (even in a game, as on Discord), the game's

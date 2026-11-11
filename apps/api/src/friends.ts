@@ -1,5 +1,12 @@
 import { accounts, blocks, friendships, profiles } from "@anytogether/db";
-import { ErrorCode, friendsKey, presenceKey, shownPrivacy, trophyLevelOf } from "@anytogether/shared";
+import {
+  ErrorCode,
+  friendsKey,
+  presenceKey,
+  shownPrivacy,
+  trophyLevelOf,
+  withoutListening,
+} from "@anytogether/shared";
 import { and, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -66,14 +73,17 @@ export function friendRoutes(deps: Deps, notes: Notifier) {
         )
     ).map((r) => (r.userA === userId ? r.userB : r.userA));
   /** What the gateway keeps, unless the person hides it from friends or appears offline (then they
-   *  look offline, like anyone else who is). */
+   *  look offline, like anyone else who is). What they listen to is for friends (and themselves)
+   *  only, also when the rest of their presence is for everyone. */
   const presenceOf = async (people: ProfileRow[], relation: "me" | "friend" | "other") => {
     const kept = people.length ? await deps.valkey.mget(...people.map((p) => presenceKey(p.accountId))) : [];
+    const shown = (raw: string) =>
+      relation === "other" ? withoutListening(JSON.parse(raw)) : JSON.parse(raw);
     return new Map(
       people.map((p, index) => [
         p.accountId,
         kept[index] && !p.appearOffline && canSee(shownPrivacy(p.privacy, p.publicProfile).presence, relation)
-          ? JSON.parse(kept[index] as string)
+          ? shown(kept[index] as string)
           : offline,
       ]),
     );

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type Friend, byPresence, presenceDot, withPresence } from "../lib/people";
+import { presenceEn, presenceTr } from "../lib/i18n-presence";
+import { type Friend, byPresence, listeningLine, presenceDot, withPresence } from "../lib/people";
 import { profilePresenceAfter } from "../lib/presenceMode";
 
 const friend = (userId: string, displayName: string, state: Friend["presence"]["state"]): Friend => ({
@@ -27,6 +28,59 @@ describe("live presence on the friends page", () => {
     expect(withPresence(list, { userId: "a", state: "dancing" })).toBe(list);
     expect(withPresence(list, { state: "online" })).toBe(list);
     expect(withPresence(list, null)).toBe(list);
+  });
+});
+
+describe("the line that says what a friend listens to", () => {
+  const heard = { title: "So What", artist: "Miles Davis" };
+
+  it("names the title and the artist, in English and in Turkish", () => {
+    expect(listeningLine({ state: "online", listening: heard }, presenceEn)).toBe(
+      "Listening to So What, Miles Davis",
+    );
+    expect(listeningLine({ state: "online", listening: heard }, presenceTr)).toBe(
+      "So What, Miles Davis dinliyor",
+    );
+    expect(listeningLine({ state: "in_game", listening: { title: "So What" } }, presenceEn)).toBe(
+      "Listening to So What",
+    );
+    expect(listeningLine({ state: "away", listening: { title: "So What", artist: " " } }, presenceTr)).toBe(
+      "So What dinliyor",
+    );
+  });
+
+  it("is not there while they are offline, share nothing, or the title makes no sense", () => {
+    expect(listeningLine(undefined, presenceEn)).toBeNull();
+    expect(listeningLine({ state: "online" }, presenceEn)).toBeNull();
+    expect(listeningLine({ state: "offline", listening: heard }, presenceEn)).toBeNull();
+    expect(listeningLine({ state: "online", listening: { title: "  " } }, presenceEn)).toBeNull();
+    expect(listeningLine({ state: "online", listening: { title: 7 } as never }, presenceEn)).toBeNull();
+  });
+
+  it("takes a title as it is written, braces too", () => {
+    expect(
+      listeningLine({ state: "online", listening: { title: "{artist}", artist: "{title}" } }, presenceEn),
+    ).toBe("Listening to {artist}, {title}");
+  });
+
+  it("names no player or service", () => {
+    for (const text of [presenceEn, presenceTr])
+      for (const line of [text.listeningTo, text.listeningToBy])
+        expect(line).not.toMatch(/spotify|apple|music|youtube|tidal|deezer/i);
+  });
+
+  it("follows a friend's presence.updated: shown when it comes, gone when it is left out", () => {
+    const list = [friend("a", "Ayşe", "online")];
+    const playing = withPresence(list, { userId: "a", state: "online", status: "online", listening: heard });
+    expect(listeningLine(playing[0]?.presence, presenceEn)).toBe("Listening to So What, Miles Davis");
+    const stopped = withPresence(playing, { userId: "a", state: "online", status: "online" });
+    expect(listeningLine(stopped[0]?.presence, presenceEn)).toBeNull();
+    const profile = profilePresenceAfter(
+      { presence: { state: "online" as const }, picked: "online" as const },
+      { type: "presence.updated", data: { userId: "a", state: "online", listening: heard } },
+      { userId: "a", self: false },
+    );
+    expect(listeningLine(profile.presence, presenceEn)).toBe("Listening to So What, Miles Davis");
   });
 });
 

@@ -30,7 +30,7 @@ the status does not lock it or any other switch.
   `{ "appearOffline": boolean, "status": "online" | "idle" | "dnd" | "invisible" }`.
   `appearOffline` stays for older clients.
 - `presence.updated`, to friends: as before (`userId`, `state`, `titleId`, `since`, `party`,
-  `game`, `share`), and while the person is not offline also
+  `game`, `share`, and `listening` while they share it), and while the person is not offline also
   `"status": "online" | "idle" | "dnd"`. Invisible is never sent to anyone else. The person is
   shown `{ "state": "offline" }` with no status, as anyone who is offline.
 
@@ -47,6 +47,37 @@ the gateway keeps, so it is the same everywhere.
 
 Clients that draw a dot: `dnd` is red even in a game, then `in_game` is the game's colour, then
 `idle` (or `state: "away"`) is the yellow moon, else green.
+
+## Listening to
+
+A launcher can read what plays on the computer from the system's media session and, while the
+person shares it, send it with its presence. Friends then see "Listening to Title, Artist".
+
+A client sends it in the gateway heartbeat:
+
+```json
+{ "op": "heartbeat", "presence": { "state": "online", "listening": { "title": "So What", "artist": "Miles Davis" } } }
+```
+
+- `title` is needed, `artist` is optional. Anything else in the object is dropped.
+- Each is kept without control characters, trimmed and cut to 120 characters
+  (`listeningOf` in `packages/shared/src/presence.ts`).
+- No `listening`, `null`, or an empty title means not listening. Every heartbeat says it again, so
+  leaving it out clears it.
+- A client that does not know the field keeps working as before.
+
+Friends get it in `presence.updated` and in every presence the API returns to a friend
+(`/me/friends`, `/users/:handle`), as `"listening": { "title": "…", "artist": "…" }`. With several
+devices it comes from the first one that says so, in the order the state is picked (in a game,
+online, away).
+
+It is for friends and the person only. Someone who is not a friend never gets it, also when the
+presence is shown to everyone, and it is not on the public profile, in discovery or in the game
+hubs. Invisible and presence shown to nobody hide it with the rest of the presence. A child's
+presence can be shown to friends at most, so the same holds there.
+
+It lives only with the live presence in Valkey: the device's own presence (60 s past its last
+heartbeat) and the merged one (70 s). Nothing is written to the database and there is no history.
 
 ## Where it is kept
 
