@@ -10,7 +10,7 @@ import type { Restriction, RestrictionKind } from "./moderation.js";
 import type { NotificationEvent } from "./notifications.js";
 import type { PartyEvent, PartyPresence } from "./parties.js";
 import type { PostEvent } from "./posts.js";
-import type { PresenceStatus, ShownStatus } from "./presence.js";
+import type { Listening, PresenceStatus, ShownStatus } from "./presence.js";
 import type { SharePlayEvent, SharePresence } from "./sharePlays.js";
 
 /** What the realtime gateway pushes; the API publishes them for each recipient. */
@@ -32,6 +32,8 @@ export type GatewayEvent =
         share?: SharePresence;
         /** While not offline: Online, Idle or Do Not Disturb (docs/presence.md). */
         status?: ShownStatus;
+        /** What they listen to, while they share it (friends only, never stored). */
+        listening?: Listening;
       };
     }
   /** The user picked a status (on any device): their other devices follow, and the gateway works
@@ -91,7 +93,14 @@ export type ClientFrame =
   | { op: "hello"; token?: string; ticket?: string; client?: string; resume?: string }
   | {
       op: "heartbeat";
-      presence?: { state: Exclude<PresenceState, "offline">; titleId?: string; since?: string };
+      presence?: {
+        state: Exclude<PresenceState, "offline">;
+        titleId?: string;
+        since?: string;
+        /** What plays on the device, while the person shares it (listeningOf in presence.ts):
+         *  absent, null or an empty title means not listening. */
+        listening?: Listening | null;
+      };
     }
   /** Typing in a conversation: the other members hear it (at most every 2 s). */
   | { op: "typing"; conversation: string }

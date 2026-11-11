@@ -62,6 +62,7 @@ describe("the privacy notice and the terms", () => {
       "delivered",
       "public profile",
       "minimal card",
+      "sharing what you listen to",
     ])
       expect(privacy).toContain(feature);
     const gizlilik = JSON.stringify(legalStrings("tr").privacy);
@@ -77,6 +78,7 @@ describe("the privacy notice and the terms", () => {
       "iletildi",
       "herkese açık profil",
       "en sade kart",
+      "dinlediğini paylaşmayı",
     ])
       expect(gizlilik).toContain(feature);
   });

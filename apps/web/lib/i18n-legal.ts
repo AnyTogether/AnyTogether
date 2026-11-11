@@ -5,7 +5,7 @@ import type { Language } from "./i18n";
  *  together; the page shows the date at its top and the repository keeps the history. */
 
 /** The day these texts last changed (YYYY-MM-DD). */
-export const legalUpdated = "2026-11-06";
+export const legalUpdated = "2026-11-11";
 
 /** The AnyTogether server these texts speak for; any other address is someone else's server. */
 export const officialOrigin = "https://anytogether.net";
@@ -99,7 +99,7 @@ const privacyEn: LegalDoc = {
             ],
             [
               "Online status",
-              "While an app or the site is open: which of your devices are online and what you are playing, kept in memory and gone about two minutes after a device's last sign of life, and when each device was last used. With Appear offline everyone sees you as offline, but the server still knows you are connected, so messages and calls reach you.",
+              "While an app or the site is open: which of your devices are online and what you are playing, kept in memory and gone about two minutes after a device's last sign of life, and when each device was last used. With Appear offline everyone sees you as offline, but the server still knows you are connected, so messages and calls reach you. If you turn on sharing what you listen to in an AnyPS5 launcher, the title and artist of what plays on your computer go to your friends with your online status. They are kept in memory the same way and never saved.",
             ],
             [
               "Messages",
@@ -490,7 +490,7 @@ const privacyTr: LegalDoc = {
             ],
             [
               "Çevrimiçi durum",
-              "Bir uygulama ya da site açıkken: hangi cihazlarının çevrimiçi olduğu ve ne oynadığın; bellekte tutulur ve bir cihazdan son haber alındıktan yaklaşık iki dakika sonra silinir. Bir de her cihazın en son ne zaman kullanıldığı. Çevrimdışı görün açıkken herkes seni çevrimdışı görür, ama mesajlar ve aramalar sana ulaşsın diye sunucu bağlı olduğunu bilmeye devam eder.",
+              "Bir uygulama ya da site açıkken: hangi cihazlarının çevrimiçi olduğu ve ne oynadığın; bellekte tutulur ve bir cihazdan son haber alındıktan yaklaşık iki dakika sonra silinir. Bir de her cihazın en son ne zaman kullanıldığı. Çevrimdışı görün açıkken herkes seni çevrimdışı görür, ama mesajlar ve aramalar sana ulaşsın diye sunucu bağlı olduğunu bilmeye devam eder. Bir AnyPS5 başlatıcısında dinlediğini paylaşmayı açarsan bilgisayarında çalan parçanın adı ve sanatçısı çevrimiçi durumunla birlikte arkadaşlarına gider. Bunlar da aynı şekilde yalnızca bellekte tutulur ve hiçbir yere kaydedilmez.",
             ],
             [
               "Mesajlar",

@@ -71,6 +71,17 @@ const publish = (userId: string, event: Record<string, unknown>) => {
     .then(() => JSON.parse(message).id as string);
 };
 
+/** Whatever Valkey holds under a key, as text, to look for something that should not be there. */
+async function dump(key: string) {
+  const type = await valkey.type(key);
+  if (type === "string") return valkey.get(key);
+  if (type === "hash") return valkey.hgetall(key);
+  if (type === "set") return valkey.smembers(key);
+  if (type === "zset") return valkey.zrange(key, 0, -1);
+  if (type === "stream") return valkey.xrange(key, "-", "+");
+  return null;
+}
+
 beforeEach(async () => {
   keys = await generateKeyPair("EdDSA", { crv: "Ed25519" });
   valkey = new Redis(process.env.TEST_VALKEY_URL ?? "redis://127.0.0.1:63799/2");
@@ -387,6 +398,192 @@ describe("the gateway", () => {
     me.send({ op: "heartbeat", presence: { state: "in_game", titleId: "PPSA01234" } });
     const playing = await friend.waitFor((frame) => (frame.data as { state?: string })?.state === "in_game");
     expect(playing.data).toMatchObject({ state: "in_game", titleId: "PPSA01234", status: "idle" });
+    me.socket.close();
+    friend.socket.close();
+  });
+
+  it("tells friends what a user listens to, cleaned, and that it stopped", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    const friend = await signedIn("u2", "s2");
+    const me = await signedIn("u1", "s1");
+    await friend.waitFor(
+      (frame) => frame.type === "presence.updated" && (frame.data as { state: string }).state === "online",
+    );
+    const listens = (frame: Record<string, unknown>) =>
+      frame.type === "presence.updated" ? (frame.data as { listening?: unknown }).listening : undefined;
+    me.send({
+      op: "heartbeat",
+      presence: {
+        state: "online",
+        listening: { title: `  So\u0000 What ${"a".repeat(200)}`, artist: " Miles\n Davis ", album: "x" },
+      },
+    });
+    const told = await friend.waitFor((frame) => listens(frame) !== undefined);
+    const kept = { title: `So What ${"a".repeat(112)}`, artist: "Miles Davis" };
+    expect(told.data).toEqual({ userId: "u1", state: "online", status: "online", listening: kept });
+    expect(JSON.parse((await valkey.get("presence:u1:s1")) ?? "{}")).toEqual({
+      state: "online",
+      listening: kept,
+    });
+    expect(JSON.parse((await valkey.get("presence:u1")) ?? "{}")).toEqual({
+      state: "online",
+      status: "online",
+      listening: kept,
+    });
+    // The same again changes nothing for friends.
+    const before = friend.frames.length;
+    me.send({ op: "heartbeat", presence: { state: "online", listening: kept } });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(friend.frames.length).toBe(before);
+    // Each way of saying "not listening" clears it: no field, null, an empty title.
+    for (const stopped of [{}, { listening: null }, { listening: { title: " ", artist: "Miles Davis" } }]) {
+      me.send({ op: "heartbeat", presence: { state: "online", listening: { title: "Milestones" } } });
+      await friend.waitFor(
+        (frame) => (listens(frame) as { title?: string } | undefined)?.title === "Milestones",
+      );
+      friend.frames.length = 0;
+      me.send({ op: "heartbeat", presence: { state: "online", ...stopped } });
+      const cleared = await friend.waitFor((frame) => frame.type === "presence.updated");
+      expect(cleared.data, JSON.stringify(stopped)).toEqual({
+        userId: "u1",
+        state: "online",
+        status: "online",
+      });
+      expect(JSON.parse((await valkey.get("presence:u1:s1")) ?? "{}")).toEqual({ state: "online" });
+      friend.frames.length = 0;
+    }
+    me.socket.close();
+    friend.socket.close();
+  });
+
+  it("keeps what a user listens to only as long as the presence itself", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    const friend = await signedIn("u2", "s2");
+    const me = await signedIn("u1", "s1");
+    await friend.waitFor(
+      (frame) => frame.type === "presence.updated" && (frame.data as { state: string }).state === "online",
+    );
+    me.send({ op: "heartbeat", presence: { state: "online", listening: { title: "So What" } } });
+    await friend.waitFor(
+      (frame) => (frame.data as { listening?: { title: string } })?.listening?.title === "So What",
+    );
+    // It lives in the two presence keys and nowhere else, and both run out by themselves.
+    const holding: string[] = [];
+    for (const key of await valkey.keys("*"))
+      if (JSON.stringify(await dump(key)).includes("So What")) holding.push(key);
+    expect(holding.sort()).toEqual(["presence:u1", "presence:u1:s1"]);
+    const deviceTtl = await valkey.ttl("presence:u1:s1");
+    expect(deviceTtl).toBeGreaterThan(0);
+    expect(deviceTtl).toBeLessThanOrEqual(60);
+    const mergedTtl = await valkey.ttl("presence:u1");
+    expect(mergedTtl).toBeGreaterThan(0);
+    expect(mergedTtl).toBeLessThanOrEqual(70);
+    // The device is gone: so is what it listened to.
+    me.socket.close();
+    const gone = await friend.waitFor((frame) => (frame.data as { state?: string })?.state === "offline");
+    expect(gone.data).toEqual({ userId: "u1", state: "offline" });
+    expect(await valkey.get("presence:u1")).toBeNull();
+    expect(await valkey.get("presence:u1:s1")).toBeNull();
+    friend.socket.close();
+  });
+
+  it("drops what a device listened to when its presence ran out without a goodbye", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    const friend = await signedIn("u2", "s2");
+    const mac = await signedIn("u1", "mac");
+    const phone = await signedIn("u1", "phone");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    mac.send({ op: "heartbeat", presence: { state: "online", listening: { title: "So What" } } });
+    await friend.waitFor(
+      (frame) => (frame.data as { listening?: { title: string } })?.listening?.title === "So What",
+    );
+    // The Mac's own presence expires (no heartbeat for a minute); the phone's next heartbeat
+    // works the presence out again without it.
+    await valkey.del("presence:u1:mac");
+    friend.frames.length = 0;
+    phone.send({ op: "heartbeat", presence: { state: "online" } });
+    const after = await friend.waitFor((frame) => frame.type === "presence.updated");
+    expect(after.data).toEqual({ userId: "u1", state: "online", status: "online" });
+    expect(JSON.parse((await valkey.get("presence:u1")) ?? "{}")).toEqual({
+      state: "online",
+      status: "online",
+    });
+    mac.socket.close();
+    phone.socket.close();
+    friend.socket.close();
+  });
+
+  it("shows what one device listens to while another plays", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    const friend = await signedIn("u2", "s2");
+    const mac = await signedIn("u1", "mac");
+    const phone = await signedIn("u1", "phone");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    mac.send({ op: "heartbeat", presence: { state: "away", listening: { title: "So What" } } });
+    await friend.waitFor(
+      (frame) => (frame.data as { listening?: { title: string } })?.listening?.title === "So What",
+    );
+    phone.send({ op: "heartbeat", presence: { state: "in_game", titleId: "PPSA01234" } });
+    const playing = await friend.waitFor((frame) => (frame.data as { state?: string })?.state === "in_game");
+    expect(playing.data).toEqual({
+      userId: "u1",
+      state: "in_game",
+      titleId: "PPSA01234",
+      status: "online",
+      listening: { title: "So What" },
+    });
+    mac.socket.close();
+    phone.socket.close();
+    friend.socket.close();
+  });
+
+  it("tells no one what a hidden user listens to, and only friends otherwise", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    await valkey.set("presence-hidden:u1", "1");
+    const friend = await signedIn("u2", "s2");
+    const stranger = await signedIn("u3", "s3");
+    const me = await signedIn("u1", "s1");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    me.send({ op: "heartbeat", presence: { state: "online", listening: { title: "So What" } } });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    // Invisible, or presence shown to nobody: nothing is kept for others and nothing is sent.
+    expect(friend.frames.filter((frame) => frame.type === "presence.updated")).toEqual([]);
+    expect(await valkey.get("presence:u1")).toBeNull();
+    // Shown again: the friend hears it, someone who is not a friend never does.
+    await valkey.del("presence-hidden:u1");
+    await publish("u1", { type: "presence.mode", data: { appearOffline: false, status: "online" } });
+    const heard = await friend.waitFor((frame) => frame.type === "presence.updated");
+    expect(heard.data).toMatchObject({ userId: "u1", listening: { title: "So What" } });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(JSON.stringify(stranger.frames)).not.toContain("So What");
+    // Hidden again: the merged presence, with what was listened to, is dropped at once.
+    await valkey.set("presence-hidden:u1", "1");
+    await publish("u1", { type: "presence.mode", data: { appearOffline: true, status: "invisible" } });
+    await me.waitFor(
+      (frame) => frame.type === "presence.mode" && (frame.data as { status?: string }).status === "invisible",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await valkey.get("presence:u1")).toBeNull();
+    me.socket.close();
+    friend.socket.close();
+    stranger.socket.close();
+  });
+
+  it("keeps working for a client that knows nothing of listening", async () => {
+    await valkey.sadd("friends:u1", "u2");
+    const friend = await signedIn("u2", "s2");
+    const me = await signedIn("u1", "s1");
+    await friend.waitFor(
+      (frame) => frame.type === "presence.updated" && (frame.data as { state: string }).state === "online",
+    );
+    me.send({ op: "heartbeat" });
+    me.send({ op: "heartbeat", presence: { state: "in_game", titleId: "PPSA01234" } });
+    const playing = await friend.waitFor((frame) => (frame.data as { state?: string })?.state === "in_game");
+    expect(playing.data).toEqual({ userId: "u1", state: "in_game", titleId: "PPSA01234", status: "online" });
+    // A listening that is not an object is ignored, the rest of the heartbeat is kept.
+    me.send({ op: "heartbeat", presence: { state: "away", listening: "So What" } });
+    const away = await friend.waitFor((frame) => (frame.data as { state?: string })?.state === "away");
+    expect(away.data).toEqual({ userId: "u1", state: "away", status: "idle" });
     me.socket.close();
     friend.socket.close();
   });
