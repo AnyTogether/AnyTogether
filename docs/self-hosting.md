@@ -613,9 +613,6 @@ docker compose exec -e USER=yourname api node dist/admin.js hub import /tmp/hub
 ## Troubleshooting
 
 - `docker compose ps` shows what is unhealthy; `docker compose logs <service>` says why.
-- The website's build stops with `An error occurred in next/font` (or `Failed to fetch ... from
-  Google Fonts`): the build downloads its fonts from Google Fonts and the connection was too slow
-  or blocked. Run `docker compose up -d --build` again; what was already built is reused.
 - No certificate: the DNS record does not point at the machine yet, or port 80/443 is closed.
   `docker compose logs caddy` names the problem; Caddy retries by itself.
 - Everyone is signed out after a restart: `JWT_PRIVATE_KEY` is empty (the API's log says so).

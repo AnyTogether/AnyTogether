@@ -20,7 +20,7 @@ vi.mock("@/lib/i18n", async (original) => ({
   language: async () => state.lang,
 }));
 vi.mock("@/lib/site", () => ({ loadReleases: async () => null }));
-vi.mock("next/font/google", () => ({ Archivo: () => ({ variable: "font-wide" }) }));
+vi.mock("next/font/local", () => ({ default: () => ({ variable: "font-wide" }) }));
 
 const version = /^\d+\.\d+\.\d+$/;
 

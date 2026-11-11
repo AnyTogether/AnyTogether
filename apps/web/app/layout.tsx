@@ -17,7 +17,7 @@ import { statusFrom } from "@/lib/presenceMode";
 import { longDate } from "@/lib/restrictions";
 import { apiJson, currentUser, incomingRequests } from "@/lib/session";
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -41,14 +41,31 @@ import "./compat.css";
 import "./voice.css";
 import "./challenges.css";
 
-const display = Space_Grotesk({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "700"],
+// The fonts are files in this repository (app/fonts, with their licences), so a build needs no
+// network. They are the google/fonts builds, cut with pyftsubset to the characters and features of
+// Google Fonts' latin and latin-ext subsets. Each face keeps the name, the weights and the fallback
+// it had when Google Fonts served it. The fallbacks' metrics are in globals.css.
+const display = localFont({
+  src: [
+    { path: "./fonts/SpaceGrotesk-Variable.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/SpaceGrotesk-Variable.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/SpaceGrotesk-Variable.woff2", weight: "700", style: "normal" },
+  ],
+  declarations: [{ prop: "font-family", value: "Space Grotesk" }],
+  display: "swap",
+  adjustFontFallback: false,
+  fallback: ["'Space Grotesk Fallback'"],
   variable: "--font-display",
 });
-const mono = JetBrains_Mono({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500"],
+const mono = localFont({
+  src: [
+    { path: "./fonts/JetBrainsMono-Variable.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/JetBrainsMono-Variable.woff2", weight: "500", style: "normal" },
+  ],
+  declarations: [{ prop: "font-family", value: "JetBrains Mono" }],
+  display: "swap",
+  adjustFontFallback: false,
+  fallback: ["'JetBrains Mono Fallback'"],
   variable: "--font-mono",
 });
 
